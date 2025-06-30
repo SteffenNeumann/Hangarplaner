@@ -1,0 +1,146 @@
+/* Info-Widget spezifisches Styling */
+#info-widget {
+	display: flex;
+	flex-direction: column;
+	width: 200px;
+	min-width: 200px;
+	background: rgba(255, 255, 255, 0.97);
+	padding: 8px 14px;
+	border-radius: 10px;
+	border: 1px solid rgba(93, 107, 137, 0.15);
+	font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+		sans-serif;
+	margin-left: 12px;
+	transition: all 0.3s ease;
+	height: auto;
+	position: relative; /* Für absolute Positionierung des Icons */
+}
+
+/* Primärer Container wird nun für Inhaltsdarstellung verwendet */
+#info-widget .info-primary {
+	display: flex;
+	align-items: flex-start;
+	font-size: 0.875rem;
+	color: #64748b;
+	padding-right: 30px; /* Platz für das Icon */
+	min-height: 24px;
+	width: 100%;
+}
+
+/* Info-Icon Container wird absolut positioniert */
+#info-icon {
+	position: absolute;
+	top: 8px;
+	right: 14px;
+	width: 24px;
+	height: 24px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: #64748b;
+	background: rgba(255, 255, 255, 0.7); /* Leicht transparenter Hintergrund */
+	z-index: 2; /* Über dem Inhalt, aber nicht zu dominant */
+	border-radius: 50%; /* Rundes Icon */
+}
+
+/* Hauptinhalt für den primären Bereich */
+#primary-status {
+	flex: 1;
+	font-size: 0.75rem;
+	white-space: normal;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	line-height: 1.3;
+	margin-bottom: 4px;
+	font-weight: 600; /* Etwas fetter als der sekundäre Text */
+}
+
+/* Sekundärer Container für zusätzlichen Status-Text */
+#info-widget .info-secondary {
+	display: flex;
+	align-items: flex-start;
+	font-size: 0.875rem;
+	color: #64748b;
+	width: 100%;
+	min-height: 1.2em;
+	height: auto;
+	border-top: 1px solid rgba(93, 107, 137, 0.15); /* Subtile Trennlinie */
+	padding-top: 4px; /* Abstand zur Trennlinie */
+}
+
+/* Status-Anzeige */
+#header-status {
+	flex: 1;
+	font-size: 0.75rem;
+	white-space: normal;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	position: relative;
+	cursor: help;
+	line-height: 1.3;
+	min-height: 1.2em;
+	max-height: none;
+	text-align: left;
+	display: block;
+	word-wrap: break-word;
+	width: 100%; /* Stellt sicher, dass der Text die volle Breite nutzt */
+}
+
+/* Tooltip für Status */
+#header-status:hover::after {
+	content: attr(data-tooltip, attr(title, "Status-Information"));
+	position: absolute;
+	left: 0;
+	bottom: -30px;
+	background: rgba(58, 67, 84, 0.95);
+	color: white;
+	padding: 6px 10px;
+	border-radius: 4px;
+	font-size: 12px;
+	white-space: normal;
+	width: max-content;
+	max-width: 300px;
+	z-index: 100;
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* Status-Styles */
+#header-status.info {
+	color: #4b5563;
+}
+#header-status.success {
+	color: #10b981;
+}
+#header-status.error {
+	color: #ef4444;
+}
+#header-status.warning {
+	color: #f59e0b;
+}
+
+/* Lade-Animation */
+@keyframes pulse {
+	0% {
+		opacity: 0.6;
+	}
+	50% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0.6;
+	}
+}
+
+#header-status:contains("Laden..."),
+#header-status:contains("Aktualisiere...") {
+	animation: pulse 1.5s infinite;
+}
+
+/* Responsive Anpassungen identisch zum Wetter-Widget */
+@media (max-width: 640px) {
+	#info-widget {
+		width: 160px; /* Feste Breite auch im responsiven Modus */
+		min-width: 160px;
+		padding: 6px 10px;
+	}
+}

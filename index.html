@@ -1,0 +1,1863 @@
+<!DOCTYPE html>
+<html lang="de">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Hangar Planner - Aircraft Management</title>
+		<script src="https://cdn.tailwindcss.com"></script>
+		<!-- PDF Export Library -->
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+		<script>
+			tailwind.config = {
+				theme: {
+					extend: {
+						colors: {
+							industrial: {
+								dark: "#3A4354" /* Moderneres, etwas helleres Dunkelblau */,
+								medium: "#5D6B89" /* Helleres Mittelblau */,
+								light: "#D1D5DB" /* Helleres Grau */,
+								accent: "#FF7043" /* Wärmeres, modernes Orange */,
+							},
+							status: {
+								green: "#22C55E" /* Helleres, lebendigeres Grün */,
+								yellow: "#F59E0B" /* Wärmeres Gelb */,
+								red: "#EF4444" /* Helleres Rot */,
+							},
+						},
+					},
+				},
+			};
+		</script>
+		<link rel="stylesheet" href="css/hangarplanner-ui.css" />
+		<link rel="stylesheet" href="css/dark-mode-zoom.css" />
+		<link rel="stylesheet" href="css/weather-widget.css" />
+		<link rel="stylesheet" href="css/info-widget.css" />
+		<!-- Neue separate CSS-Datei -->
+		<style>
+			.status-neutral {
+				background-color: white;
+				border: 1px solid #ccc;
+			}
+
+			.tow-neutral {
+				background-color: white;
+				color: #333333;
+			}
+		</style>
+	</head>
+	<body class="bg-industrial-dark text-white font-sans edit-mode">
+		<div class="flex h-screen">
+			<!-- Hauptbereich mit Hangar-Kacheln -->
+			<div class="flex-grow flex flex-col content-container">
+				<!-- Header mit Titel und Aktionen -->
+				<header
+					class="bg-white p-4 shadow-md flex justify-between items-center">
+					<!-- Wetter-Widget mit verbessertem Layout -->
+					<div class="flex-grow"></div>
+					<div id="weather-widget">
+						<div class="weather-primary">
+							<div class="weather-airport">MUC</div>
+							<div class="weather-data">
+								<span id="weather-temp">12°C</span>
+								<div id="weather-icon">
+									<svg
+										class="w-5 h-5"
+										xmlns="http://www.w3.org/2000/svg"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke="currentColor">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+									</svg>
+								</div>
+							</div>
+						</div>
+						<div class="weather-secondary">
+							<span id="weather-wind" class="weather-wind-tooltip">
+								<span class="weather-wind-icon" style="transform: rotate(0deg)"
+									>→</span
+								>
+								S 9 km/h
+							</span>
+							<span id="weather-description" class="weather-description-text"
+								>Clear</span
+							>
+							<span id="weather-visibility">Vis: 9.7km</span>
+						</div>
+					</div>
+
+					<!-- Info-Widget mit optimierter Struktur -->
+					<div id="info-widget">
+						<!-- Icon schwebt über dem Inhalt -->
+						<div id="info-icon">
+							<svg
+								class="w-5 h-5"
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke="currentColor">
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+							</svg>
+						</div>
+
+						<!-- Primärer Inhaltsbereich -->
+						<div class="info-primary">
+							<span id="primary-status">Hangar Planner Status</span>
+						</div>
+
+						<!-- Sekundärer Inhaltsbereich -->
+						<div class="info-secondary">
+							<span
+								id="header-status"
+								title="Bereit"
+								data-tooltip="Status-Informationen werden hier angezeigt"
+								>Bereit</span
+							>
+						</div>
+					</div>
+
+					<div class="flex-grow flex justify-end">
+						<!-- Vereinfachter Toggle-Button -->
+						<button
+							id="menuToggle"
+							class="menu-toggle focus:outline-none bg-white text-industrial-accent px-2 py-1 rounded hover:bg-gray-50 z-50">
+							»
+						</button>
+					</div>
+				</header>
+
+				<!-- Hangar-Kacheln Bereich - Padding weiter reduziert -->
+				<div class="flex-grow bg-white p-3 overflow-auto hangar-container">
+					<!-- Abschnitt 1 Container -->
+					<div class="section-container">
+						<div id="hangarGrid" class="grid grid-cols-4 gap-4">
+							<!-- 8 Hangar-Kacheln hier -->
+							<!-- Kachel 1 - NEU GESTALTET -->
+							<div
+								class="hangar-cell bg-white rounded-lg shadow-md flex flex-col">
+								<!-- Header mit Statuslicht und Status-Dropdown -->
+								<div class="card-header">
+									<div class="header-elements">
+										<!-- Statuslicht und Dropdown -->
+										<div class="status-dropdown-container">
+											<span
+												class="status-light status-neutral"
+												data-cell="1"
+												data-status="neutral"></span>
+											<select
+												id="status-1"
+												class="status-selector"
+												title="Aircraft Status">
+												<option value="neutral" selected></option>
+												<option value="ready">Ready</option>
+												<option value="maintenance">MX</option>
+												<option value="aog">AOG</option>
+											</select>
+										</div>
+
+										<!-- Position -->
+										<div class="position-container">
+											<input
+												type="text"
+												placeholder="1A"
+												id="hangar-position-1"
+												class="position-input"
+												title="Hangar Position" />
+										</div>
+									</div>
+								</div>
+
+								<!-- Hauptbereich -->
+								<div class="p-4 flex-grow flex flex-col">
+									<input
+										type="text"
+										id="aircraft-1"
+										placeholder="Aircraft ID"
+										class="aircraft-id" />
+
+									<!-- Einheitliche Ausrichtung für Infos -->
+									<div class="info-grid mb-3">
+										<div class="info-label">Arr:</div>
+										<input
+											type="time"
+											id="arrival-time-1"
+											class="info-input"
+											title="Time" />
+
+										<div class="info-label">Dep:</div>
+										<input
+											type="time"
+											id="departure-time-1"
+											class="info-input"
+											title="Time" />
+
+										<div class="info-label">Pos:</div>
+										<input
+											type="text"
+											id="position-1"
+											class="info-input"
+											placeholder="--"
+											maxlength="10"
+											title="Aircraft position" />
+
+										<div class="info-label">Tow:</div>
+										<div class="tow-status-container">
+											<select id="tow-status-1" class="tow-status-selector">
+												<option value="neutral" selected></option>
+												<option value="initiated" class="tow-initiated">
+													Initiated
+												</option>
+												<option value="ongoing" class="tow-ongoing">
+													In Progress
+												</option>
+												<option value="on-position" class="tow-on-position">
+													On Position
+												</option>
+											</select>
+										</div>
+									</div>
+
+									<!-- Notizen mit einer Zeile -->
+									<div class="notes-container">
+										<textarea
+											id="notes-1"
+											placeholder="Enter notes..."
+											class="notes-textarea"></textarea>
+									</div>
+								</div>
+							</div>
+
+							<!-- Kachel 2 mit neuem Layout -->
+							<div
+								class="hangar-cell bg-white rounded-lg shadow-md flex flex-col">
+								<!-- Header mit Statuslicht und Status-Dropdown -->
+								<div class="card-header">
+									<div class="header-elements">
+										<!-- Statuslicht und Dropdown -->
+										<div class="status-dropdown-container">
+											<span
+												class="status-light status-neutral"
+												data-cell="2"
+												data-status="neutral"></span>
+											<select
+												id="status-2"
+												class="status-selector"
+												title="Aircraft Status">
+												<option value="neutral" selected></option>
+												<option value="ready">Ready</option>
+												<option value="maintenance">MX</option>
+												<option value="aog">AOG</option>
+											</select>
+										</div>
+
+										<!-- Position -->
+										<div class="position-container">
+											<input
+												type="text"
+												placeholder="1B"
+												id="hangar-position-2"
+												class="position-input"
+												title="Hangar Position" />
+										</div>
+									</div>
+								</div>
+
+								<div class="p-4 flex-grow flex flex-col">
+									<input
+										type="text"
+										id="aircraft-2"
+										placeholder="Aircraft ID"
+										class="aircraft-id" />
+
+									<!-- Einheitliche Ausrichtung für Infos -->
+									<div class="info-grid mb-3">
+										<div class="info-label">Arr:</div>
+										<input
+											type="time"
+											id="arrival-time-2"
+											class="info-input"
+											title="Time" />
+
+										<div class="info-label">Dep:</div>
+										<input
+											type="time"
+											id="departure-time-2"
+											class="info-input"
+											title="Time" />
+
+										<div class="info-label">Pos:</div>
+										<input
+											type="text"
+											id="position-2"
+											class="info-input"
+											placeholder="--"
+											maxlength="10"
+											title="Aircraft position" />
+
+										<div class="info-label">Tow:</div>
+										<div class="tow-status-container">
+											<select id="tow-status-2" class="tow-status-selector">
+												<option value="neutral" selected></option>
+												<option value="initiated" class="tow-initiated">
+													Initiated
+												</option>
+												<option value="ongoing" class="tow-ongoing">
+													In Progress
+												</option>
+												<option value="on-position" class="tow-on-position">
+													On Position
+												</option>
+											</select>
+										</div>
+									</div>
+
+									<!-- Notizen mit einer Zeile -->
+									<div class="notes-container">
+										<textarea
+											id="notes-2"
+											placeholder="Enter notes..."
+											class="notes-textarea"></textarea>
+									</div>
+								</div>
+							</div>
+
+							<!-- Kachel 3 mit neuem Layout -->
+							<div
+								class="hangar-cell bg-white rounded-lg shadow-md flex flex-col">
+								<!-- Header mit Statuslicht und Status-Dropdown -->
+								<div class="card-header">
+									<div class="header-elements">
+										<!-- Statuslicht und Dropdown -->
+										<div class="status-dropdown-container">
+											<span
+												class="status-light status-neutral"
+												data-cell="3"
+												data-status="neutral"></span>
+											<select
+												id="status-3"
+												class="status-selector"
+												title="Aircraft Status">
+												<option value="neutral" selected></option>
+												<option value="ready">Ready</option>
+												<option value="maintenance">MX</option>
+												<option value="aog">AOG</option>
+											</select>
+										</div>
+
+										<!-- Position -->
+										<div class="position-container">
+											<input
+												type="text"
+												placeholder="2A"
+												id="hangar-position-3"
+												class="position-input"
+												title="Hangar Position" />
+										</div>
+									</div>
+								</div>
+
+								<div class="p-4 flex-grow flex flex-col">
+									<input
+										type="text"
+										id="aircraft-3"
+										placeholder="Aircraft ID"
+										class="aircraft-id" />
+
+									<!-- Einheitliche Ausrichtung für Infos -->
+									<div class="info-grid mb-3">
+										<div class="info-label">Arr:</div>
+										<input
+											type="time"
+											id="arrival-time-3"
+											class="info-input"
+											title="Time" />
+
+										<div class="info-label">Dep:</div>
+										<input
+											type="time"
+											id="departure-time-3"
+											class="info-input"
+											title="Time" />
+
+										<div class="info-label">Pos:</div>
+										<input
+											type="text"
+											id="position-3"
+											class="info-input"
+											placeholder="--"
+											maxlength="10"
+											title="Aircraft position" />
+
+										<div class="info-label">Tow:</div>
+										<div class="tow-status-container">
+											<select id="tow-status-3" class="tow-status-selector">
+												<option value="neutral" selected></option>
+												<option value="initiated" class="tow-initiated">
+													Initiated
+												</option>
+												<option value="ongoing" class="tow-ongoing">
+													In Progress
+												</option>
+												<option value="on-position" class="tow-on-position">
+													On Position
+												</option>
+											</select>
+										</div>
+									</div>
+
+									<!-- Notizen mit einer Zeile -->
+									<div class="notes-container">
+										<textarea
+											id="notes-3"
+											placeholder="Enter notes..."
+											class="notes-textarea"></textarea>
+									</div>
+								</div>
+							</div>
+
+							<!-- Kachel 4 mit neuem Layout + Notizfeld -->
+							<div
+								class="hangar-cell bg-white rounded-lg shadow-md flex flex-col">
+								<!-- Header mit Statuslicht und Status-Dropdown -->
+								<div class="card-header">
+									<div class="header-elements">
+										<!-- Statuslicht und Dropdown -->
+										<div class="status-dropdown-container">
+											<span
+												class="status-light status-neutral"
+												data-cell="4"
+												data-status="neutral"></span>
+											<select
+												id="status-4"
+												class="status-selector"
+												title="Aircraft Status">
+												<option value="neutral" selected></option>
+												<option value="ready">Ready</option>
+												<option value="maintenance">MX</option>
+												<option value="aog">AOG</option>
+											</select>
+										</div>
+
+										<!-- Position -->
+										<div class="position-container">
+											<input
+												type="text"
+												placeholder="2B"
+												id="hangar-position-4"
+												class="position-input"
+												title="Hangar Position" />
+										</div>
+									</div>
+								</div>
+
+								<div class="p-4 flex-grow flex flex-col">
+									<input
+										type="text"
+										id="aircraft-4"
+										placeholder="Aircraft ID"
+										class="aircraft-id" />
+
+									<!-- Einheitliche Ausrichtung für Infos -->
+									<div class="info-grid mb-3">
+										<div class="info-label">Arr:</div>
+										<input
+											type="time"
+											id="arrival-time-4"
+											class="info-input"
+											title="Time" />
+
+										<div class="info-label">Dep:</div>
+										<input
+											type="time"
+											id="departure-time-4"
+											class="info-input"
+											title="Time" />
+
+										<div class="info-label">Pos:</div>
+										<input
+											type="text"
+											id="position-4"
+											class="info-input"
+											placeholder="--"
+											maxlength="10"
+											title="Aircraft position" />
+
+										<div class="info-label">Tow:</div>
+										<div class="tow-status-container">
+											<select id="tow-status-4" class="tow-status-selector">
+												<option value="neutral" selected></option>
+												<option value="initiated" class="tow-initiated">
+													Initiated
+												</option>
+												<option value="ongoing" class="tow-ongoing">
+													In Progress
+												</option>
+												<option value="on-position" class="tow-on-position">
+													On Position
+												</option>
+											</select>
+										</div>
+									</div>
+
+									<!-- Notizen mit einer Zeile -->
+									<div class="notes-container">
+										<textarea
+											id="notes-4"
+											placeholder="Enter notes..."
+											class="notes-textarea"></textarea>
+									</div>
+								</div>
+							</div>
+
+							<!-- Kachel 5-8 mit dem gleichen optimierten Layout -->
+							<!-- Kachel 5 -->
+							<div
+								class="hangar-cell bg-white rounded-lg shadow-md flex flex-col">
+								<!-- Header mit Statuslicht und Status-Dropdown -->
+								<div class="card-header">
+									<div class="header-elements">
+										<!-- Statuslicht und Dropdown -->
+										<div class="status-dropdown-container">
+											<span
+												class="status-light status-neutral"
+												data-cell="5"
+												data-status="neutral"></span>
+											<select
+												id="status-5"
+												class="status-selector"
+												title="Aircraft Status">
+												<option value="neutral" selected></option>
+												<option value="ready">Ready</option>
+												<option value="maintenance">MX</option>
+												<option value="aog">AOG</option>
+											</select>
+										</div>
+
+										<!-- Position -->
+										<div class="position-container">
+											<input
+												type="text"
+												placeholder="2C"
+												id="hangar-position-5"
+												class="position-input"
+												title="Hangar Position" />
+										</div>
+									</div>
+								</div>
+
+								<!-- Hauptbereich mit Infos und Notizfeld -->
+								<div class="p-4 flex-grow flex flex-col">
+									<input
+										type="text"
+										id="aircraft-5"
+										placeholder="Aircraft ID"
+										class="aircraft-id" />
+
+									<div class="info-grid mb-3">
+										<div class="info-label">Arr:</div>
+										<input
+											type="time"
+											id="arrival-time-5"
+											class="info-input"
+											title="Time" />
+										<div class="info-label">Dep:</div>
+										<input
+											type="time"
+											id="departure-time-5"
+											class="info-input"
+											title="Time" />
+										<div class="info-label">Pos:</div>
+										<input
+											type="text"
+											id="position-5"
+											class="info-input"
+											placeholder="--"
+											maxlength="10"
+											title="Aircraft position" />
+										<div class="info-label">Tow:</div>
+										<div class="tow-status-container">
+											<select id="tow-status-5" class="tow-status-selector">
+												<option value="neutral" selected></option>
+												<option value="initiated" class="tow-initiated">
+													Initiated
+												</option>
+												<option value="ongoing" class="tow-ongoing">
+													In Progress
+												</option>
+												<option value="on-position" class="tow-on-position">
+													On Position
+												</option>
+											</select>
+										</div>
+									</div>
+
+									<!-- Notizfeld einzeilig -->
+									<div class="notes-container">
+										<textarea
+											id="notes-5"
+											placeholder="Enter notes..."
+											class="notes-textarea"></textarea>
+									</div>
+								</div>
+							</div>
+
+							<!-- Kachel 6 mit neuem Design -->
+							<div
+								class="hangar-cell bg-white rounded-lg shadow-md flex flex-col">
+								<!-- Header mit Statuslicht und Status-Dropdown -->
+								<div class="card-header">
+									<div class="header-elements">
+										<!-- Statuslicht und Dropdown -->
+										<div class="status-dropdown-container">
+											<span
+												class="status-light status-neutral"
+												data-cell="6"
+												data-status="neutral"></span>
+											<select
+												id="status-6"
+												class="status-selector"
+												title="Aircraft Status">
+												<option value="neutral" selected></option>
+												<option value="ready">Ready</option>
+												<option value="maintenance">MX</option>
+												<option value="aog">AOG</option>
+											</select>
+										</div>
+
+										<!-- Position -->
+										<div class="position-container">
+											<input
+												type="text"
+												placeholder="2D"
+												id="hangar-position-6"
+												class="position-input"
+												title="Hangar Position" />
+										</div>
+									</div>
+								</div>
+
+								<!-- Hauptbereich -->
+								<div class="p-4 flex-grow flex flex-col">
+									<input
+										type="text"
+										id="aircraft-6"
+										placeholder="Aircraft ID"
+										class="aircraft-id" />
+
+									<div class="info-grid mb-3">
+										<div class="info-label">Arr:</div>
+										<input
+											type="time"
+											id="arrival-time-6"
+											class="info-input"
+											title="Time" />
+										<div class="info-label">Dep:</div>
+										<input
+											type="time"
+											id="departure-time-6"
+											class="info-input"
+											title="Time" />
+										<div class="info-label">Pos:</div>
+										<input
+											type="text"
+											id="position-6"
+											class="info-input"
+											placeholder="--"
+											maxlength="10"
+											title="Aircraft position" />
+										<div class="info-label">Tow:</div>
+										<div class="tow-status-container">
+											<select id="tow-status-6" class="tow-status-selector">
+												<option value="neutral" selected></option>
+												<option value="initiated" class="tow-initiated">
+													Initiated
+												</option>
+												<option value="ongoing" class="tow-ongoing">
+													In Progress
+												</option>
+												<option value="on-position" class="tow-on-position">
+													On Position
+												</option>
+											</select>
+										</div>
+									</div>
+
+									<!-- Notizen einzeilig -->
+									<div class="notes-container">
+										<textarea
+											id="notes-6"
+											placeholder="Enter notes..."
+											class="notes-textarea"></textarea>
+									</div>
+								</div>
+							</div>
+
+							<!-- Kachel 7 mit neuem Design -->
+							<div
+								class="hangar-cell bg-white rounded-lg shadow-md flex flex-col">
+								<!-- Header mit Statuslicht und Status-Dropdown -->
+								<div class="card-header">
+									<div class="header-elements">
+										<!-- Statuslicht und Dropdown -->
+										<div class="status-dropdown-container">
+											<span
+												class="status-light status-neutral"
+												data-cell="7"
+												data-status="neutral"></span>
+											<select
+												id="status-7"
+												class="status-selector"
+												title="Aircraft Status">
+												<option value="neutral" selected></option>
+												<option value="ready">Ready</option>
+												<option value="maintenance">MX</option>
+												<option value="aog">AOG</option>
+											</select>
+										</div>
+
+										<!-- Position -->
+										<div class="position-container">
+											<input
+												type="text"
+												placeholder="2E"
+												id="hangar-position-7"
+												class="position-input"
+												title="Hangar Position" />
+										</div>
+									</div>
+								</div>
+
+								<!-- Hauptbereich -->
+								<div class="p-4 flex-grow flex flex-col">
+									<input
+										type="text"
+										id="aircraft-7"
+										placeholder="Aircraft ID"
+										class="aircraft-id" />
+
+									<div class="info-grid mb-3">
+										<div class="info-label">Arr:</div>
+										<input
+											type="time"
+											id="arrival-time-7"
+											class="info-input"
+											title="Time" />
+										<div class="info-label">Dep:</div>
+										<input
+											type="time"
+											id="departure-time-7"
+											class="info-input"
+											title="Time" />
+										<div class="info-label">Pos:</div>
+										<input
+											type="text"
+											id="position-7"
+											class="info-input"
+											placeholder="--"
+											maxlength="10"
+											title="Aircraft position" />
+										<div class="info-label">Tow:</div>
+										<div class="tow-status-container">
+											<select id="tow-status-7" class="tow-status-selector">
+												<option value="neutral" selected></option>
+												<option value="initiated" class="tow-initiated">
+													Initiated
+												</option>
+												<option value="ongoing" class="tow-ongoing">
+													In Progress
+												</option>
+												<option value="on-position" class="tow-on-position">
+													On Position
+												</option>
+											</select>
+										</div>
+									</div>
+
+									<!-- Notizen einzeilig -->
+									<div class="notes-container">
+										<textarea
+											id="notes-7"
+											placeholder="Enter notes..."
+											class="notes-textarea"></textarea>
+									</div>
+								</div>
+							</div>
+
+							<!-- Kachel 8 mit neuem Design -->
+							<div
+								class="hangar-cell bg-white rounded-lg shadow-md flex flex-col">
+								<!-- Header mit Statuslicht und Status-Dropdown -->
+								<div class="card-header">
+									<div class="header-elements">
+										<!-- Statuslicht und Dropdown -->
+										<div class="status-dropdown-container">
+											<span
+												class="status-light status-neutral"
+												data-cell="8"
+												data-status="neutral"></span>
+											<select
+												id="status-8"
+												class="status-selector"
+												title="Aircraft Status">
+												<option value="neutral" selected></option>
+												<option value="ready">Ready</option>
+												<option value="maintenance">MX</option>
+												<option value="aog">AOG</option>
+											</select>
+										</div>
+
+										<!-- Position -->
+										<div class="position-container">
+											<input
+												type="text"
+												placeholder="2F"
+												id="hangar-position-8"
+												class="position-input"
+												title="Hangar Position" />
+										</div>
+									</div>
+								</div>
+
+								<!-- Hauptbereich -->
+								<div class="p-4 flex-grow flex flex-col">
+									<input
+										type="text"
+										id="aircraft-8"
+										placeholder="Aircraft ID"
+										class="aircraft-id" />
+
+									<div class="info-grid mb-3">
+										<div class="info-label">Arr:</div>
+										<input
+											type="time"
+											id="arrival-time-8"
+											class="info-input"
+											title="Time" />
+										<div class="info-label">Dep:</div>
+										<input
+											type="time"
+											id="departure-time-8"
+											class="info-input"
+											title="Time" />
+										<div class="info-label">Pos:</div>
+										<input
+											type="text"
+											id="position-8"
+											class="info-input"
+											placeholder="--"
+											maxlength="10"
+											title="Aircraft position" />
+										<div class="info-label">Tow:</div>
+										<div class="tow-status-container">
+											<select id="tow-status-8" class="tow-status-selector">
+												<option value="neutral" selected></option>
+												<option value="initiated" class="tow-initiated">
+													Initiated
+												</option>
+												<option value="ongoing" class="tow-ongoing">
+													In Progress
+												</option>
+												<option value="on-position" class="tow-on-position">
+													On Position
+												</option>
+											</select>
+										</div>
+									</div>
+
+									<!-- Notizen einzeilig -->
+									<div class="notes-container">
+										<textarea
+											id="notes-8"
+											placeholder="Enter notes..."
+											class="notes-textarea"></textarea>
+									</div>
+								</div>
+							</div>
+
+							<!-- Kachel 9 -->
+							<div
+								class="hangar-cell bg-white rounded-lg shadow-md flex flex-col">
+								<!-- Header mit Statuslicht und Status-Dropdown -->
+								<div class="card-header">
+									<div class="header-elements">
+										<!-- Statuslicht und Dropdown -->
+										<div class="status-dropdown-container">
+											<span
+												class="status-light status-neutral"
+												data-cell="9"
+												data-status="neutral"></span>
+											<select
+												id="status-9"
+												class="status-selector"
+												title="Aircraft Status">
+												<option value="neutral" selected></option>
+												<option value="ready">Ready</option>
+												<option value="maintenance">MX</option>
+												<option value="aog">AOG</option>
+											</select>
+										</div>
+
+										<!-- Position -->
+										<div class="position-container">
+											<input
+												type="text"
+												placeholder="3A"
+												id="hangar-position-9"
+												class="position-input"
+												title="Hangar Position" />
+										</div>
+									</div>
+								</div>
+
+								<div class="p-4 flex-grow flex flex-col">
+									<input
+										type="text"
+										id="aircraft-9"
+										placeholder="Aircraft ID"
+										class="aircraft-id" />
+
+									<div class="info-grid mb-3">
+										<div class="info-label">Arr:</div>
+										<input
+											type="time"
+											id="arrival-time-9"
+											class="info-input"
+											title="Time" />
+										<div class="info-label">Dep:</div>
+										<input
+											type="time"
+											id="departure-time-9"
+											class="info-input"
+											title="Time" />
+										<div class="info-label">Pos:</div>
+										<input
+											type="text"
+											id="position-9"
+											class="info-input"
+											placeholder="--"
+											maxlength="10"
+											title="Aircraft position" />
+										<div class="info-label">Tow:</div>
+										<div class="tow-status-container">
+											<select id="tow-status-9" class="tow-status-selector">
+												<option value="neutral" selected></option>
+												<option value="initiated" class="tow-initiated">
+													Initiated
+												</option>
+												<option value="ongoing" class="tow-ongoing">
+													In Progress
+												</option>
+												<option value="on-position" class="tow-on-position">
+													On Position
+												</option>
+											</select>
+										</div>
+									</div>
+
+									<div class="notes-container">
+										<textarea
+											id="notes-9"
+											placeholder="Enter notes..."
+											class="notes-textarea"></textarea>
+									</div>
+								</div>
+							</div>
+
+							<!-- Kachel 10 -->
+							<div
+								class="hangar-cell bg-white rounded-lg shadow-md flex flex-col">
+								<!-- Header mit Statuslicht und Status-Dropdown -->
+								<div class="card-header">
+									<div class="header-elements">
+										<!-- Statuslicht und Dropdown -->
+										<div class="status-dropdown-container">
+											<span
+												class="status-light status-neutral"
+												data-cell="10"
+												data-status="neutral"></span>
+											<select
+												id="status-10"
+												class="status-selector"
+												title="Aircraft Status">
+												<option value="neutral" selected></option>
+												<option value="ready">Ready</option>
+												<option value="maintenance">MX</option>
+												<option value="aog">AOG</option>
+											</select>
+										</div>
+
+										<!-- Position -->
+										<div class="position-container">
+											<input
+												type="text"
+												placeholder="3B"
+												id="hangar-position-10"
+												class="position-input"
+												title="Hangar Position" />
+										</div>
+									</div>
+								</div>
+
+								<div class="p-4 flex-grow flex flex-col">
+									<input
+										type="text"
+										id="aircraft-10"
+										placeholder="Aircraft ID"
+										class="aircraft-id" />
+
+									<div class="info-grid mb-3">
+										<div class="info-label">Arr:</div>
+										<input
+											type="time"
+											id="arrival-time-10"
+											class="info-input"
+											title="Time" />
+										<div class="info-label">Dep:</div>
+										<input
+											type="time"
+											id="departure-time-10"
+											class="info-input"
+											title="Time" />
+										<div class="info-label">Pos:</div>
+										<input
+											type="text"
+											id="position-10"
+											class="info-input"
+											placeholder="--"
+											maxlength="10"
+											title="Aircraft position" />
+										<div class="info-label">Tow:</div>
+										<div class="tow-status-container">
+											<select id="tow-status-10" class="tow-status-selector">
+												<option value="neutral" selected></option>
+												<option value="initiated" class="tow-initiated">
+													Initiated
+												</option>
+												<option value="ongoing" class="tow-ongoing">
+													In Progress
+												</option>
+												<option value="on-position" class="tow-on-position">
+													On Position
+												</option>
+											</select>
+										</div>
+									</div>
+
+									<div class="notes-container">
+										<textarea
+											id="notes-10"
+											placeholder="Enter notes..."
+											class="notes-textarea"></textarea>
+									</div>
+								</div>
+							</div>
+
+							<!-- Kachel 11 -->
+							<div
+								class="hangar-cell bg-white rounded-lg shadow-md flex flex-col">
+								<!-- Header mit Statuslicht und Status-Dropdown -->
+								<div class="card-header">
+									<div class="header-elements">
+										<!-- Statuslicht und Dropdown -->
+										<div class="status-dropdown-container">
+											<span
+												class="status-light status-neutral"
+												data-cell="11"
+												data-status="neutral"></span>
+											<select
+												id="status-11"
+												class="status-selector"
+												title="Aircraft Status">
+												<option value="neutral" selected></option>
+												<option value="ready">Ready</option>
+												<option value="maintenance">MX</option>
+												<option value="aog">AOG</option>
+											</select>
+										</div>
+
+										<!-- Position -->
+										<div class="position-container">
+											<input
+												type="text"
+												placeholder="3C"
+												id="hangar-position-11"
+												class="position-input"
+												title="Hangar Position" />
+										</div>
+									</div>
+								</div>
+
+								<div class="p-4 flex-grow flex flex-col">
+									<input
+										type="text"
+										id="aircraft-11"
+										placeholder="Aircraft ID"
+										class="aircraft-id" />
+
+									<div class="info-grid mb-3">
+										<div class="info-label">Arr:</div>
+										<input
+											type="time"
+											id="arrival-time-11"
+											class="info-input"
+											title="Time" />
+										<div class="info-label">Dep:</div>
+										<input
+											type="time"
+											id="departure-time-11"
+											class="info-input"
+											title="Time" />
+
+										<div class="info-label">Pos:</div>
+										<input
+											type="text"
+											id="position-11"
+											class="info-input"
+											placeholder="--"
+											maxlength="10"
+											title="Aircraft position" />
+
+										<div class="info-label">Tow:</div>
+										<div class="tow-status-container">
+											<select id="tow-status-11" class="tow-status-selector">
+												<option value="neutral" selected></option>
+												<option value="initiated" class="tow-initiated">
+													Initiated
+												</option>
+												<option value="ongoing" class="tow-ongoing">
+													In Progress
+												</option>
+												<option value="on-position" class="tow-on-position">
+													On Position
+												</option>
+											</select>
+										</div>
+									</div>
+
+									<div class="notes-container">
+										<textarea
+											id="notes-11"
+											placeholder="Enter notes..."
+											class="notes-textarea"></textarea>
+									</div>
+								</div>
+							</div>
+
+							<!-- Kachel 12 -->
+							<div
+								class="hangar-cell bg-white rounded-lg shadow-md flex flex-col">
+								<!-- Header mit Statuslicht und Status-Dropdown -->
+								<div class="card-header">
+									<div class="header-elements">
+										<!-- Statuslicht und Dropdown -->
+										<div class="status-dropdown-container">
+											<span
+												class="status-light status-neutral"
+												data-cell="12"
+												data-status="neutral"></span>
+											<select
+												id="status-12"
+												class="status-selector"
+												title="Aircraft Status">
+												<option value="neutral" selected></option>
+												<option value="ready">Ready</option>
+												<option value="maintenance">MX</option>
+												<option value="aog">AOG</option>
+											</select>
+										</div>
+
+										<!-- Position -->
+										<div class="position-container">
+											<input
+												type="text"
+												placeholder="3D"
+												id="hangar-position-12"
+												class="position-input"
+												title="Hangar Position" />
+										</div>
+									</div>
+								</div>
+
+								<div class="p-4 flex-grow flex flex-col">
+									<input
+										type="text"
+										id="aircraft-12"
+										placeholder="Aircraft ID"
+										class="aircraft-id" />
+
+									<div class="info-grid mb-3">
+										<div class="info-label">Arr:</div>
+										<input
+											type="time"
+											id="arrival-time-12"
+											class="info-input"
+											title="Time" />
+										<div class="info-label">Dep:</div>
+										<input
+											type="time"
+											id="departure-time-12"
+											class="info-input"
+											title="Time" />
+
+										<div class="info-label">Pos:</div>
+										<input
+											type="text"
+											id="position-12"
+											class="info-input"
+											placeholder="--"
+											maxlength="10"
+											title="Aircraft position" />
+
+										<div class="info-label">Tow:</div>
+										<div class="tow-status-container">
+											<select id="tow-status-12" class="tow-status-selector">
+												<option value="neutral" selected></option>
+												<option value="initiated" class="tow-initiated">
+													Initiated
+												</option>
+												<option value="ongoing" class="tow-ongoing">
+													In Progress
+												</option>
+												<option value="on-position" class="tow-on-position">
+													On Position
+												</option>
+											</select>
+										</div>
+									</div>
+
+									<div class="notes-container">
+										<textarea
+											id="notes-12"
+											placeholder="Enter notes..."
+											class="notes-textarea"></textarea>
+									</div>
+								</div>
+							</div>
+							<!-- Kachel 12 schließender div-Tag hinzugefügt -->
+						</div>
+					</div>
+
+					<!-- Horizontale Trennlinie mit gleichmäßigem Abstand -->
+					<div class="section-divider"></div>
+
+					<!-- Abschnitt 2 Container -->
+					<div class="section-container">
+						<div id="secondaryHangarGrid" class="grid grid-cols-4 gap-4">
+							<!-- Hier werden dynamisch weitere Kacheln eingefügt -->
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Einklappbares Rechtes Menü -->
+			<div
+				id="sidebarMenu"
+				class="sidebar-container bg-industrial-medium flex flex-col">
+				<!-- Hauptinhalt der Sidebar -->
+				<div class="sidebar-content">
+					<!-- Ansichtsverwaltung als eigene Sektion -->
+					<div class="sidebar-accordion-item">
+						<div class="sidebar-accordion-header">
+							<div class="sidebar-header-content">
+								<i class="sidebar-icon">⚙️</i>
+								<h3 class="sidebar-section-title">Project Settings</h3>
+							</div>
+							<i class="dropdown-arrow">▼</i>
+						</div>
+						<div class="sidebar-accordion-content">
+							<!-- Mode Toggle Switch -->
+							<div class="sidebar-form-group">
+								<div class="sidebar-form-row">
+									<label for="modeToggle">View/Edit Mode:</label>
+									<div class="input-container">
+										<div class="mode-toggle">
+											<span class="mode-toggle-label text-xs">View</span>
+											<label class="toggle-switch">
+												<input type="checkbox" id="modeToggle" checked />
+												<span class="toggle-slider"></span>
+											</label>
+											<span class="mode-toggle-label text-xs">Edit</span>
+										</div>
+									</div>
+								</div>
+							</div>
+
+							<!-- Project Name -->
+							<div class="sidebar-form-group">
+								<label for="projectName">Project Name:</label>
+								<input
+									id="projectName"
+									type="text"
+									placeholder="Project Name"
+									class="sidebar-form-control" />
+								<input type="hidden" id="projectId" value="" />
+							</div>
+
+							<!-- Save/Load Buttons -->
+							<div class="sidebar-input-group">
+								<button
+									id="saveBtn"
+									class="sidebar-btn sidebar-btn-primary flex-1">
+									Save
+								</button>
+								<button
+									id="loadBtn"
+									class="sidebar-btn sidebar-btn-secondary flex-1">
+									Load
+								</button>
+							</div>
+						</div>
+					</div>
+
+					<!-- Display Options Sektion -->
+					<div class="sidebar-accordion-item">
+						<div class="sidebar-accordion-header">
+							<div class="sidebar-header-content">
+								<i class="sidebar-icon">🔳</i>
+								<h3 class="sidebar-section-title">Display Options</h3>
+							</div>
+							<i class="dropdown-arrow">▼</i>
+						</div>
+						<div class="sidebar-accordion-content">
+							<div class="sidebar-form-group">
+								<label for="tilesCount">Primary Tiles:</label>
+								<div class="sidebar-input-group">
+									<input
+										type="number"
+										id="tilesCount"
+										min="1"
+										max="12"
+										value="8"
+										class="sidebar-form-control" />
+									<button
+										id="updateTilesBtn"
+										class="sidebar-btn sidebar-btn-primary">
+										Update
+									</button>
+								</div>
+							</div>
+
+							<div class="sidebar-form-group">
+								<label for="secondaryTilesCount">Secondary Tiles:</label>
+								<div class="sidebar-input-group">
+									<input
+										type="number"
+										id="secondaryTilesCount"
+										min="0"
+										max="12"
+										value="4"
+										class="sidebar-form-control" />
+									<button
+										id="updateSecondaryTilesBtn"
+										class="sidebar-btn sidebar-btn-primary">
+										Update
+									</button>
+								</div>
+							</div>
+
+							<div class="sidebar-form-group">
+								<label for="layoutType">Layout:</label>
+								<select id="layoutType" class="sidebar-form-select">
+									<option value="1">1 Column</option>
+									<option value="2">2 Columns</option>
+									<option value="3">3 Columns</option>
+									<option value="4" selected>4 Columns</option>
+								</select>
+							</div>
+
+							<!-- Dark Mode Toggle -->
+							<div class="sidebar-form-group">
+								<div class="sidebar-form-row">
+									<label for="darkModeToggle">Dark Mode:</label>
+									<div class="input-container">
+										<div class="mode-toggle">
+											<span class="mode-toggle-label text-xs">Light</span>
+											<label class="toggle-switch">
+												<input type="checkbox" id="darkModeToggle" />
+												<span class="toggle-slider"></span>
+											</label>
+											<span class="mode-toggle-label text-xs">Dark</span>
+										</div>
+									</div>
+								</div>
+							</div>
+
+							<!-- NEU: Ansichtsmodus Toggle (Kachel/Tabelle) -->
+							<div class="sidebar-form-group">
+								<div class="sidebar-form-row">
+									<label for="viewModeToggle">Ansicht:</label>
+									<div class="input-container">
+										<div class="mode-toggle">
+											<span class="mode-toggle-label text-xs">Kachel</span>
+											<label class="toggle-switch">
+												<input type="checkbox" id="viewModeToggle" />
+												<span class="toggle-slider"></span>
+											</label>
+											<span class="mode-toggle-label text-xs">Tabelle</span>
+										</div>
+									</div>
+								</div>
+							</div>
+
+							<!-- Display Zoom Slider -->
+							<div class="sidebar-form-group">
+								<label for="displayZoom"
+									>Display Zoom: <span id="zoomValue">100%</span></label
+								>
+								<input
+									type="range"
+									id="displayZoom"
+									min="75"
+									max="150"
+									step="5"
+									value="100"
+									class="sidebar-form-control w-full" />
+							</div>
+						</div>
+					</div>
+
+					<!-- Suche nach Flugzeugen -->
+					<div class="sidebar-accordion-item">
+						<div class="sidebar-accordion-header">
+							<div class="sidebar-header-content">
+								<i class="sidebar-icon">🔍</i>
+								<h3 class="sidebar-section-title">Search Aircraft</h3>
+							</div>
+							<i class="dropdown-arrow">▼</i>
+						</div>
+						<div class="sidebar-accordion-content">
+							<div class="sidebar-input-group">
+								<input
+									type="text"
+									id="searchAircraft"
+									placeholder="Flugzeug-ID (z.B. D-AIZZ, N12345)"
+									class="sidebar-form-control"
+									title="Geben Sie eine gültige Flugzeugkennung ein, z.B. D-AIZZ oder N12345" />
+								<button id="btnSearch" class="sidebar-btn sidebar-btn-primary">
+									Search
+								</button>
+							</div>
+						</div>
+					</div>
+
+					<!-- Flugdaten abrufen -->
+					<div class="sidebar-accordion-item">
+						<div class="sidebar-accordion-header">
+							<div class="sidebar-header-content">
+								<i class="sidebar-icon">✈️</i>
+								<h3 class="sidebar-section-title">Flight Data</h3>
+							</div>
+							<i class="dropdown-arrow">▼</i>
+						</div>
+						<div id="flightDataContent" class="sidebar-accordion-content">
+							<div class="sidebar-form-group">
+								<label for="currentDateInput">Tag (letzter Flug):</label>
+								<input
+									type="date"
+									id="currentDateInput"
+									class="sidebar-form-control" />
+							</div>
+							<div class="sidebar-form-group">
+								<label for="nextDateInput">Tag (erster Flug):</label>
+								<input
+									type="date"
+									id="nextDateInput"
+									class="sidebar-form-control" />
+							</div>
+
+							<!-- IATA-Code Eingabefeld -->
+							<div class="sidebar-form-group">
+								<label for="airportCodeInput">Flughafen (IATA-Code):</label>
+								<input
+									type="text"
+									id="airportCodeInput"
+									name="airportCode"
+									placeholder="z.B. FRA, MUC"
+									maxlength="3"
+									value="MUC"
+									style="text-transform: uppercase"
+									class="sidebar-form-control" />
+								<p class="mt-1 text-xs text-gray-400">
+									Geben Sie einen IATA-Flughafencode ein, um die Suche zu
+									verfeinern.
+								</p>
+							</div>
+
+							<!-- API-Provider Auswahl -->
+							<div class="sidebar-form-group">
+								<label for="apiProviderSelect">API-Provider:</label>
+								<select id="apiProviderSelect" class="sidebar-form-select">
+									<option value="aerodatabox">AeroDataBox API</option>
+									<option value="apimarket">API Market</option>
+								</select>
+								<p class="mt-1 text-xs text-gray-400">
+									Wählen Sie zwischen AeroDataBox (via RapidAPI) oder API
+									Market.
+								</p>
+							</div>
+
+							<button
+								id="fetchFlightData"
+								class="sidebar-btn sidebar-btn-primary w-full">
+								Update Data
+							</button>
+
+							<!-- Neuer Button für Airport Flights -->
+							<button
+								id="showAirportFlightsBtn"
+								class="sidebar-btn sidebar-btn-secondary w-full mt-2">
+								Show Airport Flights
+							</button>
+
+							<div id="fetchStatus" class="text-sm text-center">
+								Ready to retrieve flight data
+							</div>
+						</div>
+					</div>
+
+					<!-- PDF Export Funktion -->
+					<div class="sidebar-accordion-item">
+						<div class="sidebar-accordion-header">
+							<div class="sidebar-header-content">
+								<i class="sidebar-icon">📄</i>
+								<h3 class="sidebar-section-title">Export Plan</h3>
+							</div>
+							<i class="dropdown-arrow">▼</i>
+						</div>
+						<div class="sidebar-accordion-content">
+							<div class="sidebar-form-group">
+								<label for="pdfFilename">File name:</label>
+								<input
+									type="text"
+									id="pdfFilename"
+									value="Hangar_Plan"
+									class="sidebar-form-control" />
+							</div>
+
+							<div class="sidebar-form-group">
+								<div class="flex items-center">
+									<input
+										type="checkbox"
+										id="includeNotes"
+										checked
+										class="mr-2" />
+									<label for="includeNotes">Include Notes</label>
+								</div>
+							</div>
+
+							<div class="sidebar-form-group">
+								<div class="flex items-center">
+									<input
+										type="checkbox"
+										id="landscapeMode"
+										checked
+										class="mr-2" />
+									<label for="landscapeMode">Landscape Mode</label>
+								</div>
+							</div>
+
+							<button
+								id="exportPdfBtn"
+								class="sidebar-btn sidebar-btn-primary w-full">
+								Export PDF
+							</button>
+						</div>
+					</div>
+
+					<!-- Versteckte File-Input-Elemente -->
+					<input type="file" id="jsonFileInput" accept=".json" class="hidden" />
+					<input
+						type="file"
+						id="settingsFileInput"
+						accept=".json"
+						class="hidden" />
+				</div>
+			</div>
+
+			<!-- Modales Fenster für Laden -->
+			<div
+				id="loadModal"
+				class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+				<div class="bg-industrial-medium rounded-lg p-6 w-96 max-w-full">
+					<h2 class="text-xl font-bold mb-4">Load Hangar Plan</h2>
+					<div class="mb-4">
+						<input
+							id="loadProjectName"
+							type="text"
+							placeholder="Enter Project Name"
+							class="w-full bg-industrial-dark text-white px-3 py-2 rounded form-control" />
+					</div>
+					<div class="flex justify-end space-x-3">
+						<button
+							id="cancelLoad"
+							class="px-4 py-2 bg-industrial-light text-industrial-dark rounded">
+							Cancel
+						</button>
+						<button
+							id="confirmLoad"
+							class="px-4 py-2 bg-industrial-accent rounded">
+							Load
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- E-Mail-Erfolgsmeldung Modal -->
+			<div
+				id="emailSentModal"
+				class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+				<div class="bg-industrial-medium rounded-lg p-6 w-96 max-w-full">
+					<h2 class="text-xl font-bold mb-4">Email Sent</h2>
+					<p class="mb-4">Your hangar plan has been sent successfully.</p>
+					<div class="flex justify-end">
+						<button
+							id="emailOkBtn"
+							class="px-4 py-2 bg-industrial-accent rounded">
+							OK
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- Ausgelagerte JavaScript-Dateien -->
+			<script src="js/helpers.js"></script>
+			<script src="js/debug-helpers.js"></script>
+			<script src="js/fileManager.js"></script>
+			<script src="js/weather-api.js"></script>
+			<script src="js/hangar-ui.js"></script>
+			<script src="js/hangar-data.js"></script>
+			<!-- API-Implementierungen -->
+			<script src="js/aerodatabox-api.js"></script>
+			<script src="js/amadeus-api.js"></script>
+			<script src="js/opensky-api.js"></script>
+			<!-- Neue Airport Flights Funktionalität -->
+			<script src="js/airport-flights.js"></script>
+			<!-- API-Fassade -->
+			<script src="js/api-facade.js"></script>
+			<script src="js/hangar-events.js"></script>
+			<script src="js/hangar-pdf.js"></script>
+			<script src="js/hangar.js"></script>
+			<script src="js/storage-browser.js"></script>
+			<!-- Zentraler Event-Manager für Synchronisation -->
+			<script src="js/event-manager.js"></script>
+			<!-- Vereinfachte Sync-Diagnose -->
+			<script src="js/sync-diagnosis.js"></script>
+
+			<!-- Event-Handler für den "Info anzeigen"-Button -->
+			<script>
+				document.addEventListener("DOMContentLoaded", function () {
+					// Event-Handler für den Ordnerstruktur-Info-Button
+					const showFolderInfoBtn =
+						document.getElementById("showFolderInfoBtn");
+					if (showFolderInfoBtn) {
+						showFolderInfoBtn.addEventListener("click", function () {
+							// Diese Funktion wird in folderManager.js definiert
+							if (typeof window.folderManager !== "undefined") {
+								window.folderManager.showFolderStructureInfo();
+							} else {
+								// Fallback, falls die Funktion nicht verfügbar ist
+								alert(
+									"Empfohlene Ordnerstruktur: HangarPlanner/Projekte/ für Projekte und HangarPlanner/Einstellungen/ für Einstellungen"
+								);
+							}
+						});
+					}
+
+					// Initialisierung der UI, wenn Funktionen verfügbar sind
+					if (typeof initializeUI === "function") {
+						initializeUI();
+					}
+
+					if (typeof setupUIEventListeners === "function") {
+						setupUIEventListeners();
+					}
+				});
+			</script>
+
+			<!-- Event-Handler für die neue Statusdarstellung -->
+			<script>
+				document.addEventListener("DOMContentLoaded", function () {
+					// Bestehendes DOMContentLoaded-Event erweitern
+					// ...existing code...
+
+					// Status-Dropdown-Handler für die neuen Statusfarben
+					document.querySelectorAll(".status-selector").forEach((select) => {
+						// Initial Status setzen
+						updateStatusLight(select);
+
+						// Event-Listener für Änderungen
+						select.addEventListener("change", function () {
+							updateStatusLight(this);
+						});
+					});
+
+					// Funktion zum Aktualisieren des Statuslichts
+					function updateStatusLight(select) {
+						const cellId = select.id.split("-")[1];
+						const statusValue = select.value;
+						const statusLight = document.querySelector(
+							`.status-light[data-cell="${cellId}"]`
+						);
+
+						if (statusLight) {
+							// Alle Status-Klassen entfernen
+							statusLight.classList.remove(
+								"status-ready",
+								"status-maintenance",
+								"status-aog"
+							);
+							// Neue Status-Klasse hinzufügen
+							statusLight.classList.add(`status-${statusValue}`);
+							// Status-Datenwert aktualisieren
+							statusLight.setAttribute("data-status", statusValue);
+						}
+					}
+				});
+			</script>
+
+			<!-- Notizfelder in allen Kacheln auf Englisch ändern mit direktem DOM-Skript -->
+			<script>
+				document.addEventListener("DOMContentLoaded", function () {
+					// Bestehender Code...
+
+					// Alle Notizfelder auf Englisch umstellen
+					document.querySelectorAll(".notes-textarea").forEach((textarea) => {
+						if (
+							textarea.getAttribute("placeholder") === "Notizen eingeben..." ||
+							!textarea.getAttribute("placeholder")
+						) {
+							textarea.setAttribute("placeholder", "Enter notes...");
+						}
+					});
+
+					// Status-Dropdowns Hintergrundfarbe forcieren
+					document.querySelectorAll(".status-selector").forEach((select) => {
+						select.style.backgroundColor = "#e6eaef";
+					});
+				});
+			</script>
+
+			<!-- Robustheitsskript für dynamisch erzeugte Elemente -->
+			<script>
+				// Sofort ausführen und dann erneut verzögert (um dynamisch erstellte Elemente zu erfassen)
+				function updateTextareasAndSelects() {
+					// Alle Notizfelder auf Englisch umstellen
+					document.querySelectorAll(".notes-textarea").forEach((textarea) => {
+						if (
+							textarea.getAttribute("placeholder") === "Notizen eingeben..." ||
+							!textarea.getAttribute("placeholder")
+						) {
+							textarea.setAttribute("placeholder", "Enter notes...");
+						}
+					});
+
+					// Status-Dropdowns Hintergrundfarbe forcieren
+					document.querySelectorAll(".status-selector").forEach((select) => {
+						select.style.backgroundColor = "#e6eaef";
+					});
+				}
+
+				// Mehrfach ausführen um sicherzustellen, dass auch nachträglich generierte Elemente erfasst werden
+				document.addEventListener("DOMContentLoaded", function () {
+					// Sofort ausführen
+					updateTextareasAndSelects();
+
+					// Dann nochmal mit Verzögerungen
+					setTimeout(updateTextareasAndSelects, 500);
+					setTimeout(updateTextareasAndSelects, 1500);
+
+					// Auch bei UI-Änderungen erneut ausführen
+					document.addEventListener(
+						"secondaryTilesCreated",
+						updateTextareasAndSelects
+					);
+				});
+			</script>
+
+			<!-- Initialisierung des Toggle-Buttons mit korrekter Richtungsanzeige -->
+			<script>
+				document.addEventListener("DOMContentLoaded", function () {
+					// Initialisierung des Toggle-Buttons mit korrekter Richtungsanzeige
+					const menuToggle = document.getElementById("menuToggle");
+					const isSidebarCollapsed =
+						document.body.classList.contains("sidebar-collapsed");
+					if (menuToggle) {
+						menuToggle.textContent = isSidebarCollapsed ? "»" : "»";
+					}
+				});
+			</script>
+
+			<!-- Event-Handler für Towing-Status Dropdowns -->
+			<script>
+				document.addEventListener("DOMContentLoaded", function () {
+					// Towing-Status-Dropdown-Handler für die farbliche Kennzeichnung
+					function setupTowStatusHandlers() {
+						document
+							.querySelectorAll(".tow-status-selector")
+							.forEach((select) => {
+								// Initial Status-Farbe setzen
+								updateTowStatusStyles(select);
+
+								// Event-Listener für Änderungen
+								select.addEventListener("change", function () {
+									updateTowStatusStyles(this);
+								});
+							});
+					}
+
+					// Funktion zum Aktualisieren der Towing-Status-Farben
+					function updateTowStatusStyles(select) {
+						// Alle Styling-Klassen entfernen
+						select.classList.remove(
+							"tow-neutral",
+							"tow-initiated",
+							"tow-ongoing",
+							"tow-on-position"
+						);
+
+						// Neue Styling-Klasse basierend auf dem Wert hinzufügen
+						const value = select.value;
+						select.classList.add(`tow-${value}`);
+
+						// Optional: Hintergrundfarbe direkt setzen
+						if (value === "neutral") {
+							select.style.backgroundColor = "white";
+							select.style.color = "#333333";
+						} else if (value === "initiated") {
+							select.style.backgroundColor = "#FEF3C7"; // Hellgelb
+							select.style.color = "#92400E";
+						} else if (value === "ongoing") {
+							select.style.backgroundColor = "#DBEAFE"; // Hellblau
+							select.style.color = "#1E40AF";
+						} else if (value === "on-position") {
+							select.style.backgroundColor = "#D1FAE5"; // Hellgrün
+							select.style.color = "#065F46";
+						}
+					}
+
+					// Initial ausführen
+					setupTowStatusHandlers();
+
+					// Auch bei UI-Updates ausführen
+					document.addEventListener(
+						"secondaryTilesCreated",
+						setupTowStatusHandlers
+					);
+
+					// Mit Verzögerung nochmal ausführen, um dynamisch erstellte Elemente zu erfassen
+					setTimeout(setupTowStatusHandlers, 500);
+				});
+			</script>
+
+			<!-- Debug Script für Position-Klon-Problem -->
+			<script src="js/debug-position-clone.js"></script>
+		</div>
+	</body>
+</html>

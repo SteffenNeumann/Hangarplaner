@@ -1,0 +1,144 @@
+#airport-flights-container {
+	max-width: 100%;
+	margin-top: 1.5rem;
+	margin-bottom: 1.5rem;
+}
+
+/* Listen-Style für Flugdaten */
+.flights-list {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+	gap: 1rem;
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+
+/* Responsive Grid für verschiedene Bildschirmgrößen */
+@media (min-width: 768px) {
+	.flights-list {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+@media (min-width: 1024px) {
+	.flights-list {
+		grid-template-columns: repeat(3, 1fr);
+	}
+}
+
+@media (min-width: 1280px) {
+	.flights-list {
+		grid-template-columns: repeat(4, 1fr);
+	}
+}
+
+/* Einzelnes Flugelement */
+.flight-item {
+	background-color: white;
+	border-radius: 0.5rem;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+	padding: 1rem;
+	transition: all 0.2s ease;
+	display: flex;
+	flex-direction: column;
+}
+
+.flight-item:hover {
+	box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
+}
+
+/* Header eines Flug-Elements mit Flugnummer und Status */
+.flight-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 0.75rem;
+}
+
+.flight-number {
+	font-weight: bold;
+	font-size: 1.125rem;
+}
+
+.aircraft-reg {
+	color: #666;
+	font-size: 0.875rem;
+	margin-left: 0.5rem;
+}
+
+/* Status-Anzeige */
+.flight-status {
+	padding: 0.25rem 0.5rem;
+	font-size: 0.75rem;
+	border-radius: 1rem;
+	font-weight: 500;
+}
+
+.status-landed {
+	color: #2ecc71;
+}
+.status-airborne {
+	color: #3498db;
+}
+.status-delayed {
+	color: #f39c12;
+}
+.status-scheduled {
+	color: #7f8c8d;
+}
+
+/* Flug-Details with time and airport */
+.flight-details {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-top: 0.5rem;
+}
+
+.flight-time-section,
+.flight-airport-section {
+	display: flex;
+	flex-direction: column;
+}
+
+.flight-time-label,
+.airport-label {
+	font-size: 0.75rem;
+	color: #7f8c8d;
+	margin-bottom: 0.25rem;
+}
+
+.flight-time {
+	font-size: 1.5rem;
+	font-weight: 500;
+	line-height: 1.2;
+}
+
+.direction-symbol {
+	font-size: 1.5rem;
+	font-weight: bold;
+	margin: 0 0.75rem;
+}
+
+.airport-code {
+	font-size: 1.25rem;
+	font-weight: 500;
+}
+
+/* Überschriften für die Abschnitte */
+.flights-title {
+	font-size: 1.25rem;
+	font-weight: bold;
+	margin: 1.5rem 0 1rem 0;
+	padding-bottom: 0.5rem;
+	border-bottom: 1px solid #e0e0e0;
+}
+
+/* Nachricht wenn keine Flüge gefunden wurden */
+.no-flights-message {
+	text-align: center;
+	padding: 2rem 0;
+	color: #6c757d;
+	font-style: italic;
+}

@@ -371,7 +371,7 @@
 												data-cell="3"
 												data-status="neutral"></span>
 											<select
-											id="status-3"
+												id="status-3"
 												class="status-selector"
 												title="Aircraft Status">
 												<option value="neutral" selected></option>
@@ -560,7 +560,7 @@
 												data-cell="5"
 												data-status="neutral"></span>
 											<select
-											id="status-5"
+												id="status-5"
 												class="status-selector"
 												title="Aircraft Status">
 												<option value="neutral" selected></option>
@@ -742,7 +742,7 @@
 												data-cell="7"
 												data-status="neutral"></span>
 											<select
-											id="status-7"
+												id="status-7"
 												class="status-selector"
 												title="Aircraft Status">
 												<option value="neutral" selected></option>
@@ -868,7 +868,7 @@
 										<div class="info-label">Arr:</div>
 										<input
 											type="time"
-										id="arrival-time-8"
+											id="arrival-time-8"
 											class="info-input"
 											title="Time" />
 										<div class="info-label">Dep:</div>
@@ -964,7 +964,7 @@
 										<div class="info-label">Dep:</div>
 										<input
 											type="time"
-										id="departure-time-9"
+											id="departure-time-9"
 											class="info-input"
 											title="Time" />
 										<div class="info-label">Pos:</div>
@@ -1547,69 +1547,64 @@
 								Show Airport Flights
 							</button>
 
-							<div id="fetchStatus" class="
-								Ready to retrieve flight data
-							</div>
+							<div id="fetchStatus" class="text-sm text-center"></div>
+							Ready to retrieve flight data
 						</div>
 					</div>
-
-					<!-- PDF Export Funktion -->
-					<div class="sidebar-accordion-item">
-						<div class="sidebar-accordion-header">
-							<div class="sidebar-header-content">
-								<i class="sidebar-icon">📄</i>
-								<h3 class="sidebar-section-title">Export Plan</h3>
-							</div>
-							<i class="dropdown-arrow">▼</i>
-						</div>
-						<div class="sidebar-accordion-content">
-							<div class="sidebar-form-group">
-								<label for="pdfFilename">File name:</label>
-								<input
-									type="text"
-									id="pdfFilename"
-									value="Hangar_Plan"
-									class="sidebar-form-control" />
-							</div>
-
-							<div class="sidebar-form-group">
-								<div class="flex items-center">
-									<input
-										type="checkbox"
-										id="includeNotes"
-										checked
-										class="mr-2" />
-									<label for="includeNotes">Include Notes</label>
-								</div>
-							</div>
-
-							<div class="sidebar-form-group">
-								<div class="flex items-center">
-									<input
-										type="checkbox"
-										id="landscapeMode"
-										checked
-										class="mr-2" />
-									<label for="landscapeMode">Landscape Mode</label>
-								</div>
-							</div>
-
-							<button
-								id="exportPdfBtn"
-								class="sidebar-btn sidebar-btn-primary w-full">
-								Export PDF
-							</button>
-						</div>
-					</div>
-
-					<!-- Versteckte File-Input-Elemente -->
-					<input type="file" id="jsonFileInput" accept=".json" class="hidden" />
-					<input
-						type="file"
-						id="settingsFileInput"
-						accept=".json"
-						class="hidden" />
 				</div>
+
+				<!-- PDF Export Funktion -->
+				<div class="sidebar-accordion-item">
+					<div class="sidebar-accordion-header">
+						<div class="sidebar-header-content">
+							<i class="sidebar-icon">📄</i>
+							<h3 class="sidebar-section-title">Export Plan</h3>
+						</div>
+						<i class="dropdown-arrow">▼</i>
+					</div>
+					<div class="sidebar-accordion-content">
+						<div class="sidebar-form-group">
+							<label for="pdfFilename">File name:</label>
+							<input
+								type="text"
+								id="pdfFilename"
+								value="Hangar_Plan"
+								class="sidebar-form-control" />
+						</div>
+
+						<div class="sidebar-form-group">
+							<div class="flex items-center">
+								<input type="checkbox" id="includeNotes" checked class="mr-2" />
+								<label for="includeNotes">Include Notes</label>
+							</div>
+						</div>
+
+						<div class="sidebar-form-group">
+							<div class="flex items-center">
+								<input
+									type="checkbox"
+									id="landscapeMode"
+									checked
+									class="mr-2" />
+								<label for="landscapeMode">Landscape Mode</label>
+							</div>
+						</div>
+
+						<button
+							id="exportPdfBtn"
+							class="sidebar-btn sidebar-btn-primary w-full">
+							Export PDF
+						</button>
+					</div>
+				</div>
+
+				<!-- Versteckte File-Input-Elemente -->
+				<input type="file" id="jsonFileInput" accept=".json" class="hidden" />
+				<input
+					type="file"
+					id="settingsFileInput"
+					accept=".json"
+					class="hidden" />
 			</div>
 
 			<!-- Modales Fenster für Laden -->
@@ -1907,7 +1902,7 @@
 
 			<!-- System Reparatur -->
 			<script src="js/system-repair.js"></script>
-			
+
 			<!-- Validation und Testing -->
 			<script src="js/system-validator.js"></script>
 

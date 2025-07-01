@@ -1113,9 +1113,57 @@ function collectTileData(cellId) {
 	}
 }
 
+/**
+ * Aktualisiert die Anzahl der sichtbaren primären Kacheln
+ * @param {number} count - Anzahl der sichtbaren Kacheln
+ */
+function updateTiles(count) {
+	console.log(`🔧 Aktualisiere primäre Kacheln: ${count}`);
+
+	try {
+		const grid = document.getElementById("hangarGrid");
+		if (!grid) {
+			console.error("❌ Primärer Grid nicht gefunden");
+			return;
+		}
+
+		const tiles = grid.querySelectorAll(".hangar-cell");
+		console.log(`Gefunden ${tiles.length} primäre Kacheln`);
+
+		// Zeige/verstecke Kacheln basierend auf count
+		tiles.forEach((tile, index) => {
+			if (index < count) {
+				tile.style.display = "";
+				tile.style.visibility = "visible";
+			} else {
+				tile.style.display = "none";
+				tile.style.visibility = "hidden";
+			}
+		});
+
+		// Aktualisiere auch das UI-Eingabefeld
+		const tilesCountInput = document.getElementById("tilesCount");
+		if (tilesCountInput && tilesCountInput.value !== count.toString()) {
+			tilesCountInput.value = count;
+		}
+
+		console.log(`✅ ${count} primäre Kacheln aktiviert`);
+
+		// Event dispatchen für andere Module
+		document.dispatchEvent(
+			new CustomEvent("primaryTilesUpdated", {
+				detail: { count },
+			})
+		);
+	} catch (error) {
+		console.error("❌ Fehler beim Aktualisieren der primären Kacheln:", error);
+	}
+}
+
 // Export des hangarUI Objekts
 window.hangarUI = {
 	uiSettings,
+	updateTiles,
 	updateSecondaryTiles,
 	updateCellAttributes,
 	setupSecondaryTileEventListeners,
@@ -1191,9 +1239,86 @@ window.hangarUI = {
 		);
 	},
 
+	/**
+	 * Initialisiert Event-Listener für sekundäre Kacheln
+	 */
+	setupSecondaryTileEventListeners: function () {
+		// Status-Selects für sekundäre Kacheln finden und Eventhandler zuweisen
+		document
+			.querySelectorAll('#secondaryHangarGrid select[id^="status-"]')
+			.forEach((select) => {
+				const cellId = parseInt(select.id.split("-")[1]);
+				select.onchange = function () {
+					updateStatusLights(cellId);
+				};
+
+				// Initialen Status setzen
+				updateStatusLights(cellId);
+			});
+
+		// Event-Listener für Position-Eingabefelder in sekundären Kacheln
+		document
+			.querySelectorAll('#secondaryHangarGrid input[id^="hangar-position-"]')
+			.forEach((input) => {
+				const cellId = parseInt(input.id.split("-")[2]);
+				console.log(
+					`Event-Handler für Position in sekundärer Kachel ${cellId} eingerichtet`
+				);
+
+				// Event-Handler für automatisches Speichern
+				input.addEventListener("blur", function () {
+					console.log(
+						`Position in sekundärer Kachel ${cellId} geändert: ${this.value}`
+					);
+					if (typeof window.hangarUI.uiSettings.save === "function") {
+						setTimeout(
+							() =>
+								window.hangarUI.uiSettings.save.call(
+									window.hangarUI.uiSettings
+								),
+							100
+						);
+					}
+				});
+			});
+
+		// Event-Listener für manuelle Eingabefelder in sekundären Kacheln
+		document
+			.querySelectorAll(
+				'#secondaryHangarGrid input[placeholder="Manual Input"]'
+			)
+			.forEach((input) => {
+				// ID zuweisen, falls noch nicht vorhanden
+				const cellId = parseInt(
+					input
+						.closest(".hangar-cell")
+						.querySelector('[id^="status-"]')
+						.id.split("-")[1]
+				);
+				if (!input.id) input.id = `manual-input-${cellId}`;
+
+				// Event-Handler für automatisches Speichern
+				input.addEventListener("blur", function () {
+					console.log(
+						`Manuelle Eingabe in sekundärer Kachel ${cellId} geändert: ${this.value}`
+					);
+					if (typeof window.hangarUI.uiSettings.save === "function") {
+						setTimeout(
+							() =>
+								window.hangarUI.uiSettings.save.call(
+									window.hangarUI.uiSettings
+								),
+							100
+						);
+					}
+				});
+			});
+	},
+
 	// ...existing functions...
 };
 
 // Kritische Funktionen global verfügbar machen
+window.updateTiles = updateTiles;
 window.collectTileData = collectTileData;
 window.updateCellAttributes = updateCellAttributes;

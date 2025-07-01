@@ -280,7 +280,10 @@ function checkRequiredScripts() {
 		{ name: "helpers", obj: window.helpers || window.showNotification },
 		{ name: "hangarUI", obj: window.hangarUI },
 		{ name: "hangarData", obj: window.hangarData },
-		{ name: "hangarEvents", obj: window.hangarEvents },
+		{
+			name: "hangarEvents",
+			obj: window.hangarEvents || window.setupUIEventListeners,
+		},
 	];
 
 	let allLoaded = true;
@@ -288,6 +291,8 @@ function checkRequiredScripts() {
 		if (!script.obj) {
 			console.error(`Benötigtes Skript '${script.name}' wurde nicht geladen!`);
 			allLoaded = false;
+		} else {
+			console.log(`✅ Skript '${script.name}' erfolgreich geladen`);
 		}
 	});
 

@@ -4,6 +4,84 @@
  * Arbeitet mit dem sync/data.php Script zusammen
  */
 
+// Robuste Fallback-Implementierung für saveFlightTimeValueToLocalStorage
+if (!window.saveFlightTimeValueToLocalStorage) {
+	window.saveFlightTimeValueToLocalStorage = function (
+		cellId,
+		fieldType,
+		value
+	) {
+		console.log(
+			`💾 Fallback Save: ${fieldType} für Kachel ${cellId} = "${value}"`
+		);
+
+		try {
+			// Direkte localStorage-Speicherung als Fallback
+			const key = `tile_${cellId}_${fieldType}`;
+			localStorage.setItem(key, value);
+
+			// Auch in hangarPlannerData integrieren falls verfügbar
+			const existing = JSON.parse(
+				localStorage.getItem("hangarPlannerData") || "{}"
+			);
+			if (!existing.tiles) existing.tiles = {};
+			if (!existing.tiles[cellId]) existing.tiles[cellId] = {};
+			existing.tiles[cellId][fieldType] = value;
+			existing.lastModified = new Date().toISOString();
+			localStorage.setItem("hangarPlannerData", JSON.stringify(existing));
+
+			console.log(`✅ Fallback: ${fieldType} für Kachel ${cellId} gespeichert`);
+		} catch (error) {
+			console.error(
+				`❌ Fallback-Speicherfehler für ${fieldType} (Kachel ${cellId}):`,
+				error
+			);
+		}
+	};
+	console.log(
+		"🔧 Fallback-Implementierung für saveFlightTimeValueToLocalStorage erstellt"
+	);
+}
+
+// Robuste Fallback-Implementierung für collectAllHangarData
+if (!window.collectAllHangarData) {
+	window.collectAllHangarData = function () {
+		console.log("🔧 Fallback: collectAllHangarData wird ausgeführt");
+
+		try {
+			// Einfache Implementierung die localStorage nutzt
+			const existing = JSON.parse(
+				localStorage.getItem("hangarPlannerData") || "{}"
+			);
+
+			// Minimale Datenstruktur erstellen
+			const result = {
+				id: existing.id || Date.now().toString(),
+				metadata: existing.metadata || {
+					created: new Date().toISOString(),
+					lastModified: new Date().toISOString(),
+				},
+				settings: existing.settings || {},
+				primaryTiles: existing.primaryTiles || [],
+				secondaryTiles: existing.secondaryTiles || [],
+			};
+
+			console.log("✅ Fallback: Basis-Datenstruktur erstellt");
+			return result;
+		} catch (error) {
+			console.error("❌ Fallback-Fehler in collectAllHangarData:", error);
+			return {
+				id: Date.now().toString(),
+				metadata: { created: new Date().toISOString() },
+				settings: {},
+				primaryTiles: [],
+				secondaryTiles: [],
+			};
+		}
+	};
+	console.log("🔧 Fallback-Implementierung für collectAllHangarData erstellt");
+}
+
 window.displayOptions = {
 	// Standardwerte
 	defaults: {
@@ -24,11 +102,16 @@ window.displayOptions = {
 	async init() {
 		console.log("🎛️ Display Options werden initialisiert...");
 
-		// Versuche Daten zu laden
-		const loaded = await this.loadFromServer();
+		// Versuche Daten zu laden (Server -> localStorage -> Defaults)
+		let loaded = await this.loadFromServer();
 
 		if (!loaded) {
-			// Falls nicht geladen werden konnte, verwende Standardwerte
+			console.log("⚠️ Server-Laden fehlgeschlagen, versuche localStorage...");
+			loaded = this.loadFromLocalStorage();
+		}
+
+		if (!loaded) {
+			// Falls nichts geladen werden konnte, verwende Standardwerte
 			this.current = { ...this.defaults };
 			console.log("📋 Standardwerte für Display Options geladen");
 		}
@@ -39,7 +122,7 @@ window.displayOptions = {
 		// Event-Listener setzen
 		this.setupEventListeners();
 
-		console.log("✅ Display Options initialisiert");
+		console.log("✅ Display Options initialisiert:", this.current);
 	},
 
 	/**
@@ -74,12 +157,15 @@ window.displayOptions = {
 	},
 
 	/**
-	 * Speichert Display Options auf dem Server
+	 * Speichert Display Options auf dem Server und lokal
 	 */
 	async saveToServer() {
 		try {
 			// Aktuelle Werte aus UI sammeln
 			this.collectFromUI();
+
+			// Zuerst lokale Kopie speichern (als Fallback)
+			this.saveToLocalStorage();
 
 			// Zuerst aktuelle Daten vom Server holen
 			let serverData = {};
@@ -132,6 +218,43 @@ window.displayOptions = {
 		} catch (error) {
 			console.error("❌ Fehler beim Speichern der Display Options:", error);
 			this.showNotification(`Fehler beim Speichern: ${error.message}`, "error");
+			// Fallback: nur lokal speichern
+			console.log("📋 Fallback: Speichere nur lokal");
+			this.saveToLocalStorage();
+			return false;
+		}
+	},
+
+	/**
+	 * Speichert Display Options nur in localStorage (Fallback)
+	 */
+	saveToLocalStorage() {
+		try {
+			this.collectFromUI();
+			localStorage.setItem("displayOptions", JSON.stringify(this.current));
+			console.log("💾 Display Options lokal gespeichert");
+			return true;
+		} catch (error) {
+			console.error("❌ Fehler beim lokalen Speichern:", error);
+			return false;
+		}
+	},
+
+	/**
+	 * Lädt Display Options aus localStorage (Fallback)
+	 */
+	loadFromLocalStorage() {
+		try {
+			const saved = localStorage.getItem("displayOptions");
+			if (saved) {
+				const parsed = JSON.parse(saved);
+				this.current = { ...this.defaults, ...parsed };
+				console.log("📥 Display Options aus localStorage geladen");
+				return true;
+			}
+			return false;
+		} catch (error) {
+			console.error("❌ Fehler beim lokalen Laden:", error);
 			return false;
 		}
 	},
@@ -330,6 +453,8 @@ window.displayOptions = {
 				this.saveToServer();
 			});
 		}
+
+		console.log("🎛️ Display Options Event-Listener eingerichtet");
 	},
 
 	/**
@@ -366,7 +491,19 @@ window.displayOptions = {
 	},
 };
 
-// Beim Laden der Seite initialisieren
+// Beim Laden der Seite initialisieren - robuste Version mit Fallbacks
 document.addEventListener("DOMContentLoaded", () => {
+	console.log("🎛️ Display Options DOMContentLoaded - initialisiere...");
+
+	// Sofort initialisieren, da wir jetzt Fallback-Implementierungen haben
 	window.displayOptions.init();
+
+	// Zusätzliche Initialisierung nach kurzer Verzögerung für bessere Integration
+	setTimeout(() => {
+		console.log(
+			"🔄 Display Options - verzögerte Re-Initialisierung für bessere Integration"
+		);
+		window.displayOptions.updateUI();
+		window.displayOptions.applySettings();
+	}, 1000);
 });

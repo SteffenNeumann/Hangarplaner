@@ -1,11 +1,20 @@
 {
-  "positions": {},
-  "aircraft": {},
-  "settings": {},
-  "metadata": {
-    "projectName": "2025_06_10 Hangarplanner",
-    "lastSaved": "2025-06-10T08:43:38.422Z",
-    "timestamp": 1749545018422,
-    "lastModified": "10.6.2025, 10:43:38"
-  }
+	"positions": {},
+	"aircraft": {},
+	"settings": {
+		"displayOptions": {
+			"tilesCount": 8,
+			"secondaryTilesCount": 4,
+			"layout": 4,
+			"darkMode": false,
+			"viewMode": false,
+			"zoomLevel": 100
+		}
+	},
+	"metadata": {
+		"projectName": "2025_06_10 Hangarplanner",
+		"lastSaved": "2025-07-01T12:00:00.000Z",
+		"timestamp": 1719835200000,
+		"lastModified": "1.7.2025, 14:00:00"
+	}
 }

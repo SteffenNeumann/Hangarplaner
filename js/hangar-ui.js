@@ -1,4 +1,6 @@
 const uiSettings = {
+	// DEPRECATED: Diese Einstellungen werden jetzt von display-options.js verwaltet
+	// und in data.json gespeichert statt localStorage
 	tilesCount: 8,
 	secondaryTilesCount: 0,
 	layout: 4,
@@ -6,8 +8,14 @@ const uiSettings = {
 	zoomLevel: 100,
 	tableView: false, // Neue Einstellung für die Tabellenansicht
 
-	// Lädt Einstellungen aus dem LocalStorage (beibehalten)
+	// DEPRECATED: Lädt Einstellungen aus dem LocalStorage - wird durch display-options.js ersetzt
 	load: async function () {
+		console.warn(
+			"⚠️ uiSettings.load() ist veraltet. Verwende window.displayOptions stattdessen."
+		);
+		return false;
+
+		/* DEPRECATED - localStorage wird nicht mehr verwendet
 		try {
 			// Aus localStorage laden
 			const savedSettingsJSON = localStorage.getItem("hangarPlannerSettings");
@@ -41,10 +49,17 @@ const uiSettings = {
 			);
 		}
 		return false;
+		*/
 	},
 
-	// Speichert Einstellungen in localStorage (beibehalten) und optional als Datei
+	// DEPRECATED: Speichert Einstellungen - wird durch display-options.js ersetzt
 	save: async function (exportToFile = false) {
+		console.warn(
+			"⚠️ uiSettings.save() ist veraltet. Verwende window.displayOptions stattdessen."
+		);
+		return false;
+
+		/* DEPRECATED - localStorage wird nicht mehr verwendet
 		try {
 			// Aktuelle Werte aus den Eingabefeldern holen
 			if (checkElement("tilesCount")) {
@@ -146,6 +161,7 @@ const uiSettings = {
 			showNotification(`Fehler beim Speichern: ${error.message}`, "error");
 			return false;
 		}
+		*/
 	},
 
 	/**

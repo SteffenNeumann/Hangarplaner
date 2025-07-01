@@ -15,7 +15,8 @@ function setupUIEventListeners() {
 			modeToggle.addEventListener("change", toggleEditMode);
 		}
 
-		// Layout-Wechsel-Handler
+		// DEPRECATED: Layout-Wechsel-Handler wird jetzt von display-options.js verwaltet
+		/* OLD CODE
 		const layoutType = document.getElementById("layoutType");
 		if (layoutType) {
 			layoutType.addEventListener("change", function () {
@@ -23,8 +24,10 @@ function setupUIEventListeners() {
 				window.hangarUI.uiSettings.apply();
 			});
 		}
+		*/
 
-		// Primary Tiles Update-Handler
+		// DEPRECATED: Primary Tiles Update-Handler wird jetzt von display-options.js verwaltet
+		/* OLD CODE
 		const updateTilesBtn = document.getElementById("updateTilesBtn");
 		if (updateTilesBtn) {
 			updateTilesBtn.addEventListener("click", function () {
@@ -68,8 +71,10 @@ function setupUIEventListeners() {
 				}
 			});
 		}
+		*/
 
-		// Secondary Tiles Update-Handler
+		// DEPRECATED: Secondary Tiles Update-Handler wird jetzt von display-options.js verwaltet
+		/* OLD CODE
 		const updateSecondaryTilesBtn = document.getElementById(
 			"updateSecondaryTilesBtn"
 		);
@@ -117,6 +122,7 @@ function setupUIEventListeners() {
 				}
 			});
 		}
+		*/
 
 		// Menü-Toggle-Button
 		const menuToggle = document.getElementById("menuToggle");

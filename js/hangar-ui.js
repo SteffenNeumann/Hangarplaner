@@ -947,18 +947,75 @@ window.hangarUI = {
 	updateCellAttributes,
 	setupSecondaryTileEventListeners,
 	adjustScaling,
-	toggleSecondarySection,
-	updateStatusLights,
-	checkElement,
-	formatAircraftId,
-	setupAircraftIdFormatting,
-	collectTileData,
-	applyTileData,
-	collectTileValues,
-	applyTileValues,
-	loadSecondaryTileValues,
-	saveCollectedData,
-	createEmptySecondaryTiles,
-	createSecondaryTilesForSync,
-	createSecondaryTilesForSync,
+
+	/**
+	 * Initialisiert das Sektion-Layout
+	 */
+	initSectionLayout: function () {
+		console.log("🔧 Initialisiere Sektion-Layout...");
+
+		// Stelle sicher, dass alle erforderlichen Sektionen vorhanden sind
+		const requiredSections = [
+			"hangarGrid",
+			"secondaryHangarGrid",
+			"sidebarMenu",
+		];
+
+		let allFound = true;
+		requiredSections.forEach((sectionId) => {
+			const section = document.getElementById(sectionId);
+			if (!section) {
+				console.warn(`⚠️ Sektion ${sectionId} nicht gefunden`);
+				allFound = false;
+			} else {
+				console.log(`✅ Sektion ${sectionId} gefunden`);
+			}
+		});
+
+		if (allFound) {
+			// Initiale UI-Einstellungen anwenden
+			this.uiSettings.apply();
+			console.log("✅ Sektion-Layout erfolgreich initialisiert");
+		} else {
+			console.error("❌ Nicht alle erforderlichen Sektionen gefunden");
+		}
+	},
+
+	/**
+	 * Initialisiert das Sidebar-Akkordeon
+	 */
+	initializeSidebarAccordion: function () {
+		console.log("🔧 Initialisiere Sidebar-Akkordeon...");
+
+		const accordionHeaders = document.querySelectorAll(
+			".sidebar-accordion-header"
+		);
+
+		accordionHeaders.forEach((header) => {
+			header.addEventListener("click", function () {
+				const content = this.nextElementSibling;
+				const arrow = this.querySelector(".dropdown-arrow");
+
+				if (
+					content &&
+					content.classList.contains("sidebar-accordion-content")
+				) {
+					// Toggle open/close
+					if (content.classList.contains("open")) {
+						content.classList.remove("open");
+						if (arrow) arrow.textContent = "▼";
+					} else {
+						content.classList.add("open");
+						if (arrow) arrow.textContent = "▲";
+					}
+				}
+			});
+		});
+
+		console.log(
+			`✅ Sidebar-Akkordeon für ${accordionHeaders.length} Header initialisiert`
+		);
+	},
+
+	// ...existing functions...
 };

@@ -4,7 +4,8 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>Hangar Planner - Aircraft Management</title>
-		<script src="https://cdn.tailwindcss.com"></script>
+		<!-- Tailwind CSS Production Build (statt CDN) -->
+		<script src="https://unpkg.com/tailwindcss@^3/dist/tailwind.min.js"></script>
 		<!-- PDF Export Library -->
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 		<script>
@@ -1872,6 +1873,9 @@
 
 			<!-- localStorage Migration Script -->
 			<script src="js/localStorage-migration.js"></script>
+
+			<!-- Initialization Debug Script -->
+			<script src="js/initialization-debug.js"></script>
 		</div>
 	</body>
 </html>

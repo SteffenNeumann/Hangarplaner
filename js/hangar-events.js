@@ -1967,632 +1967,82 @@ function applyFlightDataToCell(cellId, flightData, preferredAirport) {
 }
 
 /**
- * Richtet die Event-Handler für Eingabefelder ein
- * Wird aufgerufen, nachdem DOM-Updates durchgeführt wurden
+ * Speichert einen einzelnen Feldwert in localStorage
+ * @param {number} cellId - Kachel-ID
+ * @param {string} fieldType - Feldtyp (position, aircraft, arrivalTime, etc.)
+ * @param {string} value - Zu speichernder Wert
  */
-function setupInputEventListeners() {
-	console.log("🔧 Einrichtung von Input Event-Listenern...");
+function saveFlightTimeValueToLocalStorage(cellId, fieldType, value) {
+	try {
+		// Sammle alle aktuellen Daten
+		const currentData = collectAllHangarData();
 
-	// Event-Handler für PRIMÄRE Kacheln einrichten
-	document.querySelectorAll("#hangarGrid .hangar-cell").forEach((cell) => {
-		// Verwende das data-cell-id Attribut, um die korrekte ID zu bekommen
-		const cellId = parseInt(cell.getAttribute("data-cell-id") || 0);
+		if (currentData && currentData.primaryTiles && currentData.secondaryTiles) {
+			// Finde die entsprechende Kachel
+			let targetTile = null;
 
-		// Fallback: Aus der Aircraft-Input-ID ableiten
-		if (!cellId || cellId === 0) {
-			const aircraftInput = cell.querySelector('input[id^="aircraft-"]');
-			if (aircraftInput) {
-				const extractedId = parseInt(aircraftInput.id.split("-")[1]);
-				cell.setAttribute("data-cell-id", extractedId);
-				console.log(
-					`✅ Primäre Kachel ID ${extractedId} aus Aircraft-Input abgeleitet`
-				);
-			}
-		}
-
-		const finalCellId = parseInt(cell.getAttribute("data-cell-id") || 0);
-
-		// Container-Validation: Primäre Kacheln sollten IDs 1-12 haben
-		if (!finalCellId || finalCellId >= 101) {
-			console.warn(
-				`❌ Ungültige cellId ${finalCellId} für PRIMÄRE Kachel gefunden`
-			);
-			return;
-		}
-
-		console.log(
-			`🔧 Richte Event-Handler für PRIMÄRE Kachel ${finalCellId} ein`
-		);
-
-		// Aircraft-ID Eingabe
-		const aircraftInput = cell.querySelector(`#aircraft-${finalCellId}`);
-		if (aircraftInput) {
-			// Entferne vorherige Event-Listener
-			aircraftInput.removeEventListener("blur", aircraftInput._saveHandler);
-
-			aircraftInput._saveHandler = function () {
-				console.log(
-					`Aircraft-ID in PRIMÄRER Kachel ${finalCellId} geändert: ${this.value}`
-				);
-				saveDataToLocalStorage();
-			};
-
-			aircraftInput.addEventListener("blur", aircraftInput._saveHandler);
-		}
-
-		// Position Eingabe
-		const positionInput = cell.querySelector(`#hangar-position-${finalCellId}`);
-		if (positionInput) {
-			// Entferne vorherige Event-Listener
-			positionInput.removeEventListener("blur", positionInput._saveHandler);
-
-			positionInput._saveHandler = function () {
-				console.log(
-					`Position in PRIMÄRER Kachel ${finalCellId} geändert: ${this.value}`
-				);
-				saveDataToLocalStorage();
-			};
-
-			positionInput.addEventListener("blur", positionInput._saveHandler);
-		}
-
-		// Weitere Felder für primäre Kacheln...
-		// Manuelle Eingabe, Notizen, etc.
-	});
-
-	// Event-Handler für SEKUNDÄRE Kacheln einrichten
-	document
-		.querySelectorAll("#secondaryHangarGrid .hangar-cell")
-		.forEach((cell) => {
-			// Verwende das data-cell-id Attribut, um die korrekte ID zu bekommen
-			const cellId = parseInt(cell.getAttribute("data-cell-id") || 0);
-
-			// Container-Validation: Sekundäre Kacheln sollten IDs >= 101 haben
-			if (!cellId || cellId < 101) {
-				console.warn(
-					`❌ Ungültige cellId ${cellId} für SEKUNDÄRE Kachel gefunden`
-				);
-				return;
+			// Suche in primären Kacheln
+			for (let tile of currentData.primaryTiles) {
+				if (tile.tileId === cellId) {
+					targetTile = tile;
+					break;
+				}
 			}
 
-			console.log(`🔧 Richte Event-Handler für SEKUNDÄRE Kachel ${cellId} ein`);
-
-			// Aircraft-ID Eingabe
-			const aircraftInput = cell.querySelector(`#aircraft-${cellId}`);
-			if (aircraftInput) {
-				// Entferne vorherige Event-Listener
-				aircraftInput.removeEventListener("blur", aircraftInput._saveHandler);
-
-				aircraftInput._saveHandler = function () {
-					console.log(
-						`Aircraft-ID in SEKUNDÄRER Kachel ${cellId} geändert: ${this.value}`
-					);
-					saveDataToLocalStorage();
-				};
-
-				aircraftInput.addEventListener("blur", aircraftInput._saveHandler);
-			}
-
-			// Position Eingabe
-			const positionInput = cell.querySelector(`#hangar-position-${cellId}`);
-			if (positionInput) {
-				// Entferne vorherige Event-Listener
-				positionInput.removeEventListener("blur", positionInput._saveHandler);
-
-				positionInput._saveHandler = function () {
-					console.log(
-						`Position in SEKUNDÄRER Kachel ${cellId} geändert: ${this.value}`
-					);
-					saveDataToLocalStorage();
-				};
-
-				positionInput.addEventListener("blur", positionInput._saveHandler);
-			}
-
-			// Manuelle Eingabe
-			const manualInput = cell.querySelector(`#manual-input-${cellId}`);
-			if (manualInput) {
-				// Entferne vorherige Event-Listener
-				manualInput.removeEventListener("blur", manualInput._saveHandler);
-
-				manualInput._saveHandler = function () {
-					console.log(
-						`Manuelle Eingabe in SEKUNDÄRER Kachel ${cellId} geändert: ${this.value}`
-					);
-					saveDataToLocalStorage();
-				};
-
-				manualInput.addEventListener("blur", manualInput._saveHandler);
-			}
-
-			// Weitere Felder für sekundäre Kacheln...
-			// Notizen, Status, etc.
-		});
-
-	console.log("✅ Input Event-Listener für BEIDE Container eingerichtet");
-}
-
-// Funktion zum direkten Speichern der Daten im localStorage
-function saveDataToLocalStorage() {
-	if (window.hangarUI && window.hangarUI.uiSettings) {
-		window.hangarUI.uiSettings.save().then(() => {
-			console.log("Daten nach Änderung im localStorage gespeichert");
-		});
-	}
-}
-
-// Debug-Logging für Auto-Save Funktionalität
-function debugAutoSave() {
-	console.log("=== AUTO-SAVE DEBUG ===");
-	console.log(
-		"Auto-Sync aktiviert:",
-		localStorage.getItem("hangarplanner_auto_sync")
-	);
-	console.log("Storage Browser verfügbar:", !!window.storageBrowser);
-	console.log("Server URL:", localStorage.getItem("hangarplanner_server_url"));
-
-	if (window.storageBrowser) {
-		console.log("Letzte Prüfsumme:", window.storageBrowser.lastDataChecksum);
-		console.log(
-			"Aktuelle Prüfsumme:",
-			window.storageBrowser.createDataChecksum()
-		);
-		console.log("Daten geändert:", window.storageBrowser.hasDataChanged());
-		console.log(
-			"Applying Server Data Flag:",
-			window.storageBrowser.isApplyingServerData
-		);
-	}
-	console.log("=== AUTO-SAVE DEBUG ENDE ===");
-}
-
-// Global verfügbar machen
-window.debugAutoSave = debugAutoSave;
-
-// Event-Listener für secondaryTilesCreated einrichten, um Event-Handler nach Erstellung zu aktualisieren
-document.addEventListener("secondaryTilesCreated", function () {
-	console.log("Sekundäre Kacheln wurden erstellt, aktualisiere Event-Handler");
-	setupInputEventListeners();
-});
-
-// Auto-Sync Button Handling hinzufügen
-document.addEventListener("DOMContentLoaded", function () {
-	// Auto-Sync Toggle-Button Event-Handler
-	const autoSyncToggle = document.getElementById("autoSyncToggle");
-	if (autoSyncToggle) {
-		// Initial-Status aus localStorage laden
-		const autoSyncEnabled = localStorage.getItem("autoSyncEnabled") === "true";
-		autoSyncToggle.checked = autoSyncEnabled;
-
-		// Wenn aktiviert, Auto-Sync starten
-		if (autoSyncEnabled && window.autoSyncManager) {
-			window.autoSyncManager.startSync();
-		}
-
-		// Event-Handler für Änderungen
-		autoSyncToggle.addEventListener("change", function () {
-			if (this.checked) {
-				if (window.autoSyncManager) {
-					window.autoSyncManager.startSync();
-					localStorage.setItem("autoSyncEnabled", "true");
-
-					// Starten Sie auch die Dateianzeige
-					if (window.storageBrowser) {
-						window.storageBrowser.refreshFileList();
+			// Falls nicht gefunden, suche in sekundären Kacheln
+			if (!targetTile) {
+				for (let tile of currentData.secondaryTiles) {
+					if (tile.tileId === cellId) {
+						targetTile = tile;
+						break;
 					}
 				}
-			} else {
-				if (window.autoSyncManager) {
-					window.autoSyncManager.stopSync();
-					localStorage.setItem("autoSyncEnabled", "false");
-				}
 			}
-		});
-	}
-});
 
-// Manuelle Test-Funktion für Synchronisation
-function testSyncNow() {
-	console.log("=== MANUELLER SYNC-TEST ===");
+			if (targetTile) {
+				// Aktualisiere den entsprechenden Feldwert
+				switch (fieldType) {
+					case "position":
+						targetTile.position = value;
+						break;
+					case "aircraft":
+						targetTile.aircraftId = value;
+						break;
+					case "arrivalTime":
+						targetTile.arrivalTime = value;
+						break;
+					case "departureTime":
+						targetTile.departureTime = value;
+						break;
+					case "notes":
+						targetTile.notes = value;
+						break;
+					case "status":
+						targetTile.status = value;
+						break;
+					default:
+						console.warn(`Unbekannter Feldtyp: ${fieldType}`);
+						return;
+				}
 
-	if (!window.storageBrowser) {
-		console.error("Storage Browser nicht verfügbar");
-		return;
-	}
-
-	// Daten sammeln
-	const projectData = window.storageBrowser.collectCurrentProjectData();
-	console.log("Gesammelte Projektdaten:", projectData);
-
-	// Prüfsumme vor Speicherung
-	const checksumBefore = window.storageBrowser.createDataChecksum();
-	console.log("Prüfsumme vor Speicherung:", checksumBefore);
-
-	// Manuell speichern
-	window.storageBrowser
-		.saveCurrentProject()
-		.then(() => {
-			console.log("Manueller Sync abgeschlossen");
-			const checksumAfter = window.storageBrowser.createDataChecksum();
-			console.log("Prüfsumme nach Speicherung:", checksumAfter);
-		})
-		.catch((error) => {
-			console.error("Fehler beim manuellen Sync:", error);
-		});
-
-	console.log("=== MANUELLER SYNC-TEST ENDE ===");
-}
-
-// Global verfügbar machen
-window.testSyncNow = testSyncNow;
-
-// Exportiere Funktionen als globales Objekt
-window.hangarEvents = {
-	setupUIEventListeners,
-	toggleEditMode,
-	toggleSidebar,
-	showLoadDialog,
-	hideLoadDialog,
-	hideEmailSentModal,
-	loadProjectByName,
-	importSettingsFromJson,
-	searchAircraft,
-	fetchAndUpdateFlightData,
-	initSidebarAccordion,
-	initializeSidebarToggle, // Neue Funktion exportieren
-};
-
-// Funktion zum globalen Namensraum hinzufügen
-window.initializeUI = initializeUI;
-
-// Event-Handler initialisieren, wenn das DOM geladen ist
-document.addEventListener("DOMContentLoaded", function () {
-	// Die bisherigen Event-Handler-Aufrufe entfernen, da sie doppelt definiert sind
-
-	// Initialisiere die Sidebar-Akkordeons
-	initSidebarAccordion();
-
-	console.log("Sidebar-Akkordeon initialisiert");
-});
-
-/**
- * Initialisiert das Akkordeon-Verhalten für die Sidebar
- */
-function initSidebarAccordion() {
-	// Finde alle Akkordeon-Header
-	const accordionHeaders = document.querySelectorAll(
-		".sidebar-accordion-header"
-	);
-
-	console.log(`${accordionHeaders.length} Akkordeon-Header gefunden`);
-
-	// Für jeden Header die Funktionalität initialisieren
-	accordionHeaders.forEach((header, index) => {
-		// Standardmäßig das erste Element öffnen, Rest schließen
-		if (index !== 0) {
-			header.classList.add("collapsed");
-			const content = header.nextElementSibling;
-			if (content && content.classList.contains("sidebar-accordion-content")) {
-				content.classList.remove("open");
+				// Speichere in localStorage
+				localStorage.setItem("hangarPlannerData", JSON.stringify(currentData));
+				console.log(
+					`💾 ${fieldType} für Kachel ${cellId} gespeichert: ${value}`
+				);
+			} else {
+				console.warn(`Kachel ${cellId} nicht gefunden`);
 			}
 		} else {
-			header.classList.remove("collapsed");
-			const content = header.nextElementSibling;
-			if (content && content.classList.contains("sidebar-accordion-content")) {
-				content.classList.add("open");
-			}
+			console.error("Keine gültigen Daten zum Aktualisieren gefunden");
 		}
-
-		// Alten Event-Handler entfernen, falls vorhanden
-		if (header._clickHandler) {
-			header.removeEventListener("click", header._clickHandler);
-		}
-
-		// Neuen Event-Handler definieren
-		header._clickHandler = function () {
-			// Akkordeon umschalten
-			this.classList.toggle("collapsed");
-
-			// Content-Element finden und Klasse umschalten
-			const content = this.nextElementSibling;
-			if (content && content.classList.contains("sidebar-accordion-content")) {
-				content.classList.toggle("open");
-			}
-		};
-
-		// Event-Listener hinzufügen
-		header.addEventListener("click", header._clickHandler);
-
-		// Sicherstellen, dass die Icon-Ausrichtung korrekt ist
-
-		const iconContainer = header.querySelector(".sidebar-header-content");
-		if (iconContainer) {
-			iconContainer.style.display = "flex";
-			iconContainer.style.alignItems = "center";
-
-			const icon = iconContainer.querySelector(".sidebar-icon");
-			const title = iconContainer.querySelector(".sidebar-section-title");
-
-			if (icon && title) {
-				icon.style.marginRight = "8px";
-				icon.style.display = "inline-block";
-				title.style.display = "inline-block";
-			}
-		}
-	});
-
-	console.log("Sidebar-Akkordeon erfolgreich initialisiert");
-}
-
-// DOM Content Loaded Event - hier setzen wir das neue Akkordeon-Verhalten
-document.addEventListener("DOMContentLoaded", function () {
-	// Initialisieren der Event-Listener
-	setupUIEventListeners();
-
-	// Initialisiere die Seitenleiste und den Toggle-Button
-	initializeSidebarToggle();
-
-	// Initialisiere das verbesserte Akkordeon-Menü
-	initSidebarAccordion();
-
-	// Weitere Initialisierungen
-	if (
-		typeof window.hangarUI !== "undefined" &&
-		typeof window.hangarUI.initSectionLayout === "function"
-	) {
-		window.hangarUI.initSectionLayout();
-	}
-
-	console.log("Verbesserte UI-Initialisierung abgeschlossen");
-});
-
-/**
- * Initialisiert die Datumseingabefelder mit sinnvollen Standardwerten
- */
-function initializeDateInputs() {
-	try {
-		const currentDateInput = document.getElementById("currentDateInput");
-		const nextDateInput = document.getElementById("nextDateInput");
-
-		if (currentDateInput && nextDateInput) {
-			// Aktuelles Datum für den ersten Tag
-			const today = new Date();
-			const currentDateStr = today.toISOString().split("T")[0]; // Format YYYY-MM-DD
-
-			// Morgen für den zweiten Tag
-			const tomorrow = new Date(today);
-			tomorrow.setDate(tomorrow.getDate() + 1);
-			const nextDateStr = tomorrow.toISOString().split("T")[0]; // Format YYYY-MM-DD
-
-			// Nur setzen, wenn die Felder leer sind
-			if (!currentDateInput.value) {
-				currentDateInput.value = currentDateStr;
-			}
-			if (!nextDateInput.value) {
-				nextDateInput.value = nextDateStr;
-			}
-
-			console.log(
-				`Datumsfelder initialisiert: ${currentDateStr} bis ${nextDateStr}`
-			);
-		}
-	} catch (error) {
-		console.error("Fehler bei der Initialisierung der Datumseingaben:", error);
-	}
-}
-
-/**
- * Lädt und wendet die gespeicherten Flugzeiten-Werte aus dem localStorage an
- */
-function applyFlightTimeValuesFromLocalStorage() {
-	try {
-		const savedSettings = JSON.parse(
-			localStorage.getItem("hangarPlannerSettings") || "{}"
-		);
-
-		if (
-			!savedSettings.flightTimes ||
-			!Array.isArray(savedSettings.flightTimes)
-		) {
-			console.log("Keine gespeicherten Flugzeiten-Werte gefunden");
-			return;
-		}
-
-		console.log(
-			`Lade ${savedSettings.flightTimes.length} gespeicherte Flugzeiten-Werte`
-		);
-
-		savedSettings.flightTimes.forEach((tile) => {
-			const { cellId, arrival, departure, position } = tile;
-
-			// Arrival-Time setzen
-			if (arrival && arrival.trim() !== "") {
-				const arrivalEl = document.getElementById(`arrival-time-${cellId}`);
-				if (arrivalEl && arrivalEl.textContent !== arrival) {
-					arrivalEl.textContent = arrival;
-					console.log(
-						`Arrival-Time für Kachel ${cellId} wiederhergestellt: ${arrival}`
-					);
-				}
-			}
-
-			// Departure-Time setzen
-			if (departure && departure.trim() !== "") {
-				const departureEl = document.getElementById(`departure-time-${cellId}`);
-				if (departureEl && departureEl.textContent !== departure) {
-					departureEl.textContent = departure;
-					console.log(
-						`Departure-Time für Kachel ${cellId} wiederhergestellt: ${departure}`
-					);
-				}
-			}
-
-			// Position setzen
-			if (position && position.trim() !== "") {
-				const positionEl = document.getElementById(`hangar-position-${cellId}`);
-				if (positionEl && positionEl.value !== position) {
-					positionEl.value = position;
-					console.log(
-						`Position für Kachel ${cellId} wiederhergestellt: ${position}`
-					);
-				}
-			}
-		});
-
-		console.log("Alle gespeicherten Flugzeiten-Werte erfolgreich angewendet");
 	} catch (error) {
 		console.error(
-			"Fehler beim Laden der Flugzeiten-Werte aus localStorage:",
+			`Fehler beim Speichern von ${fieldType} für Kachel ${cellId}:`,
 			error
 		);
 	}
 }
 
-/**
- * Initialisiert die Event-Handler für die Position-Eingabefelder
- * Diese Funktion stellt sicher, dass die Position-Werte korrekt im localStorage gespeichert werden
- */
-function setupFlightTimeEventListeners() {
-	// Event-Listener für Position-Eingabefelder (hangar-position) - CONTAINER-SPEZIFISCH
-	// Primäre Kacheln (hangarGrid)
-	document
-		.querySelectorAll('#hangarGrid input[id^="hangar-position-"]')
-		.forEach((input) => {
-			const cellId = parseInt(input.id.split("-")[2]);
-
-			// Container-Validation: Primäre Kacheln sollten IDs 1-12 haben
-			if (cellId >= 101) {
-				console.warn(`❌ Primäre Kachel mit sekundärer ID ${cellId} ignoriert`);
-				return;
-			}
-
-			console.log(
-				`Event-Handler für Position in PRIMÄRER Kachel ${cellId} eingerichtet`
-			);
-
-			// Alte Event-Handler entfernen, um doppelte Aufrufe zu vermeiden
-			input.removeEventListener("blur", input._positionSaveHandler);
-			input.removeEventListener("change", input._positionSaveHandler);
-
-			// Neuen Handler für sofortiges Speichern bei Änderung hinzufügen
-			input._positionSaveHandler = function () {
-				const newValue = this.value;
-				console.log(
-					`Speichere Position für PRIMÄRE Kachel ${cellId}: ${newValue}`
-				);
-				saveFlightTimeValueToLocalStorage(cellId, "position", newValue);
-			};
-
-			// Event-Handler für Änderungen und Blur-Events hinzufügen
-			input.addEventListener("blur", input._positionSaveHandler);
-			input.addEventListener("change", input._positionSaveHandler);
-		});
-
-	// Sekundäre Kacheln (secondaryHangarGrid)
-	document
-		.querySelectorAll('#secondaryHangarGrid input[id^="hangar-position-"]')
-		.forEach((input) => {
-			const cellId = parseInt(input.id.split("-")[2]);
-
-			// Container-Validation: Sekundäre Kacheln sollten IDs >= 101 haben
-			if (cellId < 101) {
-				console.warn(`❌ Sekundäre Kachel mit primärer ID ${cellId} ignoriert`);
-				return;
-			}
-
-			console.log(
-				`Event-Handler für Position in SEKUNDÄRER Kachel ${cellId} eingerichtet`
-			);
-
-			// Alte Event-Handler entfernen, um doppelte Aufrufe zu vermeiden
-			input.removeEventListener("blur", input._positionSaveHandler);
-			input.removeEventListener("change", input._positionSaveHandler);
-
-			// Neuen Handler für sofortiges Speichern bei Änderung hinzufügen
-			input._positionSaveHandler = function () {
-				const newValue = this.value;
-				console.log(
-					`Speichere Position für SEKUNDÄRE Kachel ${cellId}: ${newValue}`
-				);
-				saveFlightTimeValueToLocalStorage(cellId, "position", newValue);
-			};
-
-			// Event-Handler für Änderungen und Blur-Events hinzufügen
-			input.addEventListener("blur", input._positionSaveHandler);
-			input.addEventListener("change", input._positionSaveHandler);
-		});
-
-	console.log("Flight Time Event-Listeners eingerichtet");
-}
-
-/**
- * Speichert Flugzeiten automatisch im localStorage wenn sie programmgesteuert gesetzt werden
- * @param {number} cellId - ID der Kachel
- * @param {string} arrivalTime - Ankunftszeit
- * @param {string} departureTime - Abflugzeit
- */
-function saveFlightTimesToLocalStorage(cellId, arrivalTime, departureTime) {
-	try {
-		// Aktuelle Einstellungen aus localStorage holen
-		const savedSettings = JSON.parse(
-			localStorage.getItem("hangarPlannerSettings") || "{}"
-		);
-
-		if (!savedSettings.flightTimes) savedSettings.flightTimes = [];
-
-		// Prüfen, ob bereits ein Eintrag für diese Kachel existiert
-		let tileIndex = savedSettings.flightTimes.findIndex(
-			(t) => t.cellId === cellId
-		);
-
-		if (tileIndex === -1) {
-			// Neuen Eintrag erstellen
-			savedSettings.flightTimes.push({
-				cellId: cellId,
-				arrival: "",
-				departure: "",
-				position: "",
-			});
-			tileIndex = savedSettings.flightTimes.length - 1;
-		}
-
-		// Werte aktualisieren wenn sie gültig sind
-		if (arrivalTime && arrivalTime !== "--:--") {
-			savedSettings.flightTimes[tileIndex].arrival = arrivalTime;
-		}
-		if (departureTime && departureTime !== "--:--") {
-			savedSettings.flightTimes[tileIndex].departure = departureTime;
-		}
-
-		// Zurück in localStorage speichern
-		localStorage.setItem(
-			"hangarPlannerSettings",
-			JSON.stringify(savedSettings)
-		);
-
-		console.log(
-			`Flugzeiten für Kachel ${cellId} gespeichert - Ankunft: ${arrivalTime}, Abflug: ${departureTime}`
-		);
-
-		// Auto-Save auslösen, wenn Server-Sync aktiviert ist
-		if (
-			localStorage.getItem("hangarplanner_auto_sync") === "true" &&
-			window.storageBrowser
-		) {
-			// Kurze Verzögerung, um mehrere schnelle Änderungen zu gruppieren
-			clearTimeout(window.storageBrowser.autoSaveTimeout);
-			window.storageBrowser.autoSaveTimeout = setTimeout(() => {
-				console.log("Auto-Save ausgelöst durch Flugzeiten-Änderung");
-				window.storageBrowser.saveCurrentProject();
-			}, 1000); // Reduziert auf 1 Sekunde für bessere Reaktivität
-		}
-	} catch (error) {
-		console.error(
-			`Fehler beim Speichern der Flugzeiten für Kachel ${cellId}:`,
-			error
-		);
-	}
-}
-
-// Funktion global verfügbar machen
-window.saveFlightTimesToLocalStorage = saveFlightTimesToLocalStorage;
+// Alle Funktionen global verfügbar machen
+window.saveFlightTimeValueToLocalStorage = saveFlightTimeValueToLocalStorage;

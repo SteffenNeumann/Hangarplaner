@@ -2044,5 +2044,26 @@ function saveFlightTimeValueToLocalStorage(cellId, fieldType, value) {
 	}
 }
 
-// Alle Funktionen global verfügbar machen
+// Alle kritischen Funktionen global verfügbar machen
 window.saveFlightTimeValueToLocalStorage = saveFlightTimeValueToLocalStorage;
+window.setupFlightTimeEventListeners = setupFlightTimeEventListeners;
+window.setupUIEventListeners = setupUIEventListeners;
+window.setupPrimaryTileEventListeners = setupPrimaryTileEventListeners;
+window.initializeUI = initializeUI;
+window.fetchAllAircraftData = fetchAllAircraftData;
+window.fetchFlightButtonHandler = fetchFlightButtonHandler;
+window.applyFlightDataToCell = applyFlightDataToCell;
+window.updateAllInstancesOfAircraft = updateAllInstancesOfAircraft;
+
+// HANGAR EVENTS OBJECT
+window.hangarEvents = {
+	setupFlightTimeEventListeners,
+	setupUIEventListeners,
+	setupPrimaryTileEventListeners,
+	initializeUI,
+	fetchAllAircraftData,
+	fetchFlightButtonHandler,
+	applyFlightDataToCell,
+	updateAllInstancesOfAircraft,
+	saveFlightTimeValueToLocalStorage,
+};

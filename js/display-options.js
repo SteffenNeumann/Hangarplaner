@@ -461,10 +461,15 @@ window.displayOptions = {
 	 * Aktualisiert die Anzahl der primären Tiles
 	 */
 	updateTiles() {
+		// Mehrere Fallback-Strategien ausprobieren
 		if (typeof updateTiles === "function") {
 			updateTiles(this.current.tilesCount);
 		} else if (typeof window.hangarUI?.updateTiles === "function") {
 			window.hangarUI.updateTiles(this.current.tilesCount);
+		} else if (typeof window.hangarUI?.uiSettings?.apply === "function") {
+			// Über uiSettings aktualisieren
+			window.hangarUI.uiSettings.tilesCount = this.current.tilesCount;
+			window.hangarUI.uiSettings.apply();
 		} else {
 			console.warn(
 				"⚠️ updateTiles Funktion nicht gefunden - verwende Fallback"
@@ -499,10 +504,16 @@ window.displayOptions = {
 	 * Aktualisiert die Anzahl der sekundären Tiles
 	 */
 	updateSecondaryTiles() {
+		// Mehrere Fallback-Strategien ausprobieren
 		if (typeof updateSecondaryTiles === "function") {
 			updateSecondaryTiles(this.current.secondaryTilesCount);
 		} else if (typeof window.hangarUI?.updateSecondaryTiles === "function") {
 			window.hangarUI.updateSecondaryTiles(this.current.secondaryTilesCount);
+		} else if (typeof window.hangarUI?.uiSettings?.apply === "function") {
+			// Über uiSettings aktualisieren
+			window.hangarUI.uiSettings.secondaryTilesCount =
+				this.current.secondaryTilesCount;
+			window.hangarUI.uiSettings.apply();
 		} else {
 			console.warn(
 				"⚠️ updateSecondaryTiles Funktion nicht gefunden - verwende Fallback"
@@ -732,78 +743,60 @@ window.displayOptions = {
 	},
 };
 
-// Globale Reparatur-Funktionen für kritische Fehlerbehebung
+// Globale Notfall-Reparatur-Funktion
 window.emergencyRepair = {
-	/**
-	 * Vollständige Notfall-Reparatur des Layouts
-	 */
 	fullRepair() {
-		console.log("🚨 STARTE VOLLSTÄNDIGE NOTFALL-REPARATUR");
+		console.log("🚨 NOTFALL-REPARATUR: Repariere alle kritischen Funktionen");
 
-		// 1. CSS-Fallback sicherstellen
-		this.ensureCSS();
-
-		// 2. Sekundäre Kacheln reparieren
-		this.repairSecondaryTiles();
-
-		// 3. Event-Handler reparieren
-		this.repairEventHandlers();
-
-		// 4. Display Options reparieren
-		this.repairDisplayOptions();
-
-		console.log("✅ NOTFALL-REPARATUR ABGESCHLOSSEN");
-	},
-
-	ensureCSS() {
-		if (!document.getElementById("emergency-css")) {
-			const style = document.createElement("style");
-			style.id = "emergency-css";
-			style.textContent = `
-				.hangar-container { display: block !important; }
-				.hangar-tile { 
-					background: white; 
-					border: 1px solid #ccc; 
-					padding: 10px; 
-					margin: 5px;
-					display: block;
-				}
-				#hangarGrid, #secondaryHangarGrid { 
-					display: grid; 
-					grid-template-columns: repeat(4, 1fr); 
-					gap: 10px; 
-					padding: 10px;
-				}
-			`;
-			document.head.appendChild(style);
-		}
-	},
-
-	repairSecondaryTiles() {
-		const grid = document.getElementById("secondaryHangarGrid");
-		if (grid && grid.children.length === 0) {
-			console.log("🔧 Erstelle fehlende sekundäre Kacheln");
-			for (let i = 0; i < 3; i++) {
-				const tile = document.createElement("div");
-				tile.className = "hangar-tile";
-				tile.innerHTML = `<div>Sekundäre Kachel ${101 + i}</div>`;
-				grid.appendChild(tile);
-			}
-		}
-	},
-
-	repairEventHandlers() {
-		// Basis Event-Handler für Buttons
-		const updateBtn = document.getElementById("updateTilesBtn");
-		if (updateBtn && !updateBtn.onclick) {
-			updateBtn.onclick = () => console.log("Update Button geklickt");
-		}
-	},
-
-	repairDisplayOptions() {
+		// 1. Display Options reparieren
 		if (window.displayOptions) {
 			window.displayOptions.emergencyLayoutRepair();
 		}
+
+		// 2. Event Manager reparieren
+		if (
+			window.hangarEventManager &&
+			typeof window.hangarEventManager.init === "function"
+		) {
+			try {
+				window.hangarEventManager.init();
+			} catch (error) {
+				console.error("Event Manager Reparatur fehlgeschlagen:", error);
+			}
+		}
+
+		// 3. Missing Funktionen nachimplementieren
+		this.ensureCriticalFunctions();
+
+		console.log("✅ Notfall-Reparatur abgeschlossen");
+	},
+
+	ensureCriticalFunctions() {
+		// updateTiles global verfügbar machen
+		if (!window.updateTiles && window.hangarUI?.updateTiles) {
+			window.updateTiles = window.hangarUI.updateTiles;
+		}
+
+		// updateSecondaryTiles global verfügbar machen
+		if (!window.updateSecondaryTiles && window.hangarUI?.updateSecondaryTiles) {
+			window.updateSecondaryTiles = window.hangarUI.updateSecondaryTiles;
+		}
+
+		// updateCellAttributes global verfügbar machen
+		if (!window.updateCellAttributes && window.hangarUI?.updateCellAttributes) {
+			window.updateCellAttributes = window.hangarUI.updateCellAttributes;
+		}
+
+		// setupFlightTimeEventListeners global verfügbar machen
+		if (
+			!window.setupFlightTimeEventListeners &&
+			window.hangarEvents?.setupFlightTimeEventListeners
+		) {
+			window.setupFlightTimeEventListeners =
+				window.hangarEvents.setupFlightTimeEventListeners;
+		}
+
+		console.log("🔧 Kritische Funktionen global verfügbar gemacht");
 	},
 };
 

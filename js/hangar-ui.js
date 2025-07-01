@@ -940,6 +940,85 @@ function checkElement(id) {
 	return document.getElementById(id) !== null;
 }
 
+/**
+ * Aktualisiert die Attribute und IDs aller Elemente in einer Kachel
+ * @param {HTMLElement} cellElement - Das Kachel-Element
+ * @param {number} cellId - Die neue Kachel-ID
+ */
+function updateCellAttributes(cellElement, cellId) {
+	console.log(`🔧 Aktualisiere Zell-Attribute für Kachel ${cellId}`);
+
+	try {
+		// Haupt-Container aktualisieren
+		cellElement.setAttribute("data-cell-id", cellId);
+
+		// Alle Input-, Select- und andere relevante Elemente finden und aktualisieren
+		const elementsToUpdate = cellElement.querySelectorAll(
+			"input, select, textarea, button, span[id], div[id], label[for]"
+		);
+
+		elementsToUpdate.forEach((element) => {
+			// ID-Muster aktualisieren
+			if (element.id) {
+				// Mögliche ID-Muster:
+				// aircraft-123 -> aircraft-{cellId}
+				// hangar-position-123 -> hangar-position-{cellId}
+				// arrival-time-123 -> arrival-time-{cellId}
+				// departure-time-123 -> departure-time-{cellId}
+				// status-123 -> status-{cellId}
+				// notes-123 -> notes-{cellId}
+				// manual-input-123 -> manual-input-{cellId}
+
+				const idParts = element.id.split("-");
+				if (idParts.length >= 2) {
+					// Letzten Teil (alte ID) durch neue ID ersetzen
+					idParts[idParts.length - 1] = cellId.toString();
+					element.id = idParts.join("-");
+				}
+			}
+
+			// Label-for-Attribute aktualisieren
+			if (element.tagName === "LABEL" && element.hasAttribute("for")) {
+				const forParts = element.getAttribute("for").split("-");
+				if (forParts.length >= 2) {
+					forParts[forParts.length - 1] = cellId.toString();
+					element.setAttribute("for", forParts.join("-"));
+				}
+			}
+
+			// Name-Attribute aktualisieren (falls vorhanden)
+			if (element.name) {
+				const nameParts = element.name.split("-");
+				if (nameParts.length >= 2) {
+					nameParts[nameParts.length - 1] = cellId.toString();
+					element.name = nameParts.join("-");
+				}
+			}
+		});
+
+		// Status-Light-Container aktualisieren
+		const statusLights = cellElement.querySelector(".status-lights");
+		if (statusLights) {
+			const lights = statusLights.querySelectorAll(".status-light");
+			lights.forEach((light, index) => {
+				const statuses = ["arrival", "present", "departure"];
+				if (statuses[index]) {
+					light.id = `light-${statuses[index]}-${cellId}`;
+				}
+			});
+		}
+
+		console.log(`✅ Zell-Attribute für Kachel ${cellId} aktualisiert`);
+		return true;
+	} catch (error) {
+		console.error(
+			`Fehler beim Aktualisieren der Zell-Attribute für Kachel ${cellId}:`,
+			error
+		);
+		return false;
+	}
+}
+
 // Export des hangarUI Objekts
 window.hangarUI = {
 	uiSettings,

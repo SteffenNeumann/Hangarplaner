@@ -1,0 +1,16 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Validate HangarPlanner Functions",
+			"type": "shell",
+			"command": "echo",
+			"args": [
+				"'HangarPlanner Function Validation - Check browser console for status'"
+			],
+			"group": "test",
+			"isBackground": false,
+			"problemMatcher": []
+		}
+	]
+}

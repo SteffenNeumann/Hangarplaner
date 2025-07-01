@@ -126,17 +126,45 @@ window.hangarActionPlan = {
 
 	// Schnelle Gesundheitsprüfung
 	quickHealthCheck() {
-		const health = {
-			eventManager: window.hangarEventManager?.getStatus() || null,
-			conflicts: window.hangarConflictResolver?.conflicts?.length || 0,
-			timestamp: new Date().toISOString(),
-		};
+		try {
+			const health = {
+				eventManager: null,
+				conflicts: 0,
+				timestamp: new Date().toISOString(),
+			};
 
-		if (health.conflicts > 0) {
-			console.warn("⚠️ Neue Konflikte erkannt:", health.conflicts);
+			// Event Manager Status sicher prüfen
+			if (
+				window.hangarEventManager &&
+				typeof window.hangarEventManager.getStatus === "function"
+			) {
+				health.eventManager = window.hangarEventManager.getStatus();
+			} else {
+				console.warn("⚠️ Event Manager nicht verfügbar oder getStatus fehlt");
+			}
+
+			// Conflicts sicher prüfen
+			if (
+				window.hangarConflictResolver &&
+				window.hangarConflictResolver.conflicts
+			) {
+				health.conflicts = window.hangarConflictResolver.conflicts.length;
+			}
+
+			if (health.conflicts > 0) {
+				console.warn("⚠️ Neue Konflikte erkannt:", health.conflicts);
+			}
+
+			return health;
+		} catch (error) {
+			console.error("❌ Fehler in quickHealthCheck:", error);
+			return {
+				eventManager: null,
+				conflicts: 0,
+				timestamp: new Date().toISOString(),
+				error: error.message,
+			};
 		}
-
-		return health;
 	},
 
 	// Führt alle Diagnose-Tools aus

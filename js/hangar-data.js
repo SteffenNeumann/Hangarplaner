@@ -1124,6 +1124,8 @@ window.hangarData = window.hangarData || {};
 window.hangarData.saveProjectToFile = saveProjectToFile;
 window.hangarData.loadProjectFromFile = loadProjectFromFile;
 window.hangarData.applyLoadedHangarPlan = applyLoadedHangarPlan;
+window.hangarData.applySingleTileData = applySingleTileData;
+window.hangarData.applyLoadedTileData = applyLoadedTileData;
 window.collectAllHangarData = collectAllHangarData; // Neue Zeile
 window.hangarData.saveCurrentStateToLocalStorage = function () {
 	// Aktuelle Daten im localStorage speichern

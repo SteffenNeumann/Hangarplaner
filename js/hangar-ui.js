@@ -558,7 +558,19 @@ function updateSecondaryTiles(count, layout) {
 				`Lade gesicherte Daten für Kachel ${newCellId}:`,
 				savedData.data
 			);
-			applyTileData(newCellId, savedData.data);
+			// Korrekte Funktion verwenden: applySingleTileData aus hangar-data.js
+			if (
+				window.hangarData &&
+				typeof window.hangarData.applySingleTileData === "function"
+			) {
+				window.hangarData.applySingleTileData(savedData.data, true);
+			} else if (typeof applySingleTileData === "function") {
+				applySingleTileData(savedData.data, true);
+			} else {
+				console.warn(
+					`Keine applySingleTileData Funktion verfügbar für Kachel ${newCellId}`
+				);
+			}
 		}
 	});
 

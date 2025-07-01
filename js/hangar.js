@@ -348,8 +348,39 @@ document.addEventListener("DOMContentLoaded", function () {
 		window.moduleStatus.helpers = true;
 	}
 
-	// Anwendung initialisieren
-	initializeApp();
+	// Warten bis alle Skripte geladen sind mit mehreren Versuchen
+	function attemptInitialization(attempts = 0) {
+		const maxAttempts = 10;
+		const delay = 200;
+
+		if (attempts >= maxAttempts) {
+			console.warn("Maximale Anzahl von Initialisierungsversuchen erreicht");
+			initializeApp(); // Versuche trotzdem zu starten
+			return;
+		}
+
+		// Prüfe kritische Module
+		const criticalModulesReady =
+			window.hangarUI !== undefined &&
+			window.hangarData !== undefined &&
+			(window.hangarEvents !== undefined ||
+				window.setupUIEventListeners !== undefined);
+
+		if (criticalModulesReady) {
+			console.log(
+				`Alle kritischen Module nach ${attempts + 1} Versuchen verfügbar`
+			);
+			initializeApp();
+		} else {
+			console.log(
+				`Versuch ${attempts + 1}/${maxAttempts}: Warte auf Module...`
+			);
+			setTimeout(() => attemptInitialization(attempts + 1), delay);
+		}
+	}
+
+	// Starte erste Überprüfung mit Verzögerung
+	setTimeout(() => attemptInitialization(), 100);
 });
 
 /**

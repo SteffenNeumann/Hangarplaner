@@ -1259,58 +1259,16 @@ if (window.helpers) {
 	};
 }
 
-/**
- * Verzögerungsbasierte DOM-Manipulation, sobald ein Element verfügbar ist
- * @param {string} selector - CSS-Selektor zum Finden des Elements
- * @param {Function} callback - Funktion, die mit dem Element aufgerufen wird
- * @param {Object} options - Optionen für die Suche
- */
-function whenElementReady(selector, callback, options = {}) {
-	const { maxAttempts = 10, interval = 200, errorCallback = null } = options;
-
-	if (window.helpers && window.helpers.storage) {
-		window.helpers.storage
-			.waitForElement(selector, maxAttempts, interval)
-			.then((element) => {
-				if (element) {
-					callback(element);
-				} else if (errorCallback) {
-					errorCallback();
-				}
-			});
-	} else {
-		// Fallback, wenn helpers nicht verfügbar
-		let attempts = 0;
-
-		const checkElement = () => {
-			attempts++;
-			const element = document.querySelector(selector);
-
-			if (element) {
-				callback(element);
-				return;
-			}
-
-			if (attempts >= maxAttempts) {
-				console.warn(
-					`Element mit Selektor "${selector}" wurde nach ${maxAttempts} Versuchen nicht gefunden`
-				);
-				if (errorCallback) {
-					errorCallback();
-				}
-				return;
-			}
-
-			setTimeout(checkElement, interval);
-		};
-
-		checkElement();
+// Initialisierung der UI-Verbesserungen NACH der storage-Definition
+function initializeUIEnhancements() {
+	// Warten bis DOM vollständig geladen ist
+	if (document.readyState === "loading") {
+		document.addEventListener("DOMContentLoaded", initializeUIEnhancements);
+		return;
 	}
-}
 
-// Validiere UI-Einstellungen bei der Initialisierung
-document.addEventListener("DOMContentLoaded", function () {
 	setTimeout(() => {
+		// Validiere UI-Einstellungen
 		if (
 			typeof storageHelper !== "undefined" &&
 			storageHelper &&
@@ -1419,7 +1377,59 @@ document.addEventListener("DOMContentLoaded", function () {
 			}, 1000);
 		}
 	}, 500);
-});
+}
+
+// Initialisierung starten
+initializeUIEnhancements();
+
+/**
+ * Verzögerungsbasierte DOM-Manipulation, sobald ein Element verfügbar ist
+ * @param {string} selector - CSS-Selektor zum Finden des Elements
+ * @param {Function} callback - Funktion, die mit dem Element aufgerufen wird
+ * @param {Object} options - Optionen für die Suche
+ */
+function whenElementReady(selector, callback, options = {}) {
+	const { maxAttempts = 10, interval = 200, errorCallback = null } = options;
+
+	if (window.helpers && window.helpers.storage) {
+		window.helpers.storage
+			.waitForElement(selector, maxAttempts, interval)
+			.then((element) => {
+				if (element) {
+					callback(element);
+				} else if (errorCallback) {
+					errorCallback();
+				}
+			});
+	} else {
+		// Fallback, wenn helpers nicht verfügbar
+		let attempts = 0;
+
+		const checkElement = () => {
+			attempts++;
+			const element = document.querySelector(selector);
+
+			if (element) {
+				callback(element);
+				return;
+			}
+
+			if (attempts >= maxAttempts) {
+				console.warn(
+					`Element mit Selektor "${selector}" wurde nach ${maxAttempts} Versuchen nicht gefunden`
+				);
+				if (errorCallback) {
+					errorCallback();
+				}
+				return;
+			}
+
+			setTimeout(checkElement, interval);
+		};
+
+		checkElement();
+	}
+}
 
 // Füge whenElementReady zum window.helpers-Objekt hinzu
 if (window.helpers) {

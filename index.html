@@ -5,29 +5,105 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>Hangar Planner - Aircraft Management</title>
 		<!-- Tailwind CSS Production Build (statt CDN) -->
-		<script src="https://unpkg.com/tailwindcss@^3/dist/tailwind.min.js"></script>
+		<script>
+			// Failsafe CSS Loader mit Fallback
+			function loadTailwind() {
+				const script = document.createElement("script");
+				script.src = "https://unpkg.com/tailwindcss@^3/dist/tailwind.min.js";
+				script.onerror = function () {
+					console.warn("⚠️ Tailwind CSS CDN failed, using fallback");
+					loadFallbackCSS();
+				};
+				script.onload = function () {
+					console.log("✅ Tailwind CSS loaded successfully");
+				};
+				document.head.appendChild(script);
+			}
+
+			function loadFallbackCSS() {
+				const fallbackStyle = document.createElement("style");
+				fallbackStyle.textContent =
+					"/* Essential Fallback CSS */" +
+					".bg-white { background-color: white; }" +
+					".text-white { color: white; }" +
+					".bg-industrial-dark { background-color: #3A4354; }" +
+					".bg-industrial-medium { background-color: #5D6B89; }" +
+					".text-industrial-accent { color: #FF7043; }" +
+					".bg-gray-50 { background-color: #f9fafb; }" +
+					".p-4 { padding: 1rem; }" +
+					".p-3 { padding: 0.75rem; }" +
+					".flex { display: flex; }" +
+					".grid { display: grid; }" +
+					".grid-cols-4 { grid-template-columns: repeat(4, 1fr); }" +
+					".gap-4 { gap: 1rem; }" +
+					".rounded-lg { border-radius: 0.5rem; }" +
+					".shadow-md { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }" +
+					".h-screen { height: 100vh; }" +
+					".flex-grow { flex-grow: 1; }" +
+					".justify-between { justify-content: space-between; }" +
+					".items-center { align-items: center; }" +
+					".overflow-auto { overflow: auto; }" +
+					".space-y-2 > * + * { margin-top: 0.5rem; }" +
+					".hidden { display: none; }" +
+					".font-sans { font-family: system-ui, sans-serif; }";
+				document.head.appendChild(fallbackStyle);
+			}
+
+			// Lade Tailwind mit Fallback
+			loadTailwind();
+		</script>
 		<!-- PDF Export Library -->
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 		<script>
-			tailwind.config = {
-				theme: {
-					extend: {
-						colors: {
-							industrial: {
-								dark: "#3A4354" /* Moderneres, etwas helleres Dunkelblau */,
-								medium: "#5D6B89" /* Helleres Mittelblau */,
-								light: "#D1D5DB" /* Helleres Grau */,
-								accent: "#FF7043" /* Wärmeres, modernes Orange */,
-							},
-							status: {
-								green: "#22C55E" /* Helleres, lebendigeres Grün */,
-								yellow: "#F59E0B" /* Wärmeres Gelb */,
-								red: "#EF4444" /* Helleres Rot */,
+			// Robuste Tailwind-Konfiguration mit Fallback
+			function configureTailwind() {
+				if (typeof tailwind !== "undefined") {
+					tailwind.config = {
+						theme: {
+							extend: {
+								colors: {
+									industrial: {
+										dark: "#3A4354",
+										medium: "#5D6B89",
+										light: "#D1D5DB",
+										accent: "#FF7043",
+									},
+									status: {
+										green: "#22C55E",
+										yellow: "#F59E0B",
+										red: "#EF4444",
+									},
+								},
 							},
 						},
-					},
-				},
-			};
+					};
+					console.log("✅ Tailwind konfiguriert");
+				} else {
+					console.log("⚠️ Tailwind nicht verfügbar - verwende CSS-Variablen");
+					// CSS-Variablen als Fallback setzen
+					document.documentElement.style.setProperty(
+						"--industrial-dark",
+						"#3A4354"
+					);
+					document.documentElement.style.setProperty(
+						"--industrial-medium",
+						"#5D6B89"
+					);
+					document.documentElement.style.setProperty(
+						"--industrial-accent",
+						"#FF7043"
+					);
+				}
+			}
+
+			// Konfiguration nach DOM-Load oder sofort falls verfügbar
+			if (typeof tailwind !== "undefined") {
+				configureTailwind();
+			} else {
+				document.addEventListener("DOMContentLoaded", function () {
+					setTimeout(configureTailwind, 100);
+				});
+			}
 		</script>
 		<link rel="stylesheet" href="css/hangarplanner-ui.css" />
 		<link rel="stylesheet" href="css/dark-mode-zoom.css" />

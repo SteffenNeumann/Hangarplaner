@@ -463,9 +463,36 @@ window.displayOptions = {
 	updateTiles() {
 		if (typeof updateTiles === "function") {
 			updateTiles(this.current.tilesCount);
+		} else if (typeof window.hangarUI?.updateTiles === "function") {
+			window.hangarUI.updateTiles(this.current.tilesCount);
 		} else {
-			console.warn("⚠️ updateTiles Funktion nicht gefunden");
+			console.warn(
+				"⚠️ updateTiles Funktion nicht gefunden - verwende Fallback"
+			);
+			// Fallback: Einfache Anzeige/Verstecken-Logik
+			this.fallbackUpdateTiles();
 		}
+	},
+
+	/**
+	 * Fallback für updateTiles wenn Hauptfunktion nicht verfügbar
+	 */
+	fallbackUpdateTiles() {
+		const grid = document.getElementById("hangarGrid");
+		if (!grid) return;
+
+		const tiles = grid.querySelectorAll(".hangar-tile");
+		const targetCount = this.current.tilesCount;
+
+		tiles.forEach((tile, index) => {
+			if (index < targetCount) {
+				tile.style.display = "";
+			} else {
+				tile.style.display = "none";
+			}
+		});
+
+		console.log(`📦 Fallback: ${targetCount} primäre Kacheln angezeigt`);
 	},
 
 	/**
@@ -474,9 +501,91 @@ window.displayOptions = {
 	updateSecondaryTiles() {
 		if (typeof updateSecondaryTiles === "function") {
 			updateSecondaryTiles(this.current.secondaryTilesCount);
+		} else if (typeof window.hangarUI?.updateSecondaryTiles === "function") {
+			window.hangarUI.updateSecondaryTiles(this.current.secondaryTilesCount);
 		} else {
-			console.warn("⚠️ updateSecondaryTiles Funktion nicht gefunden");
+			console.warn(
+				"⚠️ updateSecondaryTiles Funktion nicht gefunden - verwende Fallback"
+			);
+			// Fallback: Erstelle sekundäre Kacheln falls nicht vorhanden
+			this.fallbackUpdateSecondaryTiles();
 		}
+	},
+
+	/**
+	 * Fallback für updateSecondaryTiles wenn Hauptfunktion nicht verfügbar
+	 */
+	fallbackUpdateSecondaryTiles() {
+		const secondaryGrid = document.getElementById("secondaryHangarGrid");
+		if (!secondaryGrid) {
+			console.warn("⚠️ Sekundärer Grid nicht gefunden");
+			return;
+		}
+
+		// Bestehende sekundäre Kacheln zählen
+		const existingTiles = secondaryGrid.querySelectorAll(".hangar-tile");
+		const targetCount = this.current.secondaryTilesCount;
+
+		// Zeige/verstecke bestehende Kacheln
+		existingTiles.forEach((tile, index) => {
+			if (index < targetCount) {
+				tile.style.display = "";
+			} else {
+				tile.style.display = "none";
+			}
+		});
+
+		// Erstelle fehlende Kacheln wenn nötig
+		if (existingTiles.length < targetCount) {
+			this.createMissingSecondaryTiles(existingTiles.length, targetCount);
+		}
+
+		console.log(`📦 Fallback: ${targetCount} sekundäre Kacheln verwaltet`);
+	},
+
+	/**
+	 * Erstellt fehlende sekundäre Kacheln
+	 */
+	createMissingSecondaryTiles(currentCount, targetCount) {
+		const secondaryGrid = document.getElementById("secondaryHangarGrid");
+		if (!secondaryGrid) return;
+
+		for (let i = currentCount; i < targetCount; i++) {
+			const tileId = 101 + i; // Sekundäre IDs starten bei 101
+			const tile = this.createSecondaryTileElement(tileId);
+			secondaryGrid.appendChild(tile);
+		}
+
+		console.log(`➕ ${targetCount - currentCount} sekundäre Kacheln erstellt`);
+	},
+
+	/**
+	 * Erstellt ein einzelnes sekundäres Kachel-Element
+	 */
+	createSecondaryTileElement(tileId) {
+		const tile = document.createElement("div");
+		tile.className =
+			"hangar-tile bg-white rounded-lg shadow-md p-4 relative border-2 border-gray-200";
+		tile.innerHTML = `
+			<div class="tile-header flex justify-between items-center mb-2">
+				<span class="text-sm font-medium text-gray-500">Kachel ${tileId}</span>
+				<div class="status-light w-3 h-3 rounded-full bg-gray-300" id="status-light-${tileId}"></div>
+			</div>
+			<div class="space-y-2">
+				<input id="hangar-position-${tileId}" type="text" class="form-input" placeholder="Position">
+				<input id="aircraft-${tileId}" type="text" class="form-input" placeholder="Aircraft">
+				<input id="arrival-time-${tileId}" type="time" class="info-input">
+				<input id="departure-time-${tileId}" type="time" class="info-input">
+				<textarea id="notes-${tileId}" class="notes-textarea" placeholder="Notes"></textarea>
+				<select id="status-${tileId}" class="status-selector">
+					<option value="neutral">Neutral</option>
+					<option value="maintenance">Wartung</option>
+					<option value="ready">Bereit</option>
+					<option value="occupied">Belegt</option>
+				</select>
+			</div>
+		`;
+		return tile;
 	},
 
 	/**
@@ -487,6 +596,213 @@ window.displayOptions = {
 			showNotification(message, type);
 		} else {
 			console.log(`${type.toUpperCase()}: ${message}`);
+		}
+	},
+
+	/**
+	 * Notfall-Layout-Reparatur falls Tailwind nicht lädt
+	 */
+	emergencyLayoutRepair() {
+		console.log("🚨 Starte Notfall-Layout-Reparatur...");
+
+		// Fallback CSS direkt setzen falls Tailwind fehlt
+		if (typeof tailwind === "undefined") {
+			console.log("⚠️ Tailwind CSS nicht verfügbar - verwende Fallback-Styles");
+			this.injectFallbackCSS();
+		}
+
+		// Sekundäre Kacheln reparieren
+		const secondaryGrid = document.getElementById("secondaryHangarGrid");
+		if (secondaryGrid && secondaryGrid.children.length === 0) {
+			console.log("🔧 Repariere fehlende sekundäre Kacheln...");
+			this.fallbackUpdateSecondaryTiles();
+		}
+
+		// UI-Felder auf korrekte Werte setzen
+		this.forceUpdateUI();
+
+		console.log("✅ Notfall-Layout-Reparatur abgeschlossen");
+	},
+
+	/**
+	 * Injiziert Fallback-CSS falls Tailwind nicht lädt
+	 */
+	injectFallbackCSS() {
+		const fallbackStyle = document.createElement("style");
+		fallbackStyle.id = "emergency-fallback-css";
+		fallbackStyle.textContent = `
+			/* Notfall-Fallback falls Tailwind CSS fehlt */
+			.hangar-tile {
+				background: white;
+				border: 2px solid #e5e7eb;
+				border-radius: 8px;
+				padding: 16px;
+				margin: 8px;
+				box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+				position: relative;
+			}
+			
+			.form-input, .info-input {
+				width: 100%;
+				padding: 8px;
+				border: 1px solid #d1d5db;
+				border-radius: 4px;
+				margin: 4px 0;
+			}
+			
+			.notes-textarea {
+				width: 100%;
+				padding: 8px;
+				border: 1px solid #d1d5db;
+				border-radius: 4px;
+				resize: vertical;
+				min-height: 60px;
+			}
+			
+			.status-selector {
+				width: 100%;
+				padding: 8px;
+				border: 1px solid #d1d5db;
+				border-radius: 4px;
+				background: white;
+			}
+			
+			#hangarGrid, #secondaryHangarGrid {
+				display: grid;
+				grid-template-columns: repeat(4, 1fr);
+				gap: 16px;
+				padding: 16px;
+			}
+			
+			.status-light {
+				width: 12px;
+				height: 12px;
+				border-radius: 50%;
+				background: #9ca3af;
+			}
+			
+			.tile-header {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				margin-bottom: 8px;
+				font-size: 14px;
+				font-weight: 500;
+				color: #6b7280;
+			}
+		`;
+
+		// Prüfe ob bereits vorhanden
+		if (!document.getElementById("emergency-fallback-css")) {
+			document.head.appendChild(fallbackStyle);
+			console.log("💡 Fallback-CSS injiziert");
+		}
+	},
+
+	/**
+	 * Forciert UI-Update mit aktuellen Werten
+	 */
+	forceUpdateUI() {
+		// Sammle Werte und wende sie an
+		this.collectFromUI();
+
+		// Zoom forcieren
+		if (this.current.zoomLevel && this.current.zoomLevel !== 100) {
+			document.documentElement.style.setProperty(
+				"--zoom-scale",
+				this.current.zoomLevel / 100
+			);
+		}
+
+		// Dark Mode forcieren
+		if (this.current.darkMode) {
+			document.body.classList.add("dark-mode");
+		}
+
+		// View Mode forcieren
+		if (this.current.viewMode) {
+			document.body.classList.add("table-view");
+			document.body.classList.remove("tile-view");
+		} else {
+			document.body.classList.add("tile-view");
+			document.body.classList.remove("table-view");
+		}
+
+		console.log("🔄 UI-Werte forciert angewendet");
+	},
+};
+
+// Globale Reparatur-Funktionen für kritische Fehlerbehebung
+window.emergencyRepair = {
+	/**
+	 * Vollständige Notfall-Reparatur des Layouts
+	 */
+	fullRepair() {
+		console.log("🚨 STARTE VOLLSTÄNDIGE NOTFALL-REPARATUR");
+
+		// 1. CSS-Fallback sicherstellen
+		this.ensureCSS();
+
+		// 2. Sekundäre Kacheln reparieren
+		this.repairSecondaryTiles();
+
+		// 3. Event-Handler reparieren
+		this.repairEventHandlers();
+
+		// 4. Display Options reparieren
+		this.repairDisplayOptions();
+
+		console.log("✅ NOTFALL-REPARATUR ABGESCHLOSSEN");
+	},
+
+	ensureCSS() {
+		if (!document.getElementById("emergency-css")) {
+			const style = document.createElement("style");
+			style.id = "emergency-css";
+			style.textContent = `
+				.hangar-container { display: block !important; }
+				.hangar-tile { 
+					background: white; 
+					border: 1px solid #ccc; 
+					padding: 10px; 
+					margin: 5px;
+					display: block;
+				}
+				#hangarGrid, #secondaryHangarGrid { 
+					display: grid; 
+					grid-template-columns: repeat(4, 1fr); 
+					gap: 10px; 
+					padding: 10px;
+				}
+			`;
+			document.head.appendChild(style);
+		}
+	},
+
+	repairSecondaryTiles() {
+		const grid = document.getElementById("secondaryHangarGrid");
+		if (grid && grid.children.length === 0) {
+			console.log("🔧 Erstelle fehlende sekundäre Kacheln");
+			for (let i = 0; i < 3; i++) {
+				const tile = document.createElement("div");
+				tile.className = "hangar-tile";
+				tile.innerHTML = `<div>Sekundäre Kachel ${101 + i}</div>`;
+				grid.appendChild(tile);
+			}
+		}
+	},
+
+	repairEventHandlers() {
+		// Basis Event-Handler für Buttons
+		const updateBtn = document.getElementById("updateTilesBtn");
+		if (updateBtn && !updateBtn.onclick) {
+			updateBtn.onclick = () => console.log("Update Button geklickt");
+		}
+	},
+
+	repairDisplayOptions() {
+		if (window.displayOptions) {
+			window.displayOptions.emergencyLayoutRepair();
 		}
 	},
 };
@@ -505,5 +821,23 @@ document.addEventListener("DOMContentLoaded", () => {
 		);
 		window.displayOptions.updateUI();
 		window.displayOptions.applySettings();
+
+		// Notfall-Layout-Reparatur
+		window.displayOptions.emergencyLayoutRepair();
 	}, 1000);
+
+	// Weitere Reparatur nach längerer Verzögerung falls immer noch Probleme
+	setTimeout(() => {
+		console.log("🔧 Display Options - finale Layout-Validierung");
+		window.displayOptions.emergencyLayoutRepair();
+	}, 3000);
 });
+
+// Notfall-Reparatur automatisch nach 5 Sekunden falls Layout kaputt
+setTimeout(() => {
+	const grid = document.getElementById("secondaryHangarGrid");
+	if (grid && grid.children.length === 0) {
+		console.log("⚠️ Layout-Problem erkannt, starte automatische Reparatur");
+		window.emergencyRepair.fullRepair();
+	}
+}, 5000);

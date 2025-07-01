@@ -398,17 +398,21 @@ window.displayOptions = {
 			layout: this.current.layout,
 		});
 
-		// Primary Tiles aktualisieren
+		// Secondary Tiles aktualisieren (preserveData = true für Layout-Änderungen)
 		if (typeof updateSecondaryTiles === "function") {
 			updateSecondaryTiles(
 				this.current.secondaryTilesCount,
-				this.current.layout
+				this.current.layout,
+				true // Daten bei Layout-Änderungen beibehalten
 			);
-			console.log(`✅ Primary Tiles aktualisiert: ${this.current.tilesCount}`);
+			console.log(
+				`✅ Secondary Tiles aktualisiert: ${this.current.secondaryTilesCount}`
+			);
 		} else if (typeof window.hangarUI?.updateSecondaryTiles === "function") {
 			window.hangarUI.updateSecondaryTiles(
 				this.current.secondaryTilesCount,
-				this.current.layout
+				this.current.layout,
+				true // Daten bei Layout-Änderungen beibehalten
 			);
 			console.log(
 				`✅ Secondary Tiles über hangarUI aktualisiert: ${this.current.secondaryTilesCount}`

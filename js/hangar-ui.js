@@ -516,335 +516,116 @@ function setupAircraftIdFormatting() {
 // Placeholder für restliche Funktionen - diese werden aus der originalen Datei übernommen
 
 /**
- * Aktualisiert die sekundären Kacheln basierend auf der eingestellten Anzahl
+ * Vereinfachte Aktualisierung der sekundären Kacheln - analog zu updateTiles
+ * Verwendet das gleiche einfache Show/Hide-System wie primäre Kacheln
  * @param {number} count - Anzahl der sekundären Kacheln
  * @param {number} layout - Anzahl der Spalten
+ * @param {boolean} preserveData - Wird ignoriert, da Daten automatisch erhalten bleiben
  */
-function updateSecondaryTiles(count, layout) {
-	console.log(`=== AKTUALISIERE SEKUNDÄRE KACHELN: ${count} Kacheln ===`);
+function updateSecondaryTiles(count, layout, preserveData = true) {
+	console.log(
+		`🔧 Aktualisiere sekundäre Kacheln: ${count} (vereinfachtes System wie primäre Kacheln)`
+	);
 
 	const secondaryGrid = document.getElementById("secondaryHangarGrid");
 	if (!secondaryGrid) {
-		console.error("Sekundärer Grid-Container nicht gefunden");
+		console.error("❌ Sekundärer Grid-Container nicht gefunden");
 		return;
 	}
 
-	// Speichere vorhandene Daten vor dem Leeren
-	const existingData = [];
-	if (secondaryGrid.children.length > 0) {
-		console.log("Sichere bestehende sekundäre Kacheldaten vor Aktualisierung");
-		secondaryGrid.querySelectorAll(".hangar-cell").forEach((cell, index) => {
-			const cellId = 101 + index;
-			const tileData = collectTileData(cellId);
-			if (tileData) {
-				existingData.push({
-					index: index,
-					cellId: cellId,
-					data: tileData,
-				});
-			}
-		});
-		console.log(`${existingData.length} bestehende Kacheldaten gesichert`);
+	// Prüfe aktuelle Anzahl der Kacheln
+	let currentTiles = secondaryGrid.querySelectorAll(".hangar-cell");
+	const currentCount = currentTiles.length;
+
+	console.log(`Aktuell ${currentCount} sekundäre Kacheln, Ziel: ${count}`);
+
+	// Falls wir mehr Kacheln brauchen, erstelle sie (nur neue, niemals alle löschen)
+	if (currentCount < count) {
+		const tilesToCreate = count - currentCount;
+		console.log(`📦 Erstelle ${tilesToCreate} neue sekundäre Kacheln`);
+
+		for (let i = 0; i < tilesToCreate; i++) {
+			const cellId = 101 + currentCount + i;
+			createSingleSecondaryTile(cellId, secondaryGrid);
+		}
+
+		// Aktualisiere die Kachel-Liste
+		currentTiles = secondaryGrid.querySelectorAll(".hangar-cell");
 	}
 
-	// KRITISCHER FIX: Verwende createEmptySecondaryTiles anstatt cloneNode um Position-Kloning zu verhindern
-	createEmptySecondaryTiles(count, layout);
-
-	// Wiederherstellung der gesicherten Daten in neue Kacheln
-	existingData.forEach((savedData) => {
-		if (savedData.index < count) {
-			const newCellId = 101 + savedData.index;
-			console.log(
-				`Lade gesicherte Daten für Kachel ${newCellId}:`,
-				savedData.data
-			);
-			// Korrekte Funktion verwenden: applySingleTileData aus hangar-data.js
-			if (
-				window.hangarData &&
-				typeof window.hangarData.applySingleTileData === "function"
-			) {
-				window.hangarData.applySingleTileData(savedData.data, true);
-			} else if (typeof applySingleTileData === "function") {
-				applySingleTileData(savedData.data, true);
-			} else {
-				console.warn(
-					`Keine applySingleTileData Funktion verfügbar für Kachel ${newCellId}`
-				);
-			}
+	// Ein-/Ausblenden basierend auf count (GENAU wie bei primären Kacheln)
+	currentTiles.forEach((tile, index) => {
+		if (index < count) {
+			tile.style.display = "";
+			tile.style.visibility = "visible";
+		} else {
+			tile.style.display = "none";
+			tile.style.visibility = "hidden";
 		}
 	});
 
+	// Layout aktualisieren
+	if (layout) {
+		secondaryGrid.className = `grid grid-cols-${layout} gap-4`;
+	}
+
+	// Sichtbarkeit der sekundären Sektion
+	toggleSecondarySection(count > 0);
+
+	// UI-Eingabefeld aktualisieren
+	const secondaryTilesCountInput = document.getElementById(
+		"secondaryTilesCount"
+	);
+	if (
+		secondaryTilesCountInput &&
+		secondaryTilesCountInput.value !== count.toString()
+	) {
+		secondaryTilesCountInput.value = count;
+	}
+
 	console.log(
-		`✅ ${count} sekundäre Kacheln ohne Position-Kloning aktualisiert`
+		`✅ ${count} sekundäre Kacheln aktiviert - Daten bleiben erhalten!`
 	);
 }
 
 /**
- * Erstellt leere sekundäre Kacheln speziell für die Synchronisation
- * WICHTIG: Diese Funktion klont KEINE Daten von primären Kacheln - sie erstellt komplett leere Kacheln
- * @param {number} count - Anzahl der zu erstellenden sekundären Kacheln
- * @param {number} layout - Anzahl der Spalten (optional, Standard basiert auf aktueller Einstellung)
+ * Erstellt eine einzelne sekundäre Kachel - einfacher Ansatz ohne komplizierte Logik
+ * @param {number} cellId - ID der neuen Kachel
+ * @param {HTMLElement} container - Container für die Kachel
  */
-function createEmptySecondaryTiles(count, layout = null) {
-	console.log(`=== ERSTELLE ${count} LEERE SEKUNDÄRE KACHELN FÜR SYNC ===`);
+function createSingleSecondaryTile(cellId, container) {
+	console.log(`🎯 Erstelle einzelne sekundäre Kachel ${cellId}`);
 
-	const secondaryGrid = document.getElementById("secondaryHangarGrid");
-	if (!secondaryGrid) {
-		console.error("Sekundärer Grid-Container nicht gefunden");
-		return;
-	}
-
-	// Aktuelles Layout verwenden falls nicht angegeben
-	if (layout === null) {
-		layout = uiSettings.layout || 4;
-	}
-
-	// Leere den Container
-	secondaryGrid.innerHTML = "";
-
-	// Sichtbarkeit der sekundären Sektion steuern
-	toggleSecondarySection(count > 0);
-
-	// Wenn keine sekundären Kacheln, früh beenden
-	if (count <= 0) return;
-
-	// Template für sekundäre Kacheln basierend auf der ersten primären Kachel erstellen
+	// Template für sekundäre Kacheln
 	const templateCell = document.querySelector("#hangarGrid .hangar-cell");
 	if (!templateCell) {
-		console.error("Keine Vorlage für sekundäre Kacheln gefunden");
+		console.error("❌ Keine Vorlage für sekundäre Kacheln gefunden");
 		return;
 	}
 
-	// Erstelle die gewünschte Anzahl an KOMPLETT LEEREN sekundären Kacheln
-	for (let i = 0; i < count; i++) {
-		const cellId = 101 + i; // Start bei 101 für sekundäre Kacheln
+	// Einfaches Klonen der Struktur
+	const cellClone = templateCell.cloneNode(true);
 
-		// KRITISCH: Klone NICHT die Vorlage-Kachel, sondern nur die STRUKTUR ohne Daten
-		const cellClone = templateCell.cloneNode(true);
+	// Basis-Eigenschaften setzen
+	cellClone.setAttribute("data-cell-id", cellId.toString());
+	cellClone.id = `secondary-cell-${cellId}`;
 
-		// WICHTIG: Setze explizit das data-cell-id Attribut für korrekte Identifizierung
-		cellClone.setAttribute("data-cell-id", cellId.toString());
-		cellClone.id = `secondary-cell-${cellId}`;
+	// IDs in der geklonten Kachel aktualisieren
+	updateCellAttributes(cellClone, cellId);
 
-		// SOFORTIGE KOMPLETTE LEERUNG: Alle Input-Felder VOR jeder weiteren Verarbeitung leeren
-		const allInputs = cellClone.querySelectorAll("input, select, textarea");
-		allInputs.forEach((input) => {
-			// Attribute zurücksetzen
-			input.value = "";
-			input.defaultValue = "";
-			if (input.type === "select-one") {
-				input.selectedIndex = 0;
-			}
-			// Alle Data-Attribute entfernen, die Werte enthalten könnten
-			Array.from(input.attributes).forEach((attr) => {
-				if (attr.name.startsWith("data-") && attr.name !== "data-cell-id") {
-					input.removeAttribute(attr.name);
-				}
-			});
-		});
+	// Alle Input-Felder leeren (für neue Kacheln)
+	const allInputs = cellClone.querySelectorAll("input, select, textarea");
+	allInputs.forEach((input) => {
+		input.value = "";
+		if (input.type === "select-one") {
+			input.selectedIndex = 0;
+		}
+	});
 
-		// IDs aktualisieren NACH kompletter Leerung
-		updateCellAttributes(cellClone, cellId);
+	// Zur sekundären Sektion hinzufügen
+	container.appendChild(cellClone);
 
-		// FINALE SICHERHEIT: Nochmalige explizite Leerung aller kritischen Felder
-		const criticalFields = [
-			`#hangar-position-${cellId}`,
-			`#aircraft-${cellId}`,
-			`#arrival-time-${cellId}`,
-			`#departure-time-${cellId}`,
-			`#manual-input-${cellId}`,
-			`#notes-${cellId}`,
-			`#status-${cellId}`,
-		];
-
-		criticalFields.forEach((selector) => {
-			const element = cellClone.querySelector(selector);
-			if (element) {
-				const oldValue = element.value;
-				element.value = "";
-				element.defaultValue = "";
-				if (element.type === "select-one") {
-					element.selectedIndex = 0;
-				}
-				console.log(
-					`🔧 ${selector} für Sync geleert (war: "${oldValue}", jetzt: "${element.value}")`
-				);
-			}
-		});
-
-		// Zur sekundären Sektion hinzufügen
-		secondaryGrid.appendChild(cellClone);
-
-		// FINALE VERIFIKATION: Prüfe nach DOM-Hinzufügung, dass alle Felder wirklich leer sind
-		setTimeout(() => {
-			const verificationFields = [
-				`hangar-position-${cellId}`,
-				`aircraft-${cellId}`,
-				`arrival-time-${cellId}`,
-				`departure-time-${cellId}`,
-				`manual-input-${cellId}`,
-				`notes-${cellId}`,
-			];
-
-			verificationFields.forEach((fieldId) => {
-				const field = document.getElementById(fieldId);
-				if (field && field.value !== "") {
-					console.warn(
-						`⚠️  SYNC-WARNUNG: Feld ${fieldId} ist nicht leer (Wert: "${field.value}") - leere es nochmals`
-					);
-					field.value = "";
-					field.defaultValue = "";
-				}
-			});
-		}, 10);
-
-		console.log(
-			`✅ KOMPLETT LEERE sekundäre Kachel ${cellId} für Sync erstellt`
-		);
-	}
-
-	// Layout-Klasse setzen - korrigiert für Tailwind CSS
-	secondaryGrid.className = `grid grid-cols-${layout} gap-4`;
-
-	console.log(
-		`=== ${count} KOMPLETT LEERE SEKUNDÄRE KACHELN FÜR SYNC ERSTELLT ===`
-	);
-	console.log(
-		`🚫 KEIN DATENKLONING durchgeführt - alle Kacheln sind garantiert leer`
-	);
-
-	// KEINE Datenwiederherstellung - Kacheln sollen komplett leer bleiben für Sync!
-}
-
-/**
- * Erstellt komplett leere sekundäre Kacheln für Synchronisation OHNE Klonen
- * WICHTIG: Diese Funktion klont KEINE Daten - sie erstellt die Kacheln manuell ohne Vorlage
- * @param {number} count - Anzahl der zu erstellenden sekundären Kacheln
- * @param {number} layout - Anzahl der Spalten (optional, Standard basiert auf aktueller Einstellung)
- */
-function createSecondaryTilesForSync(count, layout = null) {
-	console.log(`=== ERSTELLE ${count} KACHELN FÜR SYNC (OHNE KLONEN) ===`);
-
-	const secondaryGrid = document.getElementById("secondaryHangarGrid");
-	if (!secondaryGrid) {
-		console.error("Sekundärer Grid-Container nicht gefunden");
-		return;
-	}
-
-	// Aktuelles Layout verwenden falls nicht angegeben
-	if (layout === null) {
-		layout = uiSettings.layout || 4;
-	}
-
-	// Leere den Container
-	secondaryGrid.innerHTML = "";
-
-	// Sichtbarkeit der sekundären Sektion steuern
-	toggleSecondarySection(count > 0);
-
-	// Wenn keine sekundären Kacheln, früh beenden
-	if (count <= 0) return;
-
-	// Erstelle die gewünschte Anzahl an KOMPLETT LEEREN sekundären Kacheln OHNE KLONEN
-	for (let i = 0; i < count; i++) {
-		const cellId = 101 + i; // Start bei 101 für sekundäre Kacheln
-
-		// MANUELL ERSTELLEN - KEIN KLONEN von primären Kacheln!
-		const cellDiv = document.createElement("div");
-		cellDiv.className = "hangar-cell bg-white border rounded-lg p-3 shadow-sm";
-		cellDiv.setAttribute("data-cell-id", cellId.toString());
-		cellDiv.id = `secondary-cell-${cellId}`;
-
-		// Erstelle die HTML-Struktur manuell
-		cellDiv.innerHTML = `
-			<div class="cell-header mb-2">
-				<div class="position-info-grid">
-					<input
-						type="text"
-						id="position-${cellId}"
-						placeholder="Position"
-						class="position-input text-xs bg-gray-50 border border-gray-300 rounded px-1 py-0.5 w-full"
-					/>
-				</div>
-			</div>
-
-			<div class="aircraft-section mb-2">
-				<input
-					type="text"
-					id="aircraft-${cellId}"
-					placeholder="Aircraft ID"
-					class="aircraft-input text-sm font-medium bg-gray-50 border border-gray-300 rounded px-2 py-1 w-full"
-				/>
-			</div>
-
-			<div class="position-section mb-2">
-				<input
-					type="text"
-					id="hangar-position-${cellId}"
-					placeholder="Hangar Position"
-					class="hangar-position-input text-xs bg-gray-50 border border-gray-300 rounded px-1 py-0.5 w-full"
-				/>
-			</div>
-
-			<div class="manual-input-section mb-2">
-				<input
-					type="text"
-					id="manual-input-${cellId}"
-					placeholder="Manual Input"
-					class="manual-input text-xs bg-gray-50 border border-gray-300 rounded px-1 py-0.5 w-full"
-				/>
-			</div>
-
-			<div class="time-section grid grid-cols-2 gap-1 mb-2">
-				<input
-					type="time"
-					id="arrival-time-${cellId}"
-					class="arrival-time text-xs bg-gray-50 border border-gray-300 rounded px-1 py-0.5"
-				/>
-				<input
-					type="time"
-					id="departure-time-${cellId}"
-					class="departure-time text-xs bg-gray-50 border border-gray-300 rounded px-1 py-0.5"
-				/>
-			</div>
-
-			<div class="status-section grid grid-cols-2 gap-1 mb-2">
-				<select id="status-${cellId}" class="status-selector text-xs bg-gray-50 border border-gray-300 rounded px-1 py-0.5">
-					<option value="neutral">Neutral</option>
-					<option value="ready">Ready</option>
-					<option value="maintenance">Maintenance</option>
-					<option value="departure">Departure</option>
-				</select>
-				<select id="tow-status-${cellId}" class="tow-status-selector text-xs bg-gray-50 border border-gray-300 rounded px-1 py-0.5">
-					<option value="neutral">Neutral</option>
-					<option value="initiated">Initiated</option>
-					<option value="ongoing">Ongoing</option>
-					<option value="on-position">On Position</option>
-				</select>
-			</div>
-
-			<div class="notes-section">
-				<textarea
-					id="notes-${cellId}"
-					placeholder="Notes"
-					class="notes-textarea text-xs bg-gray-50 border border-gray-300 rounded px-1 py-0.5 w-full h-12 resize-none"
-				></textarea>
-			</div>
-		`;
-
-		// Zur sekundären Sektion hinzufügen
-		secondaryGrid.appendChild(cellDiv);
-
-		console.log(`✅ SYNC-Kachel ${cellId} ohne Klonen erstellt`);
-	}
-
-	// Layout-Klasse setzen
-	secondaryGrid.className = `grid grid-cols-${layout} gap-4`;
-
-	console.log(`=== ${count} KACHELN FÜR SYNC OHNE KLONEN ERSTELLT ===`);
-	console.log(
-		`🚫 KEIN DATENKLONING durchgeführt - alle Kacheln sind garantiert leer`
-	);
+	console.log(`✅ Sekundäre Kachel ${cellId} erstellt`);
 }
 
 function adjustScaling() {

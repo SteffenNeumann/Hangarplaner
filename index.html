@@ -4,54 +4,7 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>Hangar Planner - Aircraft Management</title>
-		<!-- Tailwind CSS Production Build (statt CDN) -->
-		<script>
-			// Failsafe CSS Loader mit Fallback
-			function loadTailwind() {
-				const script = document.createElement("script");
-				script.src = "https://unpkg.com/tailwindcss@^3/dist/tailwind.min.js";
-				script.onerror = function () {
-					console.warn("⚠️ Tailwind CSS CDN failed, using fallback");
-					loadFallbackCSS();
-				};
-				script.onload = function () {
-					console.log("✅ Tailwind CSS loaded successfully");
-				};
-				document.head.appendChild(script);
-			}
-
-			function loadFallbackCSS() {
-				const fallbackStyle = document.createElement("style");
-				fallbackStyle.textContent =
-					"/* Essential Fallback CSS */" +
-					".bg-white { background-color: white; }" +
-					".text-white { color: white; }" +
-					".bg-industrial-dark { background-color: #3A4354; }" +
-					".bg-industrial-medium { background-color: #5D6B89; }" +
-					".text-industrial-accent { color: #FF7043; }" +
-					".bg-gray-50 { background-color: #f9fafb; }" +
-					".p-4 { padding: 1rem; }" +
-					".p-3 { padding: 0.75rem; }" +
-					".flex { display: flex; }" +
-					".grid { display: grid; }" +
-					".grid-cols-4 { grid-template-columns: repeat(4, 1fr); }" +
-					".gap-4 { gap: 1rem; }" +
-					".rounded-lg { border-radius: 0.5rem; }" +
-					".shadow-md { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }" +
-					".h-screen { height: 100vh; }" +
-					".flex-grow { flex-grow: 1; }" +
-					".justify-between { justify-content: space-between; }" +
-					".items-center { align-items: center; }" +
-					".overflow-auto { overflow: auto; }" +
-					".space-y-2 > * + * { margin-top: 0.5rem; }" +
-					".hidden { display: none; }" +
-					".font-sans { font-family: system-ui, sans-serif; }";
-				document.head.appendChild(fallbackStyle);
-			}
-
-			// Lade Tailwind mit Fallback
-			loadTailwind();
-		</script>
+		<script src="https://cdn.tailwindcss.com"></script>
 		<!-- PDF Export Library -->
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 		<script>
@@ -418,7 +371,7 @@
 												data-cell="3"
 												data-status="neutral"></span>
 											<select
-												id="status-3"
+											id="status-3"
 												class="status-selector"
 												title="Aircraft Status">
 												<option value="neutral" selected></option>
@@ -607,7 +560,7 @@
 												data-cell="5"
 												data-status="neutral"></span>
 											<select
-												id="status-5"
+											id="status-5"
 												class="status-selector"
 												title="Aircraft Status">
 												<option value="neutral" selected></option>
@@ -712,7 +665,7 @@
 										<div class="position-container">
 											<input
 												type="text"
-												placeholder="2D"
+												placeholder="3A"
 												id="hangar-position-6"
 												class="position-input"
 												title="Hangar Position" />
@@ -789,7 +742,7 @@
 												data-cell="7"
 												data-status="neutral"></span>
 											<select
-												id="status-7"
+											id="status-7"
 												class="status-selector"
 												title="Aircraft Status">
 												<option value="neutral" selected></option>
@@ -803,7 +756,7 @@
 										<div class="position-container">
 											<input
 												type="text"
-												placeholder="2E"
+												placeholder="3B"
 												id="hangar-position-7"
 												class="position-input"
 												title="Hangar Position" />
@@ -840,6 +793,7 @@
 											placeholder="--"
 											maxlength="10"
 											title="Aircraft position" />
+
 										<div class="info-label">Tow:</div>
 										<div class="tow-status-container">
 											<select id="tow-status-7" class="tow-status-selector">
@@ -894,7 +848,7 @@
 										<div class="position-container">
 											<input
 												type="text"
-												placeholder="2F"
+												placeholder="4A"
 												id="hangar-position-8"
 												class="position-input"
 												title="Hangar Position" />
@@ -914,7 +868,7 @@
 										<div class="info-label">Arr:</div>
 										<input
 											type="time"
-											id="arrival-time-8"
+										id="arrival-time-8"
 											class="info-input"
 											title="Time" />
 										<div class="info-label">Dep:</div>
@@ -1010,7 +964,7 @@
 										<div class="info-label">Dep:</div>
 										<input
 											type="time"
-											id="departure-time-9"
+										id="departure-time-9"
 											class="info-input"
 											title="Time" />
 										<div class="info-label">Pos:</div>
@@ -1593,7 +1547,7 @@
 								Show Airport Flights
 							</button>
 
-							<div id="fetchStatus" class="text-sm text-center">
+							<div id="fetchStatus" class="
 								Ready to retrieve flight data
 							</div>
 						</div>
@@ -1706,6 +1660,7 @@
 			<!-- Ausgelagerte JavaScript-Dateien -->
 			<script src="js/helpers.js"></script>
 			<script src="js/debug-helpers.js"></script>
+			<script src="js/grid-layout-debug.js"></script>
 			<script src="js/fileManager.js"></script>
 			<script src="js/weather-api.js"></script>
 			<!-- KONFLIKTLÖSUNG: Hotfix ZUERST laden -->
@@ -1949,6 +1904,12 @@
 
 			<!-- localStorage Migration Script -->
 			<script src="js/localStorage-migration.js"></script>
+
+			<!-- System Reparatur -->
+			<script src="js/system-repair.js"></script>
+			
+			<!-- Validation und Testing -->
+			<script src="js/system-validator.js"></script>
 
 			<!-- Initialization Debug Script -->
 			<script src="js/initialization-debug.js"></script>

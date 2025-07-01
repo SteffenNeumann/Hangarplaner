@@ -787,6 +787,11 @@ window.emergencyRepair = {
 			window.updateCellAttributes = window.hangarUI.updateCellAttributes;
 		}
 
+		// collectTileData global verfügbar machen (NEU HINZUGEFÜGT)
+		if (!window.collectTileData && window.hangarUI?.collectTileData) {
+			window.collectTileData = window.hangarUI.collectTileData;
+		}
+
 		// setupFlightTimeEventListeners global verfügbar machen
 		if (
 			!window.setupFlightTimeEventListeners &&
@@ -797,6 +802,24 @@ window.emergencyRepair = {
 		}
 
 		console.log("🔧 Kritische Funktionen global verfügbar gemacht");
+
+		// Debug: Prüfe verfügbarkeit aller kritischen Funktionen
+		const criticalFunctions = [
+			"updateTiles",
+			"updateSecondaryTiles",
+			"updateCellAttributes",
+			"collectTileData",
+			"setupFlightTimeEventListeners",
+		];
+
+		const missing = criticalFunctions.filter(
+			(fn) => typeof window[fn] !== "function"
+		);
+		if (missing.length > 0) {
+			console.warn("⚠️ Noch fehlende kritische Funktionen:", missing);
+		} else {
+			console.log("✅ Alle kritischen Funktionen sind verfügbar");
+		}
 	},
 };
 

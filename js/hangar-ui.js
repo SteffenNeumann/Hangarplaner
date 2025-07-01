@@ -1019,6 +1019,100 @@ function updateCellAttributes(cellElement, cellId) {
 	}
 }
 
+/**
+ * Sammelt Daten von einer einzelnen Kachel
+ * @param {number} cellId - ID der Kachel
+ * @returns {Object|null} Kacheldaten oder null
+ */
+function collectTileData(cellId) {
+	try {
+		console.log(`📊 Sammle Daten für Kachel ${cellId}`);
+
+		// Bestimme ob es eine sekundäre Kachel ist (ID >= 101)
+		const isSecondary = cellId >= 101;
+		const expectedContainer = isSecondary
+			? "#secondaryHangarGrid"
+			: "#hangarGrid";
+		const containerElement = document.querySelector(expectedContainer);
+
+		if (!containerElement) {
+			console.warn(
+				`Container ${expectedContainer} nicht gefunden für Kachel ${cellId}`
+			);
+			return null;
+		}
+
+		// Sammle alle Daten aus der Kachel
+		const aircraftElement = document.getElementById(`aircraft-${cellId}`);
+		const aircraftId =
+			aircraftElement && containerElement.contains(aircraftElement)
+				? aircraftElement.value || ""
+				: "";
+
+		const positionElement = document.getElementById(
+			`hangar-position-${cellId}`
+		);
+		const position =
+			positionElement && containerElement.contains(positionElement)
+				? positionElement.value || ""
+				: "";
+
+		const manualInputElement = document.getElementById(
+			`manual-input-${cellId}`
+		);
+		const manualInput =
+			manualInputElement && containerElement.contains(manualInputElement)
+				? manualInputElement.value || ""
+				: "";
+
+		const notesElement = document.getElementById(`notes-${cellId}`);
+		const notes =
+			notesElement && containerElement.contains(notesElement)
+				? notesElement.value || ""
+				: "";
+
+		const statusElement = document.getElementById(`status-${cellId}`);
+		const status =
+			statusElement && containerElement.contains(statusElement)
+				? statusElement.value || "neutral"
+				: "neutral";
+
+		const arrivalElement = document.getElementById(`arrival-time-${cellId}`);
+		const arrivalTime =
+			arrivalElement && containerElement.contains(arrivalElement)
+				? arrivalElement.value || ""
+				: "";
+
+		const departureElement = document.getElementById(
+			`departure-time-${cellId}`
+		);
+		const departureTime =
+			departureElement && containerElement.contains(departureElement)
+				? departureElement.value || ""
+				: "";
+
+		const tileData = {
+			tileId: cellId,
+			aircraftId: aircraftId,
+			position: position,
+			manualInput: manualInput,
+			notes: notes,
+			status: status,
+			arrivalTime: arrivalTime,
+			departureTime: departureTime,
+		};
+
+		console.log(`✅ Daten für Kachel ${cellId} gesammelt:`, tileData);
+		return tileData;
+	} catch (error) {
+		console.error(
+			`❌ Fehler beim Sammeln der Daten für Kachel ${cellId}:`,
+			error
+		);
+		return null;
+	}
+}
+
 // Export des hangarUI Objekts
 window.hangarUI = {
 	uiSettings,
@@ -1026,6 +1120,7 @@ window.hangarUI = {
 	updateCellAttributes,
 	setupSecondaryTileEventListeners,
 	adjustScaling,
+	collectTileData,
 
 	/**
 	 * Initialisiert das Sektion-Layout
@@ -1098,3 +1193,7 @@ window.hangarUI = {
 
 	// ...existing functions...
 };
+
+// Kritische Funktionen global verfügbar machen
+window.collectTileData = collectTileData;
+window.updateCellAttributes = updateCellAttributes;

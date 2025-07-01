@@ -1,76 +1,86 @@
 <!DOCTYPE html>
 <html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tailwind CSS Test</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        industrial: {
-                            dark: "#3A4354",
-                            medium: "#5D6B89",
-                            light: "#D1D5DB",
-                            accent: "#FF7043",
-                        },
-                    },
-                },
-            },
-        };
-    </script>
-</head>
-<body class="bg-gray-100 p-8">
-    <h1 class="text-3xl font-bold text-center mb-8">Tailwind CSS Grid Test</h1>
-    
-    <div class="max-w-6xl mx-auto">
-        <h2 class="text-xl mb-4">Grid Test: grid grid-cols-4 gap-4</h2>
-        <div id="testGrid" class="grid grid-cols-4 gap-4 mb-8">
-            <div class="bg-blue-200 p-4 rounded">Item 1</div>
-            <div class="bg-green-200 p-4 rounded">Item 2</div>
-            <div class="bg-yellow-200 p-4 rounded">Item 3</div>
-            <div class="bg-red-200 p-4 rounded">Item 4</div>
-            <div class="bg-purple-200 p-4 rounded">Item 5</div>
-            <div class="bg-pink-200 p-4 rounded">Item 6</div>
-            <div class="bg-indigo-200 p-4 rounded">Item 7</div>
-            <div class="bg-teal-200 p-4 rounded">Item 8</div>
-        </div>
-        
-        <h2 class="text-xl mb-4">Computed Styles</h2>
-        <div id="styleInfo" class="bg-white p-4 rounded shadow">
-            <p>Checking computed styles...</p>
-        </div>
-    </div>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Tailwind CSS Test</title>
+		<script src="https://cdn.tailwindcss.com"></script>
+		<script>
+			tailwind.config = {
+				theme: {
+					extend: {
+						colors: {
+							industrial: {
+								dark: "#3A4354",
+								medium: "#5D6B89",
+								light: "#D1D5DB",
+								accent: "#FF7043",
+							},
+						},
+					},
+				},
+			};
+		</script>
+	</head>
+	<body class="bg-gray-100 p-8">
+		<h1 class="text-3xl font-bold text-center mb-8">Tailwind CSS Grid Test</h1>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const grid = document.getElementById('testGrid');
-            const styleInfo = document.getElementById('styleInfo');
-            
-            // Wait a bit for Tailwind to load
-            setTimeout(() => {
-                const computedStyle = getComputedStyle(grid);
-                
-                const info = `
+		<div class="max-w-6xl mx-auto">
+			<h2 class="text-xl mb-4">Grid Test: grid grid-cols-4 gap-4</h2>
+			<div id="testGrid" class="grid grid-cols-4 gap-4 mb-8">
+				<div class="bg-blue-200 p-4 rounded">Item 1</div>
+				<div class="bg-green-200 p-4 rounded">Item 2</div>
+				<div class="bg-yellow-200 p-4 rounded">Item 3</div>
+				<div class="bg-red-200 p-4 rounded">Item 4</div>
+				<div class="bg-purple-200 p-4 rounded">Item 5</div>
+				<div class="bg-pink-200 p-4 rounded">Item 6</div>
+				<div class="bg-indigo-200 p-4 rounded">Item 7</div>
+				<div class="bg-teal-200 p-4 rounded">Item 8</div>
+			</div>
+
+			<h2 class="text-xl mb-4">Computed Styles</h2>
+			<div id="styleInfo" class="bg-white p-4 rounded shadow">
+				<p>Checking computed styles...</p>
+			</div>
+		</div>
+
+		<script>
+			document.addEventListener("DOMContentLoaded", function () {
+				const grid = document.getElementById("testGrid");
+				const styleInfo = document.getElementById("styleInfo");
+
+				// Wait a bit for Tailwind to load
+				setTimeout(() => {
+					const computedStyle = getComputedStyle(grid);
+
+					const info = `
                     <h3 class="font-bold mb-2">Grid Element Computed Styles:</h3>
                     <p><strong>Display:</strong> ${computedStyle.display}</p>
-                    <p><strong>Grid Template Columns:</strong> ${computedStyle.gridTemplateColumns}</p>
+                    <p><strong>Grid Template Columns:</strong> ${
+											computedStyle.gridTemplateColumns
+										}</p>
                     <p><strong>Gap:</strong> ${computedStyle.gap}</p>
-                    <p><strong>Grid Column Gap:</strong> ${computedStyle.columnGap}</p>
-                    <p><strong>Grid Row Gap:</strong> ${computedStyle.rowGap}</p>
+                    <p><strong>Grid Column Gap:</strong> ${
+											computedStyle.columnGap
+										}</p>
+                    <p><strong>Grid Row Gap:</strong> ${
+											computedStyle.rowGap
+										}</p>
                     <br>
                     <h3 class="font-bold mb-2">Classes Applied:</h3>
                     <p><strong>Class List:</strong> ${grid.className}</p>
                     <br>
                     <h3 class="font-bold mb-2">Tailwind Status:</h3>
-                    <p><strong>Tailwind Object:</strong> ${typeof tailwind !== 'undefined' ? 'Available' : 'Not Available'}</p>
+                    <p><strong>Tailwind Object:</strong> ${
+											typeof tailwind !== "undefined"
+												? "Available"
+												: "Not Available"
+										}</p>
                 `;
-                
-                styleInfo.innerHTML = info;
-            }, 1000);
-        });
-    </script>
-</body>
+
+					styleInfo.innerHTML = info;
+				}, 1000);
+			});
+		</script>
+	</body>
 </html>

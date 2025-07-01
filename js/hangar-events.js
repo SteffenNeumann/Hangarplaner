@@ -574,6 +574,13 @@ function loadUISettingsFromLocalStorage() {
 			console.log(
 				"Keine gespeicherten Einstellungen gefunden, verwende Standardwerte"
 			);
+
+			// WICHTIG: Auch bei Standardwerten die UI-Einstellungen anwenden
+			if (typeof uiSettings !== "undefined" && uiSettings.apply) {
+				console.log("Wende Standard UI-Einstellungen an...");
+				uiSettings.apply();
+			}
+
 			return false;
 		}
 
@@ -612,6 +619,13 @@ function loadUISettingsFromLocalStorage() {
 		}
 
 		console.log("UI-Einstellungen erfolgreich aus localStorage geladen");
+
+		// WICHTIG: Einstellungen auf die UI anwenden nach dem Laden
+		if (typeof uiSettings !== "undefined" && uiSettings.apply) {
+			console.log("Wende geladene UI-Einstellungen an...");
+			uiSettings.apply();
+		}
+
 		return true;
 	} catch (error) {
 		console.error(

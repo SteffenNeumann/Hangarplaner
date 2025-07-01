@@ -345,6 +345,9 @@ window.displayOptions = {
 		// View Mode anwenden
 		this.applyViewMode(this.current.viewMode);
 
+		// Layout und Tiles anwenden
+		this.applyLayout();
+
 		// Layout anwenden (falls entsprechende Funktion vorhanden ist)
 		if (typeof updateLayout === "function") {
 			updateLayout(this.current.layout);
@@ -382,6 +385,51 @@ window.displayOptions = {
 			body.classList.add("tile-view");
 			body.classList.remove("table-view");
 		}
+	},
+
+	/**
+	 * Layout und Tiles anwenden
+	 */
+	applyLayout() {
+		console.log("=== DISPLAY OPTIONS: LAYOUT ANWENDEN ===");
+		console.log("Aktueller Zustand:", {
+			tilesCount: this.current.tilesCount,
+			secondaryTilesCount: this.current.secondaryTilesCount,
+			layout: this.current.layout,
+		});
+
+		// Primary Tiles aktualisieren
+		if (typeof updateSecondaryTiles === "function") {
+			updateSecondaryTiles(
+				this.current.secondaryTilesCount,
+				this.current.layout
+			);
+			console.log(`✅ Primary Tiles aktualisiert: ${this.current.tilesCount}`);
+		} else if (typeof window.hangarUI?.updateSecondaryTiles === "function") {
+			window.hangarUI.updateSecondaryTiles(
+				this.current.secondaryTilesCount,
+				this.current.layout
+			);
+			console.log(
+				`✅ Secondary Tiles über hangarUI aktualisiert: ${this.current.secondaryTilesCount}`
+			);
+		}
+
+		// Layout-Settings an uiSettings weiterleiten (für Backward Compatibility)
+		if (typeof window.hangarUI?.uiSettings === "object") {
+			window.hangarUI.uiSettings.tilesCount = this.current.tilesCount;
+			window.hangarUI.uiSettings.secondaryTilesCount =
+				this.current.secondaryTilesCount;
+			window.hangarUI.uiSettings.layout = this.current.layout;
+
+			// uiSettings apply aufrufen falls verfügbar
+			if (typeof window.hangarUI.uiSettings.apply === "function") {
+				window.hangarUI.uiSettings.apply();
+				console.log("✅ uiSettings.apply() aufgerufen");
+			}
+		}
+
+		console.log("=== LAYOUT ANGEWENDET ===");
 	},
 
 	/**

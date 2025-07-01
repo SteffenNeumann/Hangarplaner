@@ -691,8 +691,8 @@ function createEmptySecondaryTiles(count, layout = null) {
 		);
 	}
 
-	// Layout-Klasse setzen
-	secondaryGrid.className = `hangar-grid grid-cols-${layout}`;
+	// Layout-Klasse setzen - korrigiert für Tailwind CSS
+	secondaryGrid.className = `grid grid-cols-${layout} gap-4`;
 
 	console.log(
 		`=== ${count} KOMPLETT LEERE SEKUNDÄRE KACHELN FÜR SYNC ERSTELLT ===`
@@ -827,7 +827,7 @@ function createSecondaryTilesForSync(count, layout = null) {
 	}
 
 	// Layout-Klasse setzen
-	secondaryGrid.className = `hangar-grid grid-cols-${layout}`;
+	secondaryGrid.className = `grid grid-cols-${layout} gap-4`;
 
 	console.log(`=== ${count} KACHELN FÜR SYNC OHNE KLONEN ERSTELLT ===`);
 	console.log(

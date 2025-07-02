@@ -67,7 +67,9 @@ const FlightDataAPI = (function () {
 
 			// Prüfen, ob AeroDataBoxAPI verfügbar ist
 			if (!window.AeroDataBoxAPI) {
-				throw new Error("AeroDataBoxAPI ist nicht verfügbar und konnte nicht geladen werden");
+				throw new Error(
+					"AeroDataBoxAPI ist nicht verfügbar und konnte nicht geladen werden"
+				);
 			}
 
 			// WICHTIG: Zuerst die originale Methode aufrufen, die in den meisten Fällen funktioniert
@@ -355,7 +357,9 @@ const FlightDataAPI = (function () {
 		try {
 			// Dynamic Loading: AeroDataBoxAPI laden falls nicht verfügbar
 			if (!window.AeroDataBoxAPI && window.DynamicAPILoader) {
-				console.log("[API-FASSADE] Lade AeroDataBoxAPI dynamisch für Einzelflüge...");
+				console.log(
+					"[API-FASSADE] Lade AeroDataBoxAPI dynamisch für Einzelflüge..."
+				);
 				await window.DynamicAPILoader.loadPrimaryAPI();
 			}
 
@@ -363,7 +367,9 @@ const FlightDataAPI = (function () {
 			if (window.AeroDataBoxAPI) {
 				return await window.AeroDataBoxAPI.getAircraftFlights(aircraftId, date);
 			} else {
-				throw new Error("AeroDataBoxAPI ist nicht verfügbar und konnte nicht geladen werden");
+				throw new Error(
+					"AeroDataBoxAPI ist nicht verfügbar und konnte nicht geladen werden"
+				);
 			}
 		} catch (error) {
 			console.error(

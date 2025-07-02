@@ -8,9 +8,9 @@ const UnifiedDebug = (() => {
 	// Debug-Konfiguration
 	const config = {
 		enabled: true,
-		logLevel: 'info', // 'debug', 'info', 'warn', 'error'
+		logLevel: "info", // 'debug', 'info', 'warn', 'error'
 		maxLogEntries: 100,
-		autoCheck: false
+		autoCheck: false,
 	};
 
 	// Log-History für Debugging
@@ -20,12 +20,12 @@ const UnifiedDebug = (() => {
 	 * Zentrales Logging-System
 	 */
 	const logger = {
-		debug: (message, data = null) => log('debug', message, data),
-		info: (message, data = null) => log('info', message, data),
-		warn: (message, data = null) => log('warn', message, data),
-		error: (message, data = null) => log('error', message, data),
+		debug: (message, data = null) => log("debug", message, data),
+		info: (message, data = null) => log("info", message, data),
+		warn: (message, data = null) => log("warn", message, data),
+		error: (message, data = null) => log("error", message, data),
 		group: (title) => console.group(title),
-		groupEnd: () => console.groupEnd()
+		groupEnd: () => console.groupEnd(),
 	};
 
 	const log = (level, message, data) => {
@@ -35,7 +35,7 @@ const UnifiedDebug = (() => {
 			timestamp: new Date().toISOString(),
 			level,
 			message,
-			data
+			data,
 		};
 
 		// Log-History pflegen
@@ -71,7 +71,7 @@ const UnifiedDebug = (() => {
 				hangarUI: this.checkHangarUI(),
 				eventHandlers: this.checkEventHandlers(),
 				apis: this.checkAPIs(),
-				missing: this.checkMissingFunctions()
+				missing: this.checkMissingFunctions(),
 			};
 
 			console.log("==========================================");
@@ -84,17 +84,21 @@ const UnifiedDebug = (() => {
 		 */
 		checkInitialization() {
 			logger.group("📋 INITIALISIERUNG");
-			
+
 			const checks = {
 				hangar: !!window.hangar,
 				hangarUI: !!window.hangarUI,
 				displayOptions: !!window.displayOptions,
 				improved_event_manager: !!window.improved_event_manager,
-				dynamicAPILoader: !!window.DynamicAPILoader
+				dynamicAPILoader: !!window.DynamicAPILoader,
 			};
 
 			Object.entries(checks).forEach(([name, status]) => {
-				logger.info(`${status ? '✅' : '❌'} ${name}: ${status ? 'verfügbar' : 'NICHT verfügbar'}`);
+				logger.info(
+					`${status ? "✅" : "❌"} ${name}: ${
+						status ? "verfügbar" : "NICHT verfügbar"
+					}`
+				);
 			});
 
 			logger.groupEnd();
@@ -106,7 +110,7 @@ const UnifiedDebug = (() => {
 		 */
 		checkSidebar() {
 			logger.group("🔧 SIDEBAR-STATUS");
-			
+
 			const body = document.body;
 			const menuToggleBtn = document.getElementById("menuToggle");
 			const sidebar = document.getElementById("sidebarMenu");
@@ -118,12 +122,18 @@ const UnifiedDebug = (() => {
 				buttonText: menuToggleBtn?.textContent || null,
 				sidebarExists: !!sidebar,
 				sidebarWidth: sidebar?.offsetWidth || null,
-				bodyClasses: body.className
+				bodyClasses: body.className,
 			};
 
 			logger.info("Sidebar eingeklappt:", status.isCollapsed);
-			logger.info("Toggle-Button:", status.buttonExists ? 'gefunden' : 'NICHT gefunden');
-			logger.info("Sidebar-Container:", status.sidebarExists ? 'gefunden' : 'NICHT gefunden');
+			logger.info(
+				"Toggle-Button:",
+				status.buttonExists ? "gefunden" : "NICHT gefunden"
+			);
+			logger.info(
+				"Sidebar-Container:",
+				status.sidebarExists ? "gefunden" : "NICHT gefunden"
+			);
 
 			logger.groupEnd();
 			return status;
@@ -134,22 +144,29 @@ const UnifiedDebug = (() => {
 		 */
 		checkDisplayOptions() {
 			logger.group("📊 DISPLAY OPTIONS");
-			
+
 			if (window.displayOptions) {
 				logger.info("✅ displayOptions verfügbar");
 				logger.info("Aktuelle Werte:", window.displayOptions.current);
 				logger.info("Standardwerte:", window.displayOptions.defaults);
-				
+
 				const elements = [
-					"tilesCount", "secondaryTilesCount", "layoutType",
-					"darkModeToggle", "viewModeToggle"
+					"tilesCount",
+					"secondaryTilesCount",
+					"layoutType",
+					"darkModeToggle",
+					"viewModeToggle",
 				];
 
 				const elementStatus = {};
-				elements.forEach(id => {
+				elements.forEach((id) => {
 					const element = document.getElementById(id);
 					elementStatus[id] = !!element;
-					logger.info(`${element ? '✅' : '❌'} Element ${id}: ${element ? 'gefunden' : 'NICHT gefunden'}`);
+					logger.info(
+						`${element ? "✅" : "❌"} Element ${id}: ${
+							element ? "gefunden" : "NICHT gefunden"
+						}`
+					);
 				});
 
 				logger.groupEnd();
@@ -166,17 +183,24 @@ const UnifiedDebug = (() => {
 		 */
 		checkHangarUI() {
 			logger.group("🏗️ HANGAR UI");
-			
+
 			if (window.hangarUI) {
 				const functions = [
-					'initialize', 'applyViewMode', 'updateUI', 'updateTileLayout'
+					"initialize",
+					"applyViewMode",
+					"updateUI",
+					"updateTileLayout",
 				];
 
 				const functionStatus = {};
-				functions.forEach(funcName => {
-					const exists = typeof window.hangarUI[funcName] === 'function';
+				functions.forEach((funcName) => {
+					const exists = typeof window.hangarUI[funcName] === "function";
 					functionStatus[funcName] = exists;
-					logger.info(`${exists ? '✅' : '❌'} Funktion ${funcName}: ${exists ? 'verfügbar' : 'NICHT verfügbar'}`);
+					logger.info(
+						`${exists ? "✅" : "❌"} Funktion ${funcName}: ${
+							exists ? "verfügbar" : "NICHT verfügbar"
+						}`
+					);
 				});
 
 				logger.groupEnd();
@@ -193,15 +217,17 @@ const UnifiedDebug = (() => {
 		 */
 		checkEventHandlers() {
 			logger.group("🎯 EVENT-HANDLER");
-			
+
 			const handlers = {
 				improved_event_manager: !!window.improved_event_manager,
-				DOMContentLoaded: document.readyState === 'complete',
-				menuToggle: !!document.getElementById('menuToggle')?.onclick
+				DOMContentLoaded: document.readyState === "complete",
+				menuToggle: !!document.getElementById("menuToggle")?.onclick,
 			};
 
 			Object.entries(handlers).forEach(([name, status]) => {
-				logger.info(`${status ? '✅' : '❌'} ${name}: ${status ? 'aktiv' : 'NICHT aktiv'}`);
+				logger.info(
+					`${status ? "✅" : "❌"} ${name}: ${status ? "aktiv" : "NICHT aktiv"}`
+				);
 			});
 
 			logger.groupEnd();
@@ -213,17 +239,21 @@ const UnifiedDebug = (() => {
 		 */
 		checkAPIs() {
 			logger.group("🌐 API-STATUS");
-			
+
 			const apis = {
 				dynamicLoader: !!window.DynamicAPILoader,
 				aeroDataBox: !!window.AeroDataBoxAPI,
 				amadeus: !!window.AmadeusAPI,
 				openSky: !!window.OpenskyAPI,
-				flightDataAPI: !!window.FlightDataAPI
+				flightDataAPI: !!window.FlightDataAPI,
 			};
 
 			Object.entries(apis).forEach(([name, status]) => {
-				logger.info(`${status ? '✅' : '❌'} ${name}: ${status ? 'verfügbar' : 'nicht geladen'}`);
+				logger.info(
+					`${status ? "✅" : "❌"} ${name}: ${
+						status ? "verfügbar" : "nicht geladen"
+					}`
+				);
 			});
 
 			logger.groupEnd();
@@ -235,30 +265,32 @@ const UnifiedDebug = (() => {
 		 */
 		checkMissingFunctions() {
 			logger.group("🔍 FEHLENDE FUNKTIONEN");
-			
+
 			const required = [
-				'window.hangar',
-				'window.hangarUI',
-				'window.displayOptions',
-				'window.improved_event_manager'
+				"window.hangar",
+				"window.hangarUI",
+				"window.displayOptions",
+				"window.improved_event_manager",
 			];
 
-			const missing = required.filter(path => {
-				const exists = path.split('.').reduce((obj, prop) => obj?.[prop], window);
+			const missing = required.filter((path) => {
+				const exists = path
+					.split(".")
+					.reduce((obj, prop) => obj?.[prop], window);
 				return !exists;
 			});
 
 			if (missing.length === 0) {
 				logger.info("✅ Alle erforderlichen Funktionen sind verfügbar");
 			} else {
-				missing.forEach(func => {
+				missing.forEach((func) => {
 					logger.warn(`❌ FEHLT: ${func}`);
 				});
 			}
 
 			logger.groupEnd();
 			return { missing, count: missing.length };
-		}
+		},
 	};
 
 	/**
@@ -269,14 +301,14 @@ const UnifiedDebug = (() => {
 		 * Ansichtsmodus testen
 		 */
 		toggleViewMode(isTable) {
-			logger.info(`Teste Ansichtsmodus: ${isTable ? 'Tabelle' : 'Kachel'}`);
+			logger.info(`Teste Ansichtsmodus: ${isTable ? "Tabelle" : "Kachel"}`);
 
 			// Verschiedene Zugriffswege testen
 			const methods = [
 				() => window.hangarUI?.applyViewMode?.(isTable),
 				() => window.hangarUI?.uiSettings?.applyViewMode?.(isTable),
 				() => window.uiSettings?.applyViewMode?.(isTable),
-				() => this.fallbackViewMode(isTable)
+				() => this.fallbackViewMode(isTable),
 			];
 
 			for (let i = 0; i < methods.length; i++) {
@@ -316,18 +348,20 @@ const UnifiedDebug = (() => {
 		 */
 		testStorage() {
 			logger.group("💾 STORAGE-TEST");
-			
+
 			try {
-				const testKey = 'debug_test_' + Date.now();
+				const testKey = "debug_test_" + Date.now();
 				const testValue = { test: true, timestamp: Date.now() };
-				
+
 				localStorage.setItem(testKey, JSON.stringify(testValue));
 				const retrieved = JSON.parse(localStorage.getItem(testKey));
 				localStorage.removeItem(testKey);
-				
+
 				const success = retrieved.test === testValue.test;
-				logger.info(`Storage-Test: ${success ? '✅ erfolgreich' : '❌ fehlgeschlagen'}`);
-				
+				logger.info(
+					`Storage-Test: ${success ? "✅ erfolgreich" : "❌ fehlgeschlagen"}`
+				);
+
 				logger.groupEnd();
 				return success;
 			} catch (error) {
@@ -335,7 +369,7 @@ const UnifiedDebug = (() => {
 				logger.groupEnd();
 				return false;
 			}
-		}
+		},
 	};
 
 	/**
@@ -352,7 +386,7 @@ const UnifiedDebug = (() => {
 		measure(name, startMark) {
 			const endTime = performance.now();
 			const startTime = this.markers.get(startMark);
-			
+
 			if (startTime) {
 				const duration = endTime - startTime;
 				logger.info(`⏱️ ${name}: ${duration.toFixed(2)}ms`);
@@ -361,7 +395,7 @@ const UnifiedDebug = (() => {
 				logger.warn(`❌ Start-Marker '${startMark}' nicht gefunden`);
 				return null;
 			}
-		}
+		},
 	};
 
 	/**
@@ -373,14 +407,16 @@ const UnifiedDebug = (() => {
 		 */
 		exportLogs() {
 			const logs = JSON.stringify(logHistory, null, 2);
-			const blob = new Blob([logs], { type: 'application/json' });
+			const blob = new Blob([logs], { type: "application/json" });
 			const url = URL.createObjectURL(blob);
-			
-			const a = document.createElement('a');
+
+			const a = document.createElement("a");
 			a.href = url;
-			a.download = `hangar-debug-logs-${new Date().toISOString().slice(0, 19)}.json`;
+			a.download = `hangar-debug-logs-${new Date()
+				.toISOString()
+				.slice(0, 19)}.json`;
 			a.click();
-			
+
 			URL.revokeObjectURL(url);
 			logger.info("📁 Debug-Logs exportiert");
 		},
@@ -395,12 +431,12 @@ const UnifiedDebug = (() => {
 				timestamp: new Date().toISOString(),
 				viewport: {
 					width: window.innerWidth,
-					height: window.innerHeight
+					height: window.innerHeight,
 				},
 				localStorage: {
 					available: !!window.localStorage,
-					itemCount: localStorage.length
-				}
+					itemCount: localStorage.length,
+				},
 			};
 		},
 
@@ -410,7 +446,7 @@ const UnifiedDebug = (() => {
 		configure(options) {
 			Object.assign(config, options);
 			logger.info("🔧 Debug-Konfiguration aktualisiert", config);
-		}
+		},
 	};
 
 	// Auto-Check beim Laden
@@ -426,11 +462,11 @@ const UnifiedDebug = (() => {
 		performance,
 		utils,
 		config,
-		
+
 		// Legacy-Kompatibilität
 		checkSidebarStatus: diagnostics.checkSidebar,
 		checkAllInitializations: diagnostics.checkAll,
-		toggleViewMode: testing.toggleViewMode
+		toggleViewMode: testing.toggleViewMode,
 	};
 })();
 

@@ -207,17 +207,8 @@ function saveFlightTimeValueToLocalStorage(cellId, field, value) {
 		tileValue[field] = value;
 		tileValue.lastUpdated = new Date().toISOString();
 
-		// Speichern über zentralen Event-Manager falls verfügbar
-		if (window.hangarEventManager && window.hangarEventManager.saveToStorage) {
-			window.hangarEventManager.saveToStorage(
-				"hangarPlannerSettings",
-				settings,
-				"high"
-			);
-		} else {
-			// Fallback: Direkt speichern
-			localStorage.setItem("hangarPlannerSettings", JSON.stringify(settings));
-		}
+		// Speichern
+		localStorage.setItem("hangarPlannerSettings", JSON.stringify(settings));
 
 		console.log(`${field} für Kachel ${cellId} gespeichert: ${value}`);
 	} catch (error) {

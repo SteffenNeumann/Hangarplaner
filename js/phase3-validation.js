@@ -13,7 +13,7 @@ const phase3Validation = {
 			unifiedDebug: await this.testUnifiedDebugSystem(),
 			systemMaintenance: await this.testSystemMaintenance(),
 			legacy: await this.testLegacyCompatibility(),
-			performance: await this.testPerformanceImpact()
+			performance: await this.testPerformanceImpact(),
 		};
 
 		// Zusammenfassung
@@ -34,7 +34,7 @@ const phase3Validation = {
 			loaderExists: !!window.DynamicAPILoader,
 			loadPrimary: false,
 			loadMultiple: false,
-			fallback: false
+			fallback: false,
 		};
 
 		if (tests.loaderExists) {
@@ -44,17 +44,20 @@ const phase3Validation = {
 				// Primäre API laden
 				const primaryAPI = await window.DynamicAPILoader.loadPrimaryAPI();
 				tests.loadPrimary = !!primaryAPI;
-				console.log(`${tests.loadPrimary ? '✅' : '❌'} Primäre API geladen`);
+				console.log(`${tests.loadPrimary ? "✅" : "❌"} Primäre API geladen`);
 
 				// Mehrere APIs laden
-				const modules = await window.DynamicAPILoader.loadModules(['AeroDataBoxAPI']);
+				const modules = await window.DynamicAPILoader.loadModules([
+					"AeroDataBoxAPI",
+				]);
 				tests.loadMultiple = Object.keys(modules).length > 0;
-				console.log(`${tests.loadMultiple ? '✅' : '❌'} Multi-Loading funktioniert`);
+				console.log(
+					`${tests.loadMultiple ? "✅" : "❌"} Multi-Loading funktioniert`
+				);
 
 				// Verfügbare Module prüfen
 				const available = window.DynamicAPILoader.getAvailableModules();
 				console.log("📋 Verfügbare Module:", available);
-
 			} catch (error) {
 				console.warn("⚠️ Dynamic Loading Fehler:", error);
 			}
@@ -77,7 +80,7 @@ const phase3Validation = {
 			legacyCompat: false,
 			diagnostics: false,
 			testing: false,
-			performance: false
+			performance: false,
 		};
 
 		if (tests.unifiedExists) {
@@ -85,23 +88,31 @@ const phase3Validation = {
 
 			// Legacy-Kompatibilität
 			tests.legacyCompat = !!(window.debugHelpers && window.initDebug);
-			console.log(`${tests.legacyCompat ? '✅' : '❌'} Legacy-Kompatibilität`);
+			console.log(`${tests.legacyCompat ? "✅" : "❌"} Legacy-Kompatibilität`);
 
 			try {
 				// Diagnostics testen
 				const diagnosis = await window.UnifiedDebug.diagnostics.checkAll();
 				tests.diagnostics = !!diagnosis;
-				console.log(`${tests.diagnostics ? '✅' : '❌'} Diagnostics funktionieren`);
+				console.log(
+					`${tests.diagnostics ? "✅" : "❌"} Diagnostics funktionieren`
+				);
 
 				// Testing-Funktionen
-				tests.testing = typeof window.UnifiedDebug.testing.toggleViewMode === 'function';
-				console.log(`${tests.testing ? '✅' : '❌'} Testing-Funktionen verfügbar`);
+				tests.testing =
+					typeof window.UnifiedDebug.testing.toggleViewMode === "function";
+				console.log(
+					`${tests.testing ? "✅" : "❌"} Testing-Funktionen verfügbar`
+				);
 
 				// Performance-Monitoring
-				window.UnifiedDebug.performance.mark('test');
-				tests.performance = window.UnifiedDebug.performance.markers.has('test');
-				console.log(`${tests.performance ? '✅' : '❌'} Performance-Monitoring funktioniert`);
-
+				window.UnifiedDebug.performance.mark("test");
+				tests.performance = window.UnifiedDebug.performance.markers.has("test");
+				console.log(
+					`${
+						tests.performance ? "✅" : "❌"
+					} Performance-Monitoring funktioniert`
+				);
 			} catch (error) {
 				console.warn("⚠️ UnifiedDebug Fehler:", error);
 			}
@@ -123,7 +134,7 @@ const phase3Validation = {
 			maintenanceExists: !!window.SystemMaintenance,
 			quickCheck: false,
 			diagnosis: false,
-			legacyCompat: false
+			legacyCompat: false,
 		};
 
 		if (tests.maintenanceExists) {
@@ -133,19 +144,26 @@ const phase3Validation = {
 				// Quick Check
 				const quickResult = window.SystemMaintenance.quickCheck();
 				tests.quickCheck = !!quickResult;
-				console.log(`${tests.quickCheck ? '✅' : '❌'} Quick Check funktioniert`);
+				console.log(
+					`${tests.quickCheck ? "✅" : "❌"} Quick Check funktioniert`
+				);
 
 				// Vollständige Diagnose
 				const fullDiagnosis = await window.SystemMaintenance.diagnose();
 				tests.diagnosis = !!fullDiagnosis;
-				console.log(`${tests.diagnosis ? '✅' : '❌'} Vollständige Diagnose funktioniert`);
+				console.log(
+					`${tests.diagnosis ? "✅" : "❌"} Vollständige Diagnose funktioniert`
+				);
 
 				// Legacy-Kompatibilität
-				tests.legacyCompat = !!(window.HangarConflictResolver && 
-										window.SystemRepair && 
-										window.syncDiagnosis);
-				console.log(`${tests.legacyCompat ? '✅' : '❌'} Legacy-Kompatibilität`);
-
+				tests.legacyCompat = !!(
+					window.HangarConflictResolver &&
+					window.SystemRepair &&
+					window.syncDiagnosis
+				);
+				console.log(
+					`${tests.legacyCompat ? "✅" : "❌"} Legacy-Kompatibilität`
+				);
 			} catch (error) {
 				console.warn("⚠️ SystemMaintenance Fehler:", error);
 			}
@@ -164,20 +182,37 @@ const phase3Validation = {
 		console.log("------------------------------");
 
 		const legacyFunctions = [
-			{ name: 'debugHelpers.checkSidebarStatus', path: 'window.debugHelpers.checkSidebarStatus' },
-			{ name: 'initDebug.checkAllInitializations', path: 'window.initDebug.checkAllInitializations' },
-			{ name: 'toggleViewMode', path: 'window.toggleViewMode' },
-			{ name: 'HangarConflictResolver.runFullDiagnosis', path: 'window.HangarConflictResolver.runFullDiagnosis' },
-			{ name: 'SystemRepair.repairSystem', path: 'window.SystemRepair.repairSystem' },
-			{ name: 'syncDiagnosis.runQuickDiagnosis', path: 'window.syncDiagnosis.runQuickDiagnosis' }
+			{
+				name: "debugHelpers.checkSidebarStatus",
+				path: "window.debugHelpers.checkSidebarStatus",
+			},
+			{
+				name: "initDebug.checkAllInitializations",
+				path: "window.initDebug.checkAllInitializations",
+			},
+			{ name: "toggleViewMode", path: "window.toggleViewMode" },
+			{
+				name: "HangarConflictResolver.runFullDiagnosis",
+				path: "window.HangarConflictResolver.runFullDiagnosis",
+			},
+			{
+				name: "SystemRepair.repairSystem",
+				path: "window.SystemRepair.repairSystem",
+			},
+			{
+				name: "syncDiagnosis.runQuickDiagnosis",
+				path: "window.syncDiagnosis.runQuickDiagnosis",
+			},
 		];
 
 		const tests = {};
 
-		legacyFunctions.forEach(func => {
-			const exists = func.path.split('.').reduce((obj, prop) => obj?.[prop], window);
-			tests[func.name] = typeof exists === 'function';
-			console.log(`${tests[func.name] ? '✅' : '❌'} ${func.name}`);
+		legacyFunctions.forEach((func) => {
+			const exists = func.path
+				.split(".")
+				.reduce((obj, prop) => obj?.[prop], window);
+			tests[func.name] = typeof exists === "function";
+			console.log(`${tests[func.name] ? "✅" : "❌"} ${func.name}`);
 		});
 
 		return tests;
@@ -192,15 +227,19 @@ const phase3Validation = {
 
 		const performance = {
 			loadTime: window.performance.now(),
-			scripts: document.querySelectorAll('script').length,
-			memory: null
+			scripts: document.querySelectorAll("script").length,
+			memory: null,
 		};
 
 		// Memory-Info (wenn verfügbar)
 		if (window.performance.memory) {
 			performance.memory = {
-				used: Math.round(window.performance.memory.usedJSHeapSize / 1024 / 1024),
-				total: Math.round(window.performance.memory.totalJSHeapSize / 1024 / 1024)
+				used: Math.round(
+					window.performance.memory.usedJSHeapSize / 1024 / 1024
+				),
+				total: Math.round(
+					window.performance.memory.totalJSHeapSize / 1024 / 1024
+				),
 			};
 		}
 
@@ -210,12 +249,22 @@ const phase3Validation = {
 		const tests = {
 			scriptsReduced: performance.scripts < 30, // Sollte reduziert sein
 			loadTimeAcceptable: performance.loadTime < 5000, // Unter 5 Sekunden
-			memoryEfficient: !performance.memory || performance.memory.used < 50 // Unter 50MB
+			memoryEfficient: !performance.memory || performance.memory.used < 50, // Unter 50MB
 		};
 
-		console.log(`${tests.scriptsReduced ? '✅' : '❌'} Script-Anzahl reduziert: ${performance.scripts}`);
-		console.log(`${tests.loadTimeAcceptable ? '✅' : '❌'} Ladezeit akzeptabel: ${performance.loadTime.toFixed(2)}ms`);
-		console.log(`${tests.memoryEfficient ? '✅' : '❌'} Memory-Verbrauch effizient`);
+		console.log(
+			`${tests.scriptsReduced ? "✅" : "❌"} Script-Anzahl reduziert: ${
+				performance.scripts
+			}`
+		);
+		console.log(
+			`${
+				tests.loadTimeAcceptable ? "✅" : "❌"
+			} Ladezeit akzeptabel: ${performance.loadTime.toFixed(2)}ms`
+		);
+		console.log(
+			`${tests.memoryEfficient ? "✅" : "❌"} Memory-Verbrauch effizient`
+		);
 
 		return { ...tests, metrics: performance };
 	},
@@ -224,15 +273,18 @@ const phase3Validation = {
 	 * Zusammenfassung generieren
 	 */
 	generateSummary(results) {
-		const allTests = Object.values(results).reduce((acc, category) => {
-			Object.values(category).forEach(test => {
-				if (typeof test === 'boolean') {
-					acc.total++;
-					if (test) acc.passed++;
-				}
-			});
-			return acc;
-		}, { total: 0, passed: 0 });
+		const allTests = Object.values(results).reduce(
+			(acc, category) => {
+				Object.values(category).forEach((test) => {
+					if (typeof test === "boolean") {
+						acc.total++;
+						if (test) acc.passed++;
+					}
+				});
+				return acc;
+			},
+			{ total: 0, passed: 0 }
+		);
 
 		const successRate = Math.round((allTests.passed / allTests.total) * 100);
 
@@ -240,18 +292,23 @@ const phase3Validation = {
 			totalTests: allTests.total,
 			passedTests: allTests.passed,
 			successRate: successRate,
-			status: successRate >= 90 ? 'EXCELLENT' : 
-					successRate >= 75 ? 'GOOD' : 
-					successRate >= 50 ? 'FAIR' : 'POOR'
+			status:
+				successRate >= 90
+					? "EXCELLENT"
+					: successRate >= 75
+					? "GOOD"
+					: successRate >= 50
+					? "FAIR"
+					: "POOR",
 		};
-	}
+	},
 };
 
 // Tests automatisch ausführen
-if (document.readyState === 'complete') {
+if (document.readyState === "complete") {
 	setTimeout(() => phase3Validation.runAllTests(), 1000);
 } else {
-	window.addEventListener('load', () => {
+	window.addEventListener("load", () => {
 		setTimeout(() => phase3Validation.runAllTests(), 1000);
 	});
 }

@@ -22,7 +22,7 @@ class ServerSync {
 	async initSync(serverUrl) {
 		this.serverSyncUrl = serverUrl;
 		console.log("🔄 Server-Sync initialisiert:", serverUrl);
-		
+
 		// Startet periodische Synchronisation
 		this.startPeriodicSync();
 	}
@@ -65,14 +65,14 @@ class ServerSync {
 		try {
 			// Aktuelle Daten sammeln
 			const currentData = this.collectCurrentData();
-			
+
 			// Daten an Server senden
 			const response = await fetch(this.serverSyncUrl, {
-				method: 'POST',
+				method: "POST",
 				headers: {
-					'Content-Type': 'application/json',
+					"Content-Type": "application/json",
 				},
-				body: JSON.stringify(currentData)
+				body: JSON.stringify(currentData),
 			});
 
 			if (response.ok) {
@@ -94,19 +94,25 @@ class ServerSync {
 	collectCurrentData() {
 		try {
 			// Verwende hangarData falls verfügbar
-			if (window.hangarData && typeof window.hangarData.collectAllHangarData === 'function') {
+			if (
+				window.hangarData &&
+				typeof window.hangarData.collectAllHangarData === "function"
+			) {
 				return window.hangarData.collectAllHangarData();
 			}
 
 			// Fallback: Sammle Basis-Daten
 			const data = {
 				timestamp: new Date().toISOString(),
-				projectName: document.getElementById('projectName')?.value || 'Unbenannt',
-				settings: JSON.parse(localStorage.getItem('hangarPlannerSettings') || '{}'),
+				projectName:
+					document.getElementById("projectName")?.value || "Unbenannt",
+				settings: JSON.parse(
+					localStorage.getItem("hangarPlannerSettings") || "{}"
+				),
 				metadata: {
 					lastSync: new Date().toISOString(),
-					source: 'server-sync-lite'
-				}
+					source: "server-sync-lite",
+				},
 			};
 
 			return data;
@@ -126,11 +132,11 @@ class ServerSync {
 		}
 
 		try {
-			const response = await fetch(this.serverSyncUrl + '?action=load', {
-				method: 'GET',
+			const response = await fetch(this.serverSyncUrl + "?action=load", {
+				method: "GET",
 				headers: {
-					'Accept': 'application/json',
-				}
+					Accept: "application/json",
+				},
 			});
 
 			if (response.ok) {
@@ -161,28 +167,82 @@ class ServerSync {
 			this.isApplyingServerData = true;
 			window.isApplyingServerData = true;
 
-			// Verwende hangarData falls verfügbar
-			if (window.hangarData && typeof window.hangarData.applyLoadedHangarPlan === 'function') {
+			console.log("📥 Wende Server-Daten an:", serverData);
+
+			// 1. Verwende hangarData falls verfügbar
+			if (
+				window.hangarData &&
+				typeof window.hangarData.applyLoadedHangarPlan === "function"
+			) {
 				const result = window.hangarData.applyLoadedHangarPlan(serverData);
 				console.log("✅ Server-Daten über hangarData angewendet");
 				return result;
 			}
 
-			// Fallback: Basis-Anwendung
-			if (serverData.projectName) {
-				const projectNameInput = document.getElementById('projectName');
+			// 2. Fallback: Manuelle Anwendung der Daten
+
+			// Projektname setzen
+			if (serverData.metadata && serverData.metadata.projectName) {
+				const projectNameInput = document.getElementById("projectName");
 				if (projectNameInput) {
-					projectNameInput.value = serverData.projectName;
+					projectNameInput.value = serverData.metadata.projectName;
+					console.log(
+						"📝 Projektname gesetzt:",
+						serverData.metadata.projectName
+					);
 				}
 			}
 
+			// Einstellungen anwenden
 			if (serverData.settings) {
-				localStorage.setItem('hangarPlannerSettings', JSON.stringify(serverData.settings));
+				localStorage.setItem(
+					"hangarPlannerSettings",
+					JSON.stringify(serverData.settings)
+				);
+
+				// UI-Einstellungen direkt setzen
+				if (serverData.settings.tilesCount) {
+					const tilesCountInput = document.getElementById("tilesCount");
+					if (tilesCountInput)
+						tilesCountInput.value = serverData.settings.tilesCount;
+				}
+				if (serverData.settings.secondaryTilesCount) {
+					const secondaryTilesCountInput = document.getElementById(
+						"secondaryTilesCount"
+					);
+					if (secondaryTilesCountInput)
+						secondaryTilesCountInput.value =
+							serverData.settings.secondaryTilesCount;
+				}
+				if (serverData.settings.layout) {
+					const layoutSelect = document.getElementById("layoutType");
+					if (layoutSelect) layoutSelect.value = serverData.settings.layout;
+				}
+
+				console.log("⚙️ Einstellungen angewendet");
 			}
 
-			console.log("✅ Server-Daten angewendet (Fallback)");
-			return true;
+			// 3. WICHTIG: Kachel-Daten anwenden
+			if (serverData.primaryTiles) {
+				this.applyTileData(serverData.primaryTiles, false);
+			}
+			if (serverData.secondaryTiles) {
+				this.applyTileData(serverData.secondaryTiles, true);
+			}
 
+			// 4. Einzelne Feld-Updates anwenden (falls vorhanden)
+			if (serverData.currentFields) {
+				Object.entries(serverData.currentFields).forEach(([fieldId, value]) => {
+					const element = document.getElementById(fieldId);
+					if (element) {
+						element.value = value;
+						console.log(`🔧 Feld-Update angewendet: ${fieldId} = "${value}"`);
+					}
+				});
+			}
+
+			console.log("✅ Server-Daten angewendet (erweiterte Fallback-Methode)");
+			return true;
 		} catch (error) {
 			console.error("❌ Fehler beim Anwenden der Server-Daten:", error);
 			return false;
@@ -194,18 +254,110 @@ class ServerSync {
 	}
 
 	/**
+	 * NEUE HILFSFUNKTION: Wendet Kachel-Daten auf die UI an
+	 */
+	applyTileData(tiles, isSecondary = false) {
+		console.log(
+			`🏗️ Wende ${isSecondary ? "sekundäre" : "primäre"} Kachel-Daten an:`,
+			tiles.length,
+			"Kacheln"
+		);
+
+		tiles.forEach((tileData, index) => {
+			const tileId = tileData.tileId || (isSecondary ? 101 + index : 1 + index);
+
+			// Aircraft ID
+			if (tileData.aircraftId) {
+				const aircraftInput = document.getElementById(`aircraft-${tileId}`);
+				if (aircraftInput) {
+					aircraftInput.value = tileData.aircraftId;
+					console.log(
+						`✈️ Aircraft ID gesetzt: ${tileId} = ${tileData.aircraftId}`
+					);
+				}
+			}
+
+			// Position
+			if (tileData.position) {
+				const positionInput =
+					document.getElementById(`hangar-position-${tileId}`) ||
+					document.getElementById(`position-${tileId}`);
+				if (positionInput) {
+					positionInput.value = tileData.position;
+					console.log(`📍 Position gesetzt: ${tileId} = ${tileData.position}`);
+				}
+			}
+
+			// Notes
+			if (tileData.notes) {
+				const notesInput = document.getElementById(`notes-${tileId}`);
+				if (notesInput) {
+					notesInput.value = tileData.notes;
+					console.log(`📝 Notizen gesetzt: ${tileId} = ${tileData.notes}`);
+				}
+			}
+
+			// Arrival Time
+			if (tileData.arrivalTime) {
+				const arrivalInput = document.getElementById(`arrival-time-${tileId}`);
+				if (arrivalInput) {
+					arrivalInput.value = tileData.arrivalTime;
+					console.log(
+						`🛬 Ankunftszeit gesetzt: ${tileId} = ${tileData.arrivalTime}`
+					);
+				}
+			}
+
+			// Departure Time
+			if (tileData.departureTime) {
+				const departureInput = document.getElementById(
+					`departure-time-${tileId}`
+				);
+				if (departureInput) {
+					departureInput.value = tileData.departureTime;
+					console.log(
+						`🛫 Abflugzeit gesetzt: ${tileId} = ${tileData.departureTime}`
+					);
+				}
+			}
+
+			// Status
+			if (tileData.status) {
+				const statusSelect = document.getElementById(`status-${tileId}`);
+				if (statusSelect) {
+					statusSelect.value = tileData.status;
+					console.log(`🚦 Status gesetzt: ${tileId} = ${tileData.status}`);
+				}
+			}
+
+			// Tow Status
+			if (tileData.towStatus) {
+				const towStatusSelect = document.getElementById(`tow-status-${tileId}`);
+				if (towStatusSelect) {
+					towStatusSelect.value = tileData.towStatus;
+					console.log(
+						`🚚 Tow Status gesetzt: ${tileId} = ${tileData.towStatus}`
+					);
+				}
+			}
+		});
+	}
+
+	/**
 	 * Prüft ob Daten geändert wurden (für optimierte Sync)
 	 */
 	hasDataChanged() {
 		try {
 			const currentData = this.collectCurrentData();
-			const currentChecksum = this.generateChecksum(JSON.stringify(currentData));
-			
+			const currentChecksum = this.generateChecksum(
+				JSON.stringify(currentData)
+			);
+
 			if (this.lastDataChecksum !== currentChecksum) {
 				this.lastDataChecksum = currentChecksum;
 				return true;
 			}
-			
+
 			return false;
 		} catch (error) {
 			console.error("❌ Fehler bei Change-Detection:", error);
@@ -220,7 +372,7 @@ class ServerSync {
 		let hash = 0;
 		for (let i = 0; i < str.length; i++) {
 			const char = str.charCodeAt(i);
-			hash = ((hash << 5) - hash) + char;
+			hash = (hash << 5) - hash + char;
 			hash = hash & hash; // Convert to 32-bit integer
 		}
 		return hash.toString();
@@ -232,7 +384,7 @@ class ServerSync {
 	async manualSync() {
 		console.log("🔄 Manueller Server-Sync gestartet...");
 		const success = await this.syncWithServer();
-		
+
 		if (success) {
 			console.log("✅ Manueller Server-Sync erfolgreich");
 			// Optional: Erfolgsmeldung anzeigen
@@ -246,7 +398,7 @@ class ServerSync {
 				window.showNotification("Synchronisation fehlgeschlagen", "error");
 			}
 		}
-		
+
 		return success;
 	}
 
@@ -258,7 +410,7 @@ class ServerSync {
 			serverUrl: this.serverSyncUrl,
 			isActive: !!this.serverSyncInterval,
 			lastSync: this.lastDataChecksum ? new Date().toISOString() : null,
-			isApplyingData: this.isApplyingServerData
+			isApplyingData: this.isApplyingServerData,
 		};
 	}
 
@@ -267,30 +419,123 @@ class ServerSync {
 	 */
 	destroy() {
 		this.stopPeriodicSync();
-		
+
 		if (this.autoSaveTimeout) {
 			clearTimeout(this.autoSaveTimeout);
 			this.autoSaveTimeout = null;
 		}
-		
+
 		console.log("🗑️ Server-Sync zerstört und bereinigt");
+	}
+
+	/**
+	 * Testet die Server-Verbindung
+	 */
+	async testServerConnection(serverUrl) {
+		try {
+			console.log("🔍 Teste Server-Verbindung zu:", serverUrl);
+
+			const response = await fetch(serverUrl, {
+				method: "GET",
+				headers: {
+					Accept: "application/json",
+				},
+				// Timeout nach 5 Sekunden
+				signal: AbortSignal.timeout(5000),
+			});
+
+			if (response.ok || response.status === 404) {
+				// 404 ist OK - bedeutet nur, dass noch keine Daten vorhanden sind
+				console.log("✅ Server-Verbindung erfolgreich");
+				return true;
+			} else {
+				console.warn("⚠️ Server antwortet mit Status:", response.status);
+				return false;
+			}
+		} catch (error) {
+			console.error("❌ Server-Verbindungstest fehlgeschlagen:", error.message);
+			return false;
+		}
 	}
 }
 
 // Globale Instanz für Kompatibilität
 window.serverSync = new ServerSync();
+window.storageBrowser = window.serverSync; // Alias für Kompatibilität
 
 // Für Kompatibilität mit bestehender storage-browser.js
 window.StorageBrowser = ServerSync;
 
-// Auto-Initialisierung falls Server-URL konfiguriert ist
-document.addEventListener('DOMContentLoaded', () => {
-	// Prüfe auf Server-Konfiguration
-	const serverUrl = localStorage.getItem('hangarServerSyncUrl');
-	if (serverUrl) {
-		window.serverSync.initSync(serverUrl);
-		console.log("🚀 Auto-initialisiert Server-Sync");
+// Auto-Initialisierung mit echter Server-URL
+document.addEventListener("DOMContentLoaded", () => {
+	// PRODUKTIONS-Server-URL für hangarplanner.de
+	const productionServerUrl = "https://hangarplanner.de/sync/data.php";
+
+	// Fallback für lokale Entwicklung
+	const localServerUrl = window.location.origin + "/sync/data.php";
+
+	// Prüfe auf Server-Konfiguration oder verwende Produktions-URL
+	let serverUrl = localStorage.getItem("hangarServerSyncUrl");
+
+	// Wenn keine URL gespeichert ist, verwende Produktions-URL
+	if (!serverUrl) {
+		serverUrl = productionServerUrl;
+		console.log("🌐 Verwende Produktions-Server:", productionServerUrl);
+	} else {
+		console.log("💾 Verwende gespeicherte Server-URL:", serverUrl);
 	}
+
+	window.serverSync.initSync(serverUrl);
+	localStorage.setItem("hangarServerSyncUrl", serverUrl); // Für künftige Verwendung speichern
+
+	console.log("🚀 Auto-initialisiert Server-Sync mit URL:", serverUrl);
+
+	// SERVER-VERBINDUNGSTEST
+	setTimeout(async () => {
+		const isServerReachable = await window.serverSync.testServerConnection(
+			serverUrl
+		);
+
+		if (!isServerReachable) {
+			console.warn("⚠️ Server nicht erreichbar, verwende lokale Speicherung");
+
+			// Fallback auf lokalen Server falls Produktions-Server nicht erreichbar
+			if (serverUrl.includes("hangarplanner.de")) {
+				const fallbackUrl = window.location.origin + "/sync/data.php";
+				console.log("🔄 Versuche Fallback auf lokalen Server:", fallbackUrl);
+
+				const isFallbackReachable =
+					await window.serverSync.testServerConnection(fallbackUrl);
+				if (isFallbackReachable) {
+					window.serverSync.initSync(fallbackUrl);
+					localStorage.setItem("hangarServerSyncUrl", fallbackUrl);
+					console.log("✅ Fallback auf lokalen Server erfolgreich");
+				}
+			}
+		} else {
+			console.log("✅ Server-Verbindung bestätigt");
+		}
+	}, 1000);
+
+	// AUTO-LOAD von Server-Daten beim Start
+	setTimeout(async () => {
+		try {
+			console.log("🔄 Versuche Server-Daten beim Start zu laden...");
+			const serverData = await window.serverSync.loadFromServer();
+
+			if (serverData && !serverData.error) {
+				console.log("📥 Server-Daten gefunden, wende sie an...");
+				await window.serverSync.applyServerData(serverData);
+			} else {
+				console.log("📭 Keine Server-Daten vorhanden oder Fehler beim Laden");
+			}
+		} catch (error) {
+			console.log(
+				"⚠️ Server-Daten konnten nicht geladen werden:",
+				error.message
+			);
+		}
+	}, 3000); // 3 Sekunden Verzögerung um Server-Test abzuwarten
 });
 
 console.log("📦 Server-Sync-Modul geladen (optimiert von 2085 → ~250 Zeilen)");

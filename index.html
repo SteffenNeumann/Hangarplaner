@@ -1295,7 +1295,9 @@
 				<div class="sidebar-content">
 					<!-- Ansichtsverwaltung als eigene Sektion -->
 					<div class="sidebar-accordion-item">
-						<div class="sidebar-accordion-header" onclick="toggleAccordion(this)">
+						<div
+							class="sidebar-accordion-header"
+							onclick="toggleAccordion(this)">
 							<div class="sidebar-header-content">
 								<i class="sidebar-icon">⚙️</i>
 								<h3 class="sidebar-section-title">Project Settings</h3>
@@ -1349,7 +1351,9 @@
 
 					<!-- Display Options Sektion -->
 					<div class="sidebar-accordion-item">
-						<div class="sidebar-accordion-header" onclick="toggleAccordion(this)">
+						<div
+							class="sidebar-accordion-header"
+							onclick="toggleAccordion(this)">
 							<div class="sidebar-header-content">
 								<i class="sidebar-icon">🔳</i>
 								<h3 class="sidebar-section-title">Display Options</h3>
@@ -1456,7 +1460,9 @@
 
 					<!-- Suche nach Flugzeugen -->
 					<div class="sidebar-accordion-item">
-						<div class="sidebar-accordion-header" onclick="toggleAccordion(this)">
+						<div
+							class="sidebar-accordion-header"
+							onclick="toggleAccordion(this)">
 							<div class="sidebar-header-content">
 								<i class="sidebar-icon">🔍</i>
 								<h3 class="sidebar-section-title">Search Aircraft</h3>
@@ -1480,7 +1486,9 @@
 
 					<!-- Flugdaten abrufen -->
 					<div class="sidebar-accordion-item">
-						<div class="sidebar-accordion-header" onclick="toggleAccordion(this)">
+						<div
+							class="sidebar-accordion-header"
+							onclick="toggleAccordion(this)">
 							<div class="sidebar-header-content">
 								<i class="sidebar-icon">✈️</i>
 								<h3 class="sidebar-section-title">Flight Data</h3>
@@ -1554,7 +1562,9 @@
 
 					<!-- PDF Export Funktion -->
 					<div class="sidebar-accordion-item">
-						<div class="sidebar-accordion-header" onclick="toggleAccordion(this)">
+						<div
+							class="sidebar-accordion-header"
+							onclick="toggleAccordion(this)">
 							<div class="sidebar-header-content">
 								<i class="sidebar-icon">📄</i>
 								<h3 class="sidebar-section-title">Export Plan</h3>
@@ -1573,7 +1583,11 @@
 
 							<div class="sidebar-form-group">
 								<div class="flex items-center">
-									<input type="checkbox" id="includeNotes" checked class="mr-2" />
+									<input
+										type="checkbox"
+										id="includeNotes"
+										checked
+										class="mr-2" />
 									<label for="includeNotes">Include Notes</label>
 								</div>
 							</div>
@@ -1593,6 +1607,21 @@
 								id="exportPdfBtn"
 								class="sidebar-btn sidebar-btn-primary w-full">
 								Export PDF
+							</button>
+
+							<!-- DEBUG: Server-Sync Test Button -->
+							<button
+								id="testServerSyncBtn"
+								class="sidebar-btn sidebar-btn-secondary w-full mt-2"
+								style="font-size: 11px">
+								🧪 Test Server-Sync
+							</button>
+
+							<button
+								id="fullSystemTestBtn"
+								class="sidebar-btn sidebar-btn-secondary w-full mt-1"
+								style="font-size: 11px">
+								🔬 Vollständiger System-Test
 							</button>
 						</div>
 					</div>
@@ -1684,6 +1713,8 @@
 			<script src="js/phase3-validation.js"></script>
 			<!-- KONFLIKTLÖSUNG: Aktions-Plan und Monitoring -->
 			<script src="js/action-plan.js"></script>
+			<!-- Server-Sync Test und Validierung -->
+			<script src="js/server-sync-test.js"></script>
 			<!-- Vereinfachte Sync-Diagnose -->
 
 			<!-- Einfache Accordion-Funktion ohne Event-Listener -->
@@ -1691,16 +1722,19 @@
 				// Direkte Accordion-Toggle-Funktion (keep it simple)
 				function toggleAccordion(header) {
 					const content = header.nextElementSibling;
-					const arrow = header.querySelector('.dropdown-arrow');
-					
-					if (content && content.classList.contains('sidebar-accordion-content')) {
+					const arrow = header.querySelector(".dropdown-arrow");
+
+					if (
+						content &&
+						content.classList.contains("sidebar-accordion-content")
+					) {
 						// Toggle open/close
-						if (content.classList.contains('open')) {
-							content.classList.remove('open');
-							if (arrow) arrow.textContent = '▼';
+						if (content.classList.contains("open")) {
+							content.classList.remove("open");
+							if (arrow) arrow.textContent = "▼";
 						} else {
-							content.classList.add('open');
-							if (arrow) arrow.textContent = '▲';
+							content.classList.add("open");
+							if (arrow) arrow.textContent = "▲";
 						}
 					}
 				}
@@ -1722,6 +1756,53 @@
 								alert(
 									"Empfohlene Ordnerstruktur: HangarPlanner/Projekte/ für Projekte und HangarPlanner/Einstellungen/ für Einstellungen"
 								);
+							}
+						});
+					}
+
+					// Event-Handler für Server-Sync Test Button
+					const testServerSyncBtn =
+						document.getElementById("testServerSyncBtn");
+					if (testServerSyncBtn) {
+						testServerSyncBtn.addEventListener("click", function () {
+							if (window.serverSyncValidator) {
+								window.serverSyncValidator.runFullTest();
+							} else {
+								alert("Server-Sync Validator nicht verfügbar");
+							}
+						});
+					}
+
+					// Event-Handler für vollständigen System-Test Button
+					const fullSystemTestBtn =
+						document.getElementById("fullSystemTestBtn");
+					if (fullSystemTestBtn) {
+						fullSystemTestBtn.addEventListener("click", async function () {
+							console.log("🔬 Starte vollständigen System-Test...");
+
+							// Button während Test deaktivieren
+							fullSystemTestBtn.disabled = true;
+							fullSystemTestBtn.textContent = "🔄 Teste System...";
+
+							try {
+								// Führe vollständigen System-Test aus
+								if (typeof window.runCompleteSystemTest === "function") {
+									await window.runCompleteSystemTest();
+								} else {
+									alert(
+										"❌ System-Test-Funktion nicht verfügbar.\n\nBitte Konsole öffnen und 'runCompleteSystemTest()' eingeben."
+									);
+									console.warn(
+										"System-Test-Funktion nicht verfügbar. Lade system-test.js?"
+									);
+								}
+							} catch (error) {
+								console.error("❌ System-Test Fehler:", error);
+								alert("❌ System-Test Fehler: " + error.message);
+							} finally {
+								// Button wieder aktivieren
+								fullSystemTestBtn.disabled = false;
+								fullSystemTestBtn.textContent = "🔬 Vollständiger System-Test";
 							}
 						});
 					}
@@ -1931,6 +2012,8 @@
 
 			<!-- Validierungsskript nach Optimierung -->
 			<script src="js/validation-test.js"></script>
+			<!-- System Test Script -->
+			<script src="js/system-test.js"></script>
 		</div>
 	</body>
 </html>

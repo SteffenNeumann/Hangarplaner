@@ -147,15 +147,130 @@ class HangarEventManager {
 
 	async updateFieldInStorage(fieldId, value) {
 		try {
+			// 1. Lokale Speicherung
 			const existing = (await this.loadFromStorage("hangarPlannerData")) || {};
 			existing[fieldId] = value;
 			existing.lastModified = new Date().toISOString();
 
 			await this.saveToStorage("hangarPlannerData", existing);
-			console.log(`💾 Feld gespeichert: ${fieldId} = "${value}"`);
+			console.log(`💾 Feld lokal gespeichert: ${fieldId} = "${value}"`);
+
+			// 2. DIREKTE Server-Synchronisation
+			await this.syncFieldToServer(fieldId, value);
 		} catch (error) {
 			console.error("Fehler beim Speichern von Feld:", fieldId, error);
 		}
+	}
+
+	/**
+	 * NEUE FUNKTION: Direkte Server-Synchronisation für einzelne Felder
+	 */
+	async syncFieldToServer(fieldId, value) {
+		try {
+			// Prüfe ob Server-Sync verfügbar ist
+			if (!window.storageBrowser || !window.storageBrowser.serverSyncUrl) {
+				console.log(
+					"⚠️ Server-Sync nicht konfiguriert - nur lokale Speicherung"
+				);
+				return;
+			}
+
+			// WICHTIG: Sammle ALLE aktuellen Daten für vollständige Server-Synchronisation
+			let allData = null;
+			if (
+				window.hangarData &&
+				typeof window.hangarData.collectAllHangarData === "function"
+			) {
+				allData = window.hangarData.collectAllHangarData();
+				console.log(
+					"📊 Vollständige Daten für Server-Sync gesammelt:",
+					allData
+				);
+			} else {
+				// Fallback: Erweiterte Datensammlung
+				allData = {
+					metadata: {
+						lastModified: new Date().toISOString(),
+						projectName:
+							document.getElementById("projectName")?.value || "HangarPlan",
+						syncTriggeredBy: fieldId,
+					},
+					settings: {
+						tilesCount:
+							parseInt(document.getElementById("tilesCount")?.value) || 8,
+						secondaryTilesCount:
+							parseInt(document.getElementById("secondaryTilesCount")?.value) ||
+							0,
+						layout: parseInt(document.getElementById("layoutType")?.value) || 4,
+					},
+					fieldUpdates: {
+						[fieldId]: value,
+					},
+					// Sammle alle aktuell sichtbaren Felder
+					currentFields: this.collectAllVisibleFields(),
+				};
+				console.log("📊 Fallback-Daten für Server-Sync gesammelt:", allData);
+			}
+
+			// Server-Request mit allen Daten
+			const response = await fetch(window.storageBrowser.serverSyncUrl, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(allData),
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				console.log(
+					`✅ Server-Sync erfolgreich: ${fieldId} = "${value}"`,
+					result
+				);
+			} else {
+				console.warn(
+					`⚠️ Server-Sync fehlgeschlagen für ${fieldId}:`,
+					response.status,
+					await response.text()
+				);
+			}
+		} catch (error) {
+			console.error(`❌ Server-Sync Fehler für ${fieldId}:`, error);
+		}
+	}
+
+	/**
+	 * NEUE HILFSFUNKTION: Sammelt alle sichtbaren Feldwerte
+	 */
+	collectAllVisibleFields() {
+		const fields = {};
+
+		// Alle relevanten Felder durchgehen
+		const selectors = [
+			'input[id^="aircraft-"]',
+			'input[id^="arrival-time-"]',
+			'input[id^="departure-time-"]',
+			'input[id^="position-"]',
+			'input[id^="hangar-position-"]',
+			'textarea[id^="notes-"]',
+			'select[id^="status-"]',
+			'select[id^="tow-status-"]',
+		];
+
+		selectors.forEach((selector) => {
+			document.querySelectorAll(selector).forEach((element) => {
+				if (element.id && element.value !== undefined) {
+					fields[element.id] = element.value;
+				}
+			});
+		});
+
+		console.log(
+			"🔍 Alle sichtbaren Felder gesammelt:",
+			Object.keys(fields).length,
+			"Felder"
+		);
+		return fields;
 	}
 
 	/**
@@ -206,32 +321,157 @@ class HangarEventManager {
 	}
 
 	setupUnifiedEventHandlers() {
-		// Unified Input Handler für alle relevanten Felder
-		document
-			.querySelectorAll(
-				'input[id^="aircraft-"], input[id^="arrival-time-"], input[id^="departure-time-"], input[id^="position-"], textarea[id^="notes-"]'
-			)
-			.forEach((element) => {
+		// ERWEITERTE Unified Input Handler für ALLE relevanten Felder
+		const relevantSelectors = [
+			'input[id^="aircraft-"]', // Aircraft ID Felder
+			'input[id^="arrival-time-"]', // Ankunftszeit Felder
+			'input[id^="departure-time-"]', // Abflugzeit Felder
+			'input[id^="position-"]', // Position Felder
+			'input[id^="hangar-position-"]', // Hangar Position Felder (alternative IDs)
+			'textarea[id^="notes-"]', // Notizen Felder
+			'select[id^="status-"]', // Status Dropdowns
+			'select[id^="tow-status-"]', // Tow Status Dropdowns
+			'input[type="text"][class*="aircraft"]', // Felder mit aircraft CSS-Klasse
+			'input[type="text"][class*="position"]', // Felder mit position CSS-Klasse
+			'textarea[class*="notes"]', // Notiz-Textareas mit CSS-Klasse
+		];
+
+		// Event-Handler für alle relevanten Felder registrieren
+		relevantSelectors.forEach((selector) => {
+			document.querySelectorAll(selector).forEach((element) => {
+				// Input Event (während der Eingabe)
 				this.safeAddEventListener(
 					element,
 					"input",
 					(event) => {
+						console.log(
+							`📝 Input Event: ${event.target.id} = "${event.target.value}"`
+						);
 						this.debouncedFieldUpdate(event.target.id, event.target.value);
 					},
 					"unifiedInput"
 				);
 
+				// Blur Event (wenn Feld verlassen wird)
 				this.safeAddEventListener(
 					element,
 					"blur",
 					(event) => {
+						console.log(
+							`👁️ Blur Event: ${event.target.id} = "${event.target.value}"`
+						);
 						this.debouncedFieldUpdate(event.target.id, event.target.value, 100); // Schnelleres Speichern bei Blur
 					},
 					"unifiedBlur"
 				);
-			});
 
-		console.log("🔗 Unified Event-Handler eingerichtet");
+				// Change Event (für Dropdowns)
+				this.safeAddEventListener(
+					element,
+					"change",
+					(event) => {
+						console.log(
+							`🔄 Change Event: ${event.target.id} = "${event.target.value}"`
+						);
+						this.debouncedFieldUpdate(event.target.id, event.target.value, 50); // Sofortiges Speichern bei Change
+					},
+					"unifiedChange"
+				);
+			});
+		});
+
+		console.log(
+			"🔗 ERWEITERTE Unified Event-Handler eingerichtet für alle Felder"
+		);
+
+		// Zusätzlich: MutationObserver für dynamisch hinzugefügte Felder
+		this.setupMutationObserver();
+	}
+
+	/**
+	 * NEUE FUNKTION: MutationObserver für dynamisch hinzugefügte Felder
+	 */
+	setupMutationObserver() {
+		const observer = new MutationObserver((mutations) => {
+			mutations.forEach((mutation) => {
+				mutation.addedNodes.forEach((node) => {
+					if (node.nodeType === Node.ELEMENT_NODE) {
+						// Prüfe auf neue Input-Felder
+						const newInputs = node.querySelectorAll
+							? node.querySelectorAll("input, textarea, select")
+							: [];
+
+						newInputs.forEach((input) => {
+							if (this.isRelevantField(input)) {
+								console.log(`🆕 Neues Feld erkannt: ${input.id}`);
+								this.attachEventHandlersToElement(input);
+							}
+						});
+					}
+				});
+			});
+		});
+
+		observer.observe(document.body, {
+			childList: true,
+			subtree: true,
+		});
+
+		console.log("👀 MutationObserver eingerichtet für dynamische Felder");
+	}
+
+	/**
+	 * Prüft ob ein Feld für Event-Handling relevant ist
+	 */
+	isRelevantField(element) {
+		const id = element.id;
+		const className = element.className;
+
+		return (
+			id.startsWith("aircraft-") ||
+			id.startsWith("arrival-time-") ||
+			id.startsWith("departure-time-") ||
+			id.startsWith("position-") ||
+			id.startsWith("hangar-position-") ||
+			id.startsWith("notes-") ||
+			id.startsWith("status-") ||
+			id.startsWith("tow-status-") ||
+			className.includes("aircraft") ||
+			className.includes("position") ||
+			className.includes("notes")
+		);
+	}
+
+	/**
+	 * Hängt Event-Handler an ein einzelnes Element an
+	 */
+	attachEventHandlersToElement(element) {
+		this.safeAddEventListener(
+			element,
+			"input",
+			(event) => {
+				this.debouncedFieldUpdate(event.target.id, event.target.value);
+			},
+			"dynamicInput"
+		);
+
+		this.safeAddEventListener(
+			element,
+			"blur",
+			(event) => {
+				this.debouncedFieldUpdate(event.target.id, event.target.value, 100);
+			},
+			"dynamicBlur"
+		);
+
+		this.safeAddEventListener(
+			element,
+			"change",
+			(event) => {
+				this.debouncedFieldUpdate(event.target.id, event.target.value, 50);
+			},
+			"dynamicChange"
+		);
 	}
 
 	/**

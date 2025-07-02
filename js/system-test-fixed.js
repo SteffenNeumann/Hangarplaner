@@ -61,7 +61,7 @@ async function runCompleteSystemTest() {
 				handlersWorking++;
 			}
 		});
-			}
+
 		results.eventHandlers = handlersWorking > 0;
 		console.log(
 			`Event-Handler: ${

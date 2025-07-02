@@ -28,7 +28,7 @@ const hangarData = {
  * Sammelt alle Daten aus dem Hangar für das Speichern
  * @returns {Object} Alle gesammelten Daten
  */
-function collectAllHangarData() {
+hangarData.collectAllHangarData = function () {
 	try {
 		// Projektname und Metadaten sammeln
 		const projectName =
@@ -66,7 +66,7 @@ function collectAllHangarData() {
 		console.error("Fehler beim Sammeln der Hangardaten:", error);
 		return null;
 	}
-}
+};
 
 /**
  * Importiert einen Hangarplan aus einer JSON-Datei
@@ -1126,7 +1126,8 @@ window.hangarData.loadProjectFromFile = loadProjectFromFile;
 window.hangarData.applyLoadedHangarPlan = applyLoadedHangarPlan;
 window.hangarData.applySingleTileData = applySingleTileData;
 window.hangarData.applyLoadedTileData = applyLoadedTileData;
-window.collectAllHangarData = collectAllHangarData; // Neue Zeile
+window.hangarData.collectAllHangarData = collectAllHangarData; // Korrekt an hangarData angehängt
+window.collectAllHangarData = collectAllHangarData; // Auch direkt global für Kompatibilität
 window.hangarData.saveCurrentStateToLocalStorage = function () {
 	// Aktuelle Daten im localStorage speichern
 	const projectData = {

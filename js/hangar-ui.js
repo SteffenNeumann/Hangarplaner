@@ -1115,3 +1115,6 @@ window.hangarUI = {
 window.updateTiles = updateTiles;
 window.collectTileData = collectTileData;
 window.updateCellAttributes = updateCellAttributes;
+window.updateStatusLights = updateStatusLights;
+window.setupSecondaryTileEventListeners =
+	window.hangarUI.setupSecondaryTileEventListeners;

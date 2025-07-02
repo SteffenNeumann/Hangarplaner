@@ -452,10 +452,10 @@ input:checked + .toggle-slider:before {
 	background-color: #3a4154; /* Etwas hellerer Blauton beim Hover */
 }
 
-/* Content-Bereich mit deutlicherem Kontrast */
+/* Content-Bereich mit einheitlicher Definition */
 .sidebar-accordion-content {
-	background-color: #a9b4c8; /* Deutlich hellerer Grauton für bessere Unterscheidung */
-	padding: 16px;
+	background-color: #4b5975;
+	padding: 0;
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
@@ -463,15 +463,12 @@ input:checked + .toggle-slider:before {
 	max-height: 0;
 	transition: max-height 0.3s ease, padding 0.3s ease, opacity 0.3s ease;
 	opacity: 0;
-	padding-top: 0;
-	padding-bottom: 0;
-	box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1); /* Innerer Schatten für mehr Tiefe */
-	border-top: 1px solid rgba(255, 255, 255, 0.15); /* Helle Linie zur Abgrenzung */
+	border-top: 1px solid rgba(255, 255, 255, 0.15);
 }
 
-/* Geöffneter Content-Bereich mit verbessertem visuellen Feedback */
+/* Geöffneter Content-Bereich */
 .sidebar-accordion-content.open {
-	max-height: 500px; /* Ausreichende Höhe */
+	max-height: 500px;
 	opacity: 1;
 	padding: 16px;
 }
@@ -613,28 +610,6 @@ input:checked + .toggle-slider:before {
 .display-option-group .sidebar-btn {
 	min-width: 80px;
 	text-align: center;
-}
-
-/* Verbesserte Akkordeon-Content-Sektionen */
-.sidebar-accordion-content {
-	background-color: #4b5975;
-	padding: 16px;
-	display: flex;
-	flex-direction: column;
-	gap: 12px;
-	overflow: hidden;
-	max-height: 0;
-	transition: max-height 0.3s ease, padding 0.3s ease, opacity 0.3s ease;
-	opacity: 0;
-	padding-top: 0;
-	padding-bottom: 0;
-}
-
-/* Geöffneter Content-Bereich */
-.sidebar-accordion-content.open {
-	max-height: 500px;
-	opacity: 1;
-	padding: 16px;
 }
 
 /* Verbessertes Layout für die Sidebar-Form-Groups - weniger Abstand nach unten */

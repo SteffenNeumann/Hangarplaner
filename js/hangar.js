@@ -38,7 +38,7 @@ function initializeApp() {
 				) {
 					window.hangarEvents.initializeSidebarToggle();
 				}
-				window.hangarUI.initializeSidebarAccordion(); // Neue Methode zum Initialisieren des Akkordeons
+				// Accordion wird jetzt direkt über onclick-Attribute gesteuert
 				window.moduleStatus.ui = true;
 				console.log("UI-Modul initialisiert");
 			}

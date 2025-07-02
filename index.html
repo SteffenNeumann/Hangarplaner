@@ -1295,7 +1295,7 @@
 				<div class="sidebar-content">
 					<!-- Ansichtsverwaltung als eigene Sektion -->
 					<div class="sidebar-accordion-item">
-						<div class="sidebar-accordion-header">
+						<div class="sidebar-accordion-header" onclick="toggleAccordion(this)">
 							<div class="sidebar-header-content">
 								<i class="sidebar-icon">⚙️</i>
 								<h3 class="sidebar-section-title">Project Settings</h3>
@@ -1349,14 +1349,14 @@
 
 					<!-- Display Options Sektion -->
 					<div class="sidebar-accordion-item">
-						<div class="sidebar-accordion-header">
+						<div class="sidebar-accordion-header" onclick="toggleAccordion(this)">
 							<div class="sidebar-header-content">
 								<i class="sidebar-icon">🔳</i>
 								<h3 class="sidebar-section-title">Display Options</h3>
 							</div>
 							<i class="dropdown-arrow">▼</i>
 						</div>
-						<div class="sidebar-accordion-content open">
+						<div class="sidebar-accordion-content">
 							<div class="sidebar-form-group">
 								<label for="tilesCount">Primary Tiles:</label>
 								<div class="sidebar-input-group">
@@ -1456,7 +1456,7 @@
 
 					<!-- Suche nach Flugzeugen -->
 					<div class="sidebar-accordion-item">
-						<div class="sidebar-accordion-header">
+						<div class="sidebar-accordion-header" onclick="toggleAccordion(this)">
 							<div class="sidebar-header-content">
 								<i class="sidebar-icon">🔍</i>
 								<h3 class="sidebar-section-title">Search Aircraft</h3>
@@ -1480,7 +1480,7 @@
 
 					<!-- Flugdaten abrufen -->
 					<div class="sidebar-accordion-item">
-						<div class="sidebar-accordion-header">
+						<div class="sidebar-accordion-header" onclick="toggleAccordion(this)">
 							<div class="sidebar-header-content">
 								<i class="sidebar-icon">✈️</i>
 								<h3 class="sidebar-section-title">Flight Data</h3>
@@ -1555,7 +1555,7 @@
 
 				<!-- PDF Export Funktion -->
 				<div class="sidebar-accordion-item">
-					<div class="sidebar-accordion-header">
+					<div class="sidebar-accordion-header" onclick="toggleAccordion(this)">
 						<div class="sidebar-header-content">
 							<i class="sidebar-icon">📄</i>
 							<h3 class="sidebar-section-title">Export Plan</h3>
@@ -1685,6 +1685,26 @@
 			<!-- KONFLIKTLÖSUNG: Aktions-Plan und Monitoring -->
 			<script src="js/action-plan.js"></script>
 			<!-- Vereinfachte Sync-Diagnose -->
+
+			<!-- Einfache Accordion-Funktion ohne Event-Listener -->
+			<script>
+				// Direkte Accordion-Toggle-Funktion (keep it simple)
+				function toggleAccordion(header) {
+					const content = header.nextElementSibling;
+					const arrow = header.querySelector('.dropdown-arrow');
+					
+					if (content && content.classList.contains('sidebar-accordion-content')) {
+						// Toggle open/close
+						if (content.classList.contains('open')) {
+							content.classList.remove('open');
+							if (arrow) arrow.textContent = '▼';
+						} else {
+							content.classList.add('open');
+							if (arrow) arrow.textContent = '▲';
+						}
+					}
+				}
+			</script>
 
 			<!-- Event-Handler für den "Info anzeigen"-Button -->
 			<script>

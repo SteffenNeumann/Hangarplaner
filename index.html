@@ -1551,50 +1551,50 @@
 							Ready to retrieve flight data
 						</div>
 					</div>
-				</div>
 
-				<!-- PDF Export Funktion -->
-				<div class="sidebar-accordion-item">
-					<div class="sidebar-accordion-header" onclick="toggleAccordion(this)">
-						<div class="sidebar-header-content">
-							<i class="sidebar-icon">📄</i>
-							<h3 class="sidebar-section-title">Export Plan</h3>
-						</div>
-						<i class="dropdown-arrow">▼</i>
-					</div>
-					<div class="sidebar-accordion-content">
-						<div class="sidebar-form-group">
-							<label for="pdfFilename">File name:</label>
-							<input
-								type="text"
-								id="pdfFilename"
-								value="Hangar_Plan"
-								class="sidebar-form-control" />
-						</div>
-
-						<div class="sidebar-form-group">
-							<div class="flex items-center">
-								<input type="checkbox" id="includeNotes" checked class="mr-2" />
-								<label for="includeNotes">Include Notes</label>
+					<!-- PDF Export Funktion -->
+					<div class="sidebar-accordion-item">
+						<div class="sidebar-accordion-header" onclick="toggleAccordion(this)">
+							<div class="sidebar-header-content">
+								<i class="sidebar-icon">📄</i>
+								<h3 class="sidebar-section-title">Export Plan</h3>
 							</div>
+							<i class="dropdown-arrow">▼</i>
 						</div>
-
-						<div class="sidebar-form-group">
-							<div class="flex items-center">
+						<div class="sidebar-accordion-content">
+							<div class="sidebar-form-group">
+								<label for="pdfFilename">File name:</label>
 								<input
-									type="checkbox"
-									id="landscapeMode"
-									checked
-									class="mr-2" />
-								<label for="landscapeMode">Landscape Mode</label>
+									type="text"
+									id="pdfFilename"
+									value="Hangar_Plan"
+									class="sidebar-form-control" />
 							</div>
-						</div>
 
-						<button
-							id="exportPdfBtn"
-							class="sidebar-btn sidebar-btn-primary w-full">
-							Export PDF
-						</button>
+							<div class="sidebar-form-group">
+								<div class="flex items-center">
+									<input type="checkbox" id="includeNotes" checked class="mr-2" />
+									<label for="includeNotes">Include Notes</label>
+								</div>
+							</div>
+
+							<div class="sidebar-form-group">
+								<div class="flex items-center">
+									<input
+										type="checkbox"
+										id="landscapeMode"
+										checked
+										class="mr-2" />
+									<label for="landscapeMode">Landscape Mode</label>
+								</div>
+							</div>
+
+							<button
+								id="exportPdfBtn"
+								class="sidebar-btn sidebar-btn-primary w-full">
+								Export PDF
+							</button>
+						</div>
 					</div>
 				</div>
 

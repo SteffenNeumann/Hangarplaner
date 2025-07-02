@@ -18,12 +18,7 @@ if (!window.saveFlightTimeValueToLocalStorage) {
 		try {
 			// Direkte localStorage-Speicherung als Fallback
 			const key = `tile_${cellId}_${fieldType}`;
-			// Zentralisierter localStorage-Zugriff
-		if (window.hangarEventManager && window.hangarEventManager.saveToStorage) {
-			window.hangarEventManager.saveToStorage(key, value);
-		} else {
 			localStorage.setItem(key, value);
-		}
 
 			// Auch in hangarPlannerData integrieren falls verfügbar
 			const existing = JSON.parse(
@@ -33,12 +28,7 @@ if (!window.saveFlightTimeValueToLocalStorage) {
 			if (!existing.tiles[cellId]) existing.tiles[cellId] = {};
 			existing.tiles[cellId][fieldType] = value;
 			existing.lastModified = new Date().toISOString();
-			// Zentralisierter localStorage-Zugriff
-		if (window.hangarEventManager && window.hangarEventManager.saveToStorage) {
-			window.hangarEventManager.saveToStorage("hangarPlannerData", existing);
-		} else {
 			localStorage.setItem("hangarPlannerData", JSON.stringify(existing));
-		}
 
 			console.log(`✅ Fallback: ${fieldType} für Kachel ${cellId} gespeichert`);
 		} catch (error) {

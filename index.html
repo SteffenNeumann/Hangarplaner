@@ -371,7 +371,7 @@
 												data-cell="3"
 												data-status="neutral"></span>
 											<select
-												id="status-3"
+											id="status-3"
 												class="status-selector"
 												title="Aircraft Status">
 												<option value="neutral" selected></option>
@@ -834,7 +834,7 @@
 												data-cell="8"
 												data-status="neutral"></span>
 											<select
-												id="status-8"
+											id="status-8"
 												class="status-selector"
 												title="Aircraft Status">
 												<option value="neutral" selected></option>
@@ -1053,7 +1053,7 @@
 										<div class="info-label">Dep:</div>
 										<input
 											type="time"
-											id="departure-time-10"
+										id="departure-time-10"
 											class="info-input"
 											title="Time" />
 										<div class="info-label">Pos:</div>
@@ -1654,20 +1654,18 @@
 
 			<!-- Ausgelagerte JavaScript-Dateien -->
 			<script src="js/helpers.js"></script>
-			<script src="js/debug-helpers.js"></script>
+			<!-- Unified Debug System -->
+			<script src="js/unified-debug.js"></script>
 			<script src="js/grid-layout-debug.js"></script>
 			<script src="js/fileManager.js"></script>
 			<script src="js/weather-api.js"></script>
-			<!-- KONFLIKTLÖSUNG: Hotfix ZUERST laden -->
-			<script src="js/event-handler-hotfix.js"></script>
 			<!-- KONFLIKTLÖSUNG: Verbesserter Event-Manager -->
 			<script src="js/improved-event-manager.js"></script>
 			<script src="js/hangar-ui.js"></script>
 			<script src="js/hangar-data.js"></script>
 			<!-- API-Implementierungen -->
-			<script src="js/aerodatabox-api.js"></script>
-			<script src="js/amadeus-api.js"></script>
-			<script src="js/opensky-api.js"></script>
+			<!-- Dynamic API Loader - lädt APIs nur bei Bedarf -->
+			<script src="js/dynamic-api-loader.js"></script>
 			<!-- Neue Airport Flights Funktionalität -->
 			<script src="js/airport-flights.js"></script>
 			<!-- API-Fassade -->
@@ -1677,13 +1675,17 @@
 			<script src="js/hangar.js"></script>
 			<script src="js/storage-browser.js"></script>
 			<!-- Zentraler Event-Manager für Synchronisation -->
-			<script src="js/event-manager.js"></script>
+			<!-- OPTIMIERT: event-manager.js entfernt, nur improved-event-manager.js verwendet -->
 			<!-- KONFLIKTLÖSUNG: Automatischer Konflikt-Resolver -->
-			<script src="js/conflict-resolver.js"></script>
+			<!-- System Maintenance Hub -->
+			<script src="js/system-maintenance.js"></script>
+			
+			<!-- Phase 3 Validation -->
+			<script src="js/phase3-validation.js"></script>
 			<!-- KONFLIKTLÖSUNG: Aktions-Plan und Monitoring -->
 			<script src="js/action-plan.js"></script>
 			<!-- Vereinfachte Sync-Diagnose -->
-			<script src="js/sync-diagnosis.js"></script>
+
 
 			<!-- Event-Handler für den "Info anzeigen"-Button -->
 			<script>
@@ -1892,22 +1894,25 @@
 			</script>
 
 			<!-- Debug Script für Position-Klon-Problem -->
-			<script src="js/debug-position-clone.js"></script>
+			<!-- OPTIMIERT: debug-position-clone.js entfernt -->
 
 			<!-- Display Options Script (ersetzt localStorage) -->
 			<script src="js/display-options.js"></script>
 
 			<!-- localStorage Migration Script -->
-			<script src="js/localStorage-migration.js"></script>
+			<!-- OPTIMIERT: localStorage-migration.js entfernt -->
 
 			<!-- System Reparatur -->
-			<script src="js/system-repair.js"></script>
+
 
 			<!-- Validation und Testing -->
 			<script src="js/system-validator.js"></script>
 
 			<!-- Layout Test Script -->
-			<script src="js/layout-test.js"></script>
+			<!-- OPTIMIERT: layout-test.js entfernt -->
+			
+			<!-- Validierungsskript nach Optimierung -->
+			<script src="js/validation-test.js"></script>
 		</div>
 	</body>
 </html>

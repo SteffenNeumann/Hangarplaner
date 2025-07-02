@@ -191,12 +191,9 @@ window.hangarActionPlan = {
 	emergencyReset() {
 		console.log("🚨 NOTFALL-RESET wird ausgeführt...");
 
-		// Event-Handler bereinigen - OPTIMIERT: Nutze improved-event-manager
-		if (window.hangarEventManager && window.hangarEventManager.init) {
-			console.log("🔧 Nutze improved-event-manager");
-			window.hangarEventManager.init();
-		} else {
-			console.log("⚠️ improved-event-manager nicht verfügbar");
+		// Event-Handler bereinigen
+		if (window.fixEventHandlerConflicts) {
+			window.fixEventHandlerConflicts();
 		}
 
 		// Event-Manager neu starten

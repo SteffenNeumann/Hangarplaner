@@ -106,7 +106,7 @@ function checkBrowserSupport() {
 		permissions: "permissions" in navigator,
 	};
 
-	console.log("Browser API Support:", support);
+	// Browser-API-Unterstützung prüfen
 
 	// Als Meldung anzeigen, wenn Debug aktiviert ist
 	if (localStorage.getItem("debugMode") === "true") {
@@ -116,11 +116,8 @@ function checkBrowserSupport() {
 		}
 		showNotification(message, "info", 5000);
 
-		// Explizit auf localStorage-Unterstützung prüfen und Fehler ausgeben
+		// Explizit auf localStorage-Unterstützung prüfen
 		if (!support.localStorage) {
-			console.error(
-				"WARNUNG: LocalStorage wird nicht unterstützt! Einstellungen können nicht gespeichert werden."
-			);
 			showNotification(
 				"LocalStorage wird nicht unterstützt! Einstellungen können nicht gespeichert werden.",
 				"error",
@@ -131,9 +128,7 @@ function checkBrowserSupport() {
 			try {
 				localStorage.setItem("test", "test");
 				localStorage.removeItem("test");
-				console.log("LocalStorage Test erfolgreich");
 			} catch (e) {
-				console.error("LocalStorage Test fehlgeschlagen:", e);
 				showNotification(
 					"LocalStorage Test fehlgeschlagen: " + e.message,
 					"error",
@@ -326,11 +321,6 @@ function createAutoSave(saveFunction, options = {}) {
 
 					if (field) {
 						field.value = value;
-						if (localStorage.getItem("debugMode") === "true") {
-							console.log(
-								`Position für Kachel ${id} erfolgreich gesetzt: ${value}`
-							);
-						}
 					} else {
 						if (attempts === maxAttempts) {
 							console.warn(
@@ -407,9 +397,6 @@ function createAutoSave(saveFunction, options = {}) {
 		// Wenn keine Änderungen vorliegen, nicht speichern
 		if (compareFunction && lastSavedData !== null) {
 			if (!compareFunction(lastSavedData, data)) {
-				console.log(
-					"Keine relevanten Änderungen festgestellt, Speichervorgang übersprungen"
-				);
 				savePending = false;
 				processQueue(); // Verarbeite die nächste Speicherung, falls vorhanden
 				return;
@@ -433,13 +420,6 @@ function createAutoSave(saveFunction, options = {}) {
 			saveRetryCount = 0;
 			savePending = false;
 
-			if (localStorage.getItem("debugMode") === "true") {
-				console.log(
-					"Autosave erfolgreich durchgeführt",
-					new Date().toISOString()
-				);
-			}
-
 			// Verarbeite die nächste Speicherung, falls vorhanden
 			processQueue();
 		} catch (error) {
@@ -448,11 +428,6 @@ function createAutoSave(saveFunction, options = {}) {
 			// Wiederholungsversuch, wenn maximale Anzahl nicht erreicht
 			if (saveRetryCount < maxRetries) {
 				saveRetryCount++;
-				console.log(
-					`Wiederholungsversuch ${saveRetryCount}/${maxRetries} in ${
-						saveRetryCount * 1000
-					}ms`
-				);
 				setTimeout(() => executeSave(data), saveRetryCount * 1000);
 			} else {
 				saveRetryCount = 0;
@@ -554,11 +529,6 @@ const storageHelperExtended = {
 				}
 			}
 
-			// Debug-Nachricht ausgeben
-			if (localStorage.getItem("debugMode") === "true") {
-				console.log(`Speichere in localStorage[${key}]:`, value);
-			}
-
 			localStorage.setItem(key, JSON.stringify(value));
 			return true;
 		} catch (e) {
@@ -587,11 +557,6 @@ const storageHelperExtended = {
 		try {
 			const item = localStorage.getItem(key);
 			const value = item ? JSON.parse(item) : defaultValue;
-
-			// Debug-Nachricht ausgeben
-			if (localStorage.getItem("debugMode") === "true") {
-				console.log(`Gelesen aus localStorage[${key}]:`, value);
-			}
 
 			return value;
 		} catch (e) {
@@ -662,21 +627,10 @@ const storageHelperExtended = {
 			// Aktualisiere das vollständige tileValues-Array
 			uiSettings.tileValues = allTilesData;
 
-			// Debug-Nachricht
-			console.log("Speichere sekundäre Kacheln:", tiles.length, "Kacheln");
-			if (localStorage.getItem("debugMode") === "true") {
-				console.log("Details der sekundären Kacheln:", tiles);
-				console.log("Aktualisierte UI-Einstellungen:", uiSettings);
-			}
-
 			// In localStorage speichern
 			const success = this.set(key, uiSettings);
 
-			if (success) {
-				console.log(
-					`${tiles.length} sekundäre Kacheln erfolgreich gespeichert`
-				);
-			} else {
+			if (!success) {
 				console.error(
 					"Fehler beim Speichern der sekundären Kacheln im localStorage"
 				);
@@ -791,7 +745,6 @@ const storageHelperExtended = {
 
 			// Speichern, wenn Änderungen vorgenommen wurden
 			if (isModified) {
-				console.log("UI-Einstellungen wurden repariert und werden gespeichert");
 				return this.set(key, uiSettings);
 			}
 

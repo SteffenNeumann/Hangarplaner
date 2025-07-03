@@ -220,33 +220,6 @@ function saveFlightTimeValueToLocalStorage(cellId, field, value) {
 }
 
 /**
- * UI-Update Funktionen (Business Logic)
- */
-function updateStatusLights(cellId) {
-	const statusSelect = document.getElementById(`status-${cellId}`);
-	const statusLight = document.querySelector(
-		`.status-light[data-cell="${cellId}"]`
-	);
-
-	if (statusSelect && statusLight) {
-		const statusValue = statusSelect.value;
-
-		// Alle Status-Klassen entfernen
-		statusLight.classList.remove(
-			"status-ready",
-			"status-maintenance",
-			"status-aog"
-		);
-
-		// Neue Status-Klasse hinzufügen
-		statusLight.classList.add(`status-${statusValue}`);
-		statusLight.setAttribute("data-status", statusValue);
-
-		console.log(`Status für Kachel ${cellId} aktualisiert: ${statusValue}`);
-	}
-}
-
-/**
  * Toggle-Funktionen (Business Logic)
  */
 function toggleEditMode() {

@@ -149,55 +149,6 @@ window.globalInitialization = {
 			window.updateStatusLights = window.hangarUI.updateStatusLights;
 			console.log("✅ updateStatusLights global verfügbar gemacht");
 		}
-
-		// showNotification sicherstellen
-		if (!window.showNotification) {
-			window.showNotification = function (message, type = "info") {
-				console.log(`📢 [${type.toUpperCase()}] ${message}`);
-				// Optional: Erstelle ein einfaches Notification-System
-				const notification = document.createElement("div");
-				notification.textContent = message;
-				notification.style.cssText = `
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    padding: 10px 20px;
-                    background: ${
-											type === "error"
-												? "#ef4444"
-												: type === "success"
-												? "#22c55e"
-												: "#3b82f6"
-										};
-                    color: white;
-                    border-radius: 5px;
-                    z-index: 10000;
-                    animation: fadeInOut 3s forwards;
-                `;
-				document.body.appendChild(notification);
-
-				// CSS für Animation hinzufügen
-				if (!document.getElementById("notification-styles")) {
-					const style = document.createElement("style");
-					style.id = "notification-styles";
-					style.textContent = `
-                        @keyframes fadeInOut {
-                            0% { opacity: 0; transform: translateX(100%); }
-                            10%, 90% { opacity: 1; transform: translateX(0); }
-                            100% { opacity: 0; transform: translateX(100%); }
-                        }
-                    `;
-					document.head.appendChild(style);
-				}
-
-				setTimeout(() => {
-					if (notification.parentNode) {
-						notification.parentNode.removeChild(notification);
-					}
-				}, 3000);
-			};
-			console.log("✅ showNotification Fallback erstellt");
-		}
 	},
 
 	/**

@@ -1608,21 +1608,6 @@
 								class="sidebar-btn sidebar-btn-primary w-full">
 								Export PDF
 							</button>
-
-							<!-- DEBUG: Server-Sync Test Button -->
-							<button
-								id="testServerSyncBtn"
-								class="sidebar-btn sidebar-btn-secondary w-full mt-2"
-								style="font-size: 11px">
-								🧪 Test Server-Sync
-							</button>
-
-							<button
-								id="fullSystemTestBtn"
-								class="sidebar-btn sidebar-btn-secondary w-full mt-1"
-								style="font-size: 11px">
-								🔬 Vollständiger System-Test
-							</button>
 						</div>
 					</div>
 				</div>
@@ -1681,43 +1666,21 @@
 				</div>
 			</div>
 
-			<!-- Ausgelagerte JavaScript-Dateien -->
+			<!-- JavaScript-Dateien -->
 			<script src="js/helpers.js"></script>
-			<!-- Globale Initialisierung (muss früh geladen werden) -->
 			<script src="js/global-initialization.js"></script>
-			<!-- Unified Debug System -->
-			<script src="js/unified-debug.js"></script>
-			<script src="js/grid-layout-debug.js"></script>
 			<script src="js/fileManager.js"></script>
 			<script src="js/weather-api.js"></script>
-			<!-- KONFLIKTLÖSUNG: Verbesserter Event-Manager -->
 			<script src="js/improved-event-manager.js"></script>
 			<script src="js/hangar-ui.js"></script>
 			<script src="js/hangar-data.js"></script>
-			<!-- API-Implementierungen -->
-			<!-- Dynamic API Loader - lädt APIs nur bei Bedarf -->
 			<script src="js/dynamic-api-loader.js"></script>
-			<!-- Neue Airport Flights Funktionalität -->
 			<script src="js/airport-flights.js"></script>
-			<!-- API-Fassade -->
 			<script src="js/api-facade.js"></script>
 			<script src="js/hangar-events.js"></script>
 			<script src="js/hangar-pdf.js"></script>
 			<script src="js/hangar.js"></script>
 			<script src="js/storage-browser.js"></script>
-			<!-- Zentraler Event-Manager für Synchronisation -->
-			<!-- OPTIMIERT: event-manager.js entfernt, nur improved-event-manager.js verwendet -->
-			<!-- KONFLIKTLÖSUNG: Automatischer Konflikt-Resolver -->
-			<!-- System Maintenance Hub -->
-			<script src="js/system-maintenance.js"></script>
-
-			<!-- Phase 3 Validation -->
-			<script src="js/phase3-validation.js"></script>
-			<!-- KONFLIKTLÖSUNG: Aktions-Plan und Monitoring -->
-			<script src="js/action-plan.js"></script>
-			<!-- Server-Sync Test und Validierung -->
-			<script src="js/server-sync-test.js"></script>
-			<!-- Vereinfachte Sync-Diagnose -->
 
 			<!-- Einfache Accordion-Funktion ohne Event-Listener -->
 			<script>
@@ -1758,53 +1721,6 @@
 								alert(
 									"Empfohlene Ordnerstruktur: HangarPlanner/Projekte/ für Projekte und HangarPlanner/Einstellungen/ für Einstellungen"
 								);
-							}
-						});
-					}
-
-					// Event-Handler für Server-Sync Test Button
-					const testServerSyncBtn =
-						document.getElementById("testServerSyncBtn");
-					if (testServerSyncBtn) {
-						testServerSyncBtn.addEventListener("click", function () {
-							if (window.serverSyncValidator) {
-								window.serverSyncValidator.runFullTest();
-							} else {
-								alert("Server-Sync Validator nicht verfügbar");
-							}
-						});
-					}
-
-					// Event-Handler für vollständigen System-Test Button
-					const fullSystemTestBtn =
-						document.getElementById("fullSystemTestBtn");
-					if (fullSystemTestBtn) {
-						fullSystemTestBtn.addEventListener("click", async function () {
-							console.log("🔬 Starte vollständigen System-Test...");
-
-							// Button während Test deaktivieren
-							fullSystemTestBtn.disabled = true;
-							fullSystemTestBtn.textContent = "🔄 Teste System...";
-
-							try {
-								// Führe vollständigen System-Test aus
-								if (typeof window.runCompleteSystemTest === "function") {
-									await window.runCompleteSystemTest();
-								} else {
-									alert(
-										"❌ System-Test-Funktion nicht verfügbar.\n\nBitte Konsole öffnen und 'runCompleteSystemTest()' eingeben."
-									);
-									console.warn(
-										"System-Test-Funktion nicht verfügbar. Lade system-test.js?"
-									);
-								}
-							} catch (error) {
-								console.error("❌ System-Test Fehler:", error);
-								alert("❌ System-Test Fehler: " + error.message);
-							} finally {
-								// Button wieder aktivieren
-								fullSystemTestBtn.disabled = false;
-								fullSystemTestBtn.textContent = "🔬 Vollständiger System-Test";
 							}
 						});
 					}
@@ -1998,28 +1914,8 @@
 			<!-- Debug Script für Position-Klon-Problem -->
 			<!-- OPTIMIERT: debug-position-clone.js entfernt -->
 
-			<!-- Display Options Script (ersetzt localStorage) -->
+			<!-- Display Options Script -->
 			<script src="js/display-options.js"></script>
-
-			<!-- localStorage Migration Script -->
-			<!-- OPTIMIERT: localStorage-migration.js entfernt -->
-
-			<!-- System Reparatur -->
-
-			<!-- Validation und Testing -->
-			<script src="js/system-validator.js"></script>
-
-			<!-- Layout Test Script -->
-			<!-- OPTIMIERT: layout-test.js entfernt -->
-
-			<!-- Validierungsskript nach Optimierung -->
-			<script src="js/validation-test.js"></script>
-			<!-- System Test Script -->
-			<script src="js/system-test-fixed.js"></script>
-			<!-- Umfassende Validierung -->
-			<script src="js/comprehensive-validation.js"></script>
-			<!-- Test-Koordinator -->
-			<script src="js/test-coordinator.js"></script>
 		</div>
 	</body>
 </html>

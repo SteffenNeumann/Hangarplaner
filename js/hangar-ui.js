@@ -959,7 +959,6 @@ window.hangarUI = {
 	updateTiles,
 	updateSecondaryTiles,
 	updateCellAttributes,
-	setupSecondaryTileEventListeners,
 	adjustScaling,
 	collectTileData,
 
@@ -1033,13 +1032,13 @@ window.hangarUI = {
 	},
 
 	/**
-	 * Initialisiert Event-Listener für sekundäre Kacheln - VERBESSERT
+	 * Initialisiert Event-Listener für sekundäre Kacheln - VOLLSTÄNDIG ÜBERARBEITET
 	 */
 	setupSecondaryTileEventListeners: function () {
 		const secondaryContainer = document.getElementById("secondaryHangarGrid");
 		if (!secondaryContainer) {
 			console.warn("❌ Sekundärer Container nicht gefunden");
-			return;
+			return false;
 		}
 
 		console.log("🔧 Richte Event-Handler für sekundäre Kacheln ein...");
@@ -1057,15 +1056,22 @@ window.hangarUI = {
 		];
 
 		let handlersRegistered = 0;
+		const processedIds = new Set(); // Verhindert Duplikate
 
 		relevantSelectors.forEach((selector) => {
 			const elements = secondaryContainer.querySelectorAll(selector);
+			console.log(`🔍 Gefunden ${elements.length} Elemente für Selector: ${selector}`);
 
 			elements.forEach((element) => {
+				if (processedIds.has(element.id)) {
+					console.log(`⏭️ Element bereits verarbeitet: ${element.id}`);
+					return;
+				}
+
 				const cellId = this.extractCellIdFromElement(element);
 
-				// Nur für sekundäre Kacheln (ID >= 101)
-				if (cellId >= 101) {
+				// Prüfung: Nur sekundäre Kacheln (ID >= 101) UND Element muss im sekundären Container sein
+				if (cellId >= 101 && secondaryContainer.contains(element)) {
 					console.log(
 						`🎯 Registriere Handler für sekundäres Element: ${element.id} (Kachel ${cellId})`
 					);
@@ -1088,7 +1094,7 @@ window.hangarUI = {
 									event.target.value
 								);
 							},
-							`secondary_input_${cellId}`
+							`secondary_input_${cellId}_${element.id}`
 						);
 
 						// Blur Event für finales Speichern
@@ -1105,7 +1111,7 @@ window.hangarUI = {
 									100
 								);
 							},
-							`secondary_blur_${cellId}`
+							`secondary_blur_${cellId}_${element.id}`
 						);
 
 						// Change Event für Dropdowns
@@ -1128,26 +1134,40 @@ window.hangarUI = {
 									50
 								);
 							},
-							`secondary_change_${cellId}`
+							`secondary_change_${cellId}_${element.id}`
 						);
 
 						handlersRegistered++;
+						processedIds.add(element.id);
 					} else {
 						console.warn(
-							"⚠️ Event-Manager nicht verfügbar, verwende Fallback-Handler"
+							"⚠️ Event-Manager nicht verfügbar, verwende Fallback-Handler für:",
+							element.id
 						);
 						// Fallback: Direkte Event-Handler
 						element.addEventListener("input", (event) => {
 							console.log(
 								`📝 Fallback Input: ${event.target.id} = "${event.target.value}"`
 							);
+							// Versuche localStorage-Update
+							if (window.storageBrowser && window.storageBrowser.save) {
+								const fieldData = {};
+								fieldData[event.target.id] = event.target.value;
+								window.storageBrowser.save(fieldData);
+							}
 						});
 						element.addEventListener("blur", (event) => {
 							console.log(
 								`👁️ Fallback Blur: ${event.target.id} = "${event.target.value}"`
 							);
 						});
+						handlersRegistered++;
+						processedIds.add(element.id);
 					}
+				} else if (cellId < 101) {
+					console.log(`⏭️ Element ${element.id} gehört zu primären Kacheln (ID: ${cellId})`);
+				} else {
+					console.log(`⏭️ Element ${element.id} nicht im sekundären Container oder ungültige ID`);
 				}
 			});
 		});
@@ -1155,6 +1175,8 @@ window.hangarUI = {
 		console.log(
 			`✅ ${handlersRegistered} Event-Handler für sekundäre Kacheln registriert`
 		);
+		
+		return handlersRegistered > 0;
 	},
 
 	/**
@@ -1193,10 +1215,18 @@ window.updateTiles = updateTiles;
 window.collectTileData = collectTileData;
 window.updateCellAttributes = updateCellAttributes;
 window.updateStatusLights = updateStatusLights;
-window.setupSecondaryTileEventListeners =
-	window.hangarUI.setupSecondaryTileEventListeners;
 
-// NEUE INITIALISIERUNGS-KOORDINATION
+// setupSecondaryTileEventListeners als globale Funktion
+window.setupSecondaryTileEventListeners = function() {
+	if (window.hangarUI && window.hangarUI.setupSecondaryTileEventListeners) {
+		return window.hangarUI.setupSecondaryTileEventListeners();
+	} else {
+		console.warn("❌ hangarUI.setupSecondaryTileEventListeners nicht verfügbar");
+		return false;
+	}
+};
+
+// VERBESSERTE INITIALISIERUNGS-KOORDINATION
 // Stellt sicher, dass Event-Handler nach der vollständigen DOM-/UI-Initialisierung registriert werden
 document.addEventListener("DOMContentLoaded", function () {
 	console.log("🚀 === HANGARPLANNER INITIALISIERUNG GESTARTET ===");
@@ -1215,14 +1245,47 @@ document.addEventListener("DOMContentLoaded", function () {
 	// Phase 3: Sekundäre Event-Handler registrieren (2000ms)
 	setTimeout(() => {
 		console.log("🎯 Phase 3: Sekundäre Event-Handler werden registriert...");
-		if (window.hangarUI && window.hangarUI.setupSecondaryTileEventListeners) {
-			window.hangarUI.setupSecondaryTileEventListeners();
+		
+		// Prüfe ob sekundäre Kacheln existieren
+		const secondaryContainer = document.getElementById("secondaryHangarGrid");
+		if (secondaryContainer && secondaryContainer.children.length > 0) {
+			console.log(`🔍 ${secondaryContainer.children.length} sekundäre Kacheln gefunden`);
+			
+			if (window.setupSecondaryTileEventListeners) {
+				const result = window.setupSecondaryTileEventListeners();
+				console.log("✅ setupSecondaryTileEventListeners (global):", result);
+			} else if (window.hangarUI && window.hangarUI.setupSecondaryTileEventListeners) {
+				const result = window.hangarUI.setupSecondaryTileEventListeners();
+				console.log("✅ setupSecondaryTileEventListeners (hangarUI):", result);
+			} else {
+				console.warn("❌ setupSecondaryTileEventListeners nicht verfügbar");
+			}
+		} else {
+			console.log("ℹ️ Keine sekundären Kacheln gefunden, überspringe Handler-Registrierung");
 		}
 	}, 2000);
 
-	// Phase 4: Validierung und Status-Check (6000ms)
+	// Phase 4: Server-Sync einrichten (3000ms)
 	setTimeout(() => {
-		console.log("🔍 Phase 4: System-Validierung...");
+		console.log("🌐 Phase 4: Server-Sync wird eingerichtet...");
+		if (window.storageBrowser) {
+			// Versuche Server-Daten zu laden
+			window.storageBrowser.loadFromServer().then(serverData => {
+				if (serverData) {
+					console.log("📥 Server-Daten verfügbar, wende an...");
+					window.storageBrowser.applyServerData(serverData);
+				} else {
+					console.log("ℹ️ Keine Server-Daten verfügbar, verwende lokale Daten");
+				}
+			}).catch(error => {
+				console.warn("⚠️ Fehler beim Laden der Server-Daten:", error);
+			});
+		}
+	}, 3000);
+
+	// Phase 5: Validierung und Status-Check (5000ms)
+	setTimeout(() => {
+		console.log("🔍 Phase 5: System-Validierung...");
 
 		// Prüfe Event-Handler Status
 		if (window.hangarEventManager) {
@@ -1250,8 +1313,22 @@ document.addEventListener("DOMContentLoaded", function () {
 			console.log(
 				`✅ Sekundärer Container: ${secondaryFields.length} Felder gefunden`
 			);
+
+			// Prüfe explizit sekundäre IDs
+			const secondaryIDs = [];
+			secondaryFields.forEach(field => {
+				if (field.id) {
+					const cellId = window.hangarUI ? 
+						window.hangarUI.extractCellIdFromElement(field) : 
+						parseInt(field.id.match(/\d+$/)?.[0] || 0);
+					if (cellId >= 101) {
+						secondaryIDs.push(field.id);
+					}
+				}
+			});
+			console.log(`🎯 Sekundäre IDs gefunden: ${secondaryIDs.length}`, secondaryIDs);
 		}
 
 		console.log("🎉 === HANGARPLANNER INITIALISIERUNG ABGESCHLOSSEN ===");
-	}, 6000);
+	}, 5000);
 });

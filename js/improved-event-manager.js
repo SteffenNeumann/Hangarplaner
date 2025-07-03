@@ -163,7 +163,7 @@ class HangarEventManager {
 	}
 
 	/**
-	 * NEUE FUNKTION: Direkte Server-Synchronisation für einzelne Felder
+	 * NEUE FUNKTION: Direkte Server-Synchronisation für einzelne Felder - ERWEITERT
 	 */
 	async syncFieldToServer(fieldId, value) {
 		try {
@@ -187,13 +187,17 @@ class HangarEventManager {
 					allData
 				);
 			} else {
-				// Fallback: Erweiterte Datensammlung
+				// Fallback: Erweiterte Datensammlung - VERBESSERT für sekundäre Tiles
+				const primaryFields = this.collectFieldsFromContainer("hangarGrid", false);
+				const secondaryFields = this.collectFieldsFromContainer("secondaryHangarGrid", true);
+				
 				allData = {
 					metadata: {
 						lastModified: new Date().toISOString(),
 						projectName:
 							document.getElementById("projectName")?.value || "HangarPlan",
 						syncTriggeredBy: fieldId,
+						version: "2.0-enhanced",
 					},
 					settings: {
 						tilesCount:
@@ -203,13 +207,19 @@ class HangarEventManager {
 							0,
 						layout: parseInt(document.getElementById("layoutType")?.value) || 4,
 					},
+					primaryTiles: primaryFields,
+					secondaryTiles: secondaryFields,
 					fieldUpdates: {
 						[fieldId]: value,
 					},
 					// Sammle alle aktuell sichtbaren Felder
 					currentFields: this.collectAllVisibleFields(),
 				};
-				console.log("📊 Fallback-Daten für Server-Sync gesammelt:", allData);
+				console.log("📊 Fallback-Daten für Server-Sync gesammelt:", {
+					primary: primaryFields.length,
+					secondary: secondaryFields.length,
+					total: allData
+				});
 			}
 
 			// Server-Request mit allen Daten
@@ -237,6 +247,74 @@ class HangarEventManager {
 		} catch (error) {
 			console.error(`❌ Server-Sync Fehler für ${fieldId}:`, error);
 		}
+	}
+
+	/**
+	 * NEUE HILFSFUNKTION: Sammelt Felder aus einem bestimmten Container
+	 */
+	collectFieldsFromContainer(containerId, isSecondary = false) {
+		const container = document.getElementById(containerId);
+		if (!container) {
+			console.warn(`⚠️ Container ${containerId} nicht gefunden`);
+			return [];
+		}
+
+		const tiles = [];
+		const selectors = [
+			'input[id^="aircraft-"]',
+			'input[id^="arrival-time-"]',
+			'input[id^="departure-time-"]',
+			'input[id^="position-"]',
+			'input[id^="hangar-position-"]',
+			'textarea[id^="notes-"]',
+			'select[id^="status-"]',
+			'select[id^="tow-status-"]',
+		];
+
+		// Sammle alle relevanten Elemente aus diesem Container
+		const containerFields = {};
+		selectors.forEach(selector => {
+			const elements = container.querySelectorAll(selector);
+			elements.forEach(element => {
+				if (element.id && element.value !== undefined) {
+					const cellId = this.extractCellIdFromElement(element);
+					if (cellId && (isSecondary ? cellId >= 101 : cellId < 101)) {
+						containerFields[element.id] = element.value;
+					}
+				}
+			});
+		});
+
+		// Gruppiere Felder nach Tile-ID
+		const tileGroups = {};
+		Object.entries(containerFields).forEach(([fieldId, value]) => {
+			const cellId = this.extractCellIdFromElement({id: fieldId});
+			if (cellId) {
+				if (!tileGroups[cellId]) {
+					tileGroups[cellId] = { tileId: cellId };
+				}
+
+				if (fieldId.includes('aircraft-')) {
+					tileGroups[cellId].aircraftId = value;
+				} else if (fieldId.includes('position-') || fieldId.includes('hangar-position-')) {
+					tileGroups[cellId].position = value;
+				} else if (fieldId.includes('notes-')) {
+					tileGroups[cellId].notes = value;
+				} else if (fieldId.includes('arrival-time-')) {
+					tileGroups[cellId].arrivalTime = value;
+				} else if (fieldId.includes('departure-time-')) {
+					tileGroups[cellId].departureTime = value;
+				} else if (fieldId.includes('status-')) {
+					tileGroups[cellId].status = value;
+				} else if (fieldId.includes('tow-status-')) {
+					tileGroups[cellId].towStatus = value;
+				}
+			}
+		});
+
+		const tilesArray = Object.values(tileGroups);
+		console.log(`🔍 ${containerId}: ${tilesArray.length} Tiles mit Daten gefunden`);
+		return tilesArray;
 	}
 
 	/**
@@ -336,7 +414,7 @@ class HangarEventManager {
 			'textarea[class*="notes"]', // Notiz-Textareas mit CSS-Klasse
 		];
 
-		// NEUE LOGIK: Erst alle Container prüfen und dann Container-spezifisch arbeiten
+		// NEUE LOGIK: Container-spezifische Registrierung
 		const primaryContainer = document.getElementById("hangarGrid");
 		const secondaryContainer = document.getElementById("secondaryHangarGrid");
 
@@ -348,21 +426,33 @@ class HangarEventManager {
 			relevantSelectors.forEach((selector) => {
 				const elements = primaryContainer.querySelectorAll(selector);
 				elements.forEach((element) => {
-					if (this.registerHandlerForElement(element, "primary")) {
-						handlersRegistered++;
+					// Prüfe ob Element wirklich im primären Container und primäre ID hat
+					const cellId = this.extractCellIdFromElement(element);
+					if (cellId && cellId < 101 && primaryContainer.contains(element)) {
+						if (this.registerHandlerForElement(element, "primary")) {
+							handlersRegistered++;
+						}
 					}
 				});
 			});
 		}
 
-		// Event-Handler für sekundäre Container registrieren
+		// Event-Handler für sekundäre Container registrieren - ERWEITERT
 		if (secondaryContainer) {
 			console.log("🔧 Registriere Handler für sekundäre Kacheln...");
 			relevantSelectors.forEach((selector) => {
 				const elements = secondaryContainer.querySelectorAll(selector);
+				console.log(`🔍 Sekundäre Elemente für ${selector}: ${elements.length}`);
 				elements.forEach((element) => {
-					if (this.registerHandlerForElement(element, "secondary")) {
-						handlersRegistered++;
+					// Prüfe ob Element wirklich im sekundären Container und sekundäre ID hat
+					const cellId = this.extractCellIdFromElement(element);
+					if (cellId && cellId >= 101 && secondaryContainer.contains(element)) {
+						console.log(`🎯 Registriere sekundären Handler: ${element.id} (Kachel ${cellId})`);
+						if (this.registerHandlerForElement(element, "secondary")) {
+							handlersRegistered++;
+						}
+					} else {
+						console.log(`⏭️ Sekundäres Element übersprungen: ${element.id} (CellID: ${cellId}, Container-Check: ${secondaryContainer.contains(element)})`);
 					}
 				});
 			});
@@ -487,7 +577,7 @@ class HangarEventManager {
 	}
 
 	/**
-	 * NEUE FUNKTION: MutationObserver für dynamisch hinzugefügte Felder
+	 * VERBESSERTE FUNKTION: MutationObserver für dynamisch hinzugefügte Felder
 	 */
 	setupMutationObserver() {
 		const observer = new MutationObserver((mutations) => {
@@ -502,14 +592,58 @@ class HangarEventManager {
 						newInputs.forEach((input) => {
 							if (this.isRelevantField(input)) {
 								console.log(`🆕 Neues Feld erkannt: ${input.id}`);
-								this.attachEventHandlersToElement(input);
+								
+								// Bestimme Container-Typ
+								const primaryContainer = document.getElementById("hangarGrid");
+								const secondaryContainer = document.getElementById("secondaryHangarGrid");
+								
+								let containerType = "unknown";
+								if (primaryContainer && primaryContainer.contains(input)) {
+									containerType = "primary";
+								} else if (secondaryContainer && secondaryContainer.contains(input)) {
+									containerType = "secondary";
+								}
+
+								console.log(`🏗️ Neues ${containerType} Feld: ${input.id}`);
+								this.attachEventHandlersToElement(input, containerType);
 							}
 						});
+
+						// Zusätzliche Prüfung: Falls ganze Kacheln hinzugefügt wurden
+						if (node.classList && node.classList.contains('hangar-cell')) {
+							console.log(`🏗️ Neue Hangar-Kachel erkannt:`, node.id);
+							setTimeout(() => {
+								// Event-Handler für alle Felder in der neuen Kachel registrieren
+								const cellInputs = node.querySelectorAll("input, textarea, select");
+								cellInputs.forEach(input => {
+									if (this.isRelevantField(input)) {
+										const cellId = this.extractCellIdFromElement(input);
+										const containerType = cellId >= 101 ? "secondary" : "primary";
+										console.log(`🎯 Registriere Handler für neue Kachel: ${input.id} (${containerType})`);
+										this.attachEventHandlersToElement(input, containerType);
+									}
+								});
+							}, 100);
+						}
 					}
 				});
 			});
 		});
 
+		// Überwache sowohl Haupt-Container als auch sekundäre Container
+		const containersToObserve = ['hangarGrid', 'secondaryHangarGrid'];
+		containersToObserve.forEach(containerId => {
+			const container = document.getElementById(containerId);
+			if (container) {
+				observer.observe(container, {
+					childList: true,
+					subtree: true,
+				});
+				console.log(`👀 MutationObserver aktiv für: ${containerId}`);
+			}
+		});
+
+		// Zusätzlich: Überwache Body für größere Strukturänderungen
 		observer.observe(document.body, {
 			childList: true,
 			subtree: true,
@@ -541,35 +675,73 @@ class HangarEventManager {
 	}
 
 	/**
-	 * Hängt Event-Handler an ein einzelnes Element an
+	 * Hängt Event-Handler an ein einzelnes Element an - ERWEITERT
 	 */
-	attachEventHandlersToElement(element) {
+	attachEventHandlersToElement(element, containerType = "unknown") {
+		const cellId = this.extractCellIdFromElement(element);
+		const handlerPrefix = `${containerType}_dynamic_${cellId || 'unknown'}`;
+
 		this.safeAddEventListener(
 			element,
 			"input",
 			(event) => {
+				if (window.isApplyingServerData) {
+					console.log(
+						`⏸️ Dynamic Input Event übersprungen (Server-Data wird angewendet): ${event.target.id}`
+					);
+					return;
+				}
+				console.log(
+					`📝 Dynamic ${containerType} Input: ${event.target.id} = "${event.target.value}"`
+				);
 				this.debouncedFieldUpdate(event.target.id, event.target.value);
 			},
-			"dynamicInput"
+			`${handlerPrefix}_input`
 		);
 
 		this.safeAddEventListener(
 			element,
 			"blur",
 			(event) => {
+				if (window.isApplyingServerData) {
+					console.log(
+						`⏸️ Dynamic Blur Event übersprungen (Server-Data wird angewendet): ${event.target.id}`
+					);
+					return;
+				}
+				console.log(
+					`👁️ Dynamic ${containerType} Blur: ${event.target.id} = "${event.target.value}"`
+				);
 				this.debouncedFieldUpdate(event.target.id, event.target.value, 100);
 			},
-			"dynamicBlur"
+			`${handlerPrefix}_blur`
 		);
 
 		this.safeAddEventListener(
 			element,
 			"change",
 			(event) => {
+				if (window.isApplyingServerData) {
+					console.log(
+						`⏸️ Dynamic Change Event übersprungen (Server-Data wird angewendet): ${event.target.id}`
+					);
+					return;
+				}
+				console.log(
+					`🔄 Dynamic ${containerType} Change: ${event.target.id} = "${event.target.value}"`
+				);
+
+				// Spezielle Behandlung für Status-Felder
+				if (event.target.id.startsWith("status-") && cellId && window.updateStatusLights) {
+					window.updateStatusLights(cellId);
+				}
+
 				this.debouncedFieldUpdate(event.target.id, event.target.value, 50);
 			},
-			"dynamicChange"
+			`${handlerPrefix}_change`
 		);
+
+		console.log(`✅ Dynamic Event-Handler registriert für ${containerType}: ${element.id}`);
 	}
 
 	/**

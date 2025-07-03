@@ -1060,7 +1060,9 @@ window.hangarUI = {
 
 		relevantSelectors.forEach((selector) => {
 			const elements = secondaryContainer.querySelectorAll(selector);
-			console.log(`🔍 Gefunden ${elements.length} Elemente für Selector: ${selector}`);
+			console.log(
+				`🔍 Gefunden ${elements.length} Elemente für Selector: ${selector}`
+			);
 
 			elements.forEach((element) => {
 				if (processedIds.has(element.id)) {
@@ -1165,9 +1167,13 @@ window.hangarUI = {
 						processedIds.add(element.id);
 					}
 				} else if (cellId < 101) {
-					console.log(`⏭️ Element ${element.id} gehört zu primären Kacheln (ID: ${cellId})`);
+					console.log(
+						`⏭️ Element ${element.id} gehört zu primären Kacheln (ID: ${cellId})`
+					);
 				} else {
-					console.log(`⏭️ Element ${element.id} nicht im sekundären Container oder ungültige ID`);
+					console.log(
+						`⏭️ Element ${element.id} nicht im sekundären Container oder ungültige ID`
+					);
 				}
 			});
 		});
@@ -1175,7 +1181,7 @@ window.hangarUI = {
 		console.log(
 			`✅ ${handlersRegistered} Event-Handler für sekundäre Kacheln registriert`
 		);
-		
+
 		return handlersRegistered > 0;
 	},
 
@@ -1217,11 +1223,13 @@ window.updateCellAttributes = updateCellAttributes;
 window.updateStatusLights = updateStatusLights;
 
 // setupSecondaryTileEventListeners als globale Funktion
-window.setupSecondaryTileEventListeners = function() {
+window.setupSecondaryTileEventListeners = function () {
 	if (window.hangarUI && window.hangarUI.setupSecondaryTileEventListeners) {
 		return window.hangarUI.setupSecondaryTileEventListeners();
 	} else {
-		console.warn("❌ hangarUI.setupSecondaryTileEventListeners nicht verfügbar");
+		console.warn(
+			"❌ hangarUI.setupSecondaryTileEventListeners nicht verfügbar"
+		);
 		return false;
 	}
 };
@@ -1245,23 +1253,30 @@ document.addEventListener("DOMContentLoaded", function () {
 	// Phase 3: Sekundäre Event-Handler registrieren (2000ms)
 	setTimeout(() => {
 		console.log("🎯 Phase 3: Sekundäre Event-Handler werden registriert...");
-		
+
 		// Prüfe ob sekundäre Kacheln existieren
 		const secondaryContainer = document.getElementById("secondaryHangarGrid");
 		if (secondaryContainer && secondaryContainer.children.length > 0) {
-			console.log(`🔍 ${secondaryContainer.children.length} sekundäre Kacheln gefunden`);
-			
+			console.log(
+				`🔍 ${secondaryContainer.children.length} sekundäre Kacheln gefunden`
+			);
+
 			if (window.setupSecondaryTileEventListeners) {
 				const result = window.setupSecondaryTileEventListeners();
 				console.log("✅ setupSecondaryTileEventListeners (global):", result);
-			} else if (window.hangarUI && window.hangarUI.setupSecondaryTileEventListeners) {
+			} else if (
+				window.hangarUI &&
+				window.hangarUI.setupSecondaryTileEventListeners
+			) {
 				const result = window.hangarUI.setupSecondaryTileEventListeners();
 				console.log("✅ setupSecondaryTileEventListeners (hangarUI):", result);
 			} else {
 				console.warn("❌ setupSecondaryTileEventListeners nicht verfügbar");
 			}
 		} else {
-			console.log("ℹ️ Keine sekundären Kacheln gefunden, überspringe Handler-Registrierung");
+			console.log(
+				"ℹ️ Keine sekundären Kacheln gefunden, überspringe Handler-Registrierung"
+			);
 		}
 	}, 2000);
 
@@ -1270,16 +1285,21 @@ document.addEventListener("DOMContentLoaded", function () {
 		console.log("🌐 Phase 4: Server-Sync wird eingerichtet...");
 		if (window.storageBrowser) {
 			// Versuche Server-Daten zu laden
-			window.storageBrowser.loadFromServer().then(serverData => {
-				if (serverData) {
-					console.log("📥 Server-Daten verfügbar, wende an...");
-					window.storageBrowser.applyServerData(serverData);
-				} else {
-					console.log("ℹ️ Keine Server-Daten verfügbar, verwende lokale Daten");
-				}
-			}).catch(error => {
-				console.warn("⚠️ Fehler beim Laden der Server-Daten:", error);
-			});
+			window.storageBrowser
+				.loadFromServer()
+				.then((serverData) => {
+					if (serverData) {
+						console.log("📥 Server-Daten verfügbar, wende an...");
+						window.storageBrowser.applyServerData(serverData);
+					} else {
+						console.log(
+							"ℹ️ Keine Server-Daten verfügbar, verwende lokale Daten"
+						);
+					}
+				})
+				.catch((error) => {
+					console.warn("⚠️ Fehler beim Laden der Server-Daten:", error);
+				});
 		}
 	}, 3000);
 
@@ -1316,17 +1336,20 @@ document.addEventListener("DOMContentLoaded", function () {
 
 			// Prüfe explizit sekundäre IDs
 			const secondaryIDs = [];
-			secondaryFields.forEach(field => {
+			secondaryFields.forEach((field) => {
 				if (field.id) {
-					const cellId = window.hangarUI ? 
-						window.hangarUI.extractCellIdFromElement(field) : 
-						parseInt(field.id.match(/\d+$/)?.[0] || 0);
+					const cellId = window.hangarUI
+						? window.hangarUI.extractCellIdFromElement(field)
+						: parseInt(field.id.match(/\d+$/)?.[0] || 0);
 					if (cellId >= 101) {
 						secondaryIDs.push(field.id);
 					}
 				}
 			});
-			console.log(`🎯 Sekundäre IDs gefunden: ${secondaryIDs.length}`, secondaryIDs);
+			console.log(
+				`🎯 Sekundäre IDs gefunden: ${secondaryIDs.length}`,
+				secondaryIDs
+			);
 		}
 
 		console.log("🎉 === HANGARPLANNER INITIALISIERUNG ABGESCHLOSSEN ===");

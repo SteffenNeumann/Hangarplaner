@@ -188,9 +188,15 @@ class HangarEventManager {
 				);
 			} else {
 				// Fallback: Erweiterte Datensammlung - VERBESSERT für sekundäre Tiles
-				const primaryFields = this.collectFieldsFromContainer("hangarGrid", false);
-				const secondaryFields = this.collectFieldsFromContainer("secondaryHangarGrid", true);
-				
+				const primaryFields = this.collectFieldsFromContainer(
+					"hangarGrid",
+					false
+				);
+				const secondaryFields = this.collectFieldsFromContainer(
+					"secondaryHangarGrid",
+					true
+				);
+
 				allData = {
 					metadata: {
 						lastModified: new Date().toISOString(),
@@ -218,7 +224,7 @@ class HangarEventManager {
 				console.log("📊 Fallback-Daten für Server-Sync gesammelt:", {
 					primary: primaryFields.length,
 					secondary: secondaryFields.length,
-					total: allData
+					total: allData,
 				});
 			}
 
@@ -273,9 +279,9 @@ class HangarEventManager {
 
 		// Sammle alle relevanten Elemente aus diesem Container
 		const containerFields = {};
-		selectors.forEach(selector => {
+		selectors.forEach((selector) => {
 			const elements = container.querySelectorAll(selector);
-			elements.forEach(element => {
+			elements.forEach((element) => {
 				if (element.id && element.value !== undefined) {
 					const cellId = this.extractCellIdFromElement(element);
 					if (cellId && (isSecondary ? cellId >= 101 : cellId < 101)) {
@@ -288,32 +294,37 @@ class HangarEventManager {
 		// Gruppiere Felder nach Tile-ID
 		const tileGroups = {};
 		Object.entries(containerFields).forEach(([fieldId, value]) => {
-			const cellId = this.extractCellIdFromElement({id: fieldId});
+			const cellId = this.extractCellIdFromElement({ id: fieldId });
 			if (cellId) {
 				if (!tileGroups[cellId]) {
 					tileGroups[cellId] = { tileId: cellId };
 				}
 
-				if (fieldId.includes('aircraft-')) {
+				if (fieldId.includes("aircraft-")) {
 					tileGroups[cellId].aircraftId = value;
-				} else if (fieldId.includes('position-') || fieldId.includes('hangar-position-')) {
+				} else if (
+					fieldId.includes("position-") ||
+					fieldId.includes("hangar-position-")
+				) {
 					tileGroups[cellId].position = value;
-				} else if (fieldId.includes('notes-')) {
+				} else if (fieldId.includes("notes-")) {
 					tileGroups[cellId].notes = value;
-				} else if (fieldId.includes('arrival-time-')) {
+				} else if (fieldId.includes("arrival-time-")) {
 					tileGroups[cellId].arrivalTime = value;
-				} else if (fieldId.includes('departure-time-')) {
+				} else if (fieldId.includes("departure-time-")) {
 					tileGroups[cellId].departureTime = value;
-				} else if (fieldId.includes('status-')) {
+				} else if (fieldId.includes("status-")) {
 					tileGroups[cellId].status = value;
-				} else if (fieldId.includes('tow-status-')) {
+				} else if (fieldId.includes("tow-status-")) {
 					tileGroups[cellId].towStatus = value;
 				}
 			}
 		});
 
 		const tilesArray = Object.values(tileGroups);
-		console.log(`🔍 ${containerId}: ${tilesArray.length} Tiles mit Daten gefunden`);
+		console.log(
+			`🔍 ${containerId}: ${tilesArray.length} Tiles mit Daten gefunden`
+		);
 		return tilesArray;
 	}
 
@@ -442,17 +453,27 @@ class HangarEventManager {
 			console.log("🔧 Registriere Handler für sekundäre Kacheln...");
 			relevantSelectors.forEach((selector) => {
 				const elements = secondaryContainer.querySelectorAll(selector);
-				console.log(`🔍 Sekundäre Elemente für ${selector}: ${elements.length}`);
+				console.log(
+					`🔍 Sekundäre Elemente für ${selector}: ${elements.length}`
+				);
 				elements.forEach((element) => {
 					// Prüfe ob Element wirklich im sekundären Container und sekundäre ID hat
 					const cellId = this.extractCellIdFromElement(element);
 					if (cellId && cellId >= 101 && secondaryContainer.contains(element)) {
-						console.log(`🎯 Registriere sekundären Handler: ${element.id} (Kachel ${cellId})`);
+						console.log(
+							`🎯 Registriere sekundären Handler: ${element.id} (Kachel ${cellId})`
+						);
 						if (this.registerHandlerForElement(element, "secondary")) {
 							handlersRegistered++;
 						}
 					} else {
-						console.log(`⏭️ Sekundäres Element übersprungen: ${element.id} (CellID: ${cellId}, Container-Check: ${secondaryContainer.contains(element)})`);
+						console.log(
+							`⏭️ Sekundäres Element übersprungen: ${
+								element.id
+							} (CellID: ${cellId}, Container-Check: ${secondaryContainer.contains(
+								element
+							)})`
+						);
 					}
 				});
 			});
@@ -592,15 +613,20 @@ class HangarEventManager {
 						newInputs.forEach((input) => {
 							if (this.isRelevantField(input)) {
 								console.log(`🆕 Neues Feld erkannt: ${input.id}`);
-								
+
 								// Bestimme Container-Typ
 								const primaryContainer = document.getElementById("hangarGrid");
-								const secondaryContainer = document.getElementById("secondaryHangarGrid");
-								
+								const secondaryContainer = document.getElementById(
+									"secondaryHangarGrid"
+								);
+
 								let containerType = "unknown";
 								if (primaryContainer && primaryContainer.contains(input)) {
 									containerType = "primary";
-								} else if (secondaryContainer && secondaryContainer.contains(input)) {
+								} else if (
+									secondaryContainer &&
+									secondaryContainer.contains(input)
+								) {
 									containerType = "secondary";
 								}
 
@@ -610,16 +636,21 @@ class HangarEventManager {
 						});
 
 						// Zusätzliche Prüfung: Falls ganze Kacheln hinzugefügt wurden
-						if (node.classList && node.classList.contains('hangar-cell')) {
+						if (node.classList && node.classList.contains("hangar-cell")) {
 							console.log(`🏗️ Neue Hangar-Kachel erkannt:`, node.id);
 							setTimeout(() => {
 								// Event-Handler für alle Felder in der neuen Kachel registrieren
-								const cellInputs = node.querySelectorAll("input, textarea, select");
-								cellInputs.forEach(input => {
+								const cellInputs = node.querySelectorAll(
+									"input, textarea, select"
+								);
+								cellInputs.forEach((input) => {
 									if (this.isRelevantField(input)) {
 										const cellId = this.extractCellIdFromElement(input);
-										const containerType = cellId >= 101 ? "secondary" : "primary";
-										console.log(`🎯 Registriere Handler für neue Kachel: ${input.id} (${containerType})`);
+										const containerType =
+											cellId >= 101 ? "secondary" : "primary";
+										console.log(
+											`🎯 Registriere Handler für neue Kachel: ${input.id} (${containerType})`
+										);
 										this.attachEventHandlersToElement(input, containerType);
 									}
 								});
@@ -631,8 +662,8 @@ class HangarEventManager {
 		});
 
 		// Überwache sowohl Haupt-Container als auch sekundäre Container
-		const containersToObserve = ['hangarGrid', 'secondaryHangarGrid'];
-		containersToObserve.forEach(containerId => {
+		const containersToObserve = ["hangarGrid", "secondaryHangarGrid"];
+		containersToObserve.forEach((containerId) => {
 			const container = document.getElementById(containerId);
 			if (container) {
 				observer.observe(container, {
@@ -679,7 +710,7 @@ class HangarEventManager {
 	 */
 	attachEventHandlersToElement(element, containerType = "unknown") {
 		const cellId = this.extractCellIdFromElement(element);
-		const handlerPrefix = `${containerType}_dynamic_${cellId || 'unknown'}`;
+		const handlerPrefix = `${containerType}_dynamic_${cellId || "unknown"}`;
 
 		this.safeAddEventListener(
 			element,
@@ -732,7 +763,11 @@ class HangarEventManager {
 				);
 
 				// Spezielle Behandlung für Status-Felder
-				if (event.target.id.startsWith("status-") && cellId && window.updateStatusLights) {
+				if (
+					event.target.id.startsWith("status-") &&
+					cellId &&
+					window.updateStatusLights
+				) {
 					window.updateStatusLights(cellId);
 				}
 
@@ -741,7 +776,9 @@ class HangarEventManager {
 			`${handlerPrefix}_change`
 		);
 
-		console.log(`✅ Dynamic Event-Handler registriert für ${containerType}: ${element.id}`);
+		console.log(
+			`✅ Dynamic Event-Handler registriert für ${containerType}: ${element.id}`
+		);
 	}
 
 	/**

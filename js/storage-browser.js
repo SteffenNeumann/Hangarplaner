@@ -495,19 +495,31 @@ class ServerSync {
 		if (window.setupSecondaryTileEventListeners) {
 			setTimeout(() => {
 				const result = window.setupSecondaryTileEventListeners();
-				console.log("✅ Event-Handler für sekundäre Kacheln reaktiviert (global):", result);
+				console.log(
+					"✅ Event-Handler für sekundäre Kacheln reaktiviert (global):",
+					result
+				);
 			}, 100);
-		} else if (window.hangarUI && window.hangarUI.setupSecondaryTileEventListeners) {
+		} else if (
+			window.hangarUI &&
+			window.hangarUI.setupSecondaryTileEventListeners
+		) {
 			setTimeout(() => {
 				const result = window.hangarUI.setupSecondaryTileEventListeners();
-				console.log("✅ Event-Handler für sekundäre Kacheln reaktiviert (hangarUI):", result);
+				console.log(
+					"✅ Event-Handler für sekundäre Kacheln reaktiviert (hangarUI):",
+					result
+				);
 			}, 100);
 		} else {
 			console.warn("⚠️ setupSecondaryTileEventListeners nicht verfügbar");
 		}
 
 		// Event-Handler über Event-Manager reaktivieren
-		if (window.hangarEventManager && window.hangarEventManager.setupUnifiedEventHandlers) {
+		if (
+			window.hangarEventManager &&
+			window.hangarEventManager.setupUnifiedEventHandlers
+		) {
 			setTimeout(() => {
 				window.hangarEventManager.setupUnifiedEventHandlers();
 				console.log("✅ Unified Event-Handler reaktiviert");
@@ -517,15 +529,17 @@ class ServerSync {
 		// Status-Indikatoren und UI-Updates
 		setTimeout(() => {
 			const statusElements = document.querySelectorAll('[id^="status-"]');
-			statusElements.forEach(element => {
+			statusElements.forEach((element) => {
 				if (element.value && window.updateStatusLights) {
-					const cellId = parseInt(element.id.replace('status-', ''));
+					const cellId = parseInt(element.id.replace("status-", ""));
 					if (!isNaN(cellId)) {
 						window.updateStatusLights(cellId);
 					}
 				}
 			});
-			console.log(`✅ ${statusElements.length} Status-Indikatoren aktualisiert`);
+			console.log(
+				`✅ ${statusElements.length} Status-Indikatoren aktualisiert`
+			);
 		}, 300);
 	}
 }

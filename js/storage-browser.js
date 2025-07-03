@@ -154,7 +154,7 @@ class ServerSync {
 	}
 
 	/**
-	 * Wendet Server-Daten auf die Anwendung an
+	 * Wendet Server-Daten auf die Anwendung an - VERBESSERT
 	 */
 	async applyServerData(serverData) {
 		if (!serverData) {
@@ -163,11 +163,35 @@ class ServerSync {
 		}
 
 		try {
-			// Flag setzen um localStorage-Konflikte zu vermeiden
+			// KRITISCH: Flag setzen um localStorage-Konflikte zu vermeiden
 			this.isApplyingServerData = true;
 			window.isApplyingServerData = true;
 
 			console.log("📥 Wende Server-Daten an:", serverData);
+
+			// WICHTIG: Prüfe ob Daten neuer sind als lokale Änderungen
+			const serverTimestamp =
+				serverData.metadata?.lastModified || serverData.lastSaved;
+			const localData = JSON.parse(
+				localStorage.getItem("hangarPlannerData") || "{}"
+			);
+			const localTimestamp = localData.lastModified;
+
+			if (localTimestamp && serverTimestamp) {
+				const serverTime = new Date(serverTimestamp).getTime();
+				const localTime = new Date(localTimestamp).getTime();
+
+				if (localTime > serverTime) {
+					console.log(
+						"⚠️ Lokale Daten sind neuer als Server-Daten. Server-Load übersprungen."
+					);
+					console.log(`Server: ${serverTimestamp}, Lokal: ${localTimestamp}`);
+					return false;
+				} else {
+					console.log("✅ Server-Daten sind aktueller als lokale Daten");
+					console.log(`Server: ${serverTimestamp}, Lokal: ${localTimestamp}`);
+				}
+			}
 
 			// 1. Verwende hangarData falls verfügbar
 			if (
@@ -240,6 +264,9 @@ class ServerSync {
 					}
 				});
 			}
+
+			// 5. NEUE FUNKTION: Event-Handler für neu geladene Felder aktivieren
+			this.reactivateEventHandlers();
 
 			console.log("✅ Server-Daten angewendet (erweiterte Fallback-Methode)");
 			return true;
@@ -457,6 +484,32 @@ class ServerSync {
 			return false;
 		}
 	}
+
+	/**
+	 * NEUE FUNKTION: Reaktiviert Event-Handler nach Server-Load
+	 */
+	reactivateEventHandlers() {
+		console.log("🔄 Reaktiviere Event-Handler nach Server-Load...");
+
+		// Event-Handler für sekundäre Kacheln reaktivieren
+		if (window.hangarUI && window.hangarUI.setupSecondaryTileEventListeners) {
+			setTimeout(() => {
+				window.hangarUI.setupSecondaryTileEventListeners();
+				console.log("✅ Event-Handler für sekundäre Kacheln reaktiviert");
+			}, 100);
+		}
+
+		// Event-Handler über Event-Manager reaktivieren
+		if (
+			window.hangarEventManager &&
+			window.hangarEventManager.setupUnifiedEventHandlers
+		) {
+			setTimeout(() => {
+				window.hangarEventManager.setupUnifiedEventHandlers();
+				console.log("✅ Unified Event-Handler reaktiviert");
+			}, 200);
+		}
+	}
 }
 
 // Globale Instanz für Kompatibilität
@@ -517,15 +570,38 @@ document.addEventListener("DOMContentLoaded", () => {
 		}
 	}, 1000);
 
-	// AUTO-LOAD von Server-Daten beim Start
+	// AUTO-LOAD von Server-Daten beim Start - VERBESSERT mit Konflikt-Erkennung
 	setTimeout(async () => {
 		try {
 			console.log("🔄 Versuche Server-Daten beim Start zu laden...");
+
+			// WICHTIG: Prüfe ob bereits lokale Daten vorhanden sind
+			const hasLocalData =
+				localStorage.getItem("hangarPlannerData") ||
+				localStorage.getItem("hangarPlannerSettings") ||
+				document.querySelector('input[value]:not([value=""])');
+
+			if (hasLocalData) {
+				console.log(
+					"📋 Lokale Daten gefunden - prüfe Timestamps vor Server-Load"
+				);
+			}
+
 			const serverData = await window.serverSync.loadFromServer();
 
 			if (serverData && !serverData.error) {
 				console.log("📥 Server-Daten gefunden, wende sie an...");
-				await window.serverSync.applyServerData(serverData);
+
+				// NEUE LOGIK: Nur anwenden wenn Server-Daten neuer oder keine lokalen Daten
+				const applied = await window.serverSync.applyServerData(serverData);
+
+				if (applied) {
+					console.log("✅ Server-Daten erfolgreich angewendet");
+				} else {
+					console.log(
+						"⚠️ Server-Daten nicht angewendet (lokale Daten sind neuer)"
+					);
+				}
 			} else {
 				console.log("📭 Keine Server-Daten vorhanden oder Fehler beim Laden");
 			}
@@ -535,7 +611,7 @@ document.addEventListener("DOMContentLoaded", () => {
 				error.message
 			);
 		}
-	}, 3000); // 3 Sekunden Verzögerung um Server-Test abzuwarten
+	}, 5000); // Verlängert auf 5 Sekunden um mehr Zeit für lokale Initialisierung zu geben
 });
 
 console.log("📦 Server-Sync-Modul geladen (optimiert von 2085 → ~250 Zeilen)");

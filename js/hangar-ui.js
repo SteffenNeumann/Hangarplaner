@@ -1033,79 +1033,156 @@ window.hangarUI = {
 	},
 
 	/**
-	 * Initialisiert Event-Listener für sekundäre Kacheln
+	 * Initialisiert Event-Listener für sekundäre Kacheln - VERBESSERT
 	 */
 	setupSecondaryTileEventListeners: function () {
-		// Status-Selects für sekundäre Kacheln finden und Eventhandler zuweisen
-		document
-			.querySelectorAll('#secondaryHangarGrid select[id^="status-"]')
-			.forEach((select) => {
-				const cellId = parseInt(select.id.split("-")[1]);
-				select.onchange = function () {
-					updateStatusLights(cellId);
-				};
+		const secondaryContainer = document.getElementById("secondaryHangarGrid");
+		if (!secondaryContainer) {
+			console.warn("❌ Sekundärer Container nicht gefunden");
+			return;
+		}
 
-				// Initialen Status setzen
-				updateStatusLights(cellId);
-			});
+		console.log("🔧 Richte Event-Handler für sekundäre Kacheln ein...");
 
-		// Event-Listener für Position-Eingabefelder in sekundären Kacheln
-		document
-			.querySelectorAll('#secondaryHangarGrid input[id^="hangar-position-"]')
-			.forEach((input) => {
-				const cellId = parseInt(input.id.split("-")[2]);
-				console.log(
-					`Event-Handler für Position in sekundärer Kachel ${cellId} eingerichtet`
-				);
+		// ALLE relevanten Felder in sekundären Kacheln finden
+		const relevantSelectors = [
+			'input[id^="aircraft-"]',
+			'input[id^="hangar-position-"]',
+			'input[id^="position-"]',
+			'input[id^="arrival-time-"]',
+			'input[id^="departure-time-"]',
+			'textarea[id^="notes-"]',
+			'select[id^="status-"]',
+			'select[id^="tow-status-"]',
+		];
 
-				// Event-Handler für automatisches Speichern
-				input.addEventListener("blur", function () {
+		let handlersRegistered = 0;
+
+		relevantSelectors.forEach((selector) => {
+			const elements = secondaryContainer.querySelectorAll(selector);
+
+			elements.forEach((element) => {
+				const cellId = this.extractCellIdFromElement(element);
+
+				// Nur für sekundäre Kacheln (ID >= 101)
+				if (cellId >= 101) {
 					console.log(
-						`Position in sekundärer Kachel ${cellId} geändert: ${this.value}`
+						`🎯 Registriere Handler für sekundäres Element: ${element.id} (Kachel ${cellId})`
 					);
-					if (typeof window.hangarUI.uiSettings.save === "function") {
-						setTimeout(
-							() =>
-								window.hangarUI.uiSettings.save.call(
-									window.hangarUI.uiSettings
-								),
-							100
-						);
-					}
-				});
-			});
 
-		// Event-Listener für manuelle Eingabefelder in sekundären Kacheln
-		document
-			.querySelectorAll(
-				'#secondaryHangarGrid input[placeholder="Manual Input"]'
-			)
-			.forEach((input) => {
-				// ID zuweisen, falls noch nicht vorhanden
-				const cellId = parseInt(
-					input
-						.closest(".hangar-cell")
-						.querySelector('[id^="status-"]')
-						.id.split("-")[1]
-				);
-				if (!input.id) input.id = `manual-input-${cellId}`;
-
-				// Event-Handler für automatisches Speichern
-				input.addEventListener("blur", function () {
-					console.log(
-						`Manuelle Eingabe in sekundärer Kachel ${cellId} geändert: ${this.value}`
-					);
-					if (typeof window.hangarUI.uiSettings.save === "function") {
-						setTimeout(
-							() =>
-								window.hangarUI.uiSettings.save.call(
-									window.hangarUI.uiSettings
-								),
-							100
+					// Event-Handler über zentralen Event-Manager registrieren
+					if (
+						window.hangarEventManager &&
+						window.hangarEventManager.safeAddEventListener
+					) {
+						// Input Event für Echtzeitänderungen
+						window.hangarEventManager.safeAddEventListener(
+							element,
+							"input",
+							(event) => {
+								console.log(
+									`📝 Sekundäres Input Event: ${event.target.id} = "${event.target.value}"`
+								);
+								window.hangarEventManager.debouncedFieldUpdate(
+									event.target.id,
+									event.target.value
+								);
+							},
+							`secondary_input_${cellId}`
 						);
+
+						// Blur Event für finales Speichern
+						window.hangarEventManager.safeAddEventListener(
+							element,
+							"blur",
+							(event) => {
+								console.log(
+									`👁️ Sekundäres Blur Event: ${event.target.id} = "${event.target.value}"`
+								);
+								window.hangarEventManager.debouncedFieldUpdate(
+									event.target.id,
+									event.target.value,
+									100
+								);
+							},
+							`secondary_blur_${cellId}`
+						);
+
+						// Change Event für Dropdowns
+						window.hangarEventManager.safeAddEventListener(
+							element,
+							"change",
+							(event) => {
+								console.log(
+									`🔄 Sekundäres Change Event: ${event.target.id} = "${event.target.value}"`
+								);
+
+								// Spezielle Behandlung für Status-Felder
+								if (event.target.id.startsWith("status-")) {
+									updateStatusLights(cellId);
+								}
+
+								window.hangarEventManager.debouncedFieldUpdate(
+									event.target.id,
+									event.target.value,
+									50
+								);
+							},
+							`secondary_change_${cellId}`
+						);
+
+						handlersRegistered++;
+					} else {
+						console.warn(
+							"⚠️ Event-Manager nicht verfügbar, verwende Fallback-Handler"
+						);
+						// Fallback: Direkte Event-Handler
+						element.addEventListener("input", (event) => {
+							console.log(
+								`📝 Fallback Input: ${event.target.id} = "${event.target.value}"`
+							);
+						});
+						element.addEventListener("blur", (event) => {
+							console.log(
+								`👁️ Fallback Blur: ${event.target.id} = "${event.target.value}"`
+							);
+						});
 					}
-				});
+				}
 			});
+		});
+
+		console.log(
+			`✅ ${handlersRegistered} Event-Handler für sekundäre Kacheln registriert`
+		);
+	},
+
+	/**
+	 * NEUE HILFSFUNKTION: Extrahiert Kachel-ID aus Element
+	 */
+	extractCellIdFromElement: function (element) {
+		if (!element.id) return null;
+
+		// Verschiedene ID-Patterns unterstützen
+		const patterns = [
+			/^aircraft-(\d+)$/,
+			/^hangar-position-(\d+)$/,
+			/^position-(\d+)$/,
+			/^arrival-time-(\d+)$/,
+			/^departure-time-(\d+)$/,
+			/^notes-(\d+)$/,
+			/^status-(\d+)$/,
+			/^tow-status-(\d+)$/,
+		];
+
+		for (const pattern of patterns) {
+			const match = element.id.match(pattern);
+			if (match) {
+				return parseInt(match[1]);
+			}
+		}
+
+		return null;
 	},
 
 	// ...existing functions...
@@ -1118,3 +1195,63 @@ window.updateCellAttributes = updateCellAttributes;
 window.updateStatusLights = updateStatusLights;
 window.setupSecondaryTileEventListeners =
 	window.hangarUI.setupSecondaryTileEventListeners;
+
+// NEUE INITIALISIERUNGS-KOORDINATION
+// Stellt sicher, dass Event-Handler nach der vollständigen DOM-/UI-Initialisierung registriert werden
+document.addEventListener("DOMContentLoaded", function () {
+	console.log("🚀 === HANGARPLANNER INITIALISIERUNG GESTARTET ===");
+
+	// Phase 1: Basis-UI laden (0ms)
+	console.log("📋 Phase 1: Basis-UI wird geladen...");
+
+	// Phase 2: Event-Manager initialisieren (1000ms)
+	setTimeout(() => {
+		console.log("🔧 Phase 2: Event-Manager wird initialisiert...");
+		if (window.hangarEventManager && !window.hangarEventManager.initialized) {
+			window.hangarEventManager.init();
+		}
+	}, 1000);
+
+	// Phase 3: Sekundäre Event-Handler registrieren (2000ms)
+	setTimeout(() => {
+		console.log("🎯 Phase 3: Sekundäre Event-Handler werden registriert...");
+		if (window.hangarUI && window.hangarUI.setupSecondaryTileEventListeners) {
+			window.hangarUI.setupSecondaryTileEventListeners();
+		}
+	}, 2000);
+
+	// Phase 4: Validierung und Status-Check (6000ms)
+	setTimeout(() => {
+		console.log("🔍 Phase 4: System-Validierung...");
+
+		// Prüfe Event-Handler Status
+		if (window.hangarEventManager) {
+			const status = window.hangarEventManager.getStatus();
+			console.log("📊 Event-Manager Status:", status);
+		}
+
+		// Prüfe Container-Zuordnungen
+		const primaryContainer = document.getElementById("hangarGrid");
+		const secondaryContainer = document.getElementById("secondaryHangarGrid");
+
+		if (primaryContainer) {
+			const primaryFields = primaryContainer.querySelectorAll(
+				"input, select, textarea"
+			);
+			console.log(
+				`✅ Primärer Container: ${primaryFields.length} Felder gefunden`
+			);
+		}
+
+		if (secondaryContainer) {
+			const secondaryFields = secondaryContainer.querySelectorAll(
+				"input, select, textarea"
+			);
+			console.log(
+				`✅ Sekundärer Container: ${secondaryFields.length} Felder gefunden`
+			);
+		}
+
+		console.log("🎉 === HANGARPLANNER INITIALISIERUNG ABGESCHLOSSEN ===");
+	}, 6000);
+});

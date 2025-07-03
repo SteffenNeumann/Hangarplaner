@@ -293,7 +293,7 @@ function applyLoadedHangarPlan(data) {
 }
 
 /**
- * Sammelt Daten von allen Kacheln in einem Container
+ * Sammelt Daten von allen Kacheln in einem Container - VERBESSERT
  * @param {string} containerSelector - CSS-Selektor für den Container
  * @returns {Array} - Array mit Kacheldaten
  */
@@ -325,73 +325,84 @@ function collectContainerTileData(containerSelector) {
 				`Verarbeite Kachel ${index}, ID: ${tileId}, isSecondary: ${isSecondary}`
 			);
 
-			// WICHTIGE VALIDATION: Prüfe, ob die Elemente wirklich im richtigen Container sind
-			const aircraftElement = document.getElementById(`aircraft-${tileId}`);
-			if (aircraftElement && !container.contains(aircraftElement)) {
-				console.error(
-					`❌ KRITISCHER FEHLER: Element aircraft-${tileId} ist NICHT im Container ${containerSelector}!`
-				);
-				return; // Skip diese Kachel
-			}
+			// VERBESSERTE VALIDATION: Prüfe Container-Zugehörigkeit mit mehreren Strategien
+			const validateElementInContainer = (elementId) => {
+				const element = document.getElementById(elementId);
+				if (!element) return null;
 
-			// Sammle alle Daten aus der Kachel (nach bewährtem Aircraft-Verfahren)
+				// Strategie 1: Direkte Container-Prüfung
+				if (container.contains(element)) {
+					return element;
+				}
+
+				// Strategie 2: Parent-Traversal (für dynamisch erstellte Elemente)
+				let parent = element.parentElement;
+				let depth = 0;
+				while (parent && depth < 10) {
+					if (parent === container) {
+						console.log(
+							`✅ Element ${elementId} gefunden via Parent-Traversal (Tiefe: ${depth})`
+						);
+						return element;
+					}
+					parent = parent.parentElement;
+					depth++;
+				}
+
+				// Strategie 3: Über data-cell-id Attribut suchen
+				const cellElement = container.querySelector(
+					`[data-cell-id="${tileId}"]`
+				);
+				if (cellElement && cellElement.contains(element)) {
+					console.log(`✅ Element ${elementId} gefunden via data-cell-id`);
+					return element;
+				}
+
+				console.warn(
+					`❌ Element ${elementId} nicht im Container ${containerSelector} gefunden`
+				);
+				return null;
+			};
+
+			// Sammle alle Daten mit verbesserter Validation
+			const aircraftElement = validateElementInContainer(`aircraft-${tileId}`);
 			const aircraftId = aircraftElement?.value || "";
 
-			// Position gezielt über ID finden (bewährtes Verfahren) - mit Container-Validation
-			const positionElement = document.getElementById(
+			const positionElement = validateElementInContainer(
 				`hangar-position-${tileId}`
 			);
-			const position =
-				positionElement && container.contains(positionElement)
-					? positionElement.value || ""
-					: "";
+			const position = positionElement?.value || "";
 
-			// Weitere Felder mit Container-Validation
-			const manualInputElement = document.getElementById(
+			const manualInputElement = validateElementInContainer(
 				`manual-input-${tileId}`
 			);
-			const manualInput =
-				manualInputElement && container.contains(manualInputElement)
-					? manualInputElement.value || ""
-					: "";
+			const manualInput = manualInputElement?.value || "";
 
-			const notesElement = document.getElementById(`notes-${tileId}`);
-			const notes =
-				notesElement && container.contains(notesElement)
-					? notesElement.value || ""
-					: "";
+			const notesElement = validateElementInContainer(`notes-${tileId}`);
+			const notes = notesElement?.value || "";
 
-			const statusElement = document.getElementById(`status-${tileId}`);
-			const status =
-				statusElement && container.contains(statusElement)
-					? statusElement.value || "neutral"
-					: "neutral";
+			const statusElement = validateElementInContainer(`status-${tileId}`);
+			const status = statusElement?.value || "neutral";
 
-			const towStatusElement = document.getElementById(`tow-status-${tileId}`);
-			const towStatus =
-				towStatusElement && container.contains(towStatusElement)
-					? towStatusElement.value || "neutral"
-					: "neutral";
+			const towStatusElement = validateElementInContainer(
+				`tow-status-${tileId}`
+			);
+			const towStatus = towStatusElement?.value || "neutral";
 
-			const arrivalElement = document.getElementById(`arrival-time-${tileId}`);
-			const arrivalTime =
-				arrivalElement && container.contains(arrivalElement)
-					? arrivalElement.value || ""
-					: "";
+			const arrivalElement = validateElementInContainer(
+				`arrival-time-${tileId}`
+			);
+			const arrivalTime = arrivalElement?.value || "";
 
-			const departureElement = document.getElementById(
+			const departureElement = validateElementInContainer(
 				`departure-time-${tileId}`
 			);
-			const departureTime =
-				departureElement && container.contains(departureElement)
-					? departureElement.value || ""
-					: "";
+			const departureTime = departureElement?.value || "";
 
-			const positionInfoElement = document.getElementById(`position-${tileId}`);
-			const positionInfoGrid =
-				positionInfoElement && container.contains(positionInfoElement)
-					? positionInfoElement.value || ""
-					: "";
+			const positionInfoElement = validateElementInContainer(
+				`position-${tileId}`
+			);
+			const positionInfoGrid = positionInfoElement?.value || "";
 
 			console.log(`Tow-Status für Kachel ${tileId} gesammelt: ${towStatus}`);
 
@@ -1146,11 +1157,11 @@ window.hangarData.saveCurrentStateToLocalStorage = function () {
 	console.log("Aktueller Zustand im LocalStorage gespeichert");
 };
 
-// Automatisches Laden des letzten Zustands beim Start
+// Automatisches Laden des letzten Zustands beim Start - VERBESSERT
 document.addEventListener("DOMContentLoaded", function () {
 	// Versuchen, den letzten Zustand aus dem LocalStorage zu laden
 	try {
-		// Prüfen, ob gerade Server-Daten angewendet werden
+		// WICHTIG: Prüfen, ob gerade Server-Daten angewendet werden
 		if (window.isApplyingServerData) {
 			console.log(
 				"LocalStorage-Wiederherstellung übersprungen: Server-Daten werden angewendet"
@@ -1158,12 +1169,43 @@ document.addEventListener("DOMContentLoaded", function () {
 			return;
 		}
 
-		const savedState = localStorage.getItem("hangarPlannerCurrentState");
-		if (savedState) {
-			const projectData = JSON.parse(savedState);
-			applyProjectData(projectData);
-			console.log("Letzter Zustand aus LocalStorage geladen");
-		}
+		// NEUE LOGIK: Delayed Load mit Server-Sync Koordination
+		setTimeout(() => {
+			// Erneut prüfen ob Server-Sync aktiv ist
+			if (window.isApplyingServerData) {
+				console.log("LocalStorage-Load übersprungen: Server-Sync ist aktiv");
+				return;
+			}
+
+			const savedState = localStorage.getItem("hangarPlannerCurrentState");
+			if (savedState) {
+				const projectData = JSON.parse(savedState);
+
+				// Timestamp-Prüfung: Nur laden wenn keine neueren Server-Daten zu erwarten sind
+				const localTimestamp = projectData.lastSaved;
+				const now = new Date().getTime();
+				const localTime = localTimestamp
+					? new Date(localTimestamp).getTime()
+					: 0;
+				const timeDiff = now - localTime;
+
+				// Nur laden wenn lokale Daten nicht älter als 1 Stunde sind
+				if (timeDiff < 3600000) {
+					// 1 Stunde in Millisekunden
+					console.log("📂 Lade localStorage-Daten (recent data):", {
+						localTimestamp,
+						ageMinutes: Math.round(timeDiff / 60000),
+					});
+
+					applyProjectData(projectData);
+					console.log("✅ Letzter Zustand aus LocalStorage geladen");
+				} else {
+					console.log("⏳ LocalStorage-Daten sind alt, warte auf Server-Sync");
+				}
+			} else {
+				console.log("📭 Keine localStorage-Daten gefunden");
+			}
+		}, 2000); // 2 Sekunden Verzögerung um Server-Sync Vorrang zu geben
 	} catch (error) {
 		console.warn("Konnte letzten Zustand nicht laden:", error);
 	}

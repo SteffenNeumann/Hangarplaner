@@ -336,56 +336,154 @@ class HangarEventManager {
 			'textarea[class*="notes"]', // Notiz-Textareas mit CSS-Klasse
 		];
 
-		// Event-Handler für alle relevanten Felder registrieren
-		relevantSelectors.forEach((selector) => {
-			document.querySelectorAll(selector).forEach((element) => {
-				// Input Event (während der Eingabe)
-				this.safeAddEventListener(
-					element,
-					"input",
-					(event) => {
-						console.log(
-							`📝 Input Event: ${event.target.id} = "${event.target.value}"`
-						);
-						this.debouncedFieldUpdate(event.target.id, event.target.value);
-					},
-					"unifiedInput"
-				);
+		// NEUE LOGIK: Erst alle Container prüfen und dann Container-spezifisch arbeiten
+		const primaryContainer = document.getElementById("hangarGrid");
+		const secondaryContainer = document.getElementById("secondaryHangarGrid");
 
-				// Blur Event (wenn Feld verlassen wird)
-				this.safeAddEventListener(
-					element,
-					"blur",
-					(event) => {
-						console.log(
-							`👁️ Blur Event: ${event.target.id} = "${event.target.value}"`
-						);
-						this.debouncedFieldUpdate(event.target.id, event.target.value, 100); // Schnelleres Speichern bei Blur
-					},
-					"unifiedBlur"
-				);
+		let handlersRegistered = 0;
 
-				// Change Event (für Dropdowns)
-				this.safeAddEventListener(
-					element,
-					"change",
-					(event) => {
-						console.log(
-							`🔄 Change Event: ${event.target.id} = "${event.target.value}"`
-						);
-						this.debouncedFieldUpdate(event.target.id, event.target.value, 50); // Sofortiges Speichern bei Change
-					},
-					"unifiedChange"
-				);
+		// Event-Handler für primäre Container registrieren
+		if (primaryContainer) {
+			console.log("🔧 Registriere Handler für primäre Kacheln...");
+			relevantSelectors.forEach((selector) => {
+				const elements = primaryContainer.querySelectorAll(selector);
+				elements.forEach((element) => {
+					if (this.registerHandlerForElement(element, "primary")) {
+						handlersRegistered++;
+					}
+				});
 			});
-		});
+		}
+
+		// Event-Handler für sekundäre Container registrieren
+		if (secondaryContainer) {
+			console.log("🔧 Registriere Handler für sekundäre Kacheln...");
+			relevantSelectors.forEach((selector) => {
+				const elements = secondaryContainer.querySelectorAll(selector);
+				elements.forEach((element) => {
+					if (this.registerHandlerForElement(element, "secondary")) {
+						handlersRegistered++;
+					}
+				});
+			});
+		}
 
 		console.log(
-			"🔗 ERWEITERTE Unified Event-Handler eingerichtet für alle Felder"
+			`🔗 ERWEITERTE Unified Event-Handler eingerichtet: ${handlersRegistered} Handler registriert`
 		);
 
 		// Zusätzlich: MutationObserver für dynamisch hinzugefügte Felder
 		this.setupMutationObserver();
+	}
+
+	/**
+	 * NEUE HILFSFUNKTION: Registriert Handler für ein einzelnes Element
+	 */
+	registerHandlerForElement(element, containerType) {
+		if (!element || !element.id) return false;
+
+		const elementId = element.id;
+		const cellId = this.extractCellIdFromElement(element);
+
+		// WICHTIG: Prüfe Container-Kontext für korrekte ID-Zuordnung
+		if (containerType === "secondary" && cellId < 101) {
+			console.warn(
+				`⚠️ Sekundäres Element ${elementId} hat primäre ID ${cellId} - überspringe`
+			);
+			return false;
+		}
+		if (containerType === "primary" && cellId >= 101) {
+			console.warn(
+				`⚠️ Primäres Element ${elementId} hat sekundäre ID ${cellId} - überspringe`
+			);
+			return false;
+		}
+
+		// Input Event (während der Eingabe)
+		this.safeAddEventListener(
+			element,
+			"input",
+			(event) => {
+				if (window.isApplyingServerData) {
+					console.log(
+						`⏸️ Input Event übersprungen (Server-Data wird angewendet): ${event.target.id}`
+					);
+					return;
+				}
+				console.log(
+					`📝 ${containerType} Input Event: ${event.target.id} = "${event.target.value}"`
+				);
+				this.debouncedFieldUpdate(event.target.id, event.target.value);
+			},
+			`${containerType}_input`
+		);
+
+		// Blur Event (wenn Feld verlassen wird)
+		this.safeAddEventListener(
+			element,
+			"blur",
+			(event) => {
+				if (window.isApplyingServerData) {
+					console.log(
+						`⏸️ Blur Event übersprungen (Server-Data wird angewendet): ${event.target.id}`
+					);
+					return;
+				}
+				console.log(
+					`👁️ ${containerType} Blur Event: ${event.target.id} = "${event.target.value}"`
+				);
+				this.debouncedFieldUpdate(event.target.id, event.target.value, 100); // Schnelleres Speichern bei Blur
+			},
+			`${containerType}_blur`
+		);
+
+		// Change Event (für Dropdowns)
+		this.safeAddEventListener(
+			element,
+			"change",
+			(event) => {
+				if (window.isApplyingServerData) {
+					console.log(
+						`⏸️ Change Event übersprungen (Server-Data wird angewendet): ${event.target.id}`
+					);
+					return;
+				}
+				console.log(
+					`🔄 ${containerType} Change Event: ${event.target.id} = "${event.target.value}"`
+				);
+				this.debouncedFieldUpdate(event.target.id, event.target.value, 50); // Sofortiges Speichern bei Change
+			},
+			`${containerType}_change`
+		);
+
+		return true;
+	}
+
+	/**
+	 * NEUE HILFSFUNKTION: Extrahiert Cell-ID aus Element-ID
+	 */
+	extractCellIdFromElement(element) {
+		if (!element.id) return null;
+
+		const patterns = [
+			/^aircraft-(\d+)$/,
+			/^hangar-position-(\d+)$/,
+			/^position-(\d+)$/,
+			/^arrival-time-(\d+)$/,
+			/^departure-time-(\d+)$/,
+			/^notes-(\d+)$/,
+			/^status-(\d+)$/,
+			/^tow-status-(\d+)$/,
+		];
+
+		for (const pattern of patterns) {
+			const match = element.id.match(pattern);
+			if (match) {
+				return parseInt(match[1]);
+			}
+		}
+
+		return null;
 	}
 
 	/**

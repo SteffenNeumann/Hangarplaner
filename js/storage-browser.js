@@ -154,7 +154,7 @@ class ServerSync {
 	}
 
 	/**
-	 * Wendet Server-Daten auf die Anwendung an - VERBESSERT
+	 * Wendet Server-Daten auf die Anwendung an - KOORDINIERT
 	 */
 	async applyServerData(serverData) {
 		if (!serverData) {
@@ -167,45 +167,27 @@ class ServerSync {
 			this.isApplyingServerData = true;
 			window.isApplyingServerData = true;
 
-			console.log("📥 Wende Server-Daten an:", serverData);
+			console.log("📥 Wende Server-Daten über Koordinator an:", serverData);
 
-			// WICHTIG: Prüfe ob Daten neuer sind als lokale Änderungen
-			const serverTimestamp =
-				serverData.metadata?.lastModified || serverData.lastSaved;
-			const localData = JSON.parse(
-				localStorage.getItem("hangarPlannerData") || "{}"
-			);
-			const localTimestamp = localData.lastModified;
-
-			if (localTimestamp && serverTimestamp) {
-				const serverTime = new Date(serverTimestamp).getTime();
-				const localTime = new Date(localTimestamp).getTime();
-
-				if (localTime > serverTime) {
-					console.log(
-						"⚠️ Lokale Daten sind neuer als Server-Daten. Server-Load übersprungen."
-					);
-					console.log(`Server: ${serverTimestamp}, Lokal: ${localTimestamp}`);
-					return false;
-				} else {
-					console.log("✅ Server-Daten sind aktueller als lokale Daten");
-					console.log(`Server: ${serverTimestamp}, Lokal: ${localTimestamp}`);
-				}
+			// NEUE LOGIK: Verwende zentralen Datenkoordinator
+			if (window.dataCoordinator) {
+				// Server-Daten haben höchste Priorität
+				window.dataCoordinator.loadProject(serverData, "server");
+				console.log("✅ Server-Daten über Datenkoordinator angewendet");
+				return true;
 			}
 
-			// 1. Verwende hangarData falls verfügbar
+			// Fallback: Direkte Anwendung (nur wenn Koordinator nicht verfügbar)
 			if (
 				window.hangarData &&
 				typeof window.hangarData.applyLoadedHangarPlan === "function"
 			) {
 				const result = window.hangarData.applyLoadedHangarPlan(serverData);
-				console.log("✅ Server-Daten über hangarData angewendet");
+				console.log("✅ Server-Daten über hangarData angewendet (Fallback)");
 				return result;
 			}
 
-			// 2. Fallback: Manuelle Anwendung der Daten
-
-			// Projektname setzen
+			// Basis-Fallback
 			if (serverData.metadata && serverData.metadata.projectName) {
 				const projectNameInput = document.getElementById("projectName");
 				if (projectNameInput) {
@@ -217,66 +199,18 @@ class ServerSync {
 				}
 			}
 
-			// Einstellungen anwenden
-			if (serverData.settings) {
-				localStorage.setItem(
-					"hangarPlannerSettings",
-					JSON.stringify(serverData.settings)
-				);
-
-				// UI-Einstellungen direkt setzen
-				if (serverData.settings.tilesCount) {
-					const tilesCountInput = document.getElementById("tilesCount");
-					if (tilesCountInput)
-						tilesCountInput.value = serverData.settings.tilesCount;
-				}
-				if (serverData.settings.secondaryTilesCount) {
-					const secondaryTilesCountInput = document.getElementById(
-						"secondaryTilesCount"
-					);
-					if (secondaryTilesCountInput)
-						secondaryTilesCountInput.value =
-							serverData.settings.secondaryTilesCount;
-				}
-				if (serverData.settings.layout) {
-					const layoutSelect = document.getElementById("layoutType");
-					if (layoutSelect) layoutSelect.value = serverData.settings.layout;
-				}
-
-				console.log("⚙️ Einstellungen angewendet");
-			}
-
-			// 3. WICHTIG: Kachel-Daten anwenden
-			if (serverData.primaryTiles) {
-				this.applyTileData(serverData.primaryTiles, false);
-			}
-			if (serverData.secondaryTiles) {
-				this.applyTileData(serverData.secondaryTiles, true);
-			}
-
-			// 4. Einzelne Feld-Updates anwenden (falls vorhanden)
-			if (serverData.currentFields) {
-				Object.entries(serverData.currentFields).forEach(([fieldId, value]) => {
-					const element = document.getElementById(fieldId);
-					if (element) {
-						element.value = value;
-						console.log(`🔧 Feld-Update angewendet: ${fieldId} = "${value}"`);
-					}
-				});
-			}
-
-			// 5. NEUE FUNKTION: Event-Handler für neu geladene Felder aktivieren
-			this.reactivateEventHandlers();
-
-			console.log("✅ Server-Daten angewendet (erweiterte Fallback-Methode)");
+			console.log("✅ Server-Daten angewendet (Basis-Fallback)");
 			return true;
 		} catch (error) {
 			console.error("❌ Fehler beim Anwenden der Server-Daten:", error);
 			return false;
 		} finally {
-			// Flag zurücksetzen
-			this.isApplyingServerData = false;
-			window.isApplyingServerData = false;
+			// Flag zurücksetzen mit Verzögerung um Race Conditions zu vermeiden
+			setTimeout(() => {
+				this.isApplyingServerData = false;
+				window.isApplyingServerData = false;
+				console.log("🏁 Server-Sync abgeschlossen, Flag zurückgesetzt");
+			}, 1000); // 1 Sekunde Verzögerung
 		}
 	}
 

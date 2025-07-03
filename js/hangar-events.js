@@ -184,45 +184,39 @@ function applyFlightTimeValuesFromLocalStorage() {
 }
 
 /**
- * Business Logic für Flugdaten-Updates
+ * Business Logic für Flugdaten-Updates - KOORDINIERT
  */
 function saveFlightTimeValueToLocalStorage(cellId, field, value) {
-	try {
-		let settings = JSON.parse(
-			localStorage.getItem("hangarPlannerSettings") || "{}"
-		);
-
-		if (!settings.tileValues) {
-			settings.tileValues = [];
-		}
-
-		// Finde oder erstelle Tile-Eintrag
-		let tileValue = settings.tileValues.find((t) => t.cellId === cellId);
-		if (!tileValue) {
-			tileValue = { cellId: cellId };
-			settings.tileValues.push(tileValue);
-		}
-
-		// Feld aktualisieren
-		tileValue[field] = value;
-		tileValue.lastUpdated = new Date().toISOString();
-
-		// Speichern über zentralen Event-Manager falls verfügbar
-		if (window.hangarEventManager && window.hangarEventManager.saveToStorage) {
-			window.hangarEventManager.saveToStorage(
-				"hangarPlannerSettings",
-				settings,
-				"high"
-			);
-		} else {
-			// Fallback: Direkt speichern
-			localStorage.setItem("hangarPlannerSettings", JSON.stringify(settings));
-		}
-
-		console.log(`${field} für Kachel ${cellId} gespeichert: ${value}`);
-	} catch (error) {
-		console.error("Fehler beim Speichern:", error);
+	// NEUE LOGIK: Verwende Datenkoordinator statt localStorage
+	if (window.dataCoordinator && field === "aircraftId") {
+		window.dataCoordinator.setAircraftId(cellId, value, "api");
+		return;
 	}
+
+	// DEPRECATED: localStorage-Speicherung deaktiviert zur Konfliktvermeidung
+	console.log(
+		`📝 Feld-Update protokolliert: ${field} für Kachel ${cellId} = "${value}"`
+	);
+
+	// Optional: In-Memory-Cache für Debugging
+	if (!window.flightDataCache) {
+		window.flightDataCache = {};
+	}
+
+	if (!window.flightDataCache[cellId]) {
+		window.flightDataCache[cellId] = {};
+	}
+
+	window.flightDataCache[cellId][field] = {
+		value: value,
+		timestamp: new Date().toISOString(),
+		source: "api",
+	};
+
+	console.log(
+		`💾 In-Memory Cache aktualisiert für Kachel ${cellId}:`,
+		window.flightDataCache[cellId]
+	);
 }
 
 /**
@@ -369,21 +363,50 @@ function fetchAndUpdateFlightData() {
 }
 
 function applyFlightDataToUI(flightData) {
-	console.log("Wende Flugdaten auf UI an:", flightData.length, "Flüge");
+	console.log("✈️ Wende Flugdaten auf UI an:", flightData.length, "Flüge");
 
+	// NEUE LOGIK: Verwende Datenkoordinator für sichere Anwendung
+	if (window.dataCoordinator) {
+		window.dataCoordinator.applyFlightData(flightData, "api");
+		return;
+	}
+
+	// Fallback: Direkte Anwendung mit Warnungen
 	flightData.forEach((flight, index) => {
 		const cellId = index + 1; // Einfache Zuordnung zu Kacheln
 
 		if (cellId <= 12) {
 			// Nur auf verfügbare Kacheln anwenden
-			// Aircraft ID
+
+			// Aircraft ID - MIT KONFLIKTPRÜFUNG
 			const aircraftInput = document.getElementById(`aircraft-${cellId}`);
 			if (aircraftInput && flight.aircraftId) {
+				const currentValue = aircraftInput.value.trim();
+
+				// Warnung bei Überschreibung bestehender Daten
+				if (currentValue && currentValue !== flight.aircraftId) {
+					console.warn(
+						`⚠️ API überschreibt Aircraft ID in Kachel ${cellId}: "${currentValue}" → "${flight.aircraftId}"`
+					);
+
+					// Optional: Benutzerbestätigung anfordern
+					if (window.showNotification) {
+						window.showNotification(
+							`API-Daten überschreiben Aircraft ID in Kachel ${cellId}`,
+							"warning"
+						);
+					}
+				}
+
 				aircraftInput.value = flight.aircraftId;
 				saveFlightTimeValueToLocalStorage(
 					cellId,
 					"aircraftId",
 					flight.aircraftId
+				);
+
+				console.log(
+					`✅ Aircraft ID für Kachel ${cellId} von API gesetzt: ${flight.aircraftId}`
 				);
 			}
 
@@ -413,7 +436,9 @@ function applyFlightDataToUI(flightData) {
 		}
 	});
 
-	console.log("Flugdaten erfolgreich auf UI angewendet");
+	console.log(
+		"✅ Flugdaten erfolgreich auf UI angewendet (mit Konfliktschutz)"
+	);
 }
 
 /**

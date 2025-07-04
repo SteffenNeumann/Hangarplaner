@@ -581,7 +581,7 @@ const storageHelperExtended = {
 			// Aktuellen UI-Status holen, falls vorhanden
 			const uiSettings = this.get(key, {
 				tilesCount: 8,
-				secondaryTilesCount: 0,
+				secondaryTilesCount: 4,
 				layout: 4,
 				tileValues: [],
 			});
@@ -662,7 +662,7 @@ const storageHelperExtended = {
 			}
 
 			const primaryCount = uiSettings.tilesCount || 8;
-			const secondaryCount = uiSettings.secondaryTilesCount || 0;
+			const secondaryCount = uiSettings.secondaryTilesCount || 4;
 
 			// Sekundäre Kacheln aus tileValues extrahieren
 			const secondaryTiles = uiSettings.tileValues
@@ -705,7 +705,7 @@ const storageHelperExtended = {
 			}
 
 			if (typeof uiSettings.secondaryTilesCount !== "number") {
-				uiSettings.secondaryTilesCount = 0;
+				uiSettings.secondaryTilesCount = 4;
 				isModified = true;
 			}
 

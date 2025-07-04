@@ -210,6 +210,25 @@ class ServerSync {
 					"🎛️ Display Options vom Server angewendet:",
 					serverData.settings.displayOptions
 				);
+			} else if (serverData.settings) {
+				// Legacy-Format: Direkte Einstellungen ohne displayOptions
+				if (window.displayOptions) {
+					const legacySettings = {
+						tilesCount: serverData.settings.tilesCount || 8,
+						secondaryTilesCount: serverData.settings.secondaryTilesCount || 4,
+						layout: serverData.settings.layout || 4,
+					};
+					window.displayOptions.current = {
+						...window.displayOptions.defaults,
+						...legacySettings,
+					};
+					window.displayOptions.updateUI();
+					window.displayOptions.applySettings();
+					console.log(
+						"🎛️ Legacy-Einstellungen vom Server angewendet:",
+						legacySettings
+					);
+				}
 			}
 
 			// NEUE LOGIK: Verwende zentralen Datenkoordinator

@@ -44,7 +44,27 @@ window.globalInitialization = {
 			!window.hangarData.collectAllHangarData
 		) {
 			window.hangarData.collectAllHangarData = window.collectAllHangarData;
-			// console.log("✅ collectAllHangarData an hangarData angehängt");
+			console.log("✅ collectAllHangarData an hangarData angehängt");
+		}
+
+		// KRITISCHER FALLBACK: Stelle sicher, dass collectAllHangarData immer verfügbar ist
+		if (
+			!window.collectAllHangarData &&
+			!window.hangarData?.collectAllHangarData
+		) {
+			// Erstelle eine Minimal-Implementierung als Fallback
+			window.collectAllHangarData = function () {
+				console.warn("⚠️ Fallback: collectAllHangarData minimal ausgeführt");
+				return {
+					id: Date.now().toString(),
+					metadata: { created: new Date().toISOString() },
+					settings: { tilesCount: 8, secondaryTilesCount: 4, layout: 4 },
+					primaryTiles: [],
+					secondaryTiles: [],
+				};
+			};
+			window.hangarData.collectAllHangarData = window.collectAllHangarData;
+			console.log("🚨 Kritischer Fallback für collectAllHangarData erstellt");
 		}
 
 		// 2. HangarUI sicherstellen

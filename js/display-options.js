@@ -102,7 +102,7 @@ window.displayOptions = {
 	// Standardwerte
 	defaults: {
 		tilesCount: 8,
-		secondaryTilesCount: 4,
+		secondaryTilesCount: 4, // KORRIGIERT: Startwert 4 statt 0
 		layout: 4,
 		darkMode: false,
 		viewMode: false, // false = Kachel, true = Tabelle
@@ -162,7 +162,19 @@ window.displayOptions = {
 	 */
 	async loadFromServer() {
 		try {
-			const response = await fetch("sync/data.php");
+			// Verwende den zentralen Server-Sync
+			if (window.serverSync && window.serverSync.loadFromServer) {
+				const data = await window.serverSync.loadFromServer();
+
+				if (data && data.settings && data.settings.displayOptions) {
+					this.current = { ...this.defaults, ...data.settings.displayOptions };
+					console.log("📥 Display Options vom Server geladen:", this.current);
+					return true;
+				}
+			}
+
+			// Fallback: Direkte Server-Anfrage
+			const response = await fetch("sync/data.php?action=load");
 
 			if (!response.ok) {
 				console.warn(
@@ -176,7 +188,7 @@ window.displayOptions = {
 			// Display Options aus den Einstellungen extrahieren
 			if (data.settings && data.settings.displayOptions) {
 				this.current = { ...this.defaults, ...data.settings.displayOptions };
-				// console.log("📥 Display Options vom Server geladen:", this.current);
+				console.log("📥 Display Options vom Server geladen:", this.current);
 				return true;
 			} else {
 				console.warn("⚠️ Keine Display Options in den Serverdaten gefunden");
@@ -210,29 +222,30 @@ window.displayOptions = {
 					console.log(
 						"💾 Display Options über globales Server-Sync gespeichert"
 					);
-					this.showNotification("Einstellungen gespeichert", "success");
 					return true;
 				} else {
-					throw new Error("Globales Server-Sync fehlgeschlagen");
+					console.warn(
+						"⚠️ Globales Server-Sync fehlgeschlagen, versuche direktes Speichern"
+					);
 				}
 			}
 
-			// Fallback: Direkte Server-Speicherung (nur wenn globales System nicht verfügbar)
-			console.log(
-				"⚠️ Globales Server-Sync nicht verfügbar, verwende direktes Speichern"
-			);
+			// Fallback: Direkte Server-Speicherung
+			console.log("⚠️ Verwende direktes Speichern für Display Options");
 
-			// Zuerst aktuelle Daten vom Server holen
+			// Verwende collectAllHangarData um vollständige Datenstruktur zu erhalten
 			let serverData = {};
-			try {
-				const response = await fetch("sync/data.php");
-				if (response.ok) {
-					serverData = await response.json();
-				}
-			} catch (error) {
-				console.warn(
-					"⚠️ Konnte vorhandene Serverdaten nicht laden, erstelle neue"
-				);
+			if (window.collectAllHangarData) {
+				serverData = window.collectAllHangarData();
+			} else {
+				// Minimale Fallback-Datenstruktur
+				serverData = {
+					id: Date.now().toString(),
+					metadata: { created: new Date().toISOString() },
+					settings: {},
+					primaryTiles: [],
+					secondaryTiles: [],
+				};
 			}
 
 			// Display Options in die Serverstruktur einbauen
@@ -559,7 +572,7 @@ window.displayOptions = {
 	onUpdateTiles() {
 		this.collectFromUI();
 		this.updateTiles();
-		this.saveToServer();
+		this.saveToServer(); // Automatische Server-Synchronisation
 	},
 
 	/**
@@ -568,7 +581,7 @@ window.displayOptions = {
 	onUpdateSecondaryTiles() {
 		this.collectFromUI();
 		this.updateSecondaryTiles();
-		this.saveToServer();
+		this.saveToServer(); // Automatische Server-Synchronisation
 	},
 
 	/**
@@ -577,7 +590,7 @@ window.displayOptions = {
 	onLayoutChange() {
 		this.collectFromUI();
 		this.applyLayout();
-		this.saveToServer();
+		this.saveToServer(); // Automatische Server-Synchronisation
 	},
 
 	/**
@@ -586,7 +599,7 @@ window.displayOptions = {
 	onDarkModeChange() {
 		this.collectFromUI();
 		this.applyDarkMode(this.current.darkMode);
-		this.saveToServer();
+		this.saveToServer(); // Automatische Server-Synchronisation
 	},
 
 	/**
@@ -595,7 +608,7 @@ window.displayOptions = {
 	onViewModeChange() {
 		this.collectFromUI();
 		this.applyViewMode(this.current.viewMode);
-		this.saveToServer();
+		this.saveToServer(); // Automatische Server-Synchronisation
 	},
 
 	/**
@@ -604,6 +617,7 @@ window.displayOptions = {
 	onZoomChange() {
 		this.collectFromUI();
 		this.applyZoom(this.current.zoomLevel);
+		this.saveToServer(); // Automatische Server-Synchronisation
 
 		// Zoom-Anzeige aktualisieren
 		const zoomValueDisplay = document.getElementById("zoomValue");
@@ -982,16 +996,23 @@ window.emergencyRepair = {
 
 // Beim Laden der Seite initialisieren - robuste Version mit Fallbacks
 document.addEventListener("DOMContentLoaded", () => {
-	// console.log("🎛️ Display Options DOMContentLoaded - initialisiere...");
+	console.log("🎛️ Display Options DOMContentLoaded - initialisiere...");
 
 	// Sofort initialisieren, da wir jetzt Fallback-Implementierungen haben
 	window.displayOptions.init();
 
 	// Zusätzliche Initialisierung nach kurzer Verzögerung für bessere Integration
 	setTimeout(() => {
-		// console.log(
-		//	"🔄 Display Options - verzögerte Re-Initialisierung für bessere Integration"
-		// );
+		console.log(
+			"🔄 Display Options - verzögerte Re-Initialisierung für bessere Integration"
+		);
+
+		// Stelle sicher, dass Secondary Tiles auf Startwert 4 stehen
+		if (window.displayOptions.current.secondaryTilesCount === 0) {
+			window.displayOptions.current.secondaryTilesCount = 4;
+			console.log("🔧 Secondary Tiles Startwert auf 4 korrigiert");
+		}
+
 		window.displayOptions.updateUI();
 		window.displayOptions.applySettings();
 
@@ -1000,6 +1021,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
 		// *** WICHTIG: Event-Handler für Buttons nach UI-Update setzen ***
 		window.displayOptions.setupEventHandlers();
+
+		// Server-Sync auslösen um korrigierte Werte zu speichern
+		window.displayOptions.saveToServer();
 	}, 1000);
 
 	// Weitere Reparatur nach längerer Verzögerung falls immer noch Probleme

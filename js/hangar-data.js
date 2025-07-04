@@ -40,7 +40,7 @@ hangarData.collectAllHangarData = function () {
 		const settings = {
 			tilesCount: parseInt(document.getElementById("tilesCount")?.value) || 8,
 			secondaryTilesCount:
-				parseInt(document.getElementById("secondaryTilesCount")?.value) || 0,
+				parseInt(document.getElementById("secondaryTilesCount")?.value) || 4, // Startwert 4
 			layout: parseInt(document.getElementById("layoutType")?.value) || 4,
 		};
 
@@ -110,7 +110,7 @@ function importHangarPlanFromJson(event) {
 					}
 					if (window.hangarUI.checkElement("secondaryTilesCount")) {
 						document.getElementById("secondaryTilesCount").value =
-							data.settings.secondaryTilesCount || 0;
+							data.settings.secondaryTilesCount || 4;
 					}
 					if (window.hangarUI.checkElement("layoutType")) {
 						document.getElementById("layoutType").value =
@@ -120,7 +120,7 @@ function importHangarPlanFromJson(event) {
 					// Einstellungen anwenden
 					window.hangarUI.uiSettings.tilesCount = data.settings.tilesCount || 8;
 					window.hangarUI.uiSettings.secondaryTilesCount =
-						data.settings.secondaryTilesCount || 0;
+						data.settings.secondaryTilesCount || 4;
 					window.hangarUI.uiSettings.layout = data.settings.layout || 4;
 					window.hangarUI.uiSettings.apply();
 				}
@@ -311,7 +311,7 @@ function applyLoadedHangarPlan(data) {
 				window.hangarUI.checkElement("secondaryTilesCount")
 			) {
 				document.getElementById("secondaryTilesCount").value =
-					data.settings.secondaryTilesCount || 0;
+					data.settings.secondaryTilesCount || 4;
 			}
 			if (window.hangarUI && window.hangarUI.checkElement("layoutType")) {
 				document.getElementById("layoutType").value = data.settings.layout || 4;
@@ -321,7 +321,7 @@ function applyLoadedHangarPlan(data) {
 			if (window.hangarUI && window.hangarUI.uiSettings) {
 				window.hangarUI.uiSettings.tilesCount = data.settings.tilesCount || 8;
 				window.hangarUI.uiSettings.secondaryTilesCount =
-					data.settings.secondaryTilesCount || 0;
+					data.settings.secondaryTilesCount || 4;
 				window.hangarUI.uiSettings.layout = data.settings.layout || 4;
 				window.hangarUI.uiSettings.apply();
 			}
@@ -1053,7 +1053,7 @@ function collectSettingsData() {
 	return {
 		tilesCount: parseInt(document.getElementById("tilesCount")?.value) || 8,
 		secondaryTilesCount:
-			parseInt(document.getElementById("secondaryTilesCount")?.value) || 0,
+			parseInt(document.getElementById("secondaryTilesCount")?.value) || 4,
 		layout: parseInt(document.getElementById("layoutType")?.value) || 4,
 		includeNotes: document.getElementById("includeNotes")?.checked || true,
 		landscapeMode: document.getElementById("landscapeMode")?.checked || true,
@@ -1078,7 +1078,7 @@ function applyProjectData(projectData) {
 
 		if (document.getElementById("secondaryTilesCount")) {
 			document.getElementById("secondaryTilesCount").value =
-				secondaryTilesCount || 0;
+				secondaryTilesCount || 4;
 		}
 
 		if (document.getElementById("layoutType")) {
@@ -1198,9 +1198,17 @@ window.hangarData.loadProjectFromFile = loadProjectFromFile;
 window.hangarData.applyLoadedHangarPlan = applyLoadedHangarPlan;
 window.hangarData.applySingleTileData = applySingleTileData;
 window.hangarData.applyLoadedTileData = applyLoadedTileData;
-// KORREKTUR: Verwende die korrekt definierte Funktion
+// KORREKTUR: Sichere globale Verfügbarkeit
 window.hangarData.collectAllHangarData = hangarData.collectAllHangarData;
 window.collectAllHangarData = hangarData.collectAllHangarData; // Auch direkt global für Kompatibilität
+
+// SICHERHEIT: Sofortige Verfügbarkeit nach DOM-Load
+document.addEventListener("DOMContentLoaded", function () {
+	if (!window.collectAllHangarData) {
+		window.collectAllHangarData = hangarData.collectAllHangarData;
+		console.log("🔧 collectAllHangarData nachträglich registriert");
+	}
+});
 window.hangarData.saveCurrentStateToLocalStorage = function () {
 	// DEAKTIVIERT: localStorage-Speicherung zur Konfliktvermeidung
 	console.log("💾 localStorage-Speicherung deaktiviert (Konfliktvermeidung)");

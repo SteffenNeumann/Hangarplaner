@@ -707,10 +707,18 @@ class HangarEventManager {
 window.hangarEventManager = new HangarEventManager();
 window.improved_event_manager = window.hangarEventManager; // Kompatibilität
 
-// Auto-Initialization
-document.addEventListener("DOMContentLoaded", () => {
+// *** ZENTRALE INITIALISIERUNG STATT SEPARATER DOMContentLoaded ***
+// Verwende zentrale Initialisierungsqueue statt separate DOMContentLoaded Events
+window.hangarInitQueue = window.hangarInitQueue || [];
+window.hangarInitQueue.push(function () {
+	console.log(
+		"🎯 Event Manager wird über zentrale Initialisierung gestartet..."
+	);
+
 	setTimeout(() => {
-		window.hangarEventManager.init();
+		if (window.hangarEventManager) {
+			window.hangarEventManager.init();
+		}
 	}, 1000);
 });
 

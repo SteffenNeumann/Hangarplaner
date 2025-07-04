@@ -265,13 +265,22 @@ window.globalInitialization = {
 	},
 };
 
-// Initialisierung bei DOMContentLoaded
-document.addEventListener("DOMContentLoaded", function () {
-	// console.log("📋 DOM geladen, starte globale Initialisierung...");
+// *** ZENTRALE INITIALISIERUNG STATT SEPARATER DOMContentLoaded ***
+// Verwende zentrale Initialisierungsqueue statt separate DOMContentLoaded Events
+window.hangarInitQueue = window.hangarInitQueue || [];
+window.hangarInitQueue.push(function () {
+	console.log(
+		"📋 Globale Initialisierung wird über zentrale Queue gestartet..."
+	);
 
 	// Kurze Verzögerung, damit andere Module sich laden können
 	setTimeout(() => {
-		window.globalInitialization.initializeAll();
+		if (
+			window.globalInitialization &&
+			!window.globalInitialization.initialized
+		) {
+			window.globalInitialization.initializeAll();
+		}
 	}, 100);
 });
 

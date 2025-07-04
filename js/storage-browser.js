@@ -43,16 +43,17 @@ class ServerSync {
 				!this.isApplyingServerData &&
 				!window.isApplyingServerData &&
 				!window.isLoadingServerData &&
+				!window.isSavingToServer &&
 				this.hasDataChanged()
 			) {
 				this.syncWithServer();
 			} else {
 				// console.log("⏸️ Periodische Sync übersprungen (keine Änderungen oder Sync aktiv)");
 			}
-		}, 60000); // 60 Sekunden statt 30 für bessere Performance
+		}, 120000); // 120 Sekunden statt 60 für bessere Performance
 
 		console.log(
-			"⏰ Periodische Server-Sync gestartet (60s Intervall, Change-Detection)"
+			"⏰ Periodische Server-Sync gestartet (120s Intervall, Change-Detection)"
 		);
 	}
 
@@ -428,11 +429,20 @@ class ServerSync {
 	hasDataChanged() {
 		try {
 			const currentData = this.collectCurrentData();
+
+			// Entferne zeitabhängige Felder für Vergleich
+			const compareData = { ...currentData };
+			if (compareData.metadata) {
+				delete compareData.metadata.lastModified;
+				delete compareData.metadata.lastSaved;
+			}
+
 			const currentChecksum = this.generateChecksum(
-				JSON.stringify(currentData)
+				JSON.stringify(compareData)
 			);
 
 			if (this.lastDataChecksum !== currentChecksum) {
+				// console.log("🔄 Datenänderung erkannt, Sync erforderlich");
 				this.lastDataChecksum = currentChecksum;
 				return true;
 			}
@@ -619,8 +629,12 @@ window.storageBrowser = window.serverSync; // Alias für Kompatibilität
 // Für Kompatibilität mit bestehender storage-browser.js
 window.StorageBrowser = ServerSync;
 
-// Auto-Initialisierung mit echter Server-URL
-document.addEventListener("DOMContentLoaded", () => {
+// *** ZENTRALE INITIALISIERUNG STATT SEPARATER DOMContentLoaded ***
+// Verwende zentrale Initialisierungsqueue statt separate DOMContentLoaded Events
+window.hangarInitQueue = window.hangarInitQueue || [];
+window.hangarInitQueue.push(async function () {
+	console.log("🔄 Server-Sync wird über zentrale Initialisierung gestartet...");
+
 	// PRODUKTIONS-Server-URL für hangarplanner.de
 	const productionServerUrl = "https://hangarplanner.de/sync/data.php";
 
@@ -638,112 +652,114 @@ document.addEventListener("DOMContentLoaded", () => {
 		console.log("💾 Verwende gespeicherte Server-URL:", serverUrl);
 	}
 
-	window.serverSync.initSync(serverUrl);
-	localStorage.setItem("hangarServerSyncUrl", serverUrl); // Für künftige Verwendung speichern
+	if (window.serverSync) {
+		window.serverSync.initSync(serverUrl);
+		localStorage.setItem("hangarServerSyncUrl", serverUrl); // Für künftige Verwendung speichern
+		console.log("🚀 Server-Sync initialisiert mit URL:", serverUrl);
+	}
+});
 
-	console.log("🚀 Auto-initialisiert Server-Sync mit URL:", serverUrl);
+// SERVER-VERBINDUNGSTEST (verzögert)
+setTimeout(async () => {
+	if (!window.serverSync) return;
 
-	// SERVER-VERBINDUNGSTEST
-	setTimeout(async () => {
-		const isServerReachable = await window.serverSync.testServerConnection(
-			serverUrl
-		);
+	const serverUrl =
+		localStorage.getItem("hangarServerSyncUrl") ||
+		"https://hangarplanner.de/sync/data.php";
+	const isServerReachable = await window.serverSync.testServerConnection(
+		serverUrl
+	);
 
-		if (!isServerReachable) {
-			console.warn("⚠️ Server nicht erreichbar, verwende lokale Speicherung");
+	if (!isServerReachable) {
+		console.warn("⚠️ Server nicht erreichbar, verwende lokale Speicherung");
 
-			// Fallback auf lokalen Server falls Produktions-Server nicht erreichbar
-			if (serverUrl.includes("hangarplanner.de")) {
-				const fallbackUrl = window.location.origin + "/sync/data.php";
-				console.log("🔄 Versuche Fallback auf lokalen Server:", fallbackUrl);
+		// Fallback auf lokalen Server falls Produktions-Server nicht erreichbar
+		if (serverUrl.includes("hangarplanner.de")) {
+			const fallbackUrl = window.location.origin + "/sync/data.php";
+			console.log("🔄 Versuche Fallback auf lokalen Server:", fallbackUrl);
 
-				const isFallbackReachable =
-					await window.serverSync.testServerConnection(fallbackUrl);
-				if (isFallbackReachable) {
-					window.serverSync.initSync(fallbackUrl);
-					localStorage.setItem("hangarServerSyncUrl", fallbackUrl);
-					console.log("✅ Fallback auf lokalen Server erfolgreich");
-				}
+			const isFallbackReachable = await window.serverSync.testServerConnection(
+				fallbackUrl
+			);
+			if (isFallbackReachable) {
+				window.serverSync.initSync(fallbackUrl);
+				localStorage.setItem("hangarServerSyncUrl", fallbackUrl);
+				console.log("✅ Fallback auf lokalen Server erfolgreich");
 			}
-		} else {
-			console.log("✅ Server-Verbindung bestätigt");
 		}
-	}, 1000);
+	} else {
+		console.log("✅ Server-Verbindung bestätigt");
+	}
+}, 2000);
 
-	// KOORDINIERTES AUTO-LOAD: Verhindert Race Conditions und mehrfaches Laden
-	setTimeout(async () => {
-		// Race Condition Guard - verhindert mehrfaches gleichzeitiges Laden
-		if (window.serverSync.isApplyingServerData || window.isLoadingServerData) {
-			console.log("⏸️ Server-Load bereits aktiv, überspringe Auto-Load");
-			return;
-		}
+// KOORDINIERTES AUTO-LOAD: Verhindert Race Conditions und mehrfaches Laden
+setTimeout(async () => {
+	if (!window.serverSync) return;
 
-		window.isLoadingServerData = true;
+	// Race Condition Guard - verhindert mehrfaches gleichzeitiges Laden
+	if (window.serverSync.isApplyingServerData || window.isLoadingServerData) {
+		console.log("⏸️ Server-Load bereits aktiv, überspringe Auto-Load");
+		return;
+	}
 
-		try {
-			console.log("� Versuche koordinierten Server-Daten-Load beim Start...");
+	window.isLoadingServerData = true;
 
-			const serverData = await window.serverSync.loadFromServer();
+	try {
+		console.log("📥 Versuche koordinierten Server-Daten-Load beim Start...");
 
-			if (serverData && !serverData.error) {
-				// KRITISCHE PRÜFUNG: Nur laden wenn Server-Daten nicht leer sind
-				const hasValidServerData =
-					(serverData.primaryTiles && serverData.primaryTiles.length > 0) ||
-					(serverData.secondaryTiles && serverData.secondaryTiles.length > 0) ||
-					(serverData.settings && serverData.settings.displayOptions) ||
-					(serverData.settings && Object.keys(serverData.settings).length > 0);
+		const serverData = await window.serverSync.loadFromServer();
 
-				if (hasValidServerData) {
-					console.log("📥 Gültige Server-Daten gefunden, wende sie an...");
-					const applied = await window.serverSync.applyServerData(serverData);
+		if (serverData && !serverData.error) {
+			// KRITISCHE PRÜFUNG: Nur laden wenn Server-Daten nicht leer sind
+			const hasValidServerData =
+				(serverData.primaryTiles && serverData.primaryTiles.length > 0) ||
+				(serverData.secondaryTiles && serverData.secondaryTiles.length > 0) ||
+				(serverData.settings && serverData.settings.displayOptions) ||
+				(serverData.settings && Object.keys(serverData.settings).length > 0);
 
-					if (applied) {
-						console.log("✅ Server-Daten erfolgreich angewendet");
-					} else {
-						console.log("⚠️ Server-Daten konnten nicht angewendet werden");
-					}
+			if (hasValidServerData) {
+				console.log("📥 Gültige Server-Daten gefunden, wende sie an...");
+				const applied = await window.serverSync.applyServerData(serverData);
+
+				if (applied) {
+					console.log("✅ Server-Daten erfolgreich angewendet");
 				} else {
-					console.log(
-						"📭 Server-Daten sind leer, behalte lokale Einstellungen"
-					);
-
-					// Bei leeren Server-Daten: Speichere aktuelle lokale Daten auf Server (debounced)
-					if (window.displayOptions) {
-						// Verzögert um Server-Last zu reduzieren
-						setTimeout(async () => {
-							await window.displayOptions.saveToServer();
-							console.log(
-								"💾 Lokale Einstellungen auf Server gesichert (debounced)"
-							);
-						}, 3000);
-					}
+					console.log("⚠️ Server-Daten konnten nicht angewendet werden");
 				}
 			} else {
-				console.log("📭 Keine Server-Daten vorhanden, erstelle Basis-Daten");
+				console.log("📭 Server-Daten sind leer, behalte lokale Einstellungen");
 
-				// Erstelle Basis-Datenstruktur auf Server (debounced)
+				// Bei leeren Server-Daten: Speichere aktuelle lokale Daten auf Server (debounced)
 				if (window.displayOptions) {
+					// Verzögert um Server-Last zu reduzieren
 					setTimeout(async () => {
 						await window.displayOptions.saveToServer();
 						console.log(
-							"🏗️ Basis-Einstellungen auf Server erstellt (debounced)"
+							"💾 Lokale Einstellungen auf Server gesichert (debounced)"
 						);
 					}, 5000);
 				}
 			}
-		} catch (error) {
-			console.log(
-				"⚠️ Server-Daten konnten nicht geladen werden:",
-				error.message
-			);
-		} finally {
-			window.isLoadingServerData = false;
+		} else {
+			console.log("📭 Keine Server-Daten vorhanden, erstelle Basis-Daten");
+
+			// Erstelle Basis-Datenstruktur auf Server (debounced)
+			if (window.displayOptions) {
+				setTimeout(async () => {
+					await window.displayOptions.saveToServer();
+					console.log("🏗️ Basis-Einstellungen auf Server erstellt (debounced)");
+				}, 8000);
+			}
 		}
-	}, 3000); // Erhöht auf 3 Sekunden für bessere Performance
-});
+	} catch (error) {
+		console.log("⚠️ Server-Daten konnten nicht geladen werden:", error.message);
+	} finally {
+		window.isLoadingServerData = false;
+	}
+}, 5000); // Erhöht auf 5 Sekunden für bessere Performance
 
 console.log(
-	"📦 Server-Sync-Modul geladen (Performance-optimiert: 60s Intervall, Change-Detection, Debouncing)"
+	"📦 Server-Sync-Modul geladen (Performance-optimiert: 120s Intervall, Change-Detection, Debouncing)"
 );
 
 // Globale Debug-Funktion für Synchronisations-Probleme
@@ -773,10 +789,11 @@ Performance-Flags:
 - window.isSavingToServer               → Daten werden gerade gespeichert
 
 Performance-Optimierungen:
-✅ Periodische Sync: 60s Intervall (statt 30s)
+✅ Periodische Sync: 120s Intervall (statt 60s)
 ✅ Change-Detection: Nur bei Änderungen synchronisieren
 ✅ Debounced Saves: Sammelt mehrere Änderungen (1s Verzögerung)
 ✅ Request Timeouts: 8-10s Timeouts für Server-Anfragen
 ✅ Race Condition Guards: Verhindert mehrfache gleichzeitige Operationen
+✅ Zentrale Initialisierung: Statt 26 separate DOMContentLoaded Events
 	`);
 };

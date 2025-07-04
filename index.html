@@ -49,13 +49,15 @@
 				}
 			}
 
-			// Konfiguration nach DOM-Load oder sofort falls verfügbar
+			// Verwende zentrale Initialisierung statt separate DOMContentLoaded Events
+			window.hangarInitQueue = window.hangarInitQueue || [];
+			window.hangarInitQueue.push(function () {
+				configureTailwind();
+			});
+
+			// Sofort-Konfiguration falls Tailwind bereits verfügbar
 			if (typeof tailwind !== "undefined") {
 				configureTailwind();
-			} else {
-				document.addEventListener("DOMContentLoaded", function () {
-					setTimeout(configureTailwind, 100);
-				});
 			}
 		</script>
 		<link rel="stylesheet" href="css/hangarplanner-ui.css" />
@@ -1707,7 +1709,9 @@
 
 			<!-- Event-Handler für den "Info anzeigen"-Button -->
 			<script>
-				document.addEventListener("DOMContentLoaded", function () {
+				// Verwende zentrale Initialisierung statt separate DOMContentLoaded Events
+				window.hangarInitQueue = window.hangarInitQueue || [];
+				window.hangarInitQueue.push(function () {
 					// Event-Handler für den Ordnerstruktur-Info-Button
 					const showFolderInfoBtn =
 						document.getElementById("showFolderInfoBtn");
@@ -1738,10 +1742,9 @@
 
 			<!-- Event-Handler für die neue Statusdarstellung -->
 			<script>
-				document.addEventListener("DOMContentLoaded", function () {
-					// Bestehendes DOMContentLoaded-Event erweitern
-					// ...existing code...
-
+				// Verwende zentrale Initialisierung statt separate DOMContentLoaded Events
+				window.hangarInitQueue = window.hangarInitQueue || [];
+				window.hangarInitQueue.push(function () {
 					// Status-Dropdown-Handler für die neuen Statusfarben
 					document.querySelectorAll(".status-selector").forEach((select) => {
 						// Initial Status setzen
@@ -1779,9 +1782,9 @@
 
 			<!-- Notizfelder in allen Kacheln auf Englisch ändern mit direktem DOM-Skript -->
 			<script>
-				document.addEventListener("DOMContentLoaded", function () {
-					// Bestehender Code...
-
+				// Verwende zentrale Initialisierung statt separate DOMContentLoaded Events
+				window.hangarInitQueue = window.hangarInitQueue || [];
+				window.hangarInitQueue.push(function () {
 					// Alle Notizfelder auf Englisch umstellen
 					document.querySelectorAll(".notes-textarea").forEach((textarea) => {
 						if (
@@ -1801,7 +1804,7 @@
 
 			<!-- Robustheitsskript für dynamisch erzeugte Elemente -->
 			<script>
-				// Sofort ausführen und dann erneut verzögert (um dynamisch erstellte Elemente zu erfassen)
+				// Zentrale Funktionen für UI-Updates
 				function updateTextareasAndSelects() {
 					// Alle Notizfelder auf Englisch umstellen
 					document.querySelectorAll(".notes-textarea").forEach((textarea) => {
@@ -1819,8 +1822,9 @@
 					});
 				}
 
-				// Mehrfach ausführen um sicherzustellen, dass auch nachträglich generierte Elemente erfasst werden
-				document.addEventListener("DOMContentLoaded", function () {
+				// Verwende zentrale Initialisierung
+				window.hangarInitQueue = window.hangarInitQueue || [];
+				window.hangarInitQueue.push(function () {
 					// Sofort ausführen
 					updateTextareasAndSelects();
 
@@ -1838,52 +1842,54 @@
 
 			<!-- Event-Handler für Towing-Status Dropdowns -->
 			<script>
-				document.addEventListener("DOMContentLoaded", function () {
-					// Towing-Status-Dropdown-Handler für die farbliche Kennzeichnung
-					function setupTowStatusHandlers() {
-						document
-							.querySelectorAll(".tow-status-selector")
-							.forEach((select) => {
-								// Initial Status-Farbe setzen
-								updateTowStatusStyles(select);
+				// Zentrale Towing-Status Verwaltung
+				function setupTowStatusHandlers() {
+					document
+						.querySelectorAll(".tow-status-selector")
+						.forEach((select) => {
+							// Initial Status-Farbe setzen
+							updateTowStatusStyles(select);
 
-								// Event-Listener für Änderungen
-								select.addEventListener("change", function () {
-									updateTowStatusStyles(this);
-								});
+							// Event-Listener für Änderungen
+							select.addEventListener("change", function () {
+								updateTowStatusStyles(this);
 							});
+						});
+				}
+
+				// Funktion zum Aktualisieren der Towing-Status-Farben
+				function updateTowStatusStyles(select) {
+					// Alle Styling-Klassen entfernen
+					select.classList.remove(
+						"tow-neutral",
+						"tow-initiated",
+						"tow-ongoing",
+						"tow-on-position"
+					);
+
+					// Neue Styling-Klasse basierend auf dem Wert hinzufügen
+					const value = select.value;
+					select.classList.add(`tow-${value}`);
+
+					// Optional: Hintergrundfarbe direkt setzen
+					if (value === "neutral") {
+						select.style.backgroundColor = "white";
+						select.style.color = "#333333";
+					} else if (value === "initiated") {
+						select.style.backgroundColor = "#FEF3C7"; // Hellgelb
+						select.style.color = "#92400E";
+					} else if (value === "ongoing") {
+						select.style.backgroundColor = "#DBEAFE"; // Hellblau
+						select.style.color = "#1E40AF";
+					} else if (value === "on-position") {
+						select.style.backgroundColor = "#D1FAE5"; // Hellgrün
+						select.style.color = "#065F46";
 					}
+				}
 
-					// Funktion zum Aktualisieren der Towing-Status-Farben
-					function updateTowStatusStyles(select) {
-						// Alle Styling-Klassen entfernen
-						select.classList.remove(
-							"tow-neutral",
-							"tow-initiated",
-							"tow-ongoing",
-							"tow-on-position"
-						);
-
-						// Neue Styling-Klasse basierend auf dem Wert hinzufügen
-						const value = select.value;
-						select.classList.add(`tow-${value}`);
-
-						// Optional: Hintergrundfarbe direkt setzen
-						if (value === "neutral") {
-							select.style.backgroundColor = "white";
-							select.style.color = "#333333";
-						} else if (value === "initiated") {
-							select.style.backgroundColor = "#FEF3C7"; // Hellgelb
-							select.style.color = "#92400E";
-						} else if (value === "ongoing") {
-							select.style.backgroundColor = "#DBEAFE"; // Hellblau
-							select.style.color = "#1E40AF";
-						} else if (value === "on-position") {
-							select.style.backgroundColor = "#D1FAE5"; // Hellgrün
-							select.style.color = "#065F46";
-						}
-					}
-
+				// Verwende zentrale Initialisierung
+				window.hangarInitQueue = window.hangarInitQueue || [];
+				window.hangarInitQueue.push(function () {
 					// Initial ausführen
 					setupTowStatusHandlers();
 
@@ -1906,6 +1912,48 @@
 
 			<!-- DEBUG: Uncomment for debugging Display Options -->
 			<!-- <script src="js/debug/display-options-debug.js"></script> -->
+
+			<!-- Zentrale Initialisierung - ersetzt alle separaten DOMContentLoaded Events -->
+			<script>
+				// Zentrale Initialisierungsqueue um Browser-Überlastung zu vermeiden
+				window.hangarInitQueue = window.hangarInitQueue || [];
+
+				// Einzelne zentrale Initialisierung statt 26 separate DOMContentLoaded Events
+				document.addEventListener("DOMContentLoaded", function () {
+					console.log("🚀 Starte zentrale Hangar-Initialisierung...");
+
+					// Sequential execution statt parallel um Browser-Überlastung zu vermeiden
+					let initIndex = 0;
+
+					function executeNextInit() {
+						if (initIndex < window.hangarInitQueue.length) {
+							try {
+								console.log(
+									`📋 Führe Initialisierung ${initIndex + 1}/${
+										window.hangarInitQueue.length
+									} aus`
+								);
+								window.hangarInitQueue[initIndex]();
+								initIndex++;
+								// Kleine Verzögerung zwischen Initialisierungen um Browser zu entlasten
+								setTimeout(executeNextInit, 10);
+							} catch (error) {
+								console.error(
+									`❌ Fehler bei Initialisierung ${initIndex + 1}:`,
+									error
+								);
+								initIndex++;
+								setTimeout(executeNextInit, 10);
+							}
+						} else {
+							console.log("✅ Zentrale Hangar-Initialisierung abgeschlossen");
+						}
+					}
+
+					// Starte sequentielle Ausführung
+					executeNextInit();
+				});
+			</script>
 		</div>
 	</body>
 </html>

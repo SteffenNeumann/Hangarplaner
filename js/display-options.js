@@ -120,10 +120,20 @@ window.displayOptions = {
 	isSaving: false,
 	saveTimeout: null,
 
+	// Initialisierungsdetails verfolgen
+	isInitialized: false,
+
 	/**
 	 * Initialisiert die Display Options
 	 */
 	async init() {
+		// Verhindere Doppel-Initialisierung
+		if (this.isInitialized) {
+			console.log("⏸️ Display Options bereits initialisiert");
+			return;
+		}
+
+		this.isInitialized = true;
 		// console.log("🎛️ Display Options werden initialisiert...");
 
 		// Versuche Daten zu laden (Server -> localStorage -> Defaults)
@@ -1158,18 +1168,16 @@ window.testDisplayOptionsSave = function () {
 	}
 };
 
-// Beim Laden der Seite initialisieren - robuste Version mit Fallbacks
-document.addEventListener("DOMContentLoaded", () => {
-	console.log("🎛️ Display Options DOMContentLoaded - initialisiere...");
+// *** ZENTRALE INITIALISIERUNG STATT SEPARATER DOMContentLoaded ***
+// Verwende zentrale Initialisierungsqueue statt separate DOMContentLoaded Events
+window.hangarInitQueue = window.hangarInitQueue || [];
+window.hangarInitQueue.push(async function () {
+	console.log(
+		"🎛️ Display Options werden über zentrale Initialisierung gestartet..."
+	);
 
-	// Sofort initialisieren, da wir jetzt Fallback-Implementierungen haben
-	window.displayOptions.init();
-
-	// Zusätzliche Initialisierung nach kurzer Verzögerung für bessere Integration
-	setTimeout(() => {
-		console.log(
-			"🔄 Display Options - verzögerte Re-Initialisierung für bessere Integration"
-		);
+	if (window.displayOptions) {
+		await window.displayOptions.init();
 
 		// Stelle sicher, dass Secondary Tiles auf Startwert 4 stehen
 		if (window.displayOptions.current.secondaryTilesCount === 0) {
@@ -1181,27 +1189,26 @@ document.addEventListener("DOMContentLoaded", () => {
 		window.displayOptions.applySettings();
 
 		// Notfall-Layout-Reparatur
-		window.displayOptions.emergencyLayoutRepair();
-
-		// *** WICHTIG: Event-Handler für Buttons nach UI-Update setzen ***
-		window.displayOptions.setupEventHandlers();
-
-		// Server-Sync auslösen um korrigierte Werte zu speichern
-		window.displayOptions.saveToServer();
-	}, 1000);
-
-	// Weitere Reparatur nach längerer Verzögerung falls immer noch Probleme
-	setTimeout(() => {
-		// console.log("🔧 Display Options - finale Layout-Validierung");
-		window.displayOptions.emergencyLayoutRepair();
-	}, 3000);
+		if (window.displayOptions.emergencyLayoutRepair) {
+			window.displayOptions.emergencyLayoutRepair();
+		}
+	}
 });
+
+// Weitere Reparatur nach längerer Verzögerung falls immer noch Probleme
+setTimeout(() => {
+	if (window.displayOptions && window.displayOptions.emergencyLayoutRepair) {
+		window.displayOptions.emergencyLayoutRepair();
+	}
+}, 3000);
 
 // Notfall-Reparatur automatisch nach 5 Sekunden falls Layout kaputt
 setTimeout(() => {
 	const grid = document.getElementById("secondaryHangarGrid");
 	if (grid && grid.children.length === 0) {
 		console.warn("⚠️ Layout-Problem erkannt, starte automatische Reparatur");
-		window.emergencyRepair.fullRepair();
+		if (window.emergencyRepair && window.emergencyRepair.fullRepair) {
+			window.emergencyRepair.fullRepair();
+		}
 	}
 }, 5000);

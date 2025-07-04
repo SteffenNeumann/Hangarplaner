@@ -155,7 +155,7 @@ window.displayOptions = {
 		try {
 			// Priorität 1: Server (nur wenn kein Server-Sync aktiv)
 			let loaded = false;
-			
+
 			if (!window.isApplyingServerData && !window.isLoadingServerData) {
 				loaded = await this.loadFromServer();
 			} else {

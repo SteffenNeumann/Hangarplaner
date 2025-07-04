@@ -39,10 +39,16 @@ class ServerSync {
 
 		this.serverSyncInterval = setInterval(() => {
 			// Nur synchronisieren wenn keine andere Sync-Operation läuft
-			if (!this.isApplyingServerData && !window.isApplyingServerData && !window.isLoadingServerData) {
+			if (
+				!this.isApplyingServerData &&
+				!window.isApplyingServerData &&
+				!window.isLoadingServerData
+			) {
 				this.syncWithServer();
 			} else {
-				console.log("⏸️ Periodische Sync übersprungen (andere Sync-Operation aktiv)");
+				console.log(
+					"⏸️ Periodische Sync übersprungen (andere Sync-Operation aktiv)"
+				);
 			}
 		}, 30000); // 30 Sekunden
 
@@ -658,7 +664,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 			if (serverData && !serverData.error) {
 				// KRITISCHE PRÜFUNG: Nur laden wenn Server-Daten nicht leer sind
-				const hasValidServerData = 
+				const hasValidServerData =
 					(serverData.primaryTiles && serverData.primaryTiles.length > 0) ||
 					(serverData.secondaryTiles && serverData.secondaryTiles.length > 0) ||
 					(serverData.settings && serverData.settings.displayOptions) ||
@@ -674,8 +680,10 @@ document.addEventListener("DOMContentLoaded", () => {
 						console.log("⚠️ Server-Daten konnten nicht angewendet werden");
 					}
 				} else {
-					console.log("📭 Server-Daten sind leer, behalte lokale Einstellungen");
-					
+					console.log(
+						"📭 Server-Daten sind leer, behalte lokale Einstellungen"
+					);
+
 					// Bei leeren Server-Daten: Speichere aktuelle lokale Daten auf Server
 					if (window.displayOptions) {
 						await window.displayOptions.saveToServer();
@@ -684,7 +692,7 @@ document.addEventListener("DOMContentLoaded", () => {
 				}
 			} else {
 				console.log("📭 Keine Server-Daten vorhanden, erstelle Basis-Daten");
-				
+
 				// Erstelle Basis-Datenstruktur auf Server
 				if (window.displayOptions) {
 					await window.displayOptions.saveToServer();
@@ -692,7 +700,10 @@ document.addEventListener("DOMContentLoaded", () => {
 				}
 			}
 		} catch (error) {
-			console.log("⚠️ Server-Daten konnten nicht geladen werden:", error.message);
+			console.log(
+				"⚠️ Server-Daten konnten nicht geladen werden:",
+				error.message
+			);
 		} finally {
 			window.isLoadingServerData = false;
 		}
@@ -702,7 +713,7 @@ document.addEventListener("DOMContentLoaded", () => {
 console.log("📦 Server-Sync-Modul geladen (optimiert von 2085 → ~350 Zeilen)");
 
 // Globale Debug-Funktion für Synchronisations-Probleme
-window.debugSync = function() {
+window.debugSync = function () {
 	if (window.serverSync) {
 		window.serverSync.debugSyncStatus();
 	} else {
@@ -711,7 +722,7 @@ window.debugSync = function() {
 };
 
 // Hilfe-Funktion
-window.syncHelp = function() {
+window.syncHelp = function () {
 	console.log(`
 🔧 SYNCHRONISATION DEBUG HILFE
 

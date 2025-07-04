@@ -57,7 +57,7 @@ async function initializeUI() {
 		// Prüfe ob display-options verfügbar ist
 		if (window.displayOptions) {
 			useDisplayOptions = true;
-			
+
 			// WICHTIG: Nicht laden während Server-Sync aktiv ist
 			if (!window.isApplyingServerData && !window.isLoadingServerData) {
 				// Lade Einstellungen über das neue System
@@ -72,7 +72,9 @@ async function initializeUI() {
 					console.log("📋 Display Options System: Standardwerte verwendet");
 				}
 			} else {
-				console.log("⏸️ Server-Sync aktiv, verwende aktuelle Display Options Werte");
+				console.log(
+					"⏸️ Server-Sync aktiv, verwende aktuelle Display Options Werte"
+				);
 			}
 
 			// Status-Selektoren initialisieren

@@ -26,8 +26,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
-// Dateipfad für die gespeicherten Daten
-$dataFile = __DIR__ . '/data.json';
+// Erweiterte Unterstützung für Project-IDs bei Sharing-Funktionalität
+$projectId = isset($_GET['project']) ? $_GET['project'] : null;
+
+// Angepasster Dateipfad wenn Project-ID vorhanden ist
+if ($projectId && preg_match('/^[a-zA-Z0-9_]+$/', $projectId)) {
+    // Sichere Project-ID (nur alphanumerische Zeichen und Unterstriche)
+    $dataFile = __DIR__ . '/shared_' . $projectId . '.json';
+} else {
+    $dataFile = __DIR__ . '/data.json';
+}
 
 // Maximale Dateigröße (5MB)
 const MAX_FILE_SIZE = 5 * 1024 * 1024;

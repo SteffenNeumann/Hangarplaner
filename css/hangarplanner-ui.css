@@ -1183,3 +1183,161 @@ input:checked + .toggle-slider:before {
 .dark-mode .info-input::placeholder {
 	color: var(--text-secondary);
 }
+
+/* ==========================================================================
+   SHARING & SYNCHRONIZATION STYLES
+   ========================================================================== */
+
+/* Share URL Container */
+#shareUrlContainer {
+	border: 1px dashed #cbd5e1;
+	border-radius: 8px;
+	padding: 12px;
+	background-color: #f8fafc;
+	margin-top: 8px;
+}
+
+#shareUrlContainer input#shareUrl {
+	font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+	font-size: 11px !important;
+	background-color: #ffffff;
+	border: 1px solid #e2e8f0;
+	color: #475569;
+	padding: 8px 12px;
+}
+
+#shareUrlContainer input#shareUrl:focus {
+	border-color: #3b82f6;
+	box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+	outline: none;
+}
+
+/* Copy Share URL Button */
+#copyShareUrlBtn {
+	min-width: 40px;
+	font-size: 14px;
+	background-color: #f1f5f9;
+	border: 1px solid #cbd5e1;
+	transition: all 0.2s ease;
+}
+
+#copyShareUrlBtn:hover {
+	background-color: #e2e8f0;
+	border-color: #94a3b8;
+}
+
+#copyShareUrlBtn:active {
+	background-color: #cbd5e1;
+	transform: scale(0.95);
+}
+
+/* Live Sync Toggle Styles */
+#liveSyncToggle {
+	accent-color: #10b981;
+}
+
+/* Sync Status Button States */
+.sidebar-btn.status-success {
+	background-color: #dcfce7;
+	border-color: #16a34a;
+	color: #15803d;
+}
+
+.sidebar-btn.status-warning {
+	background-color: #fef3c7;
+	border-color: #d97706;
+	color: #92400e;
+}
+
+.sidebar-btn.status-error {
+	background-color: #fee2e2;
+	border-color: #dc2626;
+	color: #991b1b;
+}
+
+/* Manual Sync Button Loading State */
+.sidebar-btn:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+	background-color: #f1f5f9;
+}
+
+/* Section Label for Data Sharing */
+.section-label-header {
+	margin-bottom: 12px;
+	padding-bottom: 8px;
+	border-bottom: 1px solid #e2e8f0;
+}
+
+.section-label {
+	font-weight: 600;
+	font-size: 13px;
+	color: #475569;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+/* Responsive Adjustments for Sharing Section */
+@media (max-width: 768px) {
+	#shareUrlContainer {
+		padding: 8px;
+	}
+
+	#shareUrlContainer input#shareUrl {
+		font-size: 10px !important;
+	}
+
+	.sidebar-input-group {
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.sidebar-input-group .sidebar-btn {
+		width: 100%;
+	}
+}
+
+/* Animation for Share URL reveal */
+#shareUrlContainer {
+	animation-duration: 0.3s;
+	animation-fill-mode: both;
+}
+
+@keyframes slideDown {
+	from {
+		opacity: 0;
+		max-height: 0;
+		transform: translateY(-10px);
+	}
+	to {
+		opacity: 1;
+		max-height: 200px;
+		transform: translateY(0);
+	}
+}
+
+@keyframes slideUp {
+	from {
+		opacity: 1;
+		max-height: 200px;
+		transform: translateY(0);
+	}
+	to {
+		opacity: 0;
+		max-height: 0;
+		transform: translateY(-10px);
+	}
+}
+
+#shareUrlContainer.show {
+	animation-name: slideDown;
+}
+
+#shareUrlContainer.hide {
+	animation-name: slideUp;
+}
+
+/* ==========================================================================
+   END SHARING & SYNCHRONIZATION STYLES
+   ========================================================================== */

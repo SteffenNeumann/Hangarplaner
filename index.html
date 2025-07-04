@@ -1348,6 +1348,65 @@
 									Load
 								</button>
 							</div>
+
+							<!-- Sharing & Synchronization Section -->
+							<div class="sidebar-form-group">
+								<div class="section-label-header">
+									<label class="section-label">🔗 Data Sharing</label>
+								</div>
+
+								<!-- Enable Live Sync Toggle -->
+								<div class="sidebar-form-row">
+									<label for="liveSyncToggle">Live Synchronization:</label>
+									<div class="input-container">
+										<label class="toggle-switch">
+											<input type="checkbox" id="liveSyncToggle" />
+											<span class="toggle-slider"></span>
+										</label>
+									</div>
+								</div>
+
+								<!-- Share URL Display -->
+								<div
+									id="shareUrlContainer"
+									class="sidebar-form-group"
+									style="display: none">
+									<label for="shareUrl">Share URL:</label>
+									<div class="sidebar-input-group">
+										<input
+											type="text"
+											id="shareUrl"
+											readonly
+											placeholder="Enable Live Sync to generate URL"
+											class="sidebar-form-control"
+											style="font-size: 12px" />
+										<button
+											id="copyShareUrlBtn"
+											class="sidebar-btn sidebar-btn-secondary"
+											title="Copy to clipboard">
+											📋
+										</button>
+									</div>
+									<div class="text-xs text-gray-400 mt-1">
+										Send this URL to share your data in real-time
+									</div>
+								</div>
+
+								<!-- Manual Sync Button -->
+								<div class="sidebar-input-group">
+									<button
+										id="manualSyncBtn"
+										class="sidebar-btn sidebar-btn-secondary flex-1">
+										🔄 Manual Sync
+									</button>
+									<button
+										id="syncStatusBtn"
+										class="sidebar-btn sidebar-btn-info flex-1"
+										title="Show sync status">
+										📊 Status
+									</button>
+								</div>
+							</div>
 						</div>
 					</div>
 
@@ -1683,6 +1742,7 @@
 			<script src="js/hangar-pdf.js"></script>
 			<script src="js/hangar.js"></script>
 			<script src="js/storage-browser.js"></script>
+			<script src="js/sharing-manager.js"></script>
 
 			<!-- Einfache Accordion-Funktion ohne Event-Listener -->
 			<script>

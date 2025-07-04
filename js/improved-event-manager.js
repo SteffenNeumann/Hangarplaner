@@ -4,8 +4,6 @@
  * Version: 2.0 - Konfliktbereinigt
  */
 
-console.log("🔧 Lade verbesserten Event-Manager...");
-
 class HangarEventManager {
 	constructor() {
 		this.initialized = false;
@@ -44,14 +42,12 @@ class HangarEventManager {
 		if (this.registeredHandlers.has(key)) {
 			const oldHandler = this.registeredHandlers.get(key);
 			element.removeEventListener(eventType, oldHandler);
-			console.log(`🔄 Handler ersetzt: ${key}`);
 		}
 
 		// Neuen Handler registrieren
 		element.addEventListener(eventType, handler);
 		this.registeredHandlers.set(key, handler);
 
-		console.log(`✅ Event-Handler sicher registriert: ${key}`);
 		return true;
 	}
 
@@ -153,7 +149,6 @@ class HangarEventManager {
 			existing.lastModified = new Date().toISOString();
 
 			await this.saveToStorage("hangarPlannerData", existing);
-			console.log(`💾 Feld lokal gespeichert: ${fieldId} = "${value}"`);
 
 			// 2. DIREKTE Server-Synchronisation
 			await this.syncFieldToServer(fieldId, value);
@@ -163,31 +158,27 @@ class HangarEventManager {
 	}
 
 	/**
-	 * NEUE FUNKTION: Direkte Server-Synchronisation für einzelne Felder - ERWEITERT
+	 * Direkte Server-Synchronisation für einzelne Felder
 	 */
 	async syncFieldToServer(fieldId, value) {
 		try {
 			// Prüfe ob Server-Sync verfügbar ist
 			if (!window.storageBrowser || !window.storageBrowser.serverSyncUrl) {
-				console.log(
+				console.warn(
 					"⚠️ Server-Sync nicht konfiguriert - nur lokale Speicherung"
 				);
 				return;
 			}
 
-			// WICHTIG: Sammle ALLE aktuellen Daten für vollständige Server-Synchronisation
+			// Sammle alle aktuellen Daten für vollständige Server-Synchronisation
 			let allData = null;
 			if (
 				window.hangarData &&
 				typeof window.hangarData.collectAllHangarData === "function"
 			) {
 				allData = window.hangarData.collectAllHangarData();
-				console.log(
-					"📊 Vollständige Daten für Server-Sync gesammelt:",
-					allData
-				);
 			} else {
-				// Fallback: Erweiterte Datensammlung - VERBESSERT für sekundäre Tiles
+				// Fallback: Erweiterte Datensammlung für sekundäre Tiles
 				const primaryFields = this.collectFieldsFromContainer(
 					"hangarGrid",
 					false
@@ -221,11 +212,6 @@ class HangarEventManager {
 					// Sammle alle aktuell sichtbaren Felder
 					currentFields: this.collectAllVisibleFields(),
 				};
-				console.log("📊 Fallback-Daten für Server-Sync gesammelt:", {
-					primary: primaryFields.length,
-					secondary: secondaryFields.length,
-					total: allData,
-				});
 			}
 
 			// Server-Request mit allen Daten
@@ -239,10 +225,6 @@ class HangarEventManager {
 
 			if (response.ok) {
 				const result = await response.json();
-				console.log(
-					`✅ Server-Sync erfolgreich: ${fieldId} = "${value}"`,
-					result
-				);
 			} else {
 				console.warn(
 					`⚠️ Server-Sync fehlgeschlagen für ${fieldId}:`,
@@ -256,7 +238,7 @@ class HangarEventManager {
 	}
 
 	/**
-	 * NEUE HILFSFUNKTION: Sammelt Felder aus einem bestimmten Container
+	 * Sammelt Felder aus einem bestimmten Container
 	 */
 	collectFieldsFromContainer(containerId, isSecondary = false) {
 		const container = document.getElementById(containerId);
@@ -322,14 +304,11 @@ class HangarEventManager {
 		});
 
 		const tilesArray = Object.values(tileGroups);
-		console.log(
-			`🔍 ${containerId}: ${tilesArray.length} Tiles mit Daten gefunden`
-		);
 		return tilesArray;
 	}
 
 	/**
-	 * NEUE HILFSFUNKTION: Sammelt alle sichtbaren Feldwerte
+	 * Sammelt alle sichtbaren Feldwerte
 	 */
 	collectAllVisibleFields() {
 		const fields = {};
@@ -354,16 +333,11 @@ class HangarEventManager {
 			});
 		});
 
-		console.log(
-			"🔍 Alle sichtbaren Felder gesammelt:",
-			Object.keys(fields).length,
-			"Felder"
-		);
 		return fields;
 	}
 
 	/**
-	 * API-AUFRUF-KONSOLIDIERUNG
+	 * API-Aufruf-Konsolidierung
 	 * Alle API-Aufrufe über zentrale Fassade
 	 */
 	async callAPI(method, params = {}) {
@@ -375,15 +349,13 @@ class HangarEventManager {
 	}
 
 	/**
-	 * INITIALIZATION & CLEANUP
+	 * Initialisierung und Cleanup
 	 */
 	init() {
 		if (this.initialized) {
-			console.log("⚠️ Event-Manager bereits initialisiert");
+			console.warn("⚠️ Event-Manager bereits initialisiert");
 			return;
 		}
-
-		console.log("🔧 Initialisiere verbesserten Event-Manager...");
 
 		// Bestehende Event-Handler bereinigen
 		this.cleanupExistingHandlers();
@@ -392,7 +364,6 @@ class HangarEventManager {
 		this.setupUnifiedEventHandlers();
 
 		this.initialized = true;
-		console.log("✅ Verbesserter Event-Manager initialisiert");
 	}
 
 	cleanupExistingHandlers() {
@@ -406,17 +377,16 @@ class HangarEventManager {
 		});
 
 		this.registeredHandlers.clear();
-		console.log("🧹 Bestehende Event-Handler bereinigt");
 	}
 
 	setupUnifiedEventHandlers() {
-		// ERWEITERTE Unified Input Handler für ALLE relevanten Felder
+		// Unified Input Handler für alle relevanten Felder
 		const relevantSelectors = [
 			'input[id^="aircraft-"]', // Aircraft ID Felder
 			'input[id^="arrival-time-"]', // Ankunftszeit Felder
 			'input[id^="departure-time-"]', // Abflugzeit Felder
 			'input[id^="position-"]', // Position Felder
-			'input[id^="hangar-position-"]', // Hangar Position Felder (alternative IDs)
+			'input[id^="hangar-position-"]', // Hangar Position Felder
 			'textarea[id^="notes-"]', // Notizen Felder
 			'select[id^="status-"]', // Status Dropdowns
 			'select[id^="tow-status-"]', // Tow Status Dropdowns
@@ -425,7 +395,7 @@ class HangarEventManager {
 			'textarea[class*="notes"]', // Notiz-Textareas mit CSS-Klasse
 		];
 
-		// NEUE LOGIK: Container-spezifische Registrierung
+		// Container-spezifische Registrierung
 		const primaryContainer = document.getElementById("hangarGrid");
 		const secondaryContainer = document.getElementById("secondaryHangarGrid");
 
@@ -433,7 +403,6 @@ class HangarEventManager {
 
 		// Event-Handler für primäre Container registrieren
 		if (primaryContainer) {
-			console.log("🔧 Registriere Handler für primäre Kacheln...");
 			relevantSelectors.forEach((selector) => {
 				const elements = primaryContainer.querySelectorAll(selector);
 				elements.forEach((element) => {
@@ -448,47 +417,28 @@ class HangarEventManager {
 			});
 		}
 
-		// Event-Handler für sekundäre Container registrieren - ERWEITERT
+		// Event-Handler für sekundäre Container registrieren
 		if (secondaryContainer) {
-			console.log("🔧 Registriere Handler für sekundäre Kacheln...");
 			relevantSelectors.forEach((selector) => {
 				const elements = secondaryContainer.querySelectorAll(selector);
-				console.log(
-					`🔍 Sekundäre Elemente für ${selector}: ${elements.length}`
-				);
 				elements.forEach((element) => {
 					// Prüfe ob Element wirklich im sekundären Container und sekundäre ID hat
 					const cellId = this.extractCellIdFromElement(element);
 					if (cellId && cellId >= 101 && secondaryContainer.contains(element)) {
-						console.log(
-							`🎯 Registriere sekundären Handler: ${element.id} (Kachel ${cellId})`
-						);
 						if (this.registerHandlerForElement(element, "secondary")) {
 							handlersRegistered++;
 						}
-					} else {
-						console.log(
-							`⏭️ Sekundäres Element übersprungen: ${
-								element.id
-							} (CellID: ${cellId}, Container-Check: ${secondaryContainer.contains(
-								element
-							)})`
-						);
 					}
 				});
 			});
 		}
-
-		console.log(
-			`🔗 ERWEITERTE Unified Event-Handler eingerichtet: ${handlersRegistered} Handler registriert`
-		);
 
 		// Zusätzlich: MutationObserver für dynamisch hinzugefügte Felder
 		this.setupMutationObserver();
 	}
 
 	/**
-	 * NEUE HILFSFUNKTION: Registriert Handler für ein einzelnes Element
+	 * Registriert Handler für ein einzelnes Element
 	 */
 	registerHandlerForElement(element, containerType) {
 		if (!element || !element.id) return false;
@@ -496,7 +446,7 @@ class HangarEventManager {
 		const elementId = element.id;
 		const cellId = this.extractCellIdFromElement(element);
 
-		// WICHTIG: Prüfe Container-Kontext für korrekte ID-Zuordnung
+		// Prüfe Container-Kontext für korrekte ID-Zuordnung
 		if (containerType === "secondary" && cellId < 101) {
 			console.warn(
 				`⚠️ Sekundäres Element ${elementId} hat primäre ID ${cellId} - überspringe`
@@ -516,14 +466,8 @@ class HangarEventManager {
 			"input",
 			(event) => {
 				if (window.isApplyingServerData) {
-					console.log(
-						`⏸️ Input Event übersprungen (Server-Data wird angewendet): ${event.target.id}`
-					);
 					return;
 				}
-				console.log(
-					`📝 ${containerType} Input Event: ${event.target.id} = "${event.target.value}"`
-				);
 				this.debouncedFieldUpdate(event.target.id, event.target.value);
 			},
 			`${containerType}_input`
@@ -535,15 +479,9 @@ class HangarEventManager {
 			"blur",
 			(event) => {
 				if (window.isApplyingServerData) {
-					console.log(
-						`⏸️ Blur Event übersprungen (Server-Data wird angewendet): ${event.target.id}`
-					);
 					return;
 				}
-				console.log(
-					`👁️ ${containerType} Blur Event: ${event.target.id} = "${event.target.value}"`
-				);
-				this.debouncedFieldUpdate(event.target.id, event.target.value, 100); // Schnelleres Speichern bei Blur
+				this.debouncedFieldUpdate(event.target.id, event.target.value, 100);
 			},
 			`${containerType}_blur`
 		);
@@ -554,15 +492,9 @@ class HangarEventManager {
 			"change",
 			(event) => {
 				if (window.isApplyingServerData) {
-					console.log(
-						`⏸️ Change Event übersprungen (Server-Data wird angewendet): ${event.target.id}`
-					);
 					return;
 				}
-				console.log(
-					`🔄 ${containerType} Change Event: ${event.target.id} = "${event.target.value}"`
-				);
-				this.debouncedFieldUpdate(event.target.id, event.target.value, 50); // Sofortiges Speichern bei Change
+				this.debouncedFieldUpdate(event.target.id, event.target.value, 50);
 			},
 			`${containerType}_change`
 		);
@@ -571,7 +503,7 @@ class HangarEventManager {
 	}
 
 	/**
-	 * NEUE HILFSFUNKTION: Extrahiert Cell-ID aus Element-ID
+	 * Extrahiert Cell-ID aus Element-ID
 	 */
 	extractCellIdFromElement(element) {
 		if (!element.id) return null;
@@ -598,7 +530,7 @@ class HangarEventManager {
 	}
 
 	/**
-	 * VERBESSERTE FUNKTION: MutationObserver für dynamisch hinzugefügte Felder
+	 * MutationObserver für dynamisch hinzugefügte Felder
 	 */
 	setupMutationObserver() {
 		const observer = new MutationObserver((mutations) => {
@@ -612,8 +544,6 @@ class HangarEventManager {
 
 						newInputs.forEach((input) => {
 							if (this.isRelevantField(input)) {
-								console.log(`🆕 Neues Feld erkannt: ${input.id}`);
-
 								// Bestimme Container-Typ
 								const primaryContainer = document.getElementById("hangarGrid");
 								const secondaryContainer = document.getElementById(
@@ -630,14 +560,12 @@ class HangarEventManager {
 									containerType = "secondary";
 								}
 
-								console.log(`🏗️ Neues ${containerType} Feld: ${input.id}`);
 								this.attachEventHandlersToElement(input, containerType);
 							}
 						});
 
 						// Zusätzliche Prüfung: Falls ganze Kacheln hinzugefügt wurden
 						if (node.classList && node.classList.contains("hangar-cell")) {
-							console.log(`🏗️ Neue Hangar-Kachel erkannt:`, node.id);
 							setTimeout(() => {
 								// Event-Handler für alle Felder in der neuen Kachel registrieren
 								const cellInputs = node.querySelectorAll(
@@ -648,9 +576,6 @@ class HangarEventManager {
 										const cellId = this.extractCellIdFromElement(input);
 										const containerType =
 											cellId >= 101 ? "secondary" : "primary";
-										console.log(
-											`🎯 Registriere Handler für neue Kachel: ${input.id} (${containerType})`
-										);
 										this.attachEventHandlersToElement(input, containerType);
 									}
 								});
@@ -670,7 +595,6 @@ class HangarEventManager {
 					childList: true,
 					subtree: true,
 				});
-				console.log(`👀 MutationObserver aktiv für: ${containerId}`);
 			}
 		});
 
@@ -679,8 +603,6 @@ class HangarEventManager {
 			childList: true,
 			subtree: true,
 		});
-
-		console.log("👀 MutationObserver eingerichtet für dynamische Felder");
 	}
 
 	/**
@@ -706,7 +628,7 @@ class HangarEventManager {
 	}
 
 	/**
-	 * Hängt Event-Handler an ein einzelnes Element an - ERWEITERT
+	 * Hängt Event-Handler an ein einzelnes Element an
 	 */
 	attachEventHandlersToElement(element, containerType = "unknown") {
 		const cellId = this.extractCellIdFromElement(element);
@@ -717,14 +639,8 @@ class HangarEventManager {
 			"input",
 			(event) => {
 				if (window.isApplyingServerData) {
-					console.log(
-						`⏸️ Dynamic Input Event übersprungen (Server-Data wird angewendet): ${event.target.id}`
-					);
 					return;
 				}
-				console.log(
-					`📝 Dynamic ${containerType} Input: ${event.target.id} = "${event.target.value}"`
-				);
 				this.debouncedFieldUpdate(event.target.id, event.target.value);
 			},
 			`${handlerPrefix}_input`
@@ -735,14 +651,8 @@ class HangarEventManager {
 			"blur",
 			(event) => {
 				if (window.isApplyingServerData) {
-					console.log(
-						`⏸️ Dynamic Blur Event übersprungen (Server-Data wird angewendet): ${event.target.id}`
-					);
 					return;
 				}
-				console.log(
-					`👁️ Dynamic ${containerType} Blur: ${event.target.id} = "${event.target.value}"`
-				);
 				this.debouncedFieldUpdate(event.target.id, event.target.value, 100);
 			},
 			`${handlerPrefix}_blur`
@@ -753,14 +663,8 @@ class HangarEventManager {
 			"change",
 			(event) => {
 				if (window.isApplyingServerData) {
-					console.log(
-						`⏸️ Dynamic Change Event übersprungen (Server-Data wird angewendet): ${event.target.id}`
-					);
 					return;
 				}
-				console.log(
-					`🔄 Dynamic ${containerType} Change: ${event.target.id} = "${event.target.value}"`
-				);
 
 				// Spezielle Behandlung für Status-Felder
 				if (
@@ -775,14 +679,10 @@ class HangarEventManager {
 			},
 			`${handlerPrefix}_change`
 		);
-
-		console.log(
-			`✅ Dynamic Event-Handler registriert für ${containerType}: ${element.id}`
-		);
 	}
 
 	/**
-	 * DEBUGGING & MONITORING
+	 * Debugging und Monitoring
 	 */
 	getStatus() {
 		return {
@@ -800,8 +700,6 @@ class HangarEventManager {
 		this.debounceTimers.clear();
 		this.storageQueue.length = 0;
 		this.initialized = false;
-
-		console.log("🗑️ Event-Manager zerstört und bereinigt");
 	}
 }
 
@@ -812,10 +710,8 @@ window.hangarEventManager = new HangarEventManager();
 document.addEventListener("DOMContentLoaded", () => {
 	setTimeout(() => {
 		window.hangarEventManager.init();
-	}, 1000); // Verzögerung um sicherzustellen, dass andere Module geladen sind
+	}, 1000);
 });
 
 // Für Debugging
 window.getEventManagerStatus = () => window.hangarEventManager.getStatus();
-
-console.log("🚀 Verbesserter Event-Manager geladen (v2.0)");

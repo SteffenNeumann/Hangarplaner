@@ -57,16 +57,22 @@ async function initializeUI() {
 		// Prüfe ob display-options verfügbar ist
 		if (window.displayOptions) {
 			useDisplayOptions = true;
-			// Lade Einstellungen über das neue System
-			const loaded = await window.displayOptions.load();
+			
+			// WICHTIG: Nicht laden während Server-Sync aktiv ist
+			if (!window.isApplyingServerData && !window.isLoadingServerData) {
+				// Lade Einstellungen über das neue System
+				const loaded = await window.displayOptions.load();
 
-			if (loaded) {
-				console.log(
-					"✅ Einstellungen über Display Options System geladen:",
-					window.displayOptions.current
-				);
+				if (loaded) {
+					console.log(
+						"✅ Einstellungen über Display Options System geladen:",
+						window.displayOptions.current
+					);
+				} else {
+					console.log("📋 Display Options System: Standardwerte verwendet");
+				}
 			} else {
-				console.log("📋 Display Options System: Standardwerte verwendet");
+				console.log("⏸️ Server-Sync aktiv, verwende aktuelle Display Options Werte");
 			}
 
 			// Status-Selektoren initialisieren

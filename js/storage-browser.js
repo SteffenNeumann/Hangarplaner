@@ -12,8 +12,10 @@ class ServerSync {
 		this.lastDataChecksum = null;
 		this.autoSaveTimeout = null;
 
-		// Global verfügbar machen für Kompatibilität
+		// Global verfügbar machen für Kompatibilität und Race Condition Prevention
 		window.isApplyingServerData = false;
+		window.isLoadingServerData = false;
+		window.isSavingToServer = false;
 	}
 
 	/**
@@ -21,7 +23,7 @@ class ServerSync {
 	 */
 	async initSync(serverUrl) {
 		this.serverSyncUrl = serverUrl;
-		console.log("🔄 Server-Sync initialisiert:", serverUrl);
+		console.log("🔄 Server-Sync initialisiet:", serverUrl);
 
 		// Startet periodische Synchronisation
 		this.startPeriodicSync();
@@ -36,7 +38,12 @@ class ServerSync {
 		}
 
 		this.serverSyncInterval = setInterval(() => {
-			this.syncWithServer();
+			// Nur synchronisieren wenn keine andere Sync-Operation läuft
+			if (!this.isApplyingServerData && !window.isApplyingServerData && !window.isLoadingServerData) {
+				this.syncWithServer();
+			} else {
+				console.log("⏸️ Periodische Sync übersprungen (andere Sync-Operation aktiv)");
+			}
 		}, 30000); // 30 Sekunden
 
 		console.log("⏰ Periodische Server-Sync gestartet");
@@ -62,6 +69,14 @@ class ServerSync {
 			return false;
 		}
 
+		// Verhindere gleichzeitige Sync-Operationen
+		if (window.isSavingToServer) {
+			console.log("⏸️ Server-Sync übersprungen (Speicherung läuft bereits)");
+			return false;
+		}
+
+		window.isSavingToServer = true;
+
 		try {
 			// Aktuelle Daten sammeln
 			const currentData = this.collectCurrentData();
@@ -85,6 +100,8 @@ class ServerSync {
 		} catch (error) {
 			console.error("❌ Server-Sync Fehler:", error);
 			return false;
+		} finally {
+			window.isSavingToServer = false;
 		}
 	}
 
@@ -186,6 +203,12 @@ class ServerSync {
 			return false;
 		}
 
+		// Verhindere gleichzeitige Anwendung von Server-Daten
+		if (this.isApplyingServerData) {
+			console.log("⏸️ Server-Daten werden bereits angewendet, überspringe");
+			return false;
+		}
+
 		try {
 			// KRITISCH: Flag setzen um localStorage-Konflikte zu vermeiden
 			this.isApplyingServerData = true;
@@ -193,7 +216,7 @@ class ServerSync {
 
 			console.log("📥 Wende Server-Daten über Koordinator an:", serverData);
 
-			// *** NEU: Display Options aus Serverdaten anwenden ***
+			// *** PRIORITÄT 1: Display Options aus Serverdaten anwenden ***
 			if (
 				serverData.settings &&
 				serverData.settings.displayOptions &&
@@ -231,6 +254,7 @@ class ServerSync {
 				}
 			}
 
+			// *** PRIORITÄT 2: Kachel-Daten anwenden ***
 			// NEUE LOGIK: Verwende zentralen Datenkoordinator
 			if (window.dataCoordinator) {
 				// Server-Daten haben höchste Priorität
@@ -272,6 +296,9 @@ class ServerSync {
 				this.isApplyingServerData = false;
 				window.isApplyingServerData = false;
 				console.log("🏁 Server-Sync abgeschlossen, Flag zurückgesetzt");
+
+				// Event-Handler nach Server-Load reaktivieren
+				this.reactivateEventHandlers();
 			}, 1000); // 1 Sekunde Verzögerung
 		}
 	}
@@ -538,6 +565,22 @@ class ServerSync {
 			);
 		}, 300);
 	}
+
+	/**
+	 * Debug-Funktion: Zeigt aktuellen Sync-Status
+	 */
+	debugSyncStatus() {
+		console.log("🔍 === SYNC STATUS DEBUG ===");
+		console.log("Server URL:", this.serverSyncUrl);
+		console.log("isApplyingServerData:", this.isApplyingServerData);
+		console.log("window.isApplyingServerData:", window.isApplyingServerData);
+		console.log("window.isLoadingServerData:", window.isLoadingServerData);
+		console.log("window.isSavingToServer:", window.isSavingToServer);
+		console.log("Display Options isLoading:", window.displayOptions?.isLoading);
+		console.log("Display Options isSaving:", window.displayOptions?.isSaving);
+		console.log("Periodische Sync aktiv:", !!this.serverSyncInterval);
+		console.log("=== END SYNC STATUS ===");
+	}
 }
 
 // Globale Instanz für Kompatibilität
@@ -598,48 +641,89 @@ document.addEventListener("DOMContentLoaded", () => {
 		}
 	}, 1000);
 
-	// AUTO-LOAD von Server-Daten beim Start - VERBESSERT mit Konflikt-Erkennung
+	// KOORDINIERTES AUTO-LOAD: Verhindert Race Conditions und mehrfaches Laden
 	setTimeout(async () => {
+		// Race Condition Guard - verhindert mehrfaches gleichzeitiges Laden
+		if (window.serverSync.isApplyingServerData || window.isLoadingServerData) {
+			console.log("⏸️ Server-Load bereits aktiv, überspringe Auto-Load");
+			return;
+		}
+
+		window.isLoadingServerData = true;
+
 		try {
-			console.log("🔄 Versuche Server-Daten beim Start zu laden...");
-
-			// WICHTIG: Prüfe ob bereits lokale Daten vorhanden sind
-			const hasLocalData =
-				localStorage.getItem("hangarPlannerData") ||
-				localStorage.getItem("hangarPlannerSettings") ||
-				document.querySelector('input[value]:not([value=""])');
-
-			if (hasLocalData) {
-				console.log(
-					"📋 Lokale Daten gefunden - prüfe Timestamps vor Server-Load"
-				);
-			}
+			console.log("� Versuche koordinierten Server-Daten-Load beim Start...");
 
 			const serverData = await window.serverSync.loadFromServer();
 
 			if (serverData && !serverData.error) {
-				console.log("📥 Server-Daten gefunden, wende sie an...");
+				// KRITISCHE PRÜFUNG: Nur laden wenn Server-Daten nicht leer sind
+				const hasValidServerData = 
+					(serverData.primaryTiles && serverData.primaryTiles.length > 0) ||
+					(serverData.secondaryTiles && serverData.secondaryTiles.length > 0) ||
+					(serverData.settings && serverData.settings.displayOptions) ||
+					(serverData.settings && Object.keys(serverData.settings).length > 0);
 
-				// NEUE LOGIK: Nur anwenden wenn Server-Daten neuer oder keine lokalen Daten
-				const applied = await window.serverSync.applyServerData(serverData);
+				if (hasValidServerData) {
+					console.log("📥 Gültige Server-Daten gefunden, wende sie an...");
+					const applied = await window.serverSync.applyServerData(serverData);
 
-				if (applied) {
-					console.log("✅ Server-Daten erfolgreich angewendet");
+					if (applied) {
+						console.log("✅ Server-Daten erfolgreich angewendet");
+					} else {
+						console.log("⚠️ Server-Daten konnten nicht angewendet werden");
+					}
 				} else {
-					console.log(
-						"⚠️ Server-Daten nicht angewendet (lokale Daten sind neuer)"
-					);
+					console.log("📭 Server-Daten sind leer, behalte lokale Einstellungen");
+					
+					// Bei leeren Server-Daten: Speichere aktuelle lokale Daten auf Server
+					if (window.displayOptions) {
+						await window.displayOptions.saveToServer();
+						console.log("💾 Lokale Einstellungen auf Server gesichert");
+					}
 				}
 			} else {
-				console.log("📭 Keine Server-Daten vorhanden oder Fehler beim Laden");
+				console.log("📭 Keine Server-Daten vorhanden, erstelle Basis-Daten");
+				
+				// Erstelle Basis-Datenstruktur auf Server
+				if (window.displayOptions) {
+					await window.displayOptions.saveToServer();
+					console.log("🏗️ Basis-Einstellungen auf Server erstellt");
+				}
 			}
 		} catch (error) {
-			console.log(
-				"⚠️ Server-Daten konnten nicht geladen werden:",
-				error.message
-			);
+			console.log("⚠️ Server-Daten konnten nicht geladen werden:", error.message);
+		} finally {
+			window.isLoadingServerData = false;
 		}
-	}, 5000); // Verlängert auf 5 Sekunden um mehr Zeit für lokale Initialisierung zu geben
+	}, 2000); // Reduziert auf 2 Sekunden für schnellere Initialisierung
 });
 
-console.log("📦 Server-Sync-Modul geladen (optimiert von 2085 → ~250 Zeilen)");
+console.log("📦 Server-Sync-Modul geladen (optimiert von 2085 → ~350 Zeilen)");
+
+// Globale Debug-Funktion für Synchronisations-Probleme
+window.debugSync = function() {
+	if (window.serverSync) {
+		window.serverSync.debugSyncStatus();
+	} else {
+		console.log("❌ ServerSync nicht verfügbar");
+	}
+};
+
+// Hilfe-Funktion
+window.syncHelp = function() {
+	console.log(`
+🔧 SYNCHRONISATION DEBUG HILFE
+
+Verfügbare Befehle:
+- window.debugSync()              → Zeigt aktuellen Sync-Status
+- window.serverSync.manualSync()  → Startet manuellen Server-Sync
+- window.displayOptions.load()    → Lädt Display Options vom Server
+- window.displayOptions.saveToServer() → Speichert Display Options
+
+Flags zum Prüfen:
+- window.isApplyingServerData     → Server-Daten werden gerade angewendet
+- window.isLoadingServerData      → Server-Daten werden gerade geladen
+- window.isSavingToServer         → Daten werden gerade gespeichert
+	`);
+};

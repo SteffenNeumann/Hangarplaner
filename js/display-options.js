@@ -112,6 +112,10 @@ window.displayOptions = {
 	// Aktuelle Werte
 	current: {},
 
+	// Ladezustand verfolgen
+	isLoading: false,
+	isSaving: false,
+
 	/**
 	 * Initialisiert die Display Options
 	 */
@@ -140,21 +144,39 @@ window.displayOptions = {
 	 * Lädt Display Options mit intelligenter Priorität (Server > localStorage > Defaults)
 	 */
 	async load() {
-		// Priorität 1: Server
-		let loaded = await this.loadFromServer();
-
-		if (!loaded) {
-			// Priorität 2: localStorage
-			loaded = this.loadFromLocalStorage();
+		// Race Condition Guard - verhindert mehrfaches gleichzeitiges Laden
+		if (this.isLoading) {
+			console.log("⏸️ Display Options werden bereits geladen, überspringe");
+			return false;
 		}
 
-		if (loaded) {
-			// UI aktualisieren falls Daten geladen wurden
-			this.updateUI();
-			this.applySettings();
-		}
+		this.isLoading = true;
 
-		return loaded;
+		try {
+			// Priorität 1: Server (nur wenn kein Server-Sync aktiv)
+			let loaded = false;
+			
+			if (!window.isApplyingServerData && !window.isLoadingServerData) {
+				loaded = await this.loadFromServer();
+			} else {
+				console.log("⏸️ Server-Sync aktiv, überspringe Server-Load");
+			}
+
+			if (!loaded) {
+				// Priorität 2: localStorage
+				loaded = this.loadFromLocalStorage();
+			}
+
+			if (loaded) {
+				// UI aktualisieren falls Daten geladen wurden
+				this.updateUI();
+				this.applySettings();
+			}
+
+			return loaded;
+		} finally {
+			this.isLoading = false;
+		}
 	},
 
 	/**
@@ -204,6 +226,20 @@ window.displayOptions = {
 	 * Speichert Display Options auf dem Server und lokal
 	 */
 	async saveToServer() {
+		// Race Condition Guard - verhindert mehrfaches gleichzeitiges Speichern
+		if (this.isSaving) {
+			console.log("⏸️ Display Options werden bereits gespeichert, überspringe");
+			return false;
+		}
+
+		// Nicht speichern wenn Server-Daten gerade angewendet werden
+		if (window.isApplyingServerData) {
+			console.log("⏸️ Server-Daten werden angewendet, überspringe Speicherung");
+			return false;
+		}
+
+		this.isSaving = true;
+
 		try {
 			// Aktuelle Werte aus UI sammeln
 			this.collectFromUI();
@@ -290,6 +326,8 @@ window.displayOptions = {
 			// console.log("📋 Fallback: Speichere nur lokal");
 			this.saveToLocalStorage();
 			return false;
+		} finally {
+			this.isSaving = false;
 		}
 	},
 

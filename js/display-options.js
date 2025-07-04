@@ -11,9 +11,9 @@ if (!window.saveFlightTimeValueToLocalStorage) {
 		fieldType,
 		value
 	) {
-		console.log(
-			`💾 Fallback Save: ${fieldType} für Kachel ${cellId} = "${value}"`
-		);
+		// console.log(
+		//	`💾 Fallback Save: ${fieldType} für Kachel ${cellId} = "${value}"`
+		// );
 
 		try {
 			// Direkte localStorage-Speicherung als Fallback
@@ -46,7 +46,7 @@ if (!window.saveFlightTimeValueToLocalStorage) {
 				localStorage.setItem("hangarPlannerData", JSON.stringify(existing));
 			}
 
-			console.log(`✅ Fallback: ${fieldType} für Kachel ${cellId} gespeichert`);
+			// console.log(`✅ Fallback: ${fieldType} für Kachel ${cellId} gespeichert`);
 		} catch (error) {
 			console.error(
 				`❌ Fallback-Speicherfehler für ${fieldType} (Kachel ${cellId}):`,
@@ -54,15 +54,15 @@ if (!window.saveFlightTimeValueToLocalStorage) {
 			);
 		}
 	};
-	console.log(
-		"🔧 Fallback-Implementierung für saveFlightTimeValueToLocalStorage erstellt"
-	);
+	// console.log(
+	//	"🔧 Fallback-Implementierung für saveFlightTimeValueToLocalStorage erstellt"
+	// );
 }
 
 // Robuste Fallback-Implementierung für collectAllHangarData
 if (!window.collectAllHangarData) {
 	window.collectAllHangarData = function () {
-		console.log("🔧 Fallback: collectAllHangarData wird ausgeführt");
+		// console.log("🔧 Fallback: collectAllHangarData wird ausgeführt");
 
 		try {
 			// Einfache Implementierung die localStorage nutzt
@@ -82,7 +82,7 @@ if (!window.collectAllHangarData) {
 				secondaryTiles: existing.secondaryTiles || [],
 			};
 
-			console.log("✅ Fallback: Basis-Datenstruktur erstellt");
+			// console.log("✅ Fallback: Basis-Datenstruktur erstellt");
 			return result;
 		} catch (error) {
 			console.error("❌ Fallback-Fehler in collectAllHangarData:", error);
@@ -95,7 +95,7 @@ if (!window.collectAllHangarData) {
 			};
 		}
 	};
-	console.log("🔧 Fallback-Implementierung für collectAllHangarData erstellt");
+	// console.log("🔧 Fallback-Implementierung für collectAllHangarData erstellt");
 }
 
 window.displayOptions = {
@@ -116,20 +116,20 @@ window.displayOptions = {
 	 * Initialisiert die Display Options
 	 */
 	async init() {
-		console.log("🎛️ Display Options werden initialisiert...");
+		// console.log("🎛️ Display Options werden initialisiert...");
 
 		// Versuche Daten zu laden (Server -> localStorage -> Defaults)
 		let loaded = await this.loadFromServer();
 
 		if (!loaded) {
-			console.log("⚠️ Server-Laden fehlgeschlagen, versuche localStorage...");
+			// console.log("⚠️ Server-Laden fehlgeschlagen, versuche localStorage...");
 			loaded = this.loadFromLocalStorage();
 		}
 
 		if (!loaded) {
 			// Falls nichts geladen werden konnte, verwende Standardwerte
 			this.current = { ...this.defaults };
-			console.log("📋 Standardwerte für Display Options geladen");
+			// console.log("📋 Standardwerte für Display Options geladen");
 		}
 
 		// UI aktualisieren
@@ -138,7 +138,7 @@ window.displayOptions = {
 		// Event-Listener setzen
 		this.setupEventListeners();
 
-		console.log("✅ Display Options initialisiert:", this.current);
+		// console.log("✅ Display Options initialisiert:", this.current);
 	},
 
 	/**
@@ -160,7 +160,7 @@ window.displayOptions = {
 			// Display Options aus den Einstellungen extrahieren
 			if (data.settings && data.settings.displayOptions) {
 				this.current = { ...this.defaults, ...data.settings.displayOptions };
-				console.log("📥 Display Options vom Server geladen:", this.current);
+				// console.log("📥 Display Options vom Server geladen:", this.current);
 				return true;
 			} else {
 				console.warn("⚠️ Keine Display Options in den Serverdaten gefunden");
@@ -225,7 +225,7 @@ window.displayOptions = {
 			const result = await response.json();
 
 			if (result.success) {
-				console.log("💾 Display Options erfolgreich gespeichert");
+				// console.log("💾 Display Options erfolgreich gespeichert");
 				this.showNotification("Einstellungen gespeichert", "success");
 				return true;
 			} else {
@@ -235,7 +235,7 @@ window.displayOptions = {
 			console.error("❌ Fehler beim Speichern der Display Options:", error);
 			this.showNotification(`Fehler beim Speichern: ${error.message}`, "error");
 			// Fallback: nur lokal speichern
-			console.log("📋 Fallback: Speichere nur lokal");
+			// console.log("📋 Fallback: Speichere nur lokal");
 			this.saveToLocalStorage();
 			return false;
 		}
@@ -248,7 +248,7 @@ window.displayOptions = {
 		try {
 			this.collectFromUI();
 			localStorage.setItem("displayOptions", JSON.stringify(this.current));
-			console.log("💾 Display Options lokal gespeichert");
+			// console.log("💾 Display Options lokal gespeichert");
 			return true;
 		} catch (error) {
 			console.error("❌ Fehler beim lokalen Speichern:", error);
@@ -265,7 +265,7 @@ window.displayOptions = {
 			if (saved) {
 				const parsed = JSON.parse(saved);
 				this.current = { ...this.defaults, ...parsed };
-				console.log("📥 Display Options aus localStorage geladen");
+				// console.log("📥 Display Options aus localStorage geladen");
 				return true;
 			}
 			return false;
@@ -407,12 +407,12 @@ window.displayOptions = {
 	 * Layout und Tiles anwenden
 	 */
 	applyLayout() {
-		console.log("=== DISPLAY OPTIONS: LAYOUT ANWENDEN ===");
-		console.log("Aktueller Zustand:", {
-			tilesCount: this.current.tilesCount,
-			secondaryTilesCount: this.current.secondaryTilesCount,
-			layout: this.current.layout,
-		});
+		// console.log("=== DISPLAY OPTIONS: LAYOUT ANWENDEN ===");
+		// console.log("Aktueller Zustand:", {
+		//	tilesCount: this.current.tilesCount,
+		//	secondaryTilesCount: this.current.secondaryTilesCount,
+		//	layout: this.current.layout,
+		// });
 
 		// Secondary Tiles aktualisieren (preserveData = true für Layout-Änderungen)
 		if (typeof updateSecondaryTiles === "function") {
@@ -421,18 +421,18 @@ window.displayOptions = {
 				this.current.layout,
 				true // Daten bei Layout-Änderungen beibehalten
 			);
-			console.log(
-				`✅ Secondary Tiles aktualisiert: ${this.current.secondaryTilesCount}`
-			);
+			// console.log(
+			//	`✅ Secondary Tiles aktualisiert: ${this.current.secondaryTilesCount}`
+			// );
 		} else if (typeof window.hangarUI?.updateSecondaryTiles === "function") {
 			window.hangarUI.updateSecondaryTiles(
 				this.current.secondaryTilesCount,
 				this.current.layout,
 				true // Daten bei Layout-Änderungen beibehalten
 			);
-			console.log(
-				`✅ Secondary Tiles über hangarUI aktualisiert: ${this.current.secondaryTilesCount}`
-			);
+			// console.log(
+			//	`✅ Secondary Tiles über hangarUI aktualisiert: ${this.current.secondaryTilesCount}`
+			// );
 		}
 
 		// Layout-Settings an uiSettings weiterleiten (für Backward Compatibility)
@@ -445,11 +445,11 @@ window.displayOptions = {
 			// uiSettings apply aufrufen falls verfügbar
 			if (typeof window.hangarUI.uiSettings.apply === "function") {
 				window.hangarUI.uiSettings.apply();
-				console.log("✅ uiSettings.apply() aufgerufen");
+				// console.log("✅ uiSettings.apply() aufgerufen");
 			}
 		}
 
-		console.log("=== LAYOUT ANGEWENDET ===");
+		// console.log("=== LAYOUT ANGEWENDET ===");
 	},
 
 	/**
@@ -522,7 +522,7 @@ window.displayOptions = {
 			});
 		}
 
-		console.log("🎛️ Display Options Event-Listener eingerichtet");
+		// console.log("🎛️ Display Options Event-Listener eingerichtet");
 	},
 
 	/**
@@ -565,7 +565,7 @@ window.displayOptions = {
 			}
 		});
 
-		console.log(`📦 Fallback: ${targetCount} primäre Kacheln angezeigt`);
+		// console.log(`📦 Fallback: ${targetCount} primäre Kacheln angezeigt`);
 	},
 
 	/**
@@ -619,7 +619,7 @@ window.displayOptions = {
 			this.createMissingSecondaryTiles(existingTiles.length, targetCount);
 		}
 
-		console.log(`📦 Fallback: ${targetCount} sekundäre Kacheln verwaltet`);
+		// console.log(`📦 Fallback: ${targetCount} sekundäre Kacheln verwaltet`);
 	},
 
 	/**
@@ -635,7 +635,7 @@ window.displayOptions = {
 			secondaryGrid.appendChild(tile);
 		}
 
-		console.log(`➕ ${targetCount - currentCount} sekundäre Kacheln erstellt`);
+		// console.log(`➕ ${targetCount - currentCount} sekundäre Kacheln erstellt`);
 	},
 
 	/**
@@ -682,25 +682,25 @@ window.displayOptions = {
 	 * Notfall-Layout-Reparatur falls Tailwind nicht lädt
 	 */
 	emergencyLayoutRepair() {
-		console.log("🚨 Starte Notfall-Layout-Reparatur...");
+		// console.log("🚨 Starte Notfall-Layout-Reparatur...");
 
 		// Fallback CSS direkt setzen falls Tailwind fehlt
 		if (typeof tailwind === "undefined") {
-			console.log("⚠️ Tailwind CSS nicht verfügbar - verwende Fallback-Styles");
+			// console.log("⚠️ Tailwind CSS nicht verfügbar - verwende Fallback-Styles");
 			this.injectFallbackCSS();
 		}
 
 		// Sekundäre Kacheln reparieren
 		const secondaryGrid = document.getElementById("secondaryHangarGrid");
 		if (secondaryGrid && secondaryGrid.children.length === 0) {
-			console.log("🔧 Repariere fehlende sekundäre Kacheln...");
+			// console.log("🔧 Repariere fehlende sekundäre Kacheln...");
 			this.fallbackUpdateSecondaryTiles();
 		}
 
 		// UI-Felder auf korrekte Werte setzen
 		this.forceUpdateUI();
 
-		console.log("✅ Notfall-Layout-Reparatur abgeschlossen");
+		// console.log("✅ Notfall-Layout-Reparatur abgeschlossen");
 	},
 
 	/**
@@ -774,7 +774,7 @@ window.displayOptions = {
 		// Prüfe ob bereits vorhanden
 		if (!document.getElementById("emergency-fallback-css")) {
 			document.head.appendChild(fallbackStyle);
-			console.log("💡 Fallback-CSS injiziert");
+			// console.log("💡 Fallback-CSS injiziert");
 		}
 	},
 
@@ -807,14 +807,14 @@ window.displayOptions = {
 			document.body.classList.remove("table-view");
 		}
 
-		console.log("🔄 UI-Werte forciert angewendet");
+		// console.log("🔄 UI-Werte forciert angewendet");
 	},
 };
 
 // Globale Notfall-Reparatur-Funktion
 window.emergencyRepair = {
 	fullRepair() {
-		console.log("🚨 NOTFALL-REPARATUR: Repariere alle kritischen Funktionen");
+		// console.log("🚨 NOTFALL-REPARATUR: Repariere alle kritischen Funktionen");
 
 		// 1. Display Options reparieren
 		if (window.displayOptions) {
@@ -836,7 +836,7 @@ window.emergencyRepair = {
 		// 3. Missing Funktionen nachimplementieren
 		this.ensureCriticalFunctions();
 
-		console.log("✅ Notfall-Reparatur abgeschlossen");
+		// console.log("✅ Notfall-Reparatur abgeschlossen");
 	},
 
 	ensureCriticalFunctions() {
@@ -869,7 +869,7 @@ window.emergencyRepair = {
 				window.hangarEvents.setupFlightTimeEventListeners;
 		}
 
-		console.log("🔧 Kritische Funktionen global verfügbar gemacht");
+		// console.log("🔧 Kritische Funktionen global verfügbar gemacht");
 
 		// Debug: Prüfe verfügbarkeit aller kritischen Funktionen
 		const criticalFunctions = [
@@ -886,23 +886,23 @@ window.emergencyRepair = {
 		if (missing.length > 0) {
 			console.warn("⚠️ Noch fehlende kritische Funktionen:", missing);
 		} else {
-			console.log("✅ Alle kritischen Funktionen sind verfügbar");
+			// console.log("✅ Alle kritischen Funktionen sind verfügbar");
 		}
 	},
 };
 
 // Beim Laden der Seite initialisieren - robuste Version mit Fallbacks
 document.addEventListener("DOMContentLoaded", () => {
-	console.log("🎛️ Display Options DOMContentLoaded - initialisiere...");
+	// console.log("🎛️ Display Options DOMContentLoaded - initialisiere...");
 
 	// Sofort initialisieren, da wir jetzt Fallback-Implementierungen haben
 	window.displayOptions.init();
 
 	// Zusätzliche Initialisierung nach kurzer Verzögerung für bessere Integration
 	setTimeout(() => {
-		console.log(
-			"🔄 Display Options - verzögerte Re-Initialisierung für bessere Integration"
-		);
+		// console.log(
+		//	"🔄 Display Options - verzögerte Re-Initialisierung für bessere Integration"
+		// );
 		window.displayOptions.updateUI();
 		window.displayOptions.applySettings();
 
@@ -912,7 +912,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	// Weitere Reparatur nach längerer Verzögerung falls immer noch Probleme
 	setTimeout(() => {
-		console.log("🔧 Display Options - finale Layout-Validierung");
+		// console.log("🔧 Display Options - finale Layout-Validierung");
 		window.displayOptions.emergencyLayoutRepair();
 	}, 3000);
 });
@@ -921,7 +921,7 @@ document.addEventListener("DOMContentLoaded", () => {
 setTimeout(() => {
 	const grid = document.getElementById("secondaryHangarGrid");
 	if (grid && grid.children.length === 0) {
-		console.log("⚠️ Layout-Problem erkannt, starte automatische Reparatur");
+		console.warn("⚠️ Layout-Problem erkannt, starte automatische Reparatur");
 		window.emergencyRepair.fullRepair();
 	}
 }, 5000);

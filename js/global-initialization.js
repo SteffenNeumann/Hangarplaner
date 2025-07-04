@@ -3,7 +3,7 @@
  * Stellt sicher, dass alle kritischen Objekte und Funktionen verfügbar sind
  */
 
-console.log("🚀 Globale Initialisierung gestartet...");
+// console.log("🚀 Globale Initialisierung gestartet...");
 
 // Zentrale globale Objekte sicherstellen
 window.globalInitialization = {
@@ -17,7 +17,7 @@ window.globalInitialization = {
 	checkModule: function (name, object) {
 		if (object) {
 			this.modules.push({ name, status: "available", object });
-			console.log(`✅ Modul ${name} verfügbar`);
+			// console.log(`✅ Modul ${name} verfügbar`);
 			return true;
 		} else {
 			this.modules.push({ name, status: "missing" });
@@ -30,12 +30,12 @@ window.globalInitialization = {
 	 * Initialisiert alle kritischen globalen Objekte
 	 */
 	initializeAll: function () {
-		console.log("🔧 Initialisiere alle globalen Module...");
+		// console.log("🔧 Initialisiere alle globalen Module...");
 
 		// 1. HangarData sicherstellen
 		if (!window.hangarData) {
 			window.hangarData = {};
-			console.log("📦 window.hangarData initialisiert");
+			// console.log("📦 window.hangarData initialisiert");
 		}
 
 		// collectAllHangarData global verfügbar machen (falls noch nicht geschehen)
@@ -44,13 +44,13 @@ window.globalInitialization = {
 			!window.hangarData.collectAllHangarData
 		) {
 			window.hangarData.collectAllHangarData = window.collectAllHangarData;
-			console.log("✅ collectAllHangarData an hangarData angehängt");
+			// console.log("✅ collectAllHangarData an hangarData angehängt");
 		}
 
 		// 2. HangarUI sicherstellen
 		if (!window.hangarUI) {
 			window.hangarUI = {};
-			console.log("📦 window.hangarUI initialisiert");
+			// console.log("📦 window.hangarUI initialisiert");
 		}
 
 		// 3. ServerSync/StorageBrowser sicherstellen
@@ -76,7 +76,7 @@ window.globalInitialization = {
 		this.checkAllModules();
 
 		this.initialized = true;
-		console.log("✅ Globale Initialisierung abgeschlossen");
+		// console.log("✅ Globale Initialisierung abgeschlossen");
 
 		// Event für andere Module
 		document.dispatchEvent(new CustomEvent("globalInitializationComplete"));
@@ -86,7 +86,7 @@ window.globalInitialization = {
 	 * Stellt sicher, dass kritische Funktionen verfügbar sind
 	 */
 	ensureCriticalFunctions: function () {
-		console.log("🔧 Stelle kritische Funktionen sicher...");
+		// console.log("🔧 Stelle kritische Funktionen sicher...");
 
 		// updateTowStatusStyles global verfügbar machen
 		if (!window.updateTowStatusStyles) {
@@ -119,12 +119,12 @@ window.globalInitialization = {
 						select.style.color = "#065F46";
 					}
 
-					console.log(`🚚 Tow-Status aktualisiert: ${value}`);
+					// console.log(`🚚 Tow-Status aktualisiert: ${value}`);
 				} catch (error) {
 					console.error("❌ Fehler beim Aktualisieren des Tow-Status:", error);
 				}
 			};
-			console.log("✅ updateTowStatusStyles global verfügbar gemacht");
+			// console.log("✅ updateTowStatusStyles global verfügbar gemacht");
 		}
 
 		// setupSecondaryTileEventListeners global verfügbar machen
@@ -135,9 +135,9 @@ window.globalInitialization = {
 		) {
 			window.setupSecondaryTileEventListeners =
 				window.hangarUI.setupSecondaryTileEventListeners;
-			console.log(
-				"✅ setupSecondaryTileEventListeners global verfügbar gemacht"
-			);
+			// console.log(
+			//	"✅ setupSecondaryTileEventListeners global verfügbar gemacht"
+			// );
 		}
 
 		// updateStatusLights global verfügbar machen
@@ -147,7 +147,7 @@ window.globalInitialization = {
 			window.hangarUI.updateStatusLights
 		) {
 			window.updateStatusLights = window.hangarUI.updateStatusLights;
-			console.log("✅ updateStatusLights global verfügbar gemacht");
+			// console.log("✅ updateStatusLights global verfügbar gemacht");
 		}
 	},
 
@@ -155,7 +155,7 @@ window.globalInitialization = {
 	 * Prüft alle wichtigen Module
 	 */
 	checkAllModules: function () {
-		console.log("🔍 Prüfe alle Module...");
+		// console.log("🔍 Prüfe alle Module...");
 
 		// Kritische Module prüfen
 		this.checkModule("window.hangarData", window.hangarData);
@@ -191,7 +191,7 @@ window.globalInitialization = {
 		).length;
 		const missing = this.modules.filter((m) => m.status === "missing").length;
 
-		console.log(`📊 Module-Status: ${available} verfügbar, ${missing} fehlend`);
+		// console.log(`📊 Module-Status: ${available} verfügbar, ${missing} fehlend`);
 
 		if (missing > 0) {
 			console.warn(
@@ -243,7 +243,7 @@ window.globalInitialization = {
 
 // Initialisierung bei DOMContentLoaded
 document.addEventListener("DOMContentLoaded", function () {
-	console.log("📋 DOM geladen, starte globale Initialisierung...");
+	// console.log("📋 DOM geladen, starte globale Initialisierung...");
 
 	// Kurze Verzögerung, damit andere Module sich laden können
 	setTimeout(() => {
@@ -254,9 +254,9 @@ document.addEventListener("DOMContentLoaded", function () {
 // Auch als Fallback nach einer Verzögerung
 setTimeout(() => {
 	if (!window.globalInitialization.initialized) {
-		console.log("⏰ Fallback-Initialisierung nach Timeout");
+		// console.log("⏰ Fallback-Initialisierung nach Timeout");
 		window.globalInitialization.initializeAll();
 	}
 }, 2000);
 
-console.log("📦 Globale Initialisierung bereit");
+// console.log("📦 Globale Initialisierung bereit");

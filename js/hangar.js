@@ -17,7 +17,7 @@ window.moduleStatus = {
  * Initialisiert die Anwendung in der richtigen Reihenfolge
  */
 function initializeApp() {
-	console.log("Initialisiere HangarPlanner-Anwendung...");
+	// console.log("Initialisiere HangarPlanner-Anwendung...");
 
 	// Starten mit einer Verzögerung, um sicherzustellen dass DOM vollständig geladen ist
 	setTimeout(() => {
@@ -40,14 +40,14 @@ function initializeApp() {
 				}
 				// Accordion wird jetzt direkt über onclick-Attribute gesteuert
 				window.moduleStatus.ui = true;
-				console.log("UI-Modul initialisiert");
+				// console.log("UI-Modul initialisiert");
 			}
 
 			// 3. Event-Listener einrichten
 			if (window.hangarEvents && window.hangarEvents.setupUIEventListeners) {
 				window.hangarEvents.setupUIEventListeners();
 				window.moduleStatus.events = true;
-				console.log("Event-Listener eingerichtet");
+				// console.log("Event-Listener eingerichtet");
 			}
 
 			// 4. Gespeicherte Einstellungen laden
@@ -57,7 +57,7 @@ function initializeApp() {
 				window.hangarUI.uiSettings.load
 			) {
 				window.hangarUI.uiSettings.load();
-				console.log("UI-Einstellungen geladen");
+				// console.log("UI-Einstellungen geladen");
 			}
 
 			// 5. Daten initialisieren
@@ -67,14 +67,14 @@ function initializeApp() {
 					window.hangarData.loadCurrentStateFromLocalStorage();
 				}
 				window.moduleStatus.data = true;
-				console.log("Daten-Modul initialisiert");
+				// console.log("Daten-Modul initialisiert");
 			}
 
 			// Initialisieren des API-Provider-Selectors
 			initializeApiProviderSelector();
 
 			// 6. Initialisierung abgeschlossen
-			console.log("HangarPlanner-Anwendung erfolgreich initialisiert!");
+			// console.log("HangarPlanner-Anwendung erfolgreich initialisiert!");
 
 			// Benachrichtigung anzeigen, wenn alle Module geladen sind
 			if (allModulesLoaded()) {
@@ -115,39 +115,39 @@ function initializeApiProviderSelector() {
 		if (window.FlightDataAPI) {
 			const newProvider = this.value;
 			window.FlightDataAPI.setProvider(newProvider);
-			console.log(`API-Provider geändert auf: ${newProvider}`);
+			// console.log(`API-Provider geändert auf: ${newProvider}`);
 		}
 	});
 
-	console.log("API-Provider-Selektor initialisiert");
+	// console.log("API-Provider-Selektor initialisiert");
 }
 
 // Initialisiert die gesamte Anwendung
 function initialize() {
-	console.log("Initialisiere HangarPlanner-Anwendung...");
+	// console.log("Initialisiere HangarPlanner-Anwendung...");
 
 	// Initialisiere UI
 	if (window.hangarUI) {
 		window.hangarUI.initializeUI();
-		console.log("UI-Modul initialisiert");
+		// console.log("UI-Modul initialisiert");
 	}
 
 	// Ereignisbehandler einrichten
 	if (window.hangarEvents) {
 		window.hangarEvents.setupEventListeners();
-		console.log("Event-Listener eingerichtet");
+		// console.log("Event-Listener eingerichtet");
 	}
 
 	// Lade die UI-Einstellungen aus dem localStorage
 	if (window.hangarUI) {
 		window.hangarUI.loadUISettings();
-		console.log("UI-Einstellungen geladen");
+		// console.log("UI-Einstellungen geladen");
 	}
 
 	// Initialisiere Datenmodul
 	if (window.hangarData) {
 		window.hangarData.loadStateFromLocalStorage();
-		console.log("Daten-Modul initialisiert");
+		// console.log("Daten-Modul initialisiert");
 	}
 
 	// Initialisiere API-Fassade - WICHTIG: Nach allen anderen APIs initialisieren
@@ -155,17 +155,17 @@ function initialize() {
 		// Warten bis AmadeusAPI und AeroDataBoxAPI geladen sind
 		setTimeout(() => {
 			setupFlightDataEventHandlers();
-			console.log("API-Fassade final initialisiert und verbunden");
+			// console.log("API-Fassade final initialisiert und verbunden");
 		}, 500);
 	}
 
 	// Initialisiere APIs
 	if (window.AeroDataBoxAPI) {
 		window.AeroDataBoxAPI.init();
-		console.log("AeroDataBox API initialisiert");
+		// console.log("AeroDataBox API initialisiert");
 	}
 
-	console.log("HangarPlanner-Anwendung erfolgreich initialisiert!");
+	// console.log("HangarPlanner-Anwendung erfolgreich initialisiert!");
 }
 
 // Funktion, um sicherzustellen, dass die API-Fassade korrekt verbunden ist
@@ -186,7 +186,7 @@ function setupFlightDataEventHandlers() {
 			event.preventDefault();
 
 			// Debug-Log
-			console.log("*** API-FASSADE WIRD DIREKT AUFGERUFEN ***");
+			// console.log("*** API-FASSADE WIRD DIREKT AUFGERUFEN ***");
 
 			const searchInput = document.getElementById("searchAircraft");
 			const currentDateInput = document.getElementById("currentDateInput");
@@ -204,19 +204,19 @@ function setupFlightDataEventHandlers() {
 				return;
 			}
 
-			console.log(
-				`API-Fassade wird verwendet für: ${aircraftId}, Flughafen: ${airportCode}`
-			);
+			// console.log(
+			// 	`API-Fassade wird verwendet für: ${aircraftId}, Flughafen: ${airportCode}`
+			// );
 
 			if (window.FlightDataAPI) {
 				try {
 					// Zusätzliches Debug-Log für die Anfrage
-					console.log("Anfrage-Parameter:", {
-						aircraftId,
-						currentDate,
-						nextDate,
-						airportCode,
-					});
+					// console.log("Anfrage-Parameter:", {
+					// 	aircraftId,
+					// 	currentDate,
+					// 	nextDate,
+					// 	airportCode,
+					// });
 
 					// API-Fassade aufrufen und Ergebnis speichern
 					const result = await window.FlightDataAPI.updateAircraftData(
@@ -225,8 +225,8 @@ function setupFlightDataEventHandlers() {
 						nextDate
 					);
 
-					console.log("API-Fassade Aufruf erfolgreich abgeschlossen");
-					console.log("Empfangene Daten:", result);
+					// console.log("API-Fassade Aufruf erfolgreich abgeschlossen");
+					// console.log("Empfangene Daten:", result);
 
 					// Optional: Überprüfen, ob die Daten zum gewünschten Flughafen gehören
 					if (
@@ -234,7 +234,7 @@ function setupFlightDataEventHandlers() {
 						(result.originCode === airportCode ||
 							result.destCode === airportCode)
 					) {
-						console.log(`Daten für Flughafen ${airportCode} gefunden.`);
+						// console.log(`Daten für Flughafen ${airportCode} gefunden.`);
 					} else if (result) {
 						console.warn(
 							`Daten enthalten nicht den gewünschten Flughafen ${airportCode}.`
@@ -248,9 +248,9 @@ function setupFlightDataEventHandlers() {
 			}
 		};
 
-		console.log(
-			"Fetch-Button mit API-Fassade neu verbunden (alle anderen Handler entfernt)"
-		);
+		// console.log(
+		// 	"Fetch-Button mit API-Fassade neu verbunden (alle anderen Handler entfernt)"
+		// );
 	}
 }
 
@@ -292,7 +292,7 @@ function checkRequiredScripts() {
 			console.error(`Benötigtes Skript '${script.name}' wurde nicht geladen!`);
 			allLoaded = false;
 		} else {
-			console.log(`✅ Skript '${script.name}' erfolgreich geladen`);
+			// console.log(`✅ Skript '${script.name}' erfolgreich geladen`);
 		}
 	});
 
@@ -320,7 +320,7 @@ function analyzeError(error) {
 	console.error("Stack Trace:", error.stack);
 
 	// Überprüfen, welche Module verfügbar sind
-	console.log("Modul-Status:", window.moduleStatus);
+	// console.log("Modul-Status:", window.moduleStatus);
 
 	// DOM-Elemente überprüfen
 	const criticalElements = [
@@ -330,10 +330,10 @@ function analyzeError(error) {
 		"menuToggle",
 	];
 
-	console.log("Kritische DOM-Elemente:");
+	// console.log("Kritische DOM-Elemente:");
 	criticalElements.forEach((id) => {
 		const element = document.getElementById(id);
-		console.log(`${id}: ${element ? "Gefunden" : "FEHLT"}`);
+		// console.log(`${id}: ${element ? "Gefunden" : "FEHLT"}`);
 	});
 
 	console.groupEnd();
@@ -341,7 +341,7 @@ function analyzeError(error) {
 
 // Event-Listener für DOMContentLoaded hinzufügen
 document.addEventListener("DOMContentLoaded", function () {
-	console.log("DOM vollständig geladen - starte Initialisierung...");
+	// console.log("DOM vollständig geladen - starte Initialisierung...");
 
 	// Helpers-Modul als geladen markieren, wenn verfügbar
 	if (window.helpers || window.showNotification) {
@@ -367,14 +367,14 @@ document.addEventListener("DOMContentLoaded", function () {
 				window.setupUIEventListeners !== undefined);
 
 		if (criticalModulesReady) {
-			console.log(
-				`Alle kritischen Module nach ${attempts + 1} Versuchen verfügbar`
-			);
+			// console.log(
+			// 	`Alle kritischen Module nach ${attempts + 1} Versuchen verfügbar`
+			// );
 			initializeApp();
 		} else {
-			console.log(
-				`Versuch ${attempts + 1}/${maxAttempts}: Warte auf Module...`
-			);
+			// console.log(
+			// 	`Versuch ${attempts + 1}/${maxAttempts}: Warte auf Module...`
+			// );
 			setTimeout(() => attemptInitialization(attempts + 1), delay);
 		}
 	}
@@ -450,9 +450,9 @@ function setupStatusSync() {
 		attributeFilter: ["class"],
 	});
 
-	console.log(
-		"Status-Synchronisation zwischen fetchStatus und header-status eingerichtet"
-	);
+	// console.log(
+	// 	"Status-Synchronisation zwischen fetchStatus und header-status eingerichtet"
+	// );
 }
 
 // Führe die Statussynchornisation nach dem initialen Laden aus

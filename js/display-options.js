@@ -115,6 +115,7 @@ window.displayOptions = {
 	// Ladezustand verfolgen
 	isLoading: false,
 	isSaving: false,
+	saveTimeout: null,
 
 	/**
 	 * Initialisiert die Display Options
@@ -605,57 +606,61 @@ window.displayOptions = {
 	},
 
 	/**
-	 * Event-Handler für Update Tiles Button
+	 * Event-Handler für Update Tiles Button (mit Debouncing)
 	 */
 	onUpdateTiles() {
 		this.collectFromUI();
 		this.updateTiles();
-		this.saveToServer(); // Automatische Server-Synchronisation
+		// Debounced Save - verhindert zu häufige Server-Anfragen
+		this.debouncedSave();
 	},
 
 	/**
-	 * Event-Handler für Update Secondary Tiles Button
+	 * Event-Handler für Update Secondary Tiles Button (mit Debouncing)
 	 */
 	onUpdateSecondaryTiles() {
 		this.collectFromUI();
 		this.updateSecondaryTiles();
-		this.saveToServer(); // Automatische Server-Synchronisation
+		// Debounced Save - verhindert zu häufige Server-Anfragen
+		this.debouncedSave();
 	},
 
 	/**
-	 * Event-Handler für Layout-Änderung
+	 * Event-Handler für Layout-Änderung (mit Debouncing)
 	 */
 	onLayoutChange() {
 		this.collectFromUI();
 		this.applyLayout();
-		this.saveToServer(); // Automatische Server-Synchronisation
+		// Debounced Save - verhindert zu häufige Server-Anfragen
+		this.debouncedSave();
 	},
 
 	/**
-	 * Event-Handler für Dark Mode Toggle
+	 * Event-Handler für Dark Mode Toggle (mit Debouncing)
 	 */
 	onDarkModeChange() {
 		this.collectFromUI();
 		this.applyDarkMode(this.current.darkMode);
-		this.saveToServer(); // Automatische Server-Synchronisation
+		// Debounced Save - verhindert zu häufige Server-Anfragen
+		this.debouncedSave();
 	},
 
 	/**
-	 * Event-Handler für View Mode Toggle
+	 * Event-Handler für View Mode Toggle (mit Debouncing)
 	 */
 	onViewModeChange() {
 		this.collectFromUI();
 		this.applyViewMode(this.current.viewMode);
-		this.saveToServer(); // Automatische Server-Synchronisation
+		// Debounced Save - verhindert zu häufige Server-Anfragen
+		this.debouncedSave();
 	},
 
 	/**
-	 * Event-Handler für Zoom-Änderung
+	 * Event-Handler für Zoom-Änderung (mit Debouncing)
 	 */
 	onZoomChange() {
 		this.collectFromUI();
 		this.applyZoom(this.current.zoomLevel);
-		this.saveToServer(); // Automatische Server-Synchronisation
 
 		// Zoom-Anzeige aktualisieren
 		const zoomValueDisplay = document.getElementById("zoomValue");
@@ -663,7 +668,23 @@ window.displayOptions = {
 			zoomValueDisplay.textContent = `${this.current.zoomLevel}%`;
 		}
 
-		this.saveToServer();
+		// Debounced Save - verhindert zu häufige Server-Anfragen bei Slider-Bewegung
+		this.debouncedSave();
+	},
+
+	/**
+	 * Debounced Save - sammelt mehrere Änderungen und speichert verzögert
+	 */
+	debouncedSave() {
+		// Lösche vorherigen Timeout
+		if (this.saveTimeout) {
+			clearTimeout(this.saveTimeout);
+		}
+
+		// Setze neuen Timeout für verzögerte Speicherung
+		this.saveTimeout = setTimeout(() => {
+			this.saveToServer();
+		}, 1000); // 1 Sekunde Verzögerung für bessere Performance
 	},
 
 	/**
@@ -949,6 +970,19 @@ window.displayOptions = {
 		}
 
 		// console.log("🔄 UI-Werte forciert angewendet");
+	},
+
+	/**
+	 * Performance-Monitoring für Display Options
+	 */
+	getPerformanceStats() {
+		return {
+			isLoading: this.isLoading,
+			isSaving: this.isSaving,
+			saveTimeout: !!this.saveTimeout,
+			lastSaveAttempt: this.lastSaveAttempt || "nie",
+			current: this.current,
+		};
 	},
 };
 

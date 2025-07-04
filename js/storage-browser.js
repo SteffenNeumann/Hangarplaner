@@ -30,7 +30,7 @@ class ServerSync {
 	}
 
 	/**
-	 * Startet periodische Synchronisation alle 30 Sekunden
+	 * Startet periodische Synchronisation alle 60 Sekunden (optimiert)
 	 */
 	startPeriodicSync() {
 		if (this.serverSyncInterval) {
@@ -38,21 +38,22 @@ class ServerSync {
 		}
 
 		this.serverSyncInterval = setInterval(() => {
-			// Nur synchronisieren wenn keine andere Sync-Operation läuft
+			// Nur synchronisieren wenn keine andere Sync-Operation läuft UND Daten geändert wurden
 			if (
 				!this.isApplyingServerData &&
 				!window.isApplyingServerData &&
-				!window.isLoadingServerData
+				!window.isLoadingServerData &&
+				this.hasDataChanged()
 			) {
 				this.syncWithServer();
 			} else {
-				console.log(
-					"⏸️ Periodische Sync übersprungen (andere Sync-Operation aktiv)"
-				);
+				// console.log("⏸️ Periodische Sync übersprungen (keine Änderungen oder Sync aktiv)");
 			}
-		}, 30000); // 30 Sekunden
+		}, 60000); // 60 Sekunden statt 30 für bessere Performance
 
-		console.log("⏰ Periodische Server-Sync gestartet");
+		console.log(
+			"⏰ Periodische Server-Sync gestartet (60s Intervall, Change-Detection)"
+		);
 	}
 
 	/**
@@ -67,7 +68,7 @@ class ServerSync {
 	}
 
 	/**
-	 * Synchronisiert Daten mit dem Server
+	 * Synchronisiert Daten mit dem Server (optimiert)
 	 */
 	async syncWithServer() {
 		if (!this.serverSyncUrl) {
@@ -77,8 +78,14 @@ class ServerSync {
 
 		// Verhindere gleichzeitige Sync-Operationen
 		if (window.isSavingToServer) {
-			console.log("⏸️ Server-Sync übersprungen (Speicherung läuft bereits)");
+			// console.log("⏸️ Server-Sync übersprungen (Speicherung läuft bereits)");
 			return false;
+		}
+
+		// Performance: Prüfe erst ob sich Daten geändert haben
+		if (!this.hasDataChanged()) {
+			// console.log("⏸️ Server-Sync übersprungen (keine Änderungen)");
+			return true; // Kein Fehler, nur keine Änderungen
 		}
 
 		window.isSavingToServer = true;
@@ -87,6 +94,15 @@ class ServerSync {
 			// Aktuelle Daten sammeln
 			const currentData = this.collectCurrentData();
 
+			if (!currentData) {
+				console.warn("⚠️ Keine Daten zum Synchronisieren verfügbar");
+				return false;
+			}
+
+			// Optimierung: Verwende AbortController für Timeout
+			const controller = new AbortController();
+			const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s Timeout
+
 			// Daten an Server senden
 			const response = await fetch(this.serverSyncUrl, {
 				method: "POST",
@@ -94,17 +110,24 @@ class ServerSync {
 					"Content-Type": "application/json",
 				},
 				body: JSON.stringify(currentData),
+				signal: controller.signal,
 			});
 
+			clearTimeout(timeoutId);
+
 			if (response.ok) {
-				console.log("✅ Server-Sync erfolgreich");
+				// console.log("✅ Server-Sync erfolgreich");
 				return true;
 			} else {
 				console.warn("⚠️ Server-Sync fehlgeschlagen:", response.status);
 				return false;
 			}
 		} catch (error) {
-			console.error("❌ Server-Sync Fehler:", error);
+			if (error.name === "AbortError") {
+				console.warn("⚠️ Server-Sync Timeout (10s)");
+			} else {
+				console.error("❌ Server-Sync Fehler:", error);
+			}
 			return false;
 		} finally {
 			window.isSavingToServer = false;
@@ -684,19 +707,28 @@ document.addEventListener("DOMContentLoaded", () => {
 						"📭 Server-Daten sind leer, behalte lokale Einstellungen"
 					);
 
-					// Bei leeren Server-Daten: Speichere aktuelle lokale Daten auf Server
+					// Bei leeren Server-Daten: Speichere aktuelle lokale Daten auf Server (debounced)
 					if (window.displayOptions) {
-						await window.displayOptions.saveToServer();
-						console.log("💾 Lokale Einstellungen auf Server gesichert");
+						// Verzögert um Server-Last zu reduzieren
+						setTimeout(async () => {
+							await window.displayOptions.saveToServer();
+							console.log(
+								"💾 Lokale Einstellungen auf Server gesichert (debounced)"
+							);
+						}, 3000);
 					}
 				}
 			} else {
 				console.log("📭 Keine Server-Daten vorhanden, erstelle Basis-Daten");
 
-				// Erstelle Basis-Datenstruktur auf Server
+				// Erstelle Basis-Datenstruktur auf Server (debounced)
 				if (window.displayOptions) {
-					await window.displayOptions.saveToServer();
-					console.log("🏗️ Basis-Einstellungen auf Server erstellt");
+					setTimeout(async () => {
+						await window.displayOptions.saveToServer();
+						console.log(
+							"🏗️ Basis-Einstellungen auf Server erstellt (debounced)"
+						);
+					}, 5000);
 				}
 			}
 		} catch (error) {
@@ -707,10 +739,12 @@ document.addEventListener("DOMContentLoaded", () => {
 		} finally {
 			window.isLoadingServerData = false;
 		}
-	}, 2000); // Reduziert auf 2 Sekunden für schnellere Initialisierung
+	}, 3000); // Erhöht auf 3 Sekunden für bessere Performance
 });
 
-console.log("📦 Server-Sync-Modul geladen (optimiert von 2085 → ~350 Zeilen)");
+console.log(
+	"📦 Server-Sync-Modul geladen (Performance-optimiert: 60s Intervall, Change-Detection, Debouncing)"
+);
 
 // Globale Debug-Funktion für Synchronisations-Probleme
 window.debugSync = function () {
@@ -727,14 +761,22 @@ window.syncHelp = function () {
 🔧 SYNCHRONISATION DEBUG HILFE
 
 Verfügbare Befehle:
-- window.debugSync()              → Zeigt aktuellen Sync-Status
-- window.serverSync.manualSync()  → Startet manuellen Server-Sync
-- window.displayOptions.load()    → Lädt Display Options vom Server
+- window.debugSync()                    → Zeigt aktuellen Sync-Status
+- window.serverSync.manualSync()       → Startet manuellen Server-Sync
+- window.displayOptions.load()         → Lädt Display Options vom Server
 - window.displayOptions.saveToServer() → Speichert Display Options
+- window.displayOptions.getPerformanceStats() → Performance-Statistiken
 
-Flags zum Prüfen:
-- window.isApplyingServerData     → Server-Daten werden gerade angewendet
-- window.isLoadingServerData      → Server-Daten werden gerade geladen
-- window.isSavingToServer         → Daten werden gerade gespeichert
+Performance-Flags:
+- window.isApplyingServerData           → Server-Daten werden gerade angewendet
+- window.isLoadingServerData            → Server-Daten werden gerade geladen
+- window.isSavingToServer               → Daten werden gerade gespeichert
+
+Performance-Optimierungen:
+✅ Periodische Sync: 60s Intervall (statt 30s)
+✅ Change-Detection: Nur bei Änderungen synchronisieren
+✅ Debounced Saves: Sammelt mehrere Änderungen (1s Verzögerung)
+✅ Request Timeouts: 8-10s Timeouts für Server-Anfragen
+✅ Race Condition Guards: Verhindert mehrfache gleichzeitige Operationen
 	`);
 };

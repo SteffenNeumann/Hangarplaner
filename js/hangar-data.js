@@ -261,21 +261,14 @@ function importHangarPlanFallback() {
 }
 
 /**
- * Wendet den importierten Hangarplan auf die Anwendung an - KOORDINIERT
+ * Wendet den importierten Hangarplan auf die Anwendung an - DIREKT (ohne Rekursion)
  * @private
  */
 function applyLoadedHangarPlan(data) {
-	console.log("📥 Wende Hangarplan an über koordinierte Logik");
+	console.log("📥 Wende Hangarplan direkt an (KEINE Rekursion)");
 
-	// NEUE LOGIK: Verwende Datenkoordinator falls verfügbar
-	if (window.dataCoordinator) {
-		// Bestimme die Datenquelle basierend auf dem Kontext
-		const source = window.isApplyingServerData ? "server" : "user";
-		window.dataCoordinator.loadProject(data, source);
-		return data;
-	}
-
-	// Fallback: Direkte Anwendung (bestehende Logik)
+	// KEINE REKURSION: Direkte Anwendung ohne dataCoordinator
+	// Die Funktion wird bereits vom dataCoordinator aufgerufen
 	// Projektname setzen
 	if (data.metadata && data.metadata.projectName) {
 		document.getElementById("projectName").value = data.metadata.projectName;
@@ -1241,7 +1234,7 @@ window.HangarDataCoordinator = {
 	isProcessing: false,
 
 	/**
-	 * Rekursive Selbstkontrolle - prüft und koordiniert alle Datenoperationen
+	 * FIXED: Datenverarbeitung OHNE rekursive Aufrufe um Endlosschleifen zu vermeiden
 	 */
 	async processOperationQueue() {
 		if (this.isProcessing) {
@@ -1250,15 +1243,21 @@ window.HangarDataCoordinator = {
 		}
 
 		this.isProcessing = true;
-		console.log("🎯 Starte rekursive Datenkoordination");
+		console.log("🎯 Starte Datenoperations-Verarbeitung");
 
 		try {
+			// Verarbeite alle Operationen in der Queue OHNE rekursive validateDataIntegrity Aufrufe
 			while (this.operationQueue.length > 0) {
 				const operation = this.operationQueue.shift();
 				await this.executeOperation(operation);
+			}
 
-				// Rekursive Selbstkontrolle nach jeder Operation
-				await this.validateDataIntegrity();
+			// EINMALIGE Validierung NACH Verarbeitung aller Operationen
+			const isValid = await this.validateDataIntegrity();
+			if (!isValid) {
+				console.warn(
+					"⚠️ Datenintegrität-Probleme erkannt, aber keine weitere Rekursion"
+				);
 			}
 		} catch (error) {
 			console.error("❌ Fehler in Datenkoordination:", error);
@@ -1348,26 +1347,79 @@ window.HangarDataCoordinator = {
 	},
 
 	/**
-	 * Sicheres Projekt laden
+	 * Sicheres Projekt laden - OHNE REKURSION
 	 */
 	async loadProjectSafe(data, source) {
-		console.log(`📂 Lade Projekt aus Quelle: ${source}`);
+		console.log(`📂 Lade Projekt aus Quelle: ${source} (direkt)`);
 
-		// Verwende bestehende applyLoadedHangarPlan Funktion
-		if (
-			window.hangarData &&
-			typeof window.hangarData.applyLoadedHangarPlan === "function"
-		) {
+		// DIREKTE Anwendung ohne weitere Koordination
+		try {
 			// Flag setzen um weitere localStorage-Operationen zu verhindern
 			window.isApplyingServerData = true;
 
-			try {
-				await window.hangarData.applyLoadedHangarPlan(data);
-				this.currentData = data;
-				console.log(`✅ Projekt geladen (Quelle: ${source})`);
-			} finally {
-				window.isApplyingServerData = false;
+			// Direkte Datenmodifikation ohne applyLoadedHangarPlan
+			this.applyDataDirectly(data);
+			this.currentData = data;
+
+			console.log(`✅ Projekt geladen (Quelle: ${source})`);
+		} finally {
+			window.isApplyingServerData = false;
+		}
+	},
+
+	/**
+	 * Wendet Daten direkt an ohne Rekursion
+	 */
+	applyDataDirectly(data) {
+		// Projektname setzen
+		if (data.metadata && data.metadata.projectName) {
+			const nameElement = document.getElementById("projectName");
+			if (nameElement) nameElement.value = data.metadata.projectName;
+
+			// Auch die versteckte ID setzen, falls vorhanden
+			if (data.id) {
+				const idElement = document.getElementById("projectId");
+				if (idElement) idElement.value = data.id;
 			}
+		}
+
+		// Display Options direkt anwenden
+		if (
+			data.settings &&
+			data.settings.displayOptions &&
+			window.displayOptions
+		) {
+			window.displayOptions.current = {
+				...window.displayOptions.defaults,
+				...data.settings.displayOptions,
+			};
+			window.displayOptions.updateUI();
+			window.displayOptions.applySettings();
+		}
+
+		// Basis-Einstellungen setzen
+		if (data.settings) {
+			const elements = ["tilesCount", "secondaryTilesCount", "layoutType"];
+			elements.forEach((id) => {
+				const element = document.getElementById(id);
+				if (element && data.settings[id.replace("Type", "")]) {
+					element.value = data.settings[id.replace("Type", "")];
+				}
+			});
+
+			// UI-Einstellungen anwenden falls hangarUI verfügbar
+			if (window.hangarUI && window.hangarUI.uiSettings) {
+				window.hangarUI.uiSettings.tilesCount = data.settings.tilesCount || 8;
+				window.hangarUI.uiSettings.secondaryTilesCount =
+					data.settings.secondaryTilesCount || 4;
+				window.hangarUI.uiSettings.layout = data.settings.layout || 4;
+				window.hangarUI.uiSettings.apply();
+			}
+		}
+
+		// Kachelndaten direkt anwenden
+		if (typeof applyLoadedTileData === "function") {
+			applyLoadedTileData(data);
 		}
 	},
 
@@ -1410,7 +1462,7 @@ window.HangarDataCoordinator = {
 	},
 
 	/**
-	 * Validiert Datenintegrität nach jeder Operation
+	 * Validiert Datenintegrität - OHNE REKURSION
 	 */
 	async validateDataIntegrity() {
 		// Prüfe auf doppelte Aircraft IDs
@@ -1430,22 +1482,33 @@ window.HangarDataCoordinator = {
 		});
 
 		if (conflicts > 0) {
-			console.warn(`⚠️ ${conflicts} Datenkonflikte erkannt`);
+			console.warn(
+				`⚠️ ${conflicts} Datenkonflikte erkannt - aber KEINE weitere Verarbeitung`
+			);
 		} else {
 			console.log("✅ Datenintegrität bestätigt");
 		}
 
+		// WICHTIG: KEINE weitere Verarbeitung oder Rekursion
 		return conflicts === 0;
 	},
 
 	/**
-	 * Fügt Operation zur Warteschlange hinzu
+	 * Fügt Operation zur Warteschlange hinzu - DEBOUNCED
 	 */
 	queueOperation(operation) {
 		this.operationQueue.push(operation);
 
-		// Automatische Verarbeitung starten
-		setTimeout(() => this.processOperationQueue(), 0);
+		// Debounced Verarbeitung um Rekursion zu vermeiden
+		if (this.processTimeout) {
+			clearTimeout(this.processTimeout);
+		}
+
+		this.processTimeout = setTimeout(() => {
+			if (!this.isProcessing) {
+				this.processOperationQueue();
+			}
+		}, 50); // 50ms Verzögerung
 	},
 
 	/**

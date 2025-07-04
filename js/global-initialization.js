@@ -165,6 +165,10 @@ window.globalInitialization = {
 		);
 		this.checkModule("window.hangarUI", window.hangarUI);
 		this.checkModule(
+			"window.hangarUI.checkElement",
+			window.hangarUI?.checkElement
+		);
+		this.checkModule(
 			"window.hangarUI.setupSecondaryTileEventListeners",
 			window.hangarUI?.setupSecondaryTileEventListeners
 		);

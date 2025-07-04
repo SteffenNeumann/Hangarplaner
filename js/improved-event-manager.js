@@ -705,6 +705,7 @@ class HangarEventManager {
 
 // Globale Instanz erstellen
 window.hangarEventManager = new HangarEventManager();
+window.improved_event_manager = window.hangarEventManager; // Kompatibilität
 
 // Auto-Initialization
 document.addEventListener("DOMContentLoaded", () => {
@@ -715,3 +716,5 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // Für Debugging
 window.getEventManagerStatus = () => window.hangarEventManager.getStatus();
+
+console.log("📦 Improved Event Manager geladen und global verfügbar");

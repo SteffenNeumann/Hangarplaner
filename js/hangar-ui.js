@@ -648,9 +648,14 @@ function adjustScaling() {
 }
 
 function toggleSecondarySection(visible) {
-	const secondarySection = document.getElementById("secondarySection");
+	const secondarySection =
+		document.querySelector(".section-container:nth-child(3)") ||
+		document.getElementById("secondarySection") ||
+		document.querySelector("[id*='secondary']");
+
 	if (!secondarySection) {
-		console.warn("Sekundäre Sektion nicht gefunden");
+		// Weniger aufdringliche Warnung
+		//console.warn("Sekundäre Sektion nicht gefunden");
 		return;
 	}
 
@@ -961,6 +966,7 @@ window.hangarUI = {
 	updateCellAttributes,
 	adjustScaling,
 	collectTileData,
+	checkElement, // Fehlende Funktion hinzugefügt
 
 	/**
 	 * Initialisiert das Sektion-Layout

@@ -39,7 +39,7 @@ const uiSettings = {
 					this.applyTileValues(settings.tileValues);
 				}
 
-				console.log("Einstellungen aus LocalStorage geladen");
+				// console.log("Einstellungen aus LocalStorage geladen");
 				return true;
 			}
 		} catch (error) {
@@ -126,7 +126,7 @@ const uiSettings = {
 						JSON.stringify(settingsData)
 					);
 				}
-				console.log("Einstellungen im LocalStorage gespeichert");
+				// console.log("Einstellungen im LocalStorage gespeichert");
 			} catch (storageError) {
 				console.error("Fehler beim Speichern im localStorage:", storageError);
 			}
@@ -328,7 +328,7 @@ const uiSettings = {
 
 		// Benachrichtigung, wenn Debugmodus aktiv ist
 		if (localStorage.getItem("debugMode") === "true") {
-			console.log(`Dark Mode ${enabled ? "aktiviert" : "deaktiviert"}`);
+			// console.log(`Dark Mode ${enabled ? "aktiviert" : "deaktiviert"}`);
 		}
 	},
 
@@ -359,7 +359,7 @@ const uiSettings = {
 
 		// Benachrichtigung, wenn Debugmodus aktiv ist
 		if (localStorage.getItem("debugMode") === "true") {
-			console.log(`Zoom-Level auf ${level}% gesetzt`);
+			// console.log(`Zoom-Level auf ${level}% gesetzt`);
 		}
 
 		// Skalierung nach Zoom-Änderung neu berechnen
@@ -395,19 +395,19 @@ const uiSettings = {
 
 		// Debug-Ausgabe
 		if (localStorage.getItem("debugMode") === "true") {
-			console.log(
-				`Ansichtsmodus auf "${tableViewEnabled ? "Tabelle" : "Kachel"}" gesetzt`
-			);
+			// console.log(
+			//	`Ansichtsmodus auf "${tableViewEnabled ? "Tabelle" : "Kachel"}" gesetzt`
+			// );
 		}
 	},
 
 	// Wendet die gespeicherten Kachelwerte auf die UI an
 	applyTileValues: function (tileValues) {
-		console.log(`Wende ${tileValues.length} gespeicherte Kachelwerte an...`);
+		// console.log(`Wende ${tileValues.length} gespeicherte Kachelwerte an...`);
 
 		tileValues.forEach((tileValue) => {
 			const cellId = tileValue.cellId;
-			console.log(`Anwenden von Werten für Kachel ${cellId}:`, tileValue);
+			// console.log(`Anwenden von Werten für Kachel ${cellId}:`, tileValue);
 
 			// Position setzen
 			const positionInput = document.getElementById(
@@ -508,9 +508,9 @@ function setupAircraftIdFormatting() {
 		});
 	});
 
-	console.log(
-		`Aircraft ID-Formatierung für ${aircraftIdInputs.length} Eingabefelder eingerichtet`
-	);
+	// console.log(
+	//	`Aircraft ID-Formatierung für ${aircraftIdInputs.length} Eingabefelder eingerichtet`
+	// );
 }
 
 // Placeholder für restliche Funktionen - diese werden aus der originalen Datei übernommen
@@ -523,9 +523,9 @@ function setupAircraftIdFormatting() {
  * @param {boolean} preserveData - Wird ignoriert, da Daten automatisch erhalten bleiben
  */
 function updateSecondaryTiles(count, layout, preserveData = true) {
-	console.log(
-		`🔧 Aktualisiere sekundäre Kacheln: ${count} (vereinfachtes System wie primäre Kacheln)`
-	);
+	// console.log(
+	//	`🔧 Aktualisiere sekundäre Kacheln: ${count} (vereinfachtes System wie primäre Kacheln)`
+	// );
 
 	const secondaryGrid = document.getElementById("secondaryHangarGrid");
 	if (!secondaryGrid) {
@@ -537,12 +537,12 @@ function updateSecondaryTiles(count, layout, preserveData = true) {
 	let currentTiles = secondaryGrid.querySelectorAll(".hangar-cell");
 	const currentCount = currentTiles.length;
 
-	console.log(`Aktuell ${currentCount} sekundäre Kacheln, Ziel: ${count}`);
+	// console.log(`Aktuell ${currentCount} sekundäre Kacheln, Ziel: ${count}`);
 
 	// Falls wir mehr Kacheln brauchen, erstelle sie (nur neue, niemals alle löschen)
 	if (currentCount < count) {
 		const tilesToCreate = count - currentCount;
-		console.log(`📦 Erstelle ${tilesToCreate} neue sekundäre Kacheln`);
+		// console.log(`📦 Erstelle ${tilesToCreate} neue sekundäre Kacheln`);
 
 		for (let i = 0; i < tilesToCreate; i++) {
 			const cellId = 101 + currentCount + i;
@@ -583,9 +583,9 @@ function updateSecondaryTiles(count, layout, preserveData = true) {
 		secondaryTilesCountInput.value = count;
 	}
 
-	console.log(
-		`✅ ${count} sekundäre Kacheln aktiviert - Daten bleiben erhalten!`
-	);
+	// console.log(
+	//	`✅ ${count} sekundäre Kacheln aktiviert - Daten bleiben erhalten!`
+	// );
 }
 
 /**
@@ -594,7 +594,7 @@ function updateSecondaryTiles(count, layout, preserveData = true) {
  * @param {HTMLElement} container - Container für die Kachel
  */
 function createSingleSecondaryTile(cellId, container) {
-	console.log(`🎯 Erstelle einzelne sekundäre Kachel ${cellId}`);
+	// console.log(`🎯 Erstelle einzelne sekundäre Kachel ${cellId}`);
 
 	// Template für sekundäre Kacheln
 	const templateCell = document.querySelector("#hangarGrid .hangar-cell");
@@ -625,7 +625,7 @@ function createSingleSecondaryTile(cellId, container) {
 	// Zur sekundären Sektion hinzufügen
 	container.appendChild(cellClone);
 
-	console.log(`✅ Sekundäre Kachel ${cellId} erstellt`);
+	// console.log(`✅ Sekundäre Kachel ${cellId} erstellt`);
 }
 
 function adjustScaling() {
@@ -644,7 +644,7 @@ function adjustScaling() {
 	container.style.transform = `scale(${scaleFactor})`;
 	container.style.transformOrigin = "top left";
 
-	console.log(`UI-Skalierung angepasst: ${(scaleFactor * 100).toFixed(1)}%`);
+	// console.log(`UI-Skalierung angepasst: ${(scaleFactor * 100).toFixed(1)}%`);
 }
 
 function toggleSecondarySection(visible) {
@@ -657,11 +657,11 @@ function toggleSecondarySection(visible) {
 	if (visible) {
 		secondarySection.style.display = "block";
 		secondarySection.classList.remove("hidden");
-		console.log("Sekundäre Sektion angezeigt");
+		//		// console.log("Sekundäre Sektion angezeigt");
 	} else {
 		secondarySection.style.display = "none";
 		secondarySection.classList.add("hidden");
-		console.log("Sekundäre Sektion ausgeblendet");
+		//		// console.log("Sekundäre Sektion ausgeblendet");
 	}
 }
 
@@ -707,7 +707,7 @@ function updateStatusLights(cellId) {
 		}
 	}
 
-	console.log(`Status-Lights für Kachel ${cellId} auf "${status}" gesetzt`);
+	// console.log(`Status-Lights für Kachel ${cellId} auf "${status}" gesetzt`);
 }
 
 /**
@@ -717,12 +717,12 @@ function saveCollectedData() {
 	const tileValues = collectTileValues();
 	if (typeof hangarData !== "undefined" && hangarData.saveTileData) {
 		hangarData.saveTileData(tileValues);
-		console.log("Kacheldaten gespeichert");
+		// console.log("Kacheldaten gespeichert");
 	} else {
 		// Fallback: localStorage verwenden
 		try {
 			localStorage.setItem("hangarTileData", JSON.stringify(tileValues));
-			console.log("Kacheldaten in localStorage gespeichert");
+			// console.log("Kacheldaten in localStorage gespeichert");
 		} catch (error) {
 			console.warn("Fehler beim Speichern in localStorage:", error);
 		}
@@ -739,7 +739,7 @@ function checkElement(id) {
  * @param {number} cellId - Die neue Kachel-ID
  */
 function updateCellAttributes(cellElement, cellId) {
-	console.log(`🔧 Aktualisiere Zell-Attribute für Kachel ${cellId}`);
+	// console.log(`🔧 Aktualisiere Zell-Attribute für Kachel ${cellId}`);
 
 	try {
 		// Haupt-Container aktualisieren
@@ -801,7 +801,7 @@ function updateCellAttributes(cellElement, cellId) {
 			});
 		}
 
-		console.log(`✅ Zell-Attribute für Kachel ${cellId} aktualisiert`);
+		// console.log(`✅ Zell-Attribute für Kachel ${cellId} aktualisiert`);
 		return true;
 	} catch (error) {
 		console.error(
@@ -819,7 +819,7 @@ function updateCellAttributes(cellElement, cellId) {
  */
 function collectTileData(cellId) {
 	try {
-		console.log(`📊 Sammle Daten für Kachel ${cellId}`);
+		// console.log(`📊 Sammle Daten für Kachel ${cellId}`);
 
 		// Bestimme ob es eine sekundäre Kachel ist (ID >= 101)
 		const isSecondary = cellId >= 101;
@@ -895,7 +895,7 @@ function collectTileData(cellId) {
 			departureTime: departureTime,
 		};
 
-		console.log(`✅ Daten für Kachel ${cellId} gesammelt:`, tileData);
+		// console.log(`✅ Daten für Kachel ${cellId} gesammelt:`, tileData);
 		return tileData;
 	} catch (error) {
 		console.error(
@@ -911,7 +911,7 @@ function collectTileData(cellId) {
  * @param {number} count - Anzahl der sichtbaren Kacheln
  */
 function updateTiles(count) {
-	console.log(`🔧 Aktualisiere primäre Kacheln: ${count}`);
+	// console.log(`🔧 Aktualisiere primäre Kacheln: ${count}`);
 
 	try {
 		const grid = document.getElementById("hangarGrid");
@@ -921,7 +921,7 @@ function updateTiles(count) {
 		}
 
 		const tiles = grid.querySelectorAll(".hangar-cell");
-		console.log(`Gefunden ${tiles.length} primäre Kacheln`);
+		// console.log(`Gefunden ${tiles.length} primäre Kacheln`);
 
 		// Zeige/verstecke Kacheln basierend auf count
 		tiles.forEach((tile, index) => {
@@ -940,7 +940,7 @@ function updateTiles(count) {
 			tilesCountInput.value = count;
 		}
 
-		console.log(`✅ ${count} primäre Kacheln aktiviert`);
+		// console.log(`✅ ${count} primäre Kacheln aktiviert`);
 
 		// Event dispatchen für andere Module
 		document.dispatchEvent(
@@ -966,7 +966,7 @@ window.hangarUI = {
 	 * Initialisiert das Sektion-Layout
 	 */
 	initSectionLayout: function () {
-		console.log("🔧 Initialisiere Sektion-Layout...");
+		// console.log("🔧 Initialisiere Sektion-Layout...");
 
 		// Stelle sicher, dass alle erforderlichen Sektionen vorhanden sind
 		const requiredSections = [
@@ -982,14 +982,14 @@ window.hangarUI = {
 				console.warn(`⚠️ Sektion ${sectionId} nicht gefunden`);
 				allFound = false;
 			} else {
-				console.log(`✅ Sektion ${sectionId} gefunden`);
+				// console.log(`✅ Sektion ${sectionId} gefunden`);
 			}
 		});
 
 		if (allFound) {
 			// Initiale UI-Einstellungen anwenden
 			this.uiSettings.apply();
-			console.log("✅ Sektion-Layout erfolgreich initialisiert");
+			// console.log("✅ Sektion-Layout erfolgreich initialisiert");
 		} else {
 			console.error("❌ Nicht alle erforderlichen Sektionen gefunden");
 		}
@@ -999,7 +999,7 @@ window.hangarUI = {
 	 * Initialisiert das Sidebar-Akkordeon
 	 */
 	initializeSidebarAccordion: function () {
-		console.log("🔧 Initialisiere Sidebar-Akkordeon...");
+		// console.log("🔧 Initialisiere Sidebar-Akkordeon...");
 
 		const accordionHeaders = document.querySelectorAll(
 			".sidebar-accordion-header"
@@ -1041,7 +1041,7 @@ window.hangarUI = {
 			return false;
 		}
 
-		console.log("🔧 Richte Event-Handler für sekundäre Kacheln ein...");
+		// console.log("🔧 Richte Event-Handler für sekundäre Kacheln ein...");
 
 		// ALLE relevanten Felder in sekundären Kacheln finden
 		const relevantSelectors = [
@@ -1060,13 +1060,13 @@ window.hangarUI = {
 
 		relevantSelectors.forEach((selector) => {
 			const elements = secondaryContainer.querySelectorAll(selector);
-			console.log(
-				`🔍 Gefunden ${elements.length} Elemente für Selector: ${selector}`
-			);
+			// console.log(
+			//	`🔍 Gefunden ${elements.length} Elemente für Selector: ${selector}`
+			// );
 
 			elements.forEach((element) => {
 				if (processedIds.has(element.id)) {
-					console.log(`⏭️ Element bereits verarbeitet: ${element.id}`);
+					// console.log(`⏭️ Element bereits verarbeitet: ${element.id}`);
 					return;
 				}
 
@@ -1074,9 +1074,9 @@ window.hangarUI = {
 
 				// Prüfung: Nur sekundäre Kacheln (ID >= 101) UND Element muss im sekundären Container sein
 				if (cellId >= 101 && secondaryContainer.contains(element)) {
-					console.log(
-						`🎯 Registriere Handler für sekundäres Element: ${element.id} (Kachel ${cellId})`
-					);
+					// console.log(
+					//	`🎯 Registriere Handler für sekundäres Element: ${element.id} (Kachel ${cellId})`
+					// );
 
 					// Event-Handler über zentralen Event-Manager registrieren
 					if (
@@ -1178,9 +1178,9 @@ window.hangarUI = {
 			});
 		});
 
-		console.log(
-			`✅ ${handlersRegistered} Event-Handler für sekundäre Kacheln registriert`
-		);
+		// console.log(
+		//	`✅ ${handlersRegistered} Event-Handler für sekundäre Kacheln registriert`
+		// );
 
 		return handlersRegistered > 0;
 	},
@@ -1237,14 +1237,14 @@ window.setupSecondaryTileEventListeners = function () {
 // VERBESSERTE INITIALISIERUNGS-KOORDINATION
 // Stellt sicher, dass Event-Handler nach der vollständigen DOM-/UI-Initialisierung registriert werden
 document.addEventListener("DOMContentLoaded", function () {
-	console.log("🚀 === HANGARPLANNER INITIALISIERUNG GESTARTET ===");
+	// console.log("🚀 === HANGARPLANNER INITIALISIERUNG GESTARTET ===");
 
 	// Phase 1: Basis-UI laden (0ms)
-	console.log("📋 Phase 1: Basis-UI wird geladen...");
+	// console.log("📋 Phase 1: Basis-UI wird geladen...");
 
 	// Phase 2: Event-Manager initialisieren (1000ms)
 	setTimeout(() => {
-		console.log("🔧 Phase 2: Event-Manager wird initialisiert...");
+		// console.log("🔧 Phase 2: Event-Manager wird initialisiert...");
 		if (window.hangarEventManager && !window.hangarEventManager.initialized) {
 			window.hangarEventManager.init();
 		}
@@ -1252,49 +1252,49 @@ document.addEventListener("DOMContentLoaded", function () {
 
 	// Phase 3: Sekundäre Event-Handler registrieren (2000ms)
 	setTimeout(() => {
-		console.log("🎯 Phase 3: Sekundäre Event-Handler werden registriert...");
+		// console.log("🎯 Phase 3: Sekundäre Event-Handler werden registriert...");
 
 		// Prüfe ob sekundäre Kacheln existieren
 		const secondaryContainer = document.getElementById("secondaryHangarGrid");
 		if (secondaryContainer && secondaryContainer.children.length > 0) {
-			console.log(
-				`🔍 ${secondaryContainer.children.length} sekundäre Kacheln gefunden`
-			);
+			// console.log(
+			//	`🔍 ${secondaryContainer.children.length} sekundäre Kacheln gefunden`
+			// );
 
 			if (window.setupSecondaryTileEventListeners) {
 				const result = window.setupSecondaryTileEventListeners();
-				console.log("✅ setupSecondaryTileEventListeners (global):", result);
+				// console.log("✅ setupSecondaryTileEventListeners (global):", result);
 			} else if (
 				window.hangarUI &&
 				window.hangarUI.setupSecondaryTileEventListeners
 			) {
 				const result = window.hangarUI.setupSecondaryTileEventListeners();
-				console.log("✅ setupSecondaryTileEventListeners (hangarUI):", result);
+				// console.log("✅ setupSecondaryTileEventListeners (hangarUI):", result);
 			} else {
 				console.warn("❌ setupSecondaryTileEventListeners nicht verfügbar");
 			}
 		} else {
-			console.log(
-				"ℹ️ Keine sekundären Kacheln gefunden, überspringe Handler-Registrierung"
-			);
+			// console.log(
+			//	"ℹ️ Keine sekundären Kacheln gefunden, überspringe Handler-Registrierung"
+			// );
 		}
 	}, 2000);
 
 	// Phase 4: Server-Sync einrichten (3000ms)
 	setTimeout(() => {
-		console.log("🌐 Phase 4: Server-Sync wird eingerichtet...");
+		// console.log("🌐 Phase 4: Server-Sync wird eingerichtet...");
 		if (window.storageBrowser) {
 			// Versuche Server-Daten zu laden
 			window.storageBrowser
 				.loadFromServer()
 				.then((serverData) => {
 					if (serverData) {
-						console.log("📥 Server-Daten verfügbar, wende an...");
+						// console.log("📥 Server-Daten verfügbar, wende an...");
 						window.storageBrowser.applyServerData(serverData);
 					} else {
-						console.log(
-							"ℹ️ Keine Server-Daten verfügbar, verwende lokale Daten"
-						);
+						// console.log(
+						//	"ℹ️ Keine Server-Daten verfügbar, verwende lokale Daten"
+						// );
 					}
 				})
 				.catch((error) => {
@@ -1305,12 +1305,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
 	// Phase 5: Validierung und Status-Check (5000ms)
 	setTimeout(() => {
-		console.log("🔍 Phase 5: System-Validierung...");
+		// console.log("🔍 Phase 5: System-Validierung...");
 
 		// Prüfe Event-Handler Status
 		if (window.hangarEventManager) {
 			const status = window.hangarEventManager.getStatus();
-			console.log("📊 Event-Manager Status:", status);
+			// console.log("📊 Event-Manager Status:", status);
 		}
 
 		// Prüfe Container-Zuordnungen
@@ -1321,18 +1321,18 @@ document.addEventListener("DOMContentLoaded", function () {
 			const primaryFields = primaryContainer.querySelectorAll(
 				"input, select, textarea"
 			);
-			console.log(
-				`✅ Primärer Container: ${primaryFields.length} Felder gefunden`
-			);
+			// console.log(
+			//	`✅ Primärer Container: ${primaryFields.length} Felder gefunden`
+			// );
 		}
 
 		if (secondaryContainer) {
 			const secondaryFields = secondaryContainer.querySelectorAll(
 				"input, select, textarea"
 			);
-			console.log(
-				`✅ Sekundärer Container: ${secondaryFields.length} Felder gefunden`
-			);
+			// console.log(
+			//	`✅ Sekundärer Container: ${secondaryFields.length} Felder gefunden`
+			// );
 
 			// Prüfe explizit sekundäre IDs
 			const secondaryIDs = [];
@@ -1346,12 +1346,12 @@ document.addEventListener("DOMContentLoaded", function () {
 					}
 				}
 			});
-			console.log(
-				`🎯 Sekundäre IDs gefunden: ${secondaryIDs.length}`,
-				secondaryIDs
-			);
+			// console.log(
+			//	`🎯 Sekundäre IDs gefunden: ${secondaryIDs.length}`,
+			//	secondaryIDs
+			// );
 		}
 
-		console.log("🎉 === HANGARPLANNER INITIALISIERUNG ABGESCHLOSSEN ===");
+		// console.log("🎉 === HANGARPLANNER INITIALISIERUNG ABGESCHLOSSEN ===");
 	}, 5000);
 });

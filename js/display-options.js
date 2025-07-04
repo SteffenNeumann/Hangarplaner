@@ -112,6 +112,9 @@ window.displayOptions = {
 	// Aktuelle Werte
 	current: {},
 
+	// Letzte gespeicherte Werte (für Change-Detection)
+	lastSavedSettings: null,
+
 	// Ladezustand verfolgen
 	isLoading: false,
 	isSaving: false,
@@ -191,6 +194,8 @@ window.displayOptions = {
 
 				if (data && data.settings && data.settings.displayOptions) {
 					this.current = { ...this.defaults, ...data.settings.displayOptions };
+					// Setze auch die letzten gespeicherten Werte um unnötige Saves zu vermeiden
+					this.lastSavedSettings = { ...this.current };
 					console.log("📥 Display Options vom Server geladen:", this.current);
 					return true;
 				}
@@ -211,6 +216,8 @@ window.displayOptions = {
 			// Display Options aus den Einstellungen extrahieren
 			if (data.settings && data.settings.displayOptions) {
 				this.current = { ...this.defaults, ...data.settings.displayOptions };
+				// Setze auch die letzten gespeicherten Werte um unnötige Saves zu vermeiden
+				this.lastSavedSettings = { ...this.current };
 				console.log("📥 Display Options vom Server geladen:", this.current);
 				return true;
 			} else {
@@ -259,6 +266,8 @@ window.displayOptions = {
 					console.log(
 						"💾 Display Options über globales Server-Sync gespeichert"
 					);
+					// Aktualisiere die letzten gespeicherten Werte
+					this.lastSavedSettings = { ...this.current };
 					return true;
 				} else {
 					console.warn(
@@ -316,6 +325,10 @@ window.displayOptions = {
 			if (result.success) {
 				// console.log("💾 Display Options erfolgreich gespeichert");
 				this.showNotification("Einstellungen gespeichert", "success");
+
+				// Aktualisiere die letzten gespeicherten Werte
+				this.lastSavedSettings = { ...this.current };
+
 				return true;
 			} else {
 				throw new Error(result.error || "Unbekannter Serverfehler");
@@ -356,6 +369,8 @@ window.displayOptions = {
 			if (saved) {
 				const parsed = JSON.parse(saved);
 				this.current = { ...this.defaults, ...parsed };
+				// Setze auch die letzten gespeicherten Werte um unnötige Saves zu vermeiden
+				this.lastSavedSettings = { ...this.current };
 				// console.log("📥 Display Options aus localStorage geladen");
 				return true;
 			}
@@ -674,6 +689,7 @@ window.displayOptions = {
 
 	/**
 	 * Debounced Save - sammelt mehrere Änderungen und speichert verzögert
+	 * Optimiert: Prüft auf Änderungen bevor gespeichert wird
 	 */
 	debouncedSave() {
 		// Lösche vorherigen Timeout
@@ -683,8 +699,65 @@ window.displayOptions = {
 
 		// Setze neuen Timeout für verzögerte Speicherung
 		this.saveTimeout = setTimeout(() => {
-			this.saveToServer();
+			// Prüfe vor dem Speichern ob sich wirklich etwas geändert hat
+			if (this.hasSettingsChanged()) {
+				console.log("🔄 Einstellungen haben sich geändert, speichere...");
+				this.saveToServer();
+			} else {
+				console.log("⏸️ Keine Änderungen erkannt, überspringe Speicherung");
+			}
 		}, 1000); // 1 Sekunde Verzögerung für bessere Performance
+	},
+
+	/**
+	 * Prüft ob sich Einstellungen tatsächlich geändert haben
+	 */
+	hasSettingsChanged() {
+		// Speichere die letzten gespeicherten Werte für Vergleich
+		if (!this.lastSavedSettings) {
+			this.lastSavedSettings = { ...this.current };
+			return true; // Erste Speicherung
+		}
+
+		// Vergleiche aktuelle UI-Werte mit letzten gespeicherten Werten
+		this.collectFromUI();
+
+		const currentSettings = { ...this.current };
+		const lastSettings = this.lastSavedSettings;
+
+		// Deep comparison der wichtigsten Einstellungen
+		const hasChanged =
+			currentSettings.tilesCount !== lastSettings.tilesCount ||
+			currentSettings.secondaryTilesCount !==
+				lastSettings.secondaryTilesCount ||
+			currentSettings.layout !== lastSettings.layout ||
+			currentSettings.darkMode !== lastSettings.darkMode ||
+			currentSettings.viewMode !== lastSettings.viewMode ||
+			currentSettings.zoomLevel !== lastSettings.zoomLevel;
+
+		if (hasChanged) {
+			console.log("📊 Einstellungsänderung erkannt:", {
+				vorher: lastSettings,
+				nachher: currentSettings,
+			});
+			this.lastSavedSettings = { ...currentSettings };
+		}
+
+		return hasChanged;
+	},
+
+	/**
+	 * Debug-Funktion: Zeigt aktuellen Status der Display Options
+	 */
+	debugStatus() {
+		console.log("🎛️ === DISPLAY OPTIONS DEBUG ===");
+		console.log("Aktuelle Werte:", this.current);
+		console.log("Letzte gespeicherte Werte:", this.lastSavedSettings);
+		console.log("Ist Loading:", this.isLoading);
+		console.log("Ist Saving:", this.isSaving);
+		console.log("Save Timeout aktiv:", !!this.saveTimeout);
+		console.log("Haben sich Werte geändert:", this.hasSettingsChanged());
+		console.log("=== END DEBUG ===");
 	},
 
 	/**
@@ -1064,6 +1137,25 @@ window.emergencyRepair = {
 			// console.log("✅ Alle kritischen Funktionen sind verfügbar");
 		}
 	},
+};
+
+// Global verfügbare Debug-Funktionen für Display Options
+window.debugDisplayOptions = function () {
+	if (window.displayOptions) {
+		window.displayOptions.debugStatus();
+	} else {
+		console.log("❌ Display Options nicht verfügbar");
+	}
+};
+
+// Hilfsfunktion um manuell Einstellungen zu testen
+window.testDisplayOptionsSave = function () {
+	if (window.displayOptions) {
+		console.log("🧪 Teste Display Options Speicherung...");
+		window.displayOptions.debouncedSave();
+	} else {
+		console.log("❌ Display Options nicht verfügbar");
+	}
 };
 
 // Beim Laden der Seite initialisieren - robuste Version mit Fallbacks

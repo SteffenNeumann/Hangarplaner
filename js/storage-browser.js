@@ -98,7 +98,24 @@ class ServerSync {
 				window.hangarData &&
 				typeof window.hangarData.collectAllHangarData === "function"
 			) {
-				return window.hangarData.collectAllHangarData();
+				const data = window.hangarData.collectAllHangarData();
+
+				// *** NEU: Display Options ergänzen ***
+				if (window.displayOptions) {
+					// Sammle aktuelle UI-Werte
+					window.displayOptions.collectFromUI();
+
+					// Füge Display Options zu den Einstellungen hinzu
+					if (!data.settings) data.settings = {};
+					data.settings.displayOptions = { ...window.displayOptions.current };
+
+					console.log(
+						"🎛️ Display Options zu Server-Daten hinzugefügt:",
+						data.settings.displayOptions
+					);
+				}
+
+				return data;
 			}
 
 			// Fallback: Sammle Basis-Daten
@@ -114,6 +131,13 @@ class ServerSync {
 					source: "server-sync-lite",
 				},
 			};
+
+			// *** NEU: Display Options auch im Fallback hinzufügen ***
+			if (window.displayOptions) {
+				window.displayOptions.collectFromUI();
+				data.settings.displayOptions = { ...window.displayOptions.current };
+				console.log("🎛️ Display Options zu Fallback-Daten hinzugefügt");
+			}
 
 			return data;
 		} catch (error) {
@@ -168,6 +192,25 @@ class ServerSync {
 			window.isApplyingServerData = true;
 
 			console.log("📥 Wende Server-Daten über Koordinator an:", serverData);
+
+			// *** NEU: Display Options aus Serverdaten anwenden ***
+			if (
+				serverData.settings &&
+				serverData.settings.displayOptions &&
+				window.displayOptions
+			) {
+				// Server-Display-Options in das aktuelle Display Options System laden
+				window.displayOptions.current = {
+					...window.displayOptions.defaults,
+					...serverData.settings.displayOptions,
+				};
+				window.displayOptions.updateUI();
+				window.displayOptions.applySettings();
+				console.log(
+					"🎛️ Display Options vom Server angewendet:",
+					serverData.settings.displayOptions
+				);
+			}
 
 			// NEUE LOGIK: Verwende zentralen Datenkoordinator
 			if (window.dataCoordinator) {

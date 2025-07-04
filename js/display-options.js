@@ -119,12 +119,7 @@ window.displayOptions = {
 		// console.log("🎛️ Display Options werden initialisiert...");
 
 		// Versuche Daten zu laden (Server -> localStorage -> Defaults)
-		let loaded = await this.loadFromServer();
-
-		if (!loaded) {
-			// console.log("⚠️ Server-Laden fehlgeschlagen, versuche localStorage...");
-			loaded = this.loadFromLocalStorage();
-		}
+		let loaded = await this.load();
 
 		if (!loaded) {
 			// Falls nichts geladen werden konnte, verwende Standardwerte
@@ -135,10 +130,31 @@ window.displayOptions = {
 		// UI aktualisieren
 		this.updateUI();
 
-		// Event-Listener setzen
-		this.setupEventListeners();
+		// Event-Handler setzen
+		this.setupEventHandlers();
 
 		// console.log("✅ Display Options initialisiert:", this.current);
+	},
+
+	/**
+	 * Lädt Display Options mit intelligenter Priorität (Server > localStorage > Defaults)
+	 */
+	async load() {
+		// Priorität 1: Server
+		let loaded = await this.loadFromServer();
+
+		if (!loaded) {
+			// Priorität 2: localStorage
+			loaded = this.loadFromLocalStorage();
+		}
+
+		if (loaded) {
+			// UI aktualisieren falls Daten geladen wurden
+			this.updateUI();
+			this.applySettings();
+		}
+
+		return loaded;
 	},
 
 	/**
@@ -182,6 +198,29 @@ window.displayOptions = {
 
 			// Zuerst lokale Kopie speichern (als Fallback)
 			this.saveToLocalStorage();
+
+			// *** NEU: Integriere mit dem globalen Server-Sync System ***
+			if (
+				window.serverSync &&
+				typeof window.serverSync.syncWithServer === "function"
+			) {
+				// Verwende das globale Server-Sync System
+				const success = await window.serverSync.syncWithServer();
+				if (success) {
+					console.log(
+						"💾 Display Options über globales Server-Sync gespeichert"
+					);
+					this.showNotification("Einstellungen gespeichert", "success");
+					return true;
+				} else {
+					throw new Error("Globales Server-Sync fehlgeschlagen");
+				}
+			}
+
+			// Fallback: Direkte Server-Speicherung (nur wenn globales System nicht verfügbar)
+			console.log(
+				"⚠️ Globales Server-Sync nicht verfügbar, verwende direktes Speichern"
+			);
 
 			// Zuerst aktuelle Daten vom Server holen
 			let serverData = {};
@@ -453,76 +492,126 @@ window.displayOptions = {
 	},
 
 	/**
-	 * Event-Listener für UI-Elemente einrichten
+	 * Event-Handler für alle Display Options Buttons und Controls einrichten
 	 */
-	setupEventListeners() {
-		// Primary Tiles Update Button
+	setupEventHandlers() {
+		// Update-Buttons für Tiles
 		const updateTilesBtn = document.getElementById("updateTilesBtn");
 		if (updateTilesBtn) {
-			updateTilesBtn.addEventListener("click", () => {
-				this.collectFromUI();
-				this.updateTiles();
-				this.saveToServer();
-			});
+			updateTilesBtn.removeEventListener("click", this.onUpdateTiles); // Entferne alte Handler
+			updateTilesBtn.addEventListener("click", this.onUpdateTiles.bind(this));
 		}
 
-		// Secondary Tiles Update Button
 		const updateSecondaryTilesBtn = document.getElementById(
 			"updateSecondaryTilesBtn"
 		);
 		if (updateSecondaryTilesBtn) {
-			updateSecondaryTilesBtn.addEventListener("click", () => {
-				this.collectFromUI();
-				this.updateSecondaryTiles();
-				this.saveToServer();
-			});
+			updateSecondaryTilesBtn.removeEventListener(
+				"click",
+				this.onUpdateSecondaryTiles
+			);
+			updateSecondaryTilesBtn.addEventListener(
+				"click",
+				this.onUpdateSecondaryTiles.bind(this)
+			);
 		}
 
-		// Layout Select
+		// Layout-Selector
 		const layoutSelect = document.getElementById("layoutType");
 		if (layoutSelect) {
-			layoutSelect.addEventListener("change", () => {
-				this.collectFromUI();
-				this.applySettings();
-				this.saveToServer();
-			});
+			layoutSelect.removeEventListener("change", this.onLayoutChange);
+			layoutSelect.addEventListener("change", this.onLayoutChange.bind(this));
 		}
 
 		// Dark Mode Toggle
 		const darkModeToggle = document.getElementById("darkModeToggle");
 		if (darkModeToggle) {
-			darkModeToggle.addEventListener("change", () => {
-				this.collectFromUI();
-				this.applySettings();
-				this.saveToServer();
-			});
+			darkModeToggle.removeEventListener("change", this.onDarkModeChange);
+			darkModeToggle.addEventListener(
+				"change",
+				this.onDarkModeChange.bind(this)
+			);
 		}
 
 		// View Mode Toggle
 		const viewModeToggle = document.getElementById("viewModeToggle");
 		if (viewModeToggle) {
-			viewModeToggle.addEventListener("change", () => {
-				this.collectFromUI();
-				this.applySettings();
-				this.saveToServer();
-			});
+			viewModeToggle.removeEventListener("change", this.onViewModeChange);
+			viewModeToggle.addEventListener(
+				"change",
+				this.onViewModeChange.bind(this)
+			);
 		}
 
 		// Zoom Slider
 		const zoomSlider = document.getElementById("displayZoom");
 		if (zoomSlider) {
-			zoomSlider.addEventListener("input", () => {
-				this.collectFromUI();
-				this.updateUI(); // Update zoom display
-				this.applySettings();
-			});
-
-			zoomSlider.addEventListener("change", () => {
-				this.saveToServer();
-			});
+			zoomSlider.removeEventListener("input", this.onZoomChange);
+			zoomSlider.addEventListener("input", this.onZoomChange.bind(this));
 		}
 
-		// console.log("🎛️ Display Options Event-Listener eingerichtet");
+		console.log("🎛️ Display Options Event-Handler eingerichtet");
+	},
+
+	/**
+	 * Event-Handler für Update Tiles Button
+	 */
+	onUpdateTiles() {
+		this.collectFromUI();
+		this.updateTiles();
+		this.saveToServer();
+	},
+
+	/**
+	 * Event-Handler für Update Secondary Tiles Button
+	 */
+	onUpdateSecondaryTiles() {
+		this.collectFromUI();
+		this.updateSecondaryTiles();
+		this.saveToServer();
+	},
+
+	/**
+	 * Event-Handler für Layout-Änderung
+	 */
+	onLayoutChange() {
+		this.collectFromUI();
+		this.applyLayout();
+		this.saveToServer();
+	},
+
+	/**
+	 * Event-Handler für Dark Mode Toggle
+	 */
+	onDarkModeChange() {
+		this.collectFromUI();
+		this.applyDarkMode(this.current.darkMode);
+		this.saveToServer();
+	},
+
+	/**
+	 * Event-Handler für View Mode Toggle
+	 */
+	onViewModeChange() {
+		this.collectFromUI();
+		this.applyViewMode(this.current.viewMode);
+		this.saveToServer();
+	},
+
+	/**
+	 * Event-Handler für Zoom-Änderung
+	 */
+	onZoomChange() {
+		this.collectFromUI();
+		this.applyZoom(this.current.zoomLevel);
+
+		// Zoom-Anzeige aktualisieren
+		const zoomValueDisplay = document.getElementById("zoomValue");
+		if (zoomValueDisplay) {
+			zoomValueDisplay.textContent = `${this.current.zoomLevel}%`;
+		}
+
+		this.saveToServer();
 	},
 
 	/**
@@ -732,7 +821,7 @@ window.displayOptions = {
 			.notes-textarea {
 				width: 100%;
 				padding: 8px;
-				border: 1px solid #d1d5db;
+				border: 1px solid #d5db;
 				border-radius: 4px;
 				resize: vertical;
 				min-height: 60px;
@@ -908,6 +997,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
 		// Notfall-Layout-Reparatur
 		window.displayOptions.emergencyLayoutRepair();
+
+		// *** WICHTIG: Event-Handler für Buttons nach UI-Update setzen ***
+		window.displayOptions.setupEventHandlers();
 	}, 1000);
 
 	// Weitere Reparatur nach längerer Verzögerung falls immer noch Probleme

@@ -50,44 +50,69 @@ function initializeUI() {
 	console.log("Initialisiere UI...");
 
 	try {
-		// UI-Einstellungen laden
-		const savedSettings = JSON.parse(
-			localStorage.getItem("hangarPlannerSettings") || "{}"
-		);
+		// *** MIGRATION: Verwende das neue display-options System ***
+		// Alte hangarPlannerSettings werden an das neue System weitergeleitet
+		let useDisplayOptions = false;
 
-		if (savedSettings) {
-			const {
-				tilesCount = 8,
-				secondaryTilesCount = 4,
-				layout = 4,
-			} = savedSettings;
+		// Prüfe ob display-options verfügbar ist
+		if (window.displayOptions) {
+			useDisplayOptions = true;
+			// Lade Einstellungen über das neue System
+			window.displayOptions.load().then(() => {
+				// Status-Selektoren initialisieren
+				initializeStatusSelectors();
+				// Menu-Toggle initialisieren
+				initializeMenuToggle();
 
-			console.log("Geladene Einstellungen:", {
-				tilesCount,
-				secondaryTilesCount,
-				layout,
+				// Position-Werte und Flugzeit-Werte anwenden
+				setTimeout(() => {
+					applyPositionValuesFromLocalStorage();
+					applyFlightTimeValuesFromLocalStorage();
+				}, 500);
 			});
+		}
 
-			// UI-Einstellungen anwenden falls verfügbar
-			if (window.hangarUI && window.hangarUI.uiSettings) {
-				window.hangarUI.uiSettings.tilesCount = parseInt(tilesCount);
-				window.hangarUI.uiSettings.secondaryTilesCount =
-					parseInt(secondaryTilesCount);
-				window.hangarUI.uiSettings.layout = parseInt(layout);
-				window.hangarUI.uiSettings.apply();
+		// Fallback: Altes System nur wenn display-options nicht verfügbar
+		if (!useDisplayOptions) {
+			// UI-Einstellungen laden (Legacy)
+			const savedSettings = JSON.parse(
+				localStorage.getItem("hangarPlannerSettings") || "{}"
+			);
+
+			if (savedSettings) {
+				const {
+					tilesCount = 8,
+					secondaryTilesCount = 4,
+					layout = 4,
+				} = savedSettings;
+
+				console.log("Geladene Einstellungen (Legacy):", {
+					tilesCount,
+					secondaryTilesCount,
+					layout,
+				});
+
+				// UI-Einstellungen anwenden falls verfügbar
+				if (window.hangarUI && window.hangarUI.uiSettings) {
+					window.hangarUI.uiSettings.tilesCount = parseInt(tilesCount);
+					window.hangarUI.uiSettings.secondaryTilesCount =
+						parseInt(secondaryTilesCount);
+					window.hangarUI.uiSettings.layout = parseInt(layout);
+					window.hangarUI.uiSettings.apply();
+				}
+
+				// Status-Selektoren initialisieren
+				initializeStatusSelectors();
+
+				// Menu-Toggle initialisieren
+				initializeMenuToggle();
+
+				// Position-Werte und Flugzeit-Werte anwenden
+				setTimeout(() => {
+					applyPositionValuesFromLocalStorage();
+					applyFlightTimeValuesFromLocalStorage();
+				}, 500);
 			}
-
-			// Status-Selektoren initialisieren
-			initializeStatusSelectors();
-
-			// Menu-Toggle initialisieren
-			initializeMenuToggle();
-
-			// Position-Werte und Flugzeit-Werte anwenden
-			setTimeout(() => {
-				applyPositionValuesFromLocalStorage();
-				applyFlightTimeValuesFromLocalStorage();
-			}, 500);
 		}
 
 		console.log("UI-Initialisierung abgeschlossen");

@@ -371,6 +371,7 @@ class SharingManager {
 	async loadSharedProject(projectId) {
 		try {
 			this.currentProjectId = projectId;
+			console.log("🔗 Lade geteiltes Projekt mit ID:", projectId);
 
 			// Aktiviere Live Sync automatisch
 			const liveSyncToggle = document.getElementById("liveSyncToggle");
@@ -379,17 +380,24 @@ class SharingManager {
 				this.isLiveSyncEnabled = true;
 			}
 
+			// WICHTIG: Informiere das Server-Sync System über die Project-ID
+			// bevor wir Daten laden, damit die korrekte URL verwendet wird
+
 			// Lade Daten vom Server
 			if (window.serverSync && window.serverSync.loadFromServer) {
 				this.showNotification("Lade geteiltes Projekt...", "info");
 
 				const serverData = await window.serverSync.loadFromServer();
-				if (serverData) {
+				if (serverData && !serverData.error) {
 					await window.serverSync.applyServerData(serverData);
 					this.showNotification(
 						"Geteiltes Projekt erfolgreich geladen!",
 						"success"
 					);
+
+					// Zeige Share URL an (für weitere Teilung)
+					const shareUrl = this.generateShareUrl();
+					this.updateShareUrlDisplay(shareUrl, true);
 
 					// Starte Live Sync
 					this.startLiveSync();
@@ -397,11 +405,21 @@ class SharingManager {
 					// URL bereinigen (optional)
 					this.cleanUrlAfterLoad();
 				} else {
+					// Keine Daten auf Server - das ist OK für neue geteilte Projekte
 					this.showNotification(
-						"Keine Daten für geteiltes Projekt gefunden",
-						"warning"
+						"Geteiltes Projekt bereit! Noch keine Daten vorhanden.",
+						"info"
 					);
+
+					// Zeige Share URL für neue Projekte
+					const shareUrl = this.generateShareUrl();
+					this.updateShareUrlDisplay(shareUrl, true);
+
+					// Starte Live Sync für zukünftige Updates
+					this.startLiveSync();
 				}
+			} else {
+				this.showNotification("Server-Sync nicht verfügbar", "warning");
 			}
 		} catch (error) {
 			console.error("❌ Fehler beim Laden des geteilten Projekts:", error);

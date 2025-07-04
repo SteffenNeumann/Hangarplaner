@@ -69,6 +69,23 @@ class ServerSync {
 	}
 
 	/**
+	 * Generiert die korrekte Server-URL mit Project-ID Parameter falls vorhanden
+	 */
+	getServerUrl() {
+		let url = this.serverSyncUrl;
+
+		// Prüfe auf aktive Project-ID vom Sharing Manager
+		const projectId = window.sharingManager?.currentProjectId;
+		if (projectId) {
+			const separator = url.includes("?") ? "&" : "?";
+			url = `${url}${separator}project=${encodeURIComponent(projectId)}`;
+			console.log(`🔗 Server-URL mit Project-ID: ${url}`);
+		}
+
+		return url;
+	}
+
+	/**
 	 * Synchronisiert Daten mit dem Server (optimiert)
 	 */
 	async syncWithServer() {
@@ -104,8 +121,11 @@ class ServerSync {
 			const controller = new AbortController();
 			const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s Timeout
 
+			// Verwende korrekte Server-URL mit Project-ID falls vorhanden
+			const serverUrl = this.getServerUrl();
+
 			// Daten an Server senden
-			const response = await fetch(this.serverSyncUrl, {
+			const response = await fetch(serverUrl, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -117,7 +137,12 @@ class ServerSync {
 			clearTimeout(timeoutId);
 
 			if (response.ok) {
-				// console.log("✅ Server-Sync erfolgreich");
+				console.log(
+					"✅ Server-Sync erfolgreich" +
+						(window.sharingManager?.currentProjectId
+							? ` (Project: ${window.sharingManager.currentProjectId})`
+							: "")
+				);
 				return true;
 			} else {
 				console.warn("⚠️ Server-Sync fehlgeschlagen:", response.status);
@@ -203,7 +228,12 @@ class ServerSync {
 		}
 
 		try {
-			const response = await fetch(this.serverSyncUrl + "?action=load", {
+			// Verwende korrekte Server-URL mit Project-ID falls vorhanden
+			const serverUrl = this.getServerUrl();
+			const loadUrl =
+				serverUrl + (serverUrl.includes("?") ? "&" : "?") + "action=load";
+
+			const response = await fetch(loadUrl, {
 				method: "GET",
 				headers: {
 					Accept: "application/json",
@@ -212,7 +242,12 @@ class ServerSync {
 
 			if (response.ok) {
 				const data = await response.json();
-				console.log("✅ Daten vom Server geladen");
+				console.log(
+					"✅ Daten vom Server geladen" +
+						(window.sharingManager?.currentProjectId
+							? ` (Project: ${window.sharingManager.currentProjectId})`
+							: "")
+				);
 				return data;
 			} else {
 				console.warn("⚠️ Server-Load fehlgeschlagen:", response.status);
@@ -611,6 +646,11 @@ class ServerSync {
 	debugSyncStatus() {
 		console.log("🔍 === SYNC STATUS DEBUG ===");
 		console.log("Server URL:", this.serverSyncUrl);
+		console.log(
+			"Project ID:",
+			window.sharingManager?.currentProjectId || "Keine"
+		);
+		console.log("Effektive Server URL:", this.getServerUrl());
 		console.log("isApplyingServerData:", this.isApplyingServerData);
 		console.log("window.isApplyingServerData:", window.isApplyingServerData);
 		console.log("window.isLoadingServerData:", window.isLoadingServerData);
@@ -618,6 +658,10 @@ class ServerSync {
 		console.log("Display Options isLoading:", window.displayOptions?.isLoading);
 		console.log("Display Options isSaving:", window.displayOptions?.isSaving);
 		console.log("Periodische Sync aktiv:", !!this.serverSyncInterval);
+		console.log(
+			"Live Sync aktiv:",
+			window.sharingManager?.isLiveSyncEnabled || false
+		);
 		console.log("=== END SYNC STATUS ===");
 	}
 }

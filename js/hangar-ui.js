@@ -8,12 +8,18 @@ const uiSettings = {
 	zoomLevel: 100,
 	tableView: false, // Neue Einstellung für die Tabellenansicht
 
-	// DEPRECATED: Lädt Einstellungen aus dem LocalStorage - wird durch display-options.js ersetzt
+	// MIGRATED: Lädt Einstellungen über das neue display-options System
 	load: async function () {
-		console.warn(
-			"⚠️ uiSettings.load() ist veraltet. Verwende window.displayOptions stattdessen."
-		);
-		return false;
+		// Migration zum neuen System
+		if (window.displayOptions) {
+			console.log("✅ Verwende neues Display Options System");
+			return await window.displayOptions.load();
+		} else {
+			console.warn(
+				"⚠️ Display Options System nicht verfügbar, verwende Fallback"
+			);
+			return false;
+		}
 
 		/* DEPRECATED - localStorage wird nicht mehr verwendet
 		try {

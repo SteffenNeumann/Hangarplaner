@@ -36,13 +36,25 @@ hangarData.collectAllHangarData = function () {
 		const projectId =
 			document.getElementById("projectId").value || Date.now().toString();
 
-		// Einstellungen sammeln
+		// Basis-Einstellungen sammeln (Legacy-Format für Kompatibilität)
 		const settings = {
-			tilesCount: parseInt(document.getElementById("tilesCount").value) || 8,
+			tilesCount: parseInt(document.getElementById("tilesCount")?.value) || 8,
 			secondaryTilesCount:
-				parseInt(document.getElementById("secondaryTilesCount").value) || 0,
-			layout: parseInt(document.getElementById("layoutType").value) || 4,
+				parseInt(document.getElementById("secondaryTilesCount")?.value) || 0,
+			layout: parseInt(document.getElementById("layoutType")?.value) || 4,
 		};
+
+		// *** NEU: Display Options hinzufügen ***
+		if (window.displayOptions) {
+			// Aktuelle UI-Werte sammeln
+			window.displayOptions.collectFromUI();
+			// Display Options zu den Einstellungen hinzufügen
+			settings.displayOptions = { ...window.displayOptions.current };
+			console.log(
+				"🎛️ Display Options zu collectAllHangarData hinzugefügt:",
+				settings.displayOptions
+			);
+		}
 
 		// Kacheldaten sammeln
 		const primaryTiles = collectContainerTileData("#hangarGrid");
@@ -276,30 +288,51 @@ function applyLoadedHangarPlan(data) {
 
 	// Einstellungen übernehmen und anwenden
 	if (data.settings) {
-		if (window.hangarUI.checkElement("tilesCount")) {
-			document.getElementById("tilesCount").value =
-				data.settings.tilesCount || 8;
-		}
-		if (window.hangarUI.checkElement("secondaryTilesCount")) {
-			document.getElementById("secondaryTilesCount").value =
-				data.settings.secondaryTilesCount || 0;
-		}
-		if (window.hangarUI.checkElement("layoutType")) {
-			document.getElementById("layoutType").value = data.settings.layout || 4;
-		}
+		// *** NEU: Display Options anwenden ***
+		if (data.settings.displayOptions && window.displayOptions) {
+			window.displayOptions.current = {
+				...window.displayOptions.defaults,
+				...data.settings.displayOptions,
+			};
+			window.displayOptions.updateUI();
+			window.displayOptions.applySettings();
+			console.log(
+				"🎛️ Display Options von geladenen Daten angewendet:",
+				data.settings.displayOptions
+			);
+		} else {
+			// Legacy-System für alte Daten ohne displayOptions
+			if (window.hangarUI && window.hangarUI.checkElement("tilesCount")) {
+				document.getElementById("tilesCount").value =
+					data.settings.tilesCount || 8;
+			}
+			if (
+				window.hangarUI &&
+				window.hangarUI.checkElement("secondaryTilesCount")
+			) {
+				document.getElementById("secondaryTilesCount").value =
+					data.settings.secondaryTilesCount || 0;
+			}
+			if (window.hangarUI && window.hangarUI.checkElement("layoutType")) {
+				document.getElementById("layoutType").value = data.settings.layout || 4;
+			}
 
-		// Einstellungen anwenden
-		window.hangarUI.uiSettings.tilesCount = data.settings.tilesCount || 8;
-		window.hangarUI.uiSettings.secondaryTilesCount =
-			data.settings.secondaryTilesCount || 0;
-		window.hangarUI.uiSettings.layout = data.settings.layout || 4;
-		window.hangarUI.uiSettings.apply();
+			// Legacy-Einstellungen anwenden
+			if (window.hangarUI && window.hangarUI.uiSettings) {
+				window.hangarUI.uiSettings.tilesCount = data.settings.tilesCount || 8;
+				window.hangarUI.uiSettings.secondaryTilesCount =
+					data.settings.secondaryTilesCount || 0;
+				window.hangarUI.uiSettings.layout = data.settings.layout || 4;
+				window.hangarUI.uiSettings.apply();
+			}
+		}
 	}
 
 	// Kachelndaten anwenden
 	applyLoadedTileData(data);
 
-	window.showNotification("Hangarplan erfolgreich geladen", "success");
+	window.showNotification &&
+		window.showNotification("Hangarplan erfolgreich geladen", "success");
 	console.log("✅ Hangarplan angewendet (Fallback-Methode)");
 	return data;
 }
@@ -1165,8 +1198,9 @@ window.hangarData.loadProjectFromFile = loadProjectFromFile;
 window.hangarData.applyLoadedHangarPlan = applyLoadedHangarPlan;
 window.hangarData.applySingleTileData = applySingleTileData;
 window.hangarData.applyLoadedTileData = applyLoadedTileData;
-window.hangarData.collectAllHangarData = collectAllHangarData; // Korrekt an hangarData angehängt
-window.collectAllHangarData = collectAllHangarData; // Auch direkt global für Kompatibilität
+// KORREKTUR: Verwende die korrekt definierte Funktion
+window.hangarData.collectAllHangarData = hangarData.collectAllHangarData;
+window.collectAllHangarData = hangarData.collectAllHangarData; // Auch direkt global für Kompatibilität
 window.hangarData.saveCurrentStateToLocalStorage = function () {
 	// DEAKTIVIERT: localStorage-Speicherung zur Konfliktvermeidung
 	console.log("💾 localStorage-Speicherung deaktiviert (Konfliktvermeidung)");

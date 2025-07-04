@@ -46,7 +46,7 @@ function initializeStatusSelectors() {
 /**
  * Verbesserte Initialisierungsfunktion für die UI
  */
-function initializeUI() {
+async function initializeUI() {
 	console.log("Initialisiere UI...");
 
 	try {
@@ -58,22 +58,35 @@ function initializeUI() {
 		if (window.displayOptions) {
 			useDisplayOptions = true;
 			// Lade Einstellungen über das neue System
-			window.displayOptions.load().then(() => {
-				// Status-Selektoren initialisieren
-				initializeStatusSelectors();
-				// Menu-Toggle initialisieren
-				initializeMenuToggle();
+			const loaded = await window.displayOptions.load();
 
-				// Position-Werte und Flugzeit-Werte anwenden
-				setTimeout(() => {
-					applyPositionValuesFromLocalStorage();
-					applyFlightTimeValuesFromLocalStorage();
-				}, 500);
-			});
+			if (loaded) {
+				console.log(
+					"✅ Einstellungen über Display Options System geladen:",
+					window.displayOptions.current
+				);
+			} else {
+				console.log("📋 Display Options System: Standardwerte verwendet");
+			}
+
+			// Status-Selektoren initialisieren
+			initializeStatusSelectors();
+			// Menu-Toggle initialisieren
+			initializeMenuToggle();
+
+			// Position-Werte und Flugzeit-Werte anwenden
+			setTimeout(() => {
+				applyPositionValuesFromLocalStorage();
+				applyFlightTimeValuesFromLocalStorage();
+			}, 500);
 		}
 
 		// Fallback: Altes System nur wenn display-options nicht verfügbar
 		if (!useDisplayOptions) {
+			console.warn(
+				"⚠️ Display Options nicht verfügbar, verwende Legacy-System"
+			);
+
 			// UI-Einstellungen laden (Legacy)
 			const savedSettings = JSON.parse(
 				localStorage.getItem("hangarPlannerSettings") || "{}"

@@ -121,37 +121,19 @@
 						</div>
 					</div>
 
-					<!-- Info-Widget mit optimierter Struktur -->
+					<!-- Info-Widget mit Zeit-Anzeigen -->
 					<div id="info-widget">
-						<!-- Icon schwebt über dem Inhalt -->
-						<div id="info-icon">
-							<svg
-								class="w-5 h-5"
-								xmlns="http://www.w3.org/2000/svg"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke="currentColor">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-							</svg>
+						<!-- Erste Zeile: Zeiten in einer Zeile -->
+						<div class="time-display-row">
+							<span class="time-label">Local:</span>
+							<span id="local-time" class="time-value">19:17</span>
+							<span class="time-label">UTC:</span>
+							<span id="utc-time" class="time-value">17:17</span>
 						</div>
-
-						<!-- Primärer Inhaltsbereich -->
-						<div class="info-primary">
-							<span id="primary-status">Hangar Planner Status</span>
-						</div>
-
-						<!-- Sekundärer Inhaltsbereich -->
-						<div class="info-secondary">
-							<span
-								id="header-status"
-								title="Bereit"
-								data-tooltip="Status-Informationen werden hier angezeigt"
-								>Bereit</span
-							>
+						<!-- Zweite Zeile: Mode Display -->
+						<div class="mode-display">
+							<span class="mode-label">Mode:</span>
+							<span id="sync-mode" class="sync-mode-value">Standalone</span>
 						</div>
 					</div>
 
@@ -2155,6 +2137,76 @@
 
 					// Starte sequentielle Ausführung
 					executeNextInit();
+				});
+			</script>
+
+			<!-- Zeit-Update Script für Info Widget -->
+			<script>
+				// Zeit-Update Funktionen für Info Widget
+				function updateTimeDisplay() {
+					const now = new Date();
+
+					// Lokale Zeit formatieren (ohne Sekunden)
+					const localTime = now.toLocaleTimeString("de-DE", {
+						hour: "2-digit",
+						minute: "2-digit",
+					});
+
+					// UTC Zeit formatieren (ohne Sekunden)
+					const utcTime = now.toUTCString().split(" ")[4].substring(0, 5); // Extrahiere HH:MM
+
+					// DOM Elemente aktualisieren
+					const localTimeElement = document.getElementById("local-time");
+					const utcTimeElement = document.getElementById("utc-time");
+
+					if (localTimeElement) {
+						localTimeElement.textContent = localTime;
+					}
+
+					if (utcTimeElement) {
+						utcTimeElement.textContent = utcTime;
+					}
+				}
+
+				// Master/Slave Status Update Funktion
+				function updateSyncModeDisplay() {
+					const syncModeElement = document.getElementById("sync-mode");
+					const liveSyncToggle = document.getElementById("liveSyncToggle");
+
+					if (syncModeElement && liveSyncToggle) {
+						const isEnabled = liveSyncToggle.checked;
+						const mode = isEnabled ? "Master" : "Standalone";
+
+						syncModeElement.textContent = mode;
+						syncModeElement.classList.remove("master", "slave", "standalone");
+
+						if (isEnabled) {
+							syncModeElement.classList.add("master");
+						} else {
+							syncModeElement.classList.add("standalone");
+						}
+					}
+				}
+
+				// Zeit-Update zur zentralen Initialisierung hinzufügen
+				window.hangarInitQueue = window.hangarInitQueue || [];
+				window.hangarInitQueue.push(function () {
+					// Sofort einmal ausführen
+					updateTimeDisplay();
+					updateSyncModeDisplay();
+
+					// Dann jede Minute aktualisieren (weniger häufig für Zeit ohne Sekunden)
+					setInterval(updateTimeDisplay, 60000);
+
+					// Event-Listener für Sync-Toggle
+					const liveSyncToggle = document.getElementById("liveSyncToggle");
+					if (liveSyncToggle) {
+						liveSyncToggle.addEventListener("change", updateSyncModeDisplay);
+					}
+
+					console.log(
+						"⏰ Zeit-Anzeige und Sync-Status im Info Widget initialisiert"
+					);
 				});
 			</script>
 		</div>

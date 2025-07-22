@@ -1,9 +1,9 @@
-/* Info-Widget spezifisches Styling */
+/* Info-Widget spezifisches Styling - einheitlich mit Weather-Widget */
 #info-widget {
 	display: flex;
 	flex-direction: column;
-	width: 200px;
-	min-width: 200px;
+	width: auto;
+	min-width: 220px;
 	background: rgba(255, 255, 255, 0.97);
 	padding: 8px 14px;
 	border-radius: 10px;
@@ -13,18 +13,34 @@
 	margin-left: 12px;
 	transition: all 0.3s ease;
 	height: auto;
-	position: relative; /* Für absolute Positionierung des Icons */
+	box-shadow: 0 2px 8px rgba(93, 107, 137, 0.1);
 }
 
-/* Primärer Container wird nun für Inhaltsdarstellung verwendet */
-#info-widget .info-primary {
-	display: flex;
-	align-items: flex-start;
-	font-size: 0.875rem;
-	color: #64748b;
-	padding-right: 30px; /* Platz für das Icon */
-	min-height: 24px;
-	width: 100%;
+/* Responsive Anpassungen - einheitlich mit Weather-Widget */
+@media (max-width: 640px) {
+	#info-widget {
+		width: 160px;
+		min-width: 160px;
+		padding: 8px 12px;
+	}
+
+	.time-group {
+		margin: 0 2px;
+	}
+
+	.time-label,
+	.mode-label {
+		font-size: 0.65rem;
+	}
+
+	.time-value {
+		font-size: 0.8rem;
+	}
+
+	.sync-mode-value {
+		font-size: 0.7rem;
+		padding: 1px 6px;
+	}
 }
 
 /* Info-Icon Container wird absolut positioniert */
@@ -116,6 +132,79 @@
 }
 #header-status.warning {
 	color: #f59e0b;
+}
+
+/* Zeit-Anzeige Container - exakt wie Weather Widget Primary */
+.time-display-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 4px;
+	border-bottom: 1px solid rgba(93, 107, 137, 0.15);
+	padding-bottom: 4px;
+}
+
+.time-display-row .time-label,
+.time-display-row .time-value {
+	display: inline-block;
+	white-space: nowrap;
+}
+
+/* Mode Display - exakt wie Weather Widget Secondary */
+.mode-display {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	font-size: 0.875rem;
+	color: #64748b;
+	margin-top: 4px;
+	flex-wrap: nowrap;
+	height: 1.2em;
+	line-height: 1.2;
+	width: 100%;
+}
+
+.time-label,
+.mode-label {
+	color: #64748b;
+	font-size: 0.875rem;
+	font-weight: normal;
+	display: inline-block;
+	white-space: nowrap;
+}
+
+.time-value {
+	color: #1e293b;
+	font-weight: 600;
+	font-family: "SF Mono", "Monaco", "Inconsolata", "Roboto Mono", monospace;
+	letter-spacing: 0.5px;
+	font-size: 0.875rem;
+	display: inline-block;
+	white-space: nowrap;
+	margin-right: 12px;
+}
+
+.sync-mode-value {
+	color: #64748b;
+	font-weight: normal;
+	font-size: 0.875rem;
+	display: inline-block;
+	white-space: nowrap;
+}
+
+.sync-mode-value.master {
+	background: #dcfce7;
+	color: #166534;
+}
+
+.sync-mode-value.slave {
+	background: #fef3c7;
+	color: #92400e;
+}
+
+.sync-mode-value.standalone {
+	background: #f1f5f9;
+	color: #475569;
 }
 
 /* Lade-Animation */

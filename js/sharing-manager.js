@@ -204,16 +204,32 @@ class SharingManager {
 		// Update Sync Status Button
 		const syncStatusBtn = document.getElementById("syncStatusBtn");
 		if (syncStatusBtn) {
+			// CSS-Klassen zurücksetzen
+			syncStatusBtn.classList.remove(
+				"status-success",
+				"status-warning",
+				"status-error"
+			);
+
 			if (isActive) {
-				syncStatusBtn.textContent = `📊 ${status}`;
-				syncStatusBtn.classList.add("status-success");
+				// Bestimme Emoji und CSS-Klasse basierend auf Status
+				let emoji = "📊";
+				let cssClass = "status-success";
+
+				if (status === "Master") {
+					emoji = "👑"; // Krone für Master
+					cssClass = "status-success";
+				} else if (status === "Slave") {
+					emoji = "📊"; // Diagramm für Slave
+					cssClass = "status-success";
+				}
+
+				syncStatusBtn.textContent = `${emoji} ${status}`;
+				syncStatusBtn.classList.add(cssClass);
+				syncStatusBtn.title = `Sync aktiv im ${status}-Modus`;
 			} else {
 				syncStatusBtn.textContent = "📊 Status";
-				syncStatusBtn.classList.remove(
-					"status-success",
-					"status-warning",
-					"status-error"
-				);
+				syncStatusBtn.title = "Sync inaktiv - Klicken für Details";
 			}
 		}
 
@@ -498,22 +514,33 @@ class SharingManager {
 			"status-error"
 		);
 
-		// Füge neue Status-Klasse hinzu
+		// Bewahre aktuellen Master/Slave-Status, ändere nur Indikator
+		let currentText = syncStatusBtn.textContent;
+		let baseText = "📊 Status";
+		
+		// Extrahiere den aktuellen Modus (Master/Slave) falls vorhanden
+		if (currentText.includes("Master")) {
+			baseText = "👑 Master";
+		} else if (currentText.includes("Slave")) {
+			baseText = "📊 Slave";
+		}
+
+		// Füge neue Status-Klasse und Indikator hinzu
 		switch (status) {
 			case "success":
 				syncStatusBtn.classList.add("status-success");
-				syncStatusBtn.textContent = "📊 ✅";
+				syncStatusBtn.textContent = baseText; // Keine zusätzlichen Emojis
 				break;
 			case "warning":
 				syncStatusBtn.classList.add("status-warning");
-				syncStatusBtn.textContent = "📊 ⚠️";
+				syncStatusBtn.textContent = `${baseText} ⚠️`;
 				break;
 			case "error":
 				syncStatusBtn.classList.add("status-error");
-				syncStatusBtn.textContent = "📊 ❌";
+				syncStatusBtn.textContent = `${baseText} ❌`;
 				break;
 			default:
-				syncStatusBtn.textContent = "📊 Status";
+				syncStatusBtn.textContent = baseText;
 		}
 	}
 
@@ -532,6 +559,9 @@ class SharingManager {
 					liveSyncToggle.checked = true;
 					this.handleMasterSlaveToggle(true);
 				}
+			} else {
+				// Falls Sync deaktiviert ist, zeige Standard-Status
+				this.updateSyncStatusDisplay("Status", false);
 			}
 
 			this.isMasterMode = settings.isMasterMode || false;
@@ -540,6 +570,8 @@ class SharingManager {
 				"❌ Fehler beim Laden der Master-Slave-Einstellungen:",
 				error
 			);
+			// Bei Fehler Standard-Status anzeigen
+			this.updateSyncStatusDisplay("Status", false);
 		}
 	}
 

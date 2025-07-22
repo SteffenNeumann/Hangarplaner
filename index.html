@@ -1349,15 +1349,27 @@
 								</button>
 							</div>
 
-							<!-- Sharing & Synchronization Section -->
-							<div class="sidebar-form-group">
-								<div class="section-label-header">
-									<label class="section-label">🔗 Data Sharing</label>
-								</div>
+						</div>
+					</div>
 
-								<!-- Enable Live Sync Toggle -->
+					<!-- Master-Slave Synchronization Section -->
+					<div class="sidebar-accordion-item">
+						<div
+							class="sidebar-accordion-header"
+							onclick="toggleAccordion(this)">
+							<div class="sidebar-header-content">
+								<i class="sidebar-icon">🔗</i>
+								<h3 class="sidebar-section-title">Master-Slave Sync</h3>
+							</div>
+							<i class="dropdown-arrow">▼</i>
+						</div>
+						<div class="sidebar-accordion-content">
+							<!-- Enable Master-Slave Sync Toggle -->
+							<div class="sidebar-form-group">
 								<div class="sidebar-form-row">
-									<label for="liveSyncToggle">Live Synchronization:</label>
+									<label for="liveSyncToggle"
+										>Master-Slave Synchronization:</label
+									>
 									<div class="input-container">
 										<label class="toggle-switch">
 											<input type="checkbox" id="liveSyncToggle" />
@@ -1366,42 +1378,24 @@
 									</div>
 								</div>
 
-								<!-- Share URL Display -->
-								<div
-									id="shareUrlContainer"
-									class="sidebar-form-group"
-									style="display: none">
-									<label for="shareUrl">Share URL:</label>
-									<div class="sidebar-input-group">
-										<input
-											type="text"
-											id="shareUrl"
-											readonly
-											placeholder="Enable Live Sync to generate URL"
-											class="sidebar-form-control"
-											style="font-size: 12px" />
-										<button
-											id="copyShareUrlBtn"
-											class="sidebar-btn sidebar-btn-secondary"
-											title="Copy to clipboard">
-											📋
-										</button>
-									</div>
+								<!-- Status Display -->
+								<div class="sidebar-form-group">
 									<div class="text-xs text-gray-400 mt-1">
-										Send this URL to share your data in real-time
+										Master: Kann Daten bearbeiten und speichern<br />
+										Slave: Empfängt Updates automatisch
 									</div>
 								</div>
 
-								<!-- Manual Sync Button -->
+								<!-- Manual Sync Buttons - Kleinere Größe für Konsistenz -->
 								<div class="sidebar-input-group">
 									<button
 										id="manualSyncBtn"
-										class="sidebar-btn sidebar-btn-secondary flex-1">
+										class="sidebar-btn sidebar-btn-secondary text-sm px-2 py-1">
 										🔄 Manual Sync
 									</button>
 									<button
 										id="syncStatusBtn"
-										class="sidebar-btn sidebar-btn-info flex-1"
+										class="sidebar-btn sidebar-btn-info text-sm px-2 py-1"
 										title="Show sync status">
 										📊 Status
 									</button>

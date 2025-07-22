@@ -7,7 +7,9 @@
 class SharingManager {
 	constructor() {
 		this.isLiveSyncEnabled = false;
-		this.isMasterMode = false;
+		this.shareUrlBase = "https://hangarplanner.de";
+		this.currentProjectId = null;
+		this.shareCheckInterval = null;
 		this.initialized = false;
 
 		// Singleton Pattern
@@ -18,7 +20,7 @@ class SharingManager {
 	}
 
 	/**
-	 * Initialisiert den vereinfachten Master-Slave Manager
+	 * Initialisiert den Sharing Manager
 	 */
 	init() {
 		if (this.initialized) {
@@ -27,21 +29,30 @@ class SharingManager {
 		}
 
 		this.setupEventHandlers();
+		this.checkUrlForSharedProject();
 		this.loadSavedSharingSettings();
 		this.initialized = true;
 
-		console.log("🔗 Master-Slave Manager initialisiert");
+		console.log("🔗 Sharing Manager initialisiert");
 	}
 
 	/**
-	 * Setzt Event-Handler für Master-Slave-UI-Elemente
+	 * Setzt Event-Handler für Sharing-UI-Elemente
 	 */
 	setupEventHandlers() {
-		// Live Sync Toggle -> Master-Slave Toggle
+		// Live Sync Toggle
 		const liveSyncToggle = document.getElementById("liveSyncToggle");
 		if (liveSyncToggle) {
 			liveSyncToggle.addEventListener("change", (e) => {
-				this.handleMasterSlaveToggle(e.target.checked);
+				this.handleLiveSyncToggle(e.target.checked);
+			});
+		}
+
+		// Copy Share URL Button
+		const copyShareUrlBtn = document.getElementById("copyShareUrlBtn");
+		if (copyShareUrlBtn) {
+			copyShareUrlBtn.addEventListener("click", () => {
+				this.copyShareUrlToClipboard();
 			});
 		}
 
@@ -61,19 +72,19 @@ class SharingManager {
 			});
 		}
 
-		console.log("🎯 Master-Slave Event-Handler registriert");
+		console.log("🎯 Sharing Event-Handler registriert");
 	}
 
 	/**
-	 * NEUE METHODE: Behandelt Master-Slave Toggle
+	 * Behandelt Live Sync Toggle
 	 */
-	async handleMasterSlaveToggle(enabled) {
+	async handleLiveSyncToggle(enabled) {
 		this.isLiveSyncEnabled = enabled;
 
 		if (enabled) {
-			await this.enableMasterSlaveSync();
+			await this.enableLiveSync();
 		} else {
-			this.disableMasterSlaveSync();
+			this.disableLiveSync();
 		}
 
 		// Einstellungen speichern
@@ -81,40 +92,35 @@ class SharingManager {
 	}
 
 	/**
-	 * NEUE METHODE: Aktiviert Master-Slave Synchronisation
+	 * Aktiviert Live Synchronisation
 	 */
-	async enableMasterSlaveSync() {
+	async enableLiveSync() {
 		try {
-			// Lasse ServerSync die Master-Slave Rolle bestimmen
-			if (window.serverSync) {
-				await window.serverSync.determineMasterSlaveRole();
-
-				if (window.serverSync.isMaster) {
-					this.isMasterMode = true;
-					this.showNotification(
-						"Master-Modus aktiviert - Sie können Daten bearbeiten",
-						"success"
-					);
-					this.updateSyncStatusDisplay("Master", true);
-				} else {
-					this.isMasterMode = false;
-					this.showNotification(
-						"Slave-Modus aktiviert - Empfange Updates automatisch",
-						"info"
-					);
-					this.updateSyncStatusDisplay("Slave", true);
-				}
-
-				console.log("✅ Master-Slave Sync aktiviert");
-			} else {
-				throw new Error("ServerSync nicht verfügbar");
+			// Generiere oder verwende bestehende Projekt-ID
+			if (!this.currentProjectId) {
+				this.currentProjectId = this.generateProjectId();
 			}
-		} catch (error) {
-			console.error("❌ Fehler beim Aktivieren von Master-Slave Sync:", error);
+
+			// Erstelle Share URL
+			const shareUrl = this.generateShareUrl();
+			this.updateShareUrlDisplay(shareUrl, true);
+
+			// Starte erweiterte Synchronisation für Live Sharing
+			this.startLiveSync();
+
+			// Zeige Erfolgsmeldung
 			this.showNotification(
-				"Fehler beim Aktivieren der Synchronisation",
-				"error"
+				"Live Sync aktiviert! Share URL generiert.",
+				"success"
 			);
+
+			console.log(
+				"✅ Live Sync aktiviert mit Projekt-ID:",
+				this.currentProjectId
+			);
+		} catch (error) {
+			console.error("❌ Fehler beim Aktivieren von Live Sync:", error);
+			this.showNotification("Fehler beim Aktivieren von Live Sync", "error");
 
 			// Toggle zurücksetzen bei Fehler
 			const liveSyncToggle = document.getElementById("liveSyncToggle");
@@ -125,26 +131,20 @@ class SharingManager {
 	}
 
 	/**
-	 * NEUE METHODE: Deaktiviert Master-Slave Synchronisation
+	 * Deaktiviert Live Synchronisation
 	 */
-	disableMasterSlaveSync() {
-		// Stoppe ServerSync
-		if (window.serverSync) {
-			window.serverSync.stopPeriodicSync();
-
-			if (window.serverSync.slaveCheckInterval) {
-				clearInterval(window.serverSync.slaveCheckInterval);
-				window.serverSync.slaveCheckInterval = null;
-			}
-
-			window.serverSync.isMaster = false;
-			window.serverSync.isSlaveActive = false;
+	disableLiveSync() {
+		// Stoppe Live Sync Intervall
+		if (this.shareCheckInterval) {
+			clearInterval(this.shareCheckInterval);
+			this.shareCheckInterval = null;
 		}
 
-		this.isMasterMode = false;
-		this.updateSyncStatusDisplay("Deaktiviert", false);
-		this.showNotification("Master-Slave Sync deaktiviert", "info");
-		console.log("⏹️ Master-Slave Sync deaktiviert");
+		// Verstecke Share URL Container
+		this.updateShareUrlDisplay("", false);
+
+		this.showNotification("Live Sync deaktiviert", "info");
+		console.log("⏹️ Live Sync deaktiviert");
 	}
 
 	/**
@@ -165,10 +165,10 @@ class SharingManager {
 	}
 
 	/**
-	 * AKTUALISIERT: Führt Master-Slave Synchronisation durch
+	 * Führt Live Synchronisation durch
 	 */
 	async performLiveSync() {
-		if (!this.isLiveSyncEnabled) {
+		if (!this.isLiveSyncEnabled || !this.currentProjectId) {
 			return;
 		}
 
@@ -190,39 +190,6 @@ class SharingManager {
 			this.updateSyncStatusIndicator("error");
 		}
 	}
-
-	/**
-	 * NEUE METHODE: Aktualisiert Sync-Status-Anzeige
-	 */
-	updateSyncStatusDisplay(status, isActive) {
-		// Verstecke Share URL Container (nicht mehr benötigt)
-		const shareUrlContainer = document.getElementById("shareUrlContainer");
-		if (shareUrlContainer) {
-			shareUrlContainer.style.display = "none";
-		}
-
-		// Update Sync Status Button
-		const syncStatusBtn = document.getElementById("syncStatusBtn");
-		if (syncStatusBtn) {
-			if (isActive) {
-				syncStatusBtn.textContent = `📊 ${status}`;
-				syncStatusBtn.classList.add("status-success");
-			} else {
-				syncStatusBtn.textContent = "📊 Status";
-				syncStatusBtn.classList.remove(
-					"status-success",
-					"status-warning",
-					"status-error"
-				);
-			}
-		}
-
-		console.log(
-			`🔄 Sync-Status angezeigt: ${status} (${isActive ? "aktiv" : "inaktiv"})`
-		);
-	}
-
-	// *** OBSOLETE METHODEN - WERDEN NICHT MEHR VERWENDET ***
 
 	/**
 	 * Generiert eine eindeutige Projekt-ID
@@ -354,15 +321,15 @@ class SharingManager {
 	}
 
 	/**
-	 * AKTUALISIERT: Zeigt Master-Slave Status
+	 * Zeigt Sync Status
 	 */
 	showSyncStatus() {
-		let statusInfo = "🔍 MASTER-SLAVE SYNC STATUS:\n\n";
+		let statusInfo = "🔍 SYNC STATUS:\n\n";
 
-		statusInfo += `Master-Slave Sync: ${
+		statusInfo += `Live Sync: ${
 			this.isLiveSyncEnabled ? "✅ Aktiviert" : "❌ Deaktiviert"
 		}\n`;
-		statusInfo += `Modus: ${this.isMasterMode ? "👑 Master" : "👤 Slave"}\n`;
+		statusInfo += `Projekt-ID: ${this.currentProjectId || "Nicht generiert"}\n`;
 
 		if (window.serverSync) {
 			const serverStatus = window.serverSync.getStatus();
@@ -372,15 +339,7 @@ class SharingManager {
 			statusInfo += `Server Sync aktiv: ${
 				serverStatus.isActive ? "✅ Ja" : "❌ Nein"
 			}\n`;
-			statusInfo += `Master-Modus: ${
-				window.serverSync.isMaster ? "✅ Ja" : "❌ Nein"
-			}\n`;
-			statusInfo += `Slave-Modus: ${
-				window.serverSync.isSlaveActive ? "✅ Ja" : "❌ Nein"
-			}\n`;
-			statusInfo += `Letzter Server-Timestamp: ${
-				window.serverSync.lastServerTimestamp || "Nie"
-			}\n`;
+			statusInfo += `Letzter Sync: ${serverStatus.lastSync || "Nie"}\n`;
 		}
 
 		statusInfo += `\nGlobale Flags:\n`;
@@ -518,49 +477,45 @@ class SharingManager {
 	}
 
 	/**
-	 * AKTUALISIERT: Lädt gespeicherte Master-Slave-Einstellungen
+	 * Lädt gespeicherte Sharing-Einstellungen
 	 */
 	loadSavedSharingSettings() {
 		try {
 			const settings = JSON.parse(
-				localStorage.getItem("hangarMasterSlaveSettings") || "{}"
+				localStorage.getItem("hangarSharingSettings") || "{}"
 			);
 
 			if (settings.isLiveSyncEnabled) {
 				const liveSyncToggle = document.getElementById("liveSyncToggle");
 				if (liveSyncToggle) {
 					liveSyncToggle.checked = true;
-					this.handleMasterSlaveToggle(true);
+					this.handleLiveSyncToggle(true);
 				}
 			}
 
-			this.isMasterMode = settings.isMasterMode || false;
+			if (settings.currentProjectId) {
+				this.currentProjectId = settings.currentProjectId;
+			}
 		} catch (error) {
-			console.error(
-				"❌ Fehler beim Laden der Master-Slave-Einstellungen:",
-				error
-			);
+			console.error("❌ Fehler beim Laden der Sharing-Einstellungen:", error);
 		}
 	}
 
 	/**
-	 * AKTUALISIERT: Speichert Master-Slave-Einstellungen
+	 * Speichert Sharing-Einstellungen
 	 */
 	saveSharingSettings() {
 		try {
 			const settings = {
 				isLiveSyncEnabled: this.isLiveSyncEnabled,
-				isMasterMode: this.isMasterMode,
+				currentProjectId: this.currentProjectId,
 				lastSaved: new Date().toISOString(),
 			};
 
-			localStorage.setItem(
-				"hangarMasterSlaveSettings",
-				JSON.stringify(settings)
-			);
+			localStorage.setItem("hangarSharingSettings", JSON.stringify(settings));
 		} catch (error) {
 			console.error(
-				"❌ Fehler beim Speichern der Master-Slave-Einstellungen:",
+				"❌ Fehler beim Speichern der Sharing-Einstellungen:",
 				error
 			);
 		}

@@ -12,13 +12,6 @@ class ServerSync {
 		this.lastDataChecksum = null;
 		this.autoSaveTimeout = null;
 
-		// NEUE Master-Slave Eigenschaften
-		this.isMaster = false;
-		this.isSlaveActive = false;
-		this.serverTimestamp = null;
-		this.slaveCheckInterval = null;
-		this.lastServerTimestamp = 0;
-
 		// Global verfügbar machen für Kompatibilität und Race Condition Prevention
 		window.isApplyingServerData = false;
 		window.isLoadingServerData = false;
@@ -26,22 +19,14 @@ class ServerSync {
 	}
 
 	/**
-	 * Initialisiert die Server-Synchronisation mit Master-Slave Erkennung
+	 * Initialisiert die Server-Synchronisation
 	 */
 	async initSync(serverUrl) {
 		this.serverSyncUrl = serverUrl;
-		console.log("🔄 Server-Sync initialisiert:", serverUrl);
+		console.log("🔄 Server-Sync initialisiet:", serverUrl);
 
-		// Automatische Master-Slave Erkennung
-		await this.determineMasterSlaveRole();
-
-		if (this.isMaster) {
-			console.log("👑 Master-Modus aktiviert");
-			this.startMasterMode();
-		} else {
-			console.log("👤 Slave-Modus aktiviert");
-			this.startSlaveMode();
-		}
+		// Startet periodische Synchronisation
+		this.startPeriodicSync();
 	}
 
 	/**
@@ -84,143 +69,29 @@ class ServerSync {
 	}
 
 	/**
-	 * VEREINFACHT: Nur Standard Server-URL ohne Projekt-IDs
+	 * Generiert die korrekte Server-URL mit Project-ID Parameter falls vorhanden
 	 */
 	getServerUrl() {
-		return this.serverSyncUrl;
-	}
+		let url = this.serverSyncUrl;
 
-	/**
-	 * NEUE METHODE: Bestimmt Master oder Slave Rolle
-	 */
-	async determineMasterSlaveRole() {
-		try {
-			// Prüfe ob bereits Daten auf Server vorhanden sind
-			const serverTimestamp = await this.getServerTimestamp();
-
-			// Wenn kein Server-Timestamp vorhanden, wird diese Instanz Master
-			if (!serverTimestamp || serverTimestamp === 0) {
-				this.isMaster = true;
-				this.isSlaveActive = false;
-				console.log("🏴 Keine Server-Daten gefunden - Master-Rolle übernommen");
-			} else {
-				// Server-Daten vorhanden, diese Instanz wird Slave
-				this.isMaster = false;
-				this.isSlaveActive = true;
-				this.lastServerTimestamp = serverTimestamp;
-				console.log("📡 Server-Daten gefunden - Slave-Rolle übernommen");
-			}
-		} catch (error) {
-			// Bei Fehler standardmäßig Master werden
-			console.warn(
-				"⚠️ Fehler bei Master-Slave Erkennung, werde Master:",
-				error
-			);
-			this.isMaster = true;
-			this.isSlaveActive = false;
-		}
-	}
-
-	/**
-	 * NEUE METHODE: Holt Server-Timestamp für Change-Detection
-	 */
-	async getServerTimestamp() {
-		try {
-			const response = await fetch(`${this.serverSyncUrl}?action=timestamp`, {
-				method: "GET",
-				signal: AbortSignal.timeout(5000),
-			});
-
-			if (response.ok) {
-				const data = await response.json();
-				return data.timestamp || 0;
-			} else {
-				return 0;
-			}
-		} catch (error) {
-			console.warn("⚠️ Server-Timestamp nicht abrufbar:", error.message);
-			return 0;
-		}
-	}
-
-	/**
-	 * NEUE METHODE: Startet Master-Modus
-	 */
-	startMasterMode() {
-		this.isMaster = true;
-		this.isSlaveActive = false;
-
-		// Stoppe Slave-Intervall falls aktiv
-		if (this.slaveCheckInterval) {
-			clearInterval(this.slaveCheckInterval);
-			this.slaveCheckInterval = null;
+		// Prüfe auf aktive Project-ID vom Sharing Manager
+		const projectId = window.sharingManager?.currentProjectId;
+		if (projectId) {
+			const separator = url.includes("?") ? "&" : "?";
+			url = `${url}${separator}project=${encodeURIComponent(projectId)}`;
+			console.log(`🔗 Server-URL mit Project-ID: ${url}`);
 		}
 
-		// Starte normale periodische Synchronisation (Speichern)
-		this.startPeriodicSync();
-		console.log("👑 Master-Modus gestartet - periodisches Speichern aktiv");
+		return url;
 	}
 
 	/**
-	 * NEUE METHODE: Startet Slave-Modus
-	 */
-	startSlaveMode() {
-		this.isMaster = false;
-		this.isSlaveActive = true;
-
-		// Stoppe normale Sync falls aktiv
-		this.stopPeriodicSync();
-
-		// Starte Slave-Polling (nur Laden bei Änderungen)
-		this.slaveCheckInterval = setInterval(async () => {
-			await this.slaveCheckForUpdates();
-		}, 30000); // 30 Sekunden Polling-Intervall
-
-		console.log("👤 Slave-Modus gestartet - Polling für Updates aktiv");
-
-		// Initialer Load der Server-Daten
-		setTimeout(() => this.slaveCheckForUpdates(), 1000);
-	}
-
-	/**
-	 * NEUE METHODE: Slave prüft auf Server-Updates
-	 */
-	async slaveCheckForUpdates() {
-		if (!this.isSlaveActive) return;
-
-		try {
-			const currentServerTimestamp = await this.getServerTimestamp();
-
-			if (currentServerTimestamp > this.lastServerTimestamp) {
-				console.log("🔄 Slave: Neue Daten auf Server erkannt, lade Updates...");
-
-				const serverData = await this.loadFromServer();
-				if (serverData && !serverData.error) {
-					await this.applyServerData(serverData);
-					this.lastServerTimestamp = currentServerTimestamp;
-					console.log("✅ Slave: Server-Daten erfolgreich geladen");
-				}
-			} else {
-				// console.log("⏸️ Slave: Keine Änderungen auf Server");
-			}
-		} catch (error) {
-			console.error("❌ Slave: Fehler beim Prüfen auf Updates:", error);
-		}
-	}
-
-	/**
-	 * Synchronisiert Daten mit dem Server (NUR Master-Modus)
+	 * Synchronisiert Daten mit dem Server (optimiert)
 	 */
 	async syncWithServer() {
 		if (!this.serverSyncUrl) {
 			console.warn("⚠️ Server-URL nicht konfiguriert");
 			return false;
-		}
-
-		// NEUE PRÜFUNG: Nur Master darf speichern
-		if (!this.isMaster) {
-			// console.log("⏸️ Slave-Modus: Speichern übersprungen");
-			return true; // Kein Fehler, nur keine Berechtigung
 		}
 
 		// Verhindere gleichzeitige Sync-Operationen
@@ -266,7 +137,12 @@ class ServerSync {
 			clearTimeout(timeoutId);
 
 			if (response.ok) {
-				console.log("✅ Master: Server-Sync erfolgreich");
+				console.log(
+					"✅ Server-Sync erfolgreich" +
+						(window.sharingManager?.currentProjectId
+							? ` (Project: ${window.sharingManager.currentProjectId})`
+							: "")
+				);
 				return true;
 			} else {
 				console.warn("⚠️ Server-Sync fehlgeschlagen:", response.status);
@@ -366,7 +242,12 @@ class ServerSync {
 
 			if (response.ok) {
 				const data = await response.json();
-				console.log("✅ Daten vom Server geladen");
+				console.log(
+					"✅ Daten vom Server geladen" +
+						(window.sharingManager?.currentProjectId
+							? ` (Project: ${window.sharingManager.currentProjectId})`
+							: "")
+				);
 				return data;
 			} else {
 				console.warn("⚠️ Server-Load fehlgeschlagen:", response.status);
@@ -765,7 +646,10 @@ class ServerSync {
 	debugSyncStatus() {
 		console.log("🔍 === SYNC STATUS DEBUG ===");
 		console.log("Server URL:", this.serverSyncUrl);
-		console.log("Project ID:", "Standard (kein Projekt-ID System)");
+		console.log(
+			"Project ID:",
+			window.sharingManager?.currentProjectId || "Keine"
+		);
 		console.log("Effektive Server URL:", this.getServerUrl());
 		console.log("isApplyingServerData:", this.isApplyingServerData);
 		console.log("window.isApplyingServerData:", window.isApplyingServerData);
@@ -774,10 +658,8 @@ class ServerSync {
 		console.log("Display Options isLoading:", window.displayOptions?.isLoading);
 		console.log("Display Options isSaving:", window.displayOptions?.isSaving);
 		console.log("Periodische Sync aktiv:", !!this.serverSyncInterval);
-		console.log("Master-Modus:", this.isMaster);
-		console.log("Slave-Modus:", this.isSlaveActive);
 		console.log(
-			"Master-Slave Sync aktiv:",
+			"Live Sync aktiv:",
 			window.sharingManager?.isLiveSyncEnabled || false
 		);
 		console.log("=== END SYNC STATUS ===");

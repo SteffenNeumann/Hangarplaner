@@ -26,25 +26,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
-// VEREINFACHT: Nur Standard data.json verwenden (Master-Slave ohne Projekt-IDs)
-$dataFile = __DIR__ . '/data.json';
+// Erweiterte Unterstützung für Project-IDs bei Sharing-Funktionalität
+$projectId = isset($_GET['project']) ? $_GET['project'] : null;
 
-// Neuer Endpoint für Timestamp-basierte Synchronisierung
-if (isset($_GET['action']) && $_GET['action'] === 'timestamp') {
-    if (file_exists($dataFile)) {
-        echo json_encode([
-            'timestamp' => filemtime($dataFile) * 1000, // Milliseconds für JS-Kompatibilität
-            'size' => filesize($dataFile),
-            'success' => true
-        ]);
-    } else {
-        echo json_encode([
-            'timestamp' => 0,
-            'size' => 0,
-            'success' => false
-        ]);
-    }
-    exit(0);
+// Angepasster Dateipfad wenn Project-ID vorhanden ist
+if ($projectId && preg_match('/^[a-zA-Z0-9_]+$/', $projectId)) {
+    // Sichere Project-ID (nur alphanumerische Zeichen und Unterstriche)
+    $dataFile = __DIR__ . '/shared_' . $projectId . '.json';
+} else {
+    $dataFile = __DIR__ . '/data.json';
 }
 
 // Maximale Dateigröße (5MB)

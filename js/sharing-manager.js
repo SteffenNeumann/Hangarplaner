@@ -517,7 +517,7 @@ class SharingManager {
 		// Bewahre aktuellen Master/Slave-Status, ändere nur Indikator
 		let currentText = syncStatusBtn.textContent;
 		let baseText = "📊 Status";
-		
+
 		// Extrahiere den aktuellen Modus (Master/Slave) falls vorhanden
 		if (currentText.includes("Master")) {
 			baseText = "👑 Master";

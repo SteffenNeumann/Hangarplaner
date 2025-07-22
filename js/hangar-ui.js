@@ -471,11 +471,11 @@ const uiSettings = {
 
 		// Nach dem Anwenden aller Werte: Event auslösen für Status-Lichter-Update
 		setTimeout(() => {
-			const dataLoadedEvent = new CustomEvent('dataLoaded', {
-				detail: { 
+			const dataLoadedEvent = new CustomEvent("dataLoaded", {
+				detail: {
 					tilesUpdated: tileValues.length,
-					timestamp: new Date().toISOString()
-				}
+					timestamp: new Date().toISOString(),
+				},
 			});
 			document.dispatchEvent(dataLoadedEvent);
 		}, 100);
@@ -669,18 +669,21 @@ function createSingleSecondaryTile(cellId, container) {
 function setupEventListenersForTile(tileElement, cellId) {
 	// Status-Selector Event-Listener (vereinfacht - nutzt globale updateStatusLight Funktion)
 	const statusSelector = tileElement.querySelector(`#status-${cellId}`);
-	if (statusSelector && !statusSelector.hasAttribute('data-status-listener-added')) {
+	if (
+		statusSelector &&
+		!statusSelector.hasAttribute("data-status-listener-added")
+	) {
 		statusSelector.addEventListener("change", function () {
 			// Nutze die globale updateStatusLight Funktion aus index.html
-			if (typeof updateStatusLight === 'function') {
+			if (typeof updateStatusLight === "function") {
 				updateStatusLight(this);
 			}
 		});
-		statusSelector.setAttribute('data-status-listener-added', 'true');
-		
+		statusSelector.setAttribute("data-status-listener-added", "true");
+
 		// Initial Status setzen (nach DOM-Update)
 		setTimeout(() => {
-			if (typeof updateStatusLight === 'function') {
+			if (typeof updateStatusLight === "function") {
 				updateStatusLight(statusSelector);
 			}
 		}, 50);
@@ -688,9 +691,9 @@ function setupEventListenersForTile(tileElement, cellId) {
 
 	// Aircraft ID Formatierung
 	const aircraftInput = tileElement.querySelector(`#aircraft-${cellId}`);
-	if (aircraftInput && !aircraftInput.hasAttribute('data-listener-added')) {
+	if (aircraftInput && !aircraftInput.hasAttribute("data-listener-added")) {
 		aircraftInput.addEventListener("input", function (e) {
-			if (typeof formatAircraftId === 'function') {
+			if (typeof formatAircraftId === "function") {
 				const formatted = formatAircraftId(e.target.value);
 				if (formatted !== e.target.value) {
 					e.target.value = formatted;
@@ -698,32 +701,33 @@ function setupEventListenersForTile(tileElement, cellId) {
 			}
 		});
 		aircraftInput.addEventListener("blur", function (e) {
-			if (typeof formatAircraftId === 'function') {
+			if (typeof formatAircraftId === "function") {
 				const formatted = formatAircraftId(e.target.value);
 				if (formatted !== e.target.value) {
 					e.target.value = formatted;
 				}
 			}
 		});
-		aircraftInput.setAttribute('data-listener-added', 'true');
+		aircraftInput.setAttribute("data-listener-added", "true");
 	}
 
 	// Towing Status Event-Listener
 	const towSelector = tileElement.querySelector(`#tow-status-${cellId}`);
-	if (towSelector && !towSelector.hasAttribute('data-listener-added')) {
+	if (towSelector && !towSelector.hasAttribute("data-listener-added")) {
 		towSelector.addEventListener("change", function () {
-			if (typeof updateTowStatusStyles === 'function') {
+			if (typeof updateTowStatusStyles === "function") {
 				updateTowStatusStyles(this);
 			}
 		});
-		towSelector.setAttribute('data-listener-added', 'true');
-		
+		towSelector.setAttribute("data-listener-added", "true");
+
 		// Initial Towing Status setzen
-		if (typeof updateTowStatusStyles === 'function') {
+		if (typeof updateTowStatusStyles === "function") {
 			updateTowStatusStyles(towSelector);
 		}
 	}
-}function adjustScaling() {
+}
+function adjustScaling() {
 	// Dynamische Skalierung der UI-Elemente basierend auf Bildschirmgröße
 	const container = document.querySelector(".main-container");
 	if (!container) return;
@@ -1330,10 +1334,10 @@ window.updateCellAttributes = updateCellAttributes;
 window.updateStatusLights = updateStatusLights;
 
 // Status-Lichter-Funktionen global verfügbar machen
-if (typeof updateAllStatusLights !== 'undefined') {
+if (typeof updateAllStatusLights !== "undefined") {
 	window.updateAllStatusLights = updateAllStatusLights;
 }
-if (typeof updateStatusLightByCellId !== 'undefined') {
+if (typeof updateStatusLightByCellId !== "undefined") {
 	window.updateStatusLightByCellId = updateStatusLightByCellId;
 }
 
@@ -1468,7 +1472,7 @@ document.addEventListener("DOMContentLoaded", function () {
 		}
 
 		// WICHTIG: Finale Status-Lichter-Aktualisierung nach vollständiger Initialisierung
-		if (typeof updateAllStatusLights === 'function') {
+		if (typeof updateAllStatusLights === "function") {
 			// console.log('🔄 Finale Status-Lichter-Aktualisierung...');
 			updateAllStatusLights();
 		}

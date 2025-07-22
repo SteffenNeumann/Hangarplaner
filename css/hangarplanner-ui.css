@@ -44,7 +44,28 @@ body {
 	box-shadow: none !important;
 	border: 1px solid #e5e7eb;
 	border-radius: 12px;
-	background-color: #e6eaef;
+	background-color: #ffffff !important; /* Zurück auf weiß */
+}
+
+/* MAXIMALE PRIORITÄT: Überschreibe alle möglichen Status-basierten Hintergründe */
+.hangar-cell[style*="background"],
+.hangar-cell[class*="orange"],
+.hangar-cell[class*="status"],
+.hangar-cell[class*="tow"] {
+	background-color: #ffffff !important; /* FORCIERE weißen Hintergrund */
+}
+
+/* Verhindere, dass Status-Klassen die gesamte Kachel beeinflussen */
+.hangar-cell.tow-initiated,
+.hangar-cell.tow-ongoing,
+.hangar-cell.tow-on-position,
+.hangar-cell.status-aog,
+.hangar-cell.status-ready,
+.hangar-cell.status-maintenance,
+.hangar-cell.aog,
+.hangar-cell.ready,
+.hangar-cell.maintenance {
+	background-color: #ffffff !important; /* Überschreibe ALLE Status-Hintergründe auf weiß */
 }
 
 .hangar-cell:hover {
@@ -109,26 +130,26 @@ body {
 	border: 1px solid rgba(0, 0, 0, 0.1);
 	box-shadow: none;
 	/* Standard: Neutral/Weiß */
-	background-color: #FFFFFF;
-	border-color: #D1D5DB;
+	background-color: #ffffff;
+	border-color: #d1d5db;
 }
 
 /* CSS-basierte Status-Lichter über data-status Attribut - entfernt !important für dynamische Updates */
 .status-light[data-status="ready"] {
-	background-color: #10B981; /* Grün */
-	border-color: #10B981;
+	background-color: #10b981; /* Grün */
+	border-color: #10b981;
 }
 .status-light[data-status="maintenance"] {
-	background-color: #F59E0B; /* Gelb */
-	border-color: #F59E0B;
+	background-color: #f59e0b; /* Gelb */
+	border-color: #f59e0b;
 }
 .status-light[data-status="aog"] {
-	background-color: #DC2626; /* Rot */
-	border-color: #DC2626;
+	background-color: #dc2626; /* Rot */
+	border-color: #dc2626;
 }
 .status-light[data-status="neutral"] {
-	background-color: #FFFFFF; /* Weiß */
-	border-color: #D1D5DB;
+	background-color: #ffffff; /* Weiß */
+	border-color: #d1d5db;
 }
 
 /* Legacy CSS-Klassen für Kompatibilität */
@@ -174,6 +195,8 @@ select.status-selector {
 	background-color: #f3f4f6;
 	color: #4b5563;
 }
+
+/* Towing-Status spezifische Styles - nur für .tow-status Elemente */
 .tow-status.tow-initiated {
 	background-color: #fff1e6;
 	color: #b45309;
@@ -186,6 +209,8 @@ select.status-selector {
 	background-color: #dcfce7;
 	color: #166534;
 }
+
+/* Towing-Status-Selektoren - nur für .tow-status-selector Elemente */
 
 .info-grid {
 	display: grid;
@@ -275,21 +300,32 @@ textarea.notes-textarea {
 
 .aircraft-id {
 	text-align: center;
-	font-weight: bold;
-	font-size: 0.95rem;
-	padding: 0.25rem;
-	margin-bottom: 0.25rem;
+	font-weight: 700; /* Extra bold für maximale Präsenz */
+	font-size: 1.35rem; /* Deutlich vergrößert von 0.95rem */
+	letter-spacing: 0.02em; /* Leichte Buchstabenweitung für bessere Lesbarkeit */
+	padding: 0.5rem 0.25rem; /* Mehr vertikaler Padding */
+	margin-bottom: 0.4rem; /* Mehr Abstand nach unten */
 	border-bottom: none;
 	background-color: transparent;
 	width: 100%;
-	color: var(--text-dark);
+	color: #1a202c; /* Dunklerer, kontrastreicherer Text */
+	line-height: 1.2; /* Optimierte Zeilenhöhe */
+	font-family: system-ui, -apple-system, sans-serif; /* Klarere Schrift */
 }
 .aircraft-id::placeholder {
 	color: #9ca3af;
+	font-weight: 400; /* Normale Gewichtung für Placeholder */
+	font-size: 1.1rem; /* Etwas kleiner für Placeholder */
 }
 .aircraft-id:focus {
 	outline: none;
-	border-bottom-color: #ff7043;
+	border-bottom: 2px solid #ff7043; /* Sichtbarerer Fokus-Indikator */
+	background-color: rgba(
+		255,
+		112,
+		67,
+		0.05
+	); /* Subtiler Hintergrund beim Fokus */
 }
 
 .edit-mode .view-only {
@@ -861,27 +897,30 @@ input:checked + .toggle-slider:before {
 /* Dark Mode Styles */
 .dark-mode {
 	color-scheme: dark;
-	/* Hintergrund */
-	--bg-primary: #1f2937;
-	--bg-secondary: #111827;
-	--bg-tertiary: #374151;
+	/* Einheitliche Hintergrund-Hierarchie */
+	--bg-primary: #1a202c; /* Dunkelster Hintergrund */
+	--bg-secondary: #2d3748; /* Kachel-Hintergrund */
+	--bg-tertiary: #4a5568; /* Header-Hintergrund */
+	--bg-input: #374151; /* Einheitlicher Input-Hintergrund */
 
-	/* Textfarben */
-	--text-primary: #f9fafb;
-	--text-secondary: #d1d5db;
-	--text-tertiary: #9ca3af;
+	/* Klare Textfarben-Hierarchie */
+	--text-primary: #f7fafc; /* Primärer Text (Aircraft ID) */
+	--text-secondary: #e2e8f0; /* Sekundärer Text (Labels) */
+	--text-tertiary: #a0aec0; /* Tertiärer Text (Values) */
+	--text-muted: #718096; /* Placeholder Text */
 
-	/* UI-Elemente */
-	--card-bg: #374151;
-	--card-header-bg: #4b5563;
-	--input-bg: #4b5563;
-	--input-text: #e5e7eb;
-	--border-color: #4b5563;
+	/* Einheitliche UI-Elemente */
+	--card-bg: #2d3748; /* Kachel-Hintergrund */
+	--card-header-bg: #4a5568; /* Header-Hintergrund */
+	--input-bg: #374151; /* Alle Inputs einheitlich */
+	--input-text: #e2e8f0; /* Input-Text */
+	--border-color: #4a5568; /* Einheitliche Rahmen */
 
-	/* Status-Farben anpassen für besseren Kontrast im Darkmode */
-	--status-ready-bg: #065f46; /* Dunkleres Grün */
-	--status-maintenance-bg: #854d0e; /* Dunkleres Gelb */
-	--status-aog-bg: #991b1b; /* Dunkleres Rot */
+	/* Verbesserte Status-Farben für Dark Mode */
+	--status-ready: #48bb78; /* Sichtbares Grün */
+	--status-maintenance: #ed8936; /* Sichtbares Orange */
+	--status-aog: #f56565; /* Sichtbares Rot */
+	--status-neutral: #a0aec0; /* Neutrales Grau */
 }
 
 /* Background und Text Colors */
@@ -890,14 +929,20 @@ input:checked + .toggle-slider:before {
 	color: var(--text-primary);
 }
 
-/* Sidebar styling im Dark Mode */
+.dark-mode .hangar-container {
+	background-color: var(--bg-primary);
+}
+
+/* Verbesserte Sidebar-Styling im Dark Mode */
 .dark-mode .sidebar-container {
 	background-color: var(--bg-secondary);
 	color: var(--text-primary);
+	border-left-color: var(--border-color);
 }
 
 .dark-mode .sidebar-accordion-header {
 	background-color: var(--bg-tertiary);
+	color: var(--text-primary);
 	border-color: var(--border-color);
 }
 
@@ -918,65 +963,163 @@ input:checked + .toggle-slider:before {
 .dark-mode .sidebar-form-select {
 	background-color: var(--input-bg);
 	color: var(--input-text);
+	border-color: var(--border-color);
 }
 
 .dark-mode .sidebar-btn {
 	background-color: var(--bg-tertiary);
+	color: var(--text-primary);
 }
 
 .dark-mode .sidebar-btn-primary {
-	background-color: #2563eb; /* Blautonung anpassen */
+	background-color: #ff7043 !important; /* Orange beibehalten */
+	color: white !important;
 }
 
-/* Hangar-Kacheln im Dark Mode */
+/* Hangar-Kacheln im Dark Mode - Einheitliches Design */
 .dark-mode .hangar-cell {
-	background-color: var(--card-bg);
+	background-color: var(
+		--card-bg
+	) !important; /* Forciere einheitlichen Hintergrund */
 	color: var(--text-primary);
-	box-shadow: none;
-	border-color: var(--border-color);
+	border: 1px solid var(--border-color);
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* MAXIMALE PRIORITÄT: Überschreibe alle möglichen Status-basierten Hintergründe im Dark Mode */
+.dark-mode .hangar-cell[style*="background"],
+.dark-mode .hangar-cell[class*="orange"],
+.dark-mode .hangar-cell[class*="status"],
+.dark-mode .hangar-cell[class*="tow"] {
+	background-color: var(
+		--card-bg
+	) !important; /* FORCIERE Dark Mode Hintergrund */
+}
+
+/* WICHTIG: Verhindere Status-basierte Kachel-Hintergründe im Dark Mode */
+.dark-mode .hangar-cell.tow-initiated,
+.dark-mode .hangar-cell.tow-ongoing,
+.dark-mode .hangar-cell.tow-on-position,
+.dark-mode .hangar-cell.status-aog,
+.dark-mode .hangar-cell.status-ready,
+.dark-mode .hangar-cell.status-maintenance,
+.dark-mode .hangar-cell.aog,
+.dark-mode .hangar-cell.ready,
+.dark-mode .hangar-cell.maintenance {
+	background-color: var(
+		--card-bg
+	) !important; /* Überschreibe ALLE Status-Hintergründe */
 }
 
 .dark-mode .card-header {
 	background-color: var(--card-header-bg);
-	border-color: var(--border-color);
-}
-
-.dark-mode .aircraft-id {
-	background-color: var(--input-bg);
 	color: var(--text-primary);
 	border-color: var(--border-color);
 }
 
+.dark-mode .aircraft-id {
+	background-color: transparent; /* Kein separater Hintergrund */
+	color: var(--text-primary);
+	border: none;
+	font-weight: 700;
+	font-size: 1.35rem;
+}
+
+.dark-mode .aircraft-id:focus {
+	background-color: rgba(255, 112, 67, 0.15);
+	border-bottom: 2px solid #ff7043;
+}
+
+/* Alle Input-Elemente einheitlich */
+.dark-mode .info-input,
+.dark-mode .notes-textarea,
+.dark-mode .status-selector,
+.dark-mode .tow-status-selector {
+	background-color: var(--input-bg) !important;
+	color: var(--input-text) !important;
+	border: 1px solid var(--border-color) !important;
+}
+
+.dark-mode .info-input:focus,
+.dark-mode .notes-textarea:focus {
+	background-color: rgba(255, 112, 67, 0.15) !important;
+	border-color: #ff7043 !important;
+}
+
+/* Konsistente Textfarben */
 .dark-mode .info-label {
 	color: var(--text-secondary);
 }
 
 .dark-mode .info-value {
-	color: var(--text-primary);
+	color: var(--text-tertiary);
 }
 
-.dark-mode .tow-status-selector {
-	background-color: var(--input-bg);
-	color: var(--text-secondary);
+/* Status-Lichter im Dark Mode - deutlich sichtbar */
+.dark-mode .status-light[data-status="ready"] {
+	background-color: var(--status-ready);
+	border-color: var(--status-ready);
+	box-shadow: 0 0 4px rgba(72, 187, 120, 0.4);
 }
 
-.dark-mode .notes-textarea {
-	background-color: var(--input-bg);
-	color: var(--input-text);
-	border-color: var(--border-color);
+.dark-mode .status-light[data-status="maintenance"] {
+	background-color: var(--status-maintenance);
+	border-color: var(--status-maintenance);
+	box-shadow: 0 0 4px rgba(237, 137, 54, 0.4);
 }
 
-/* Status-Lichter im Dark Mode sichtbarer machen */
+.dark-mode .status-light[data-status="aog"] {
+	background-color: var(--status-aog);
+	border-color: var(--status-aog);
+	box-shadow: 0 0 4px rgba(245, 101, 101, 0.4);
+}
+
+.dark-mode .status-light[data-status="neutral"] {
+	background-color: var(--status-neutral);
+	border-color: var(--status-neutral);
+}
+
+/* Legacy Status-Klassen für Dark Mode */
 .dark-mode .status-ready {
-	background-color: var(--status-ready-bg);
+	background-color: var(--status-ready) !important;
+	box-shadow: 0 0 4px rgba(72, 187, 120, 0.4);
 }
 
 .dark-mode .status-maintenance {
-	background-color: var(--status-maintenance-bg);
+	background-color: var(--status-maintenance) !important;
+	box-shadow: 0 0 4px rgba(237, 137, 54, 0.4);
 }
 
 .dark-mode .status-aog {
-	background-color: var(--status-aog-bg);
+	background-color: var(--status-aog) !important;
+	box-shadow: 0 0 4px rgba(245, 101, 101, 0.4);
+}
+
+/* Verbesserte Towing-Status im Dark Mode */
+.dark-mode .tow-status-selector.tow-initiated {
+	background-color: rgba(237, 137, 54, 0.2) !important;
+	border-color: var(--status-maintenance);
+	color: var(--status-maintenance);
+}
+
+.dark-mode .tow-status-selector.tow-ongoing {
+	background-color: rgba(59, 130, 246, 0.2) !important;
+	border-color: #3b82f6;
+	color: #60a5fa;
+}
+
+.dark-mode .tow-status-selector.tow-on-position {
+	background-color: rgba(72, 187, 120, 0.2) !important;
+	border-color: var(--status-ready);
+	color: var(--status-ready);
+}
+
+/* Placeholder-Text im Dark Mode */
+.dark-mode .aircraft-id::placeholder,
+.dark-mode .info-input::placeholder,
+.dark-mode .notes-textarea::placeholder {
+	color: var(--text-muted) !important;
+	font-style: italic;
 }
 
 /* Header und andere UI-Elemente */
@@ -1121,13 +1264,14 @@ input:checked + .toggle-slider:before {
 }
 
 .table-view .aircraft-id {
-	width: 120px;
-	min-width: 120px;
+	width: 140px; /* Etwas breiter für die größere Schrift */
+	min-width: 140px;
 	text-align: left;
 	margin: 0 1rem 0 0;
 	padding: 0.25rem 0.5rem;
-	font-size: 0.9rem;
-	height: 30px;
+	font-size: 1.1rem; /* Größer auch in der Tabellenansicht */
+	font-weight: 700; /* Konsistente Gewichtung */
+	height: 32px; /* Etwas höher für die größere Schrift */
 }
 
 .table-view .info-grid {

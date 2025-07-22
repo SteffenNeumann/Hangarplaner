@@ -1806,17 +1806,17 @@
 				function updateStatusLight(select) {
 					const cellId = select.id.split("-")[1];
 					const statusValue = select.value;
-					
+
 					// Suche Status-Licht in primären ODER sekundären Kacheln
 					let statusLight = document.querySelector(
 						`.status-light[data-cell="${cellId}"]`
 					);
-					
+
 					// Fallback: Suche in der nächsten Container-Hierarchie
 					if (!statusLight) {
-						const container = select.closest('.hangar-cell');
+						const container = select.closest(".hangar-cell");
 						if (container) {
-							statusLight = container.querySelector('.status-light');
+							statusLight = container.querySelector(".status-light");
 						}
 					}
 
@@ -1824,17 +1824,17 @@
 						// CSS-basierte Lösung: Nur data-status Attribut setzen
 						statusLight.setAttribute("data-status", statusValue);
 						statusLight.setAttribute("data-cell", cellId);
-						
+
 						// Legacy CSS-Klassen entfernen (für alte Browser)
 						statusLight.classList.remove(
 							"status-ready",
-							"status-maintenance", 
+							"status-maintenance",
 							"status-aog",
 							"status-neutral"
 						);
 						// Neue CSS-Klasse hinzufügen (Fallback)
 						statusLight.classList.add(`status-${statusValue}`);
-						
+
 						// console.log(`✅ Status-Licht für Kachel ${cellId} auf ${statusValue} gesetzt`);
 					} else {
 						console.warn(`❌ Status-Licht für Kachel ${cellId} nicht gefunden`);
@@ -1844,16 +1844,17 @@
 				// Globale Funktion zum Aktualisieren ALLER Status-Lichter
 				function updateAllStatusLights() {
 					// console.log('🔄 Aktualisiere alle Status-Lichter...');
-					const allStatusSelectors = document.querySelectorAll('.status-selector');
+					const allStatusSelectors =
+						document.querySelectorAll(".status-selector");
 					let updated = 0;
-					
-					allStatusSelectors.forEach(select => {
-						if (select.value && select.value !== 'neutral') {
+
+					allStatusSelectors.forEach((select) => {
+						if (select.value && select.value !== "neutral") {
 							updateStatusLight(select);
 							updated++;
 						}
 					});
-					
+
 					// console.log(`✅ ${updated} Status-Lichter aktualisiert`);
 					return updated;
 				}
@@ -1875,7 +1876,7 @@
 					function setupStatusHandlers() {
 						document.querySelectorAll(".status-selector").forEach((select) => {
 							// Prüfe ob Event-Listener bereits hinzugefügt wurde
-							if (!select.hasAttribute('data-status-listener-added')) {
+							if (!select.hasAttribute("data-status-listener-added")) {
 								// Initial Status setzen
 								updateStatusLight(select);
 
@@ -1883,24 +1884,24 @@
 								select.addEventListener("change", function () {
 									updateStatusLight(this);
 								});
-								
+
 								// Markiere als verarbeitet
-								select.setAttribute('data-status-listener-added', 'true');
+								select.setAttribute("data-status-listener-added", "true");
 							}
 						});
 					}
-					
+
 					// Initial alle Status-Handler einrichten
 					setupStatusHandlers();
-					
+
 					// Event-Listener für dynamisch erstellte sekundäre Kacheln
-					document.addEventListener('secondaryTilesCreated', function(event) {
+					document.addEventListener("secondaryTilesCreated", function (event) {
 						// console.log('🎯 Sekundäre Kacheln erstellt, richte Status-Handler ein...');
 						setTimeout(setupStatusHandlers, 100); // Kurze Verzögerung für DOM-Update
 					});
-					
+
 					// Event-Listener für Daten-Updates (nach dem Laden von gespeicherten Daten)
-					document.addEventListener('dataLoaded', function(event) {
+					document.addEventListener("dataLoaded", function (event) {
 						// console.log('📊 Daten geladen, aktualisiere alle Status-Lichter...');
 						setTimeout(updateAllStatusLights, 200); // Verzögerung für DOM-Updates
 					});

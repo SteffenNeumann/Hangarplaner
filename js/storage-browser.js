@@ -483,6 +483,28 @@ class ServerSync {
 
 				// Event-Handler nach Server-Load reaktivieren
 				this.reactivateEventHandlers();
+
+				// KRITISCH: Ampelfarben nach Server-Sync aktualisieren
+				if (typeof window.updateAllStatusLightsForced === "function") {
+					setTimeout(() => {
+						window.updateAllStatusLightsForced();
+						console.log(
+							"🚦 Ampelfarben nach Server-Sync erzwungen aktualisiert"
+						);
+					}, 100);
+				} else if (typeof window.updateAllStatusLights === "function") {
+					setTimeout(() => {
+						window.updateAllStatusLights();
+						console.log("🚦 Ampelfarben nach Server-Sync aktualisiert");
+					}, 100);
+				} else if (typeof updateAllStatusLights === "function") {
+					setTimeout(() => {
+						updateAllStatusLights();
+						console.log(
+							"🚦 Ampelfarben nach Server-Sync aktualisiert (global)"
+						);
+					}, 100);
+				}
 			}, 1000); // 1 Sekunde Verzögerung
 		}
 	}

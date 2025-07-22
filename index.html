@@ -1852,6 +1852,23 @@
 					return updated;
 				}
 
+				// NEUE FUNKTION: Aktualisiert Status-Lichter für alle Kacheln (auch leere)
+				function updateAllStatusLightsForced() {
+					console.log("🔄 Erzwinge Update aller Status-Lichter...");
+					const allStatusSelectors =
+						document.querySelectorAll(".status-selector");
+					let updated = 0;
+
+					allStatusSelectors.forEach((select) => {
+						// Aktualisiere ALLE Status-Lichter, auch die mit "neutral" Wert
+						updateStatusLight(select);
+						updated++;
+					});
+
+					console.log(`✅ ${updated} Status-Lichter erzwungen aktualisiert`);
+					return updated;
+				}
+
 				// Globale Funktion zum Aktualisieren eines spezifischen Status-Lichts nach Kachel-ID
 				function updateStatusLightByCellId(cellId) {
 					const statusSelect = document.getElementById(`status-${cellId}`);
@@ -1864,6 +1881,12 @@
 
 				// Verwende zentrale Initialisierung statt separate DOMContentLoaded Events
 				window.hangarInitQueue = window.hangarInitQueue || [];
+
+				// Mache Funktionen global verfügbar
+				window.updateAllStatusLights = updateAllStatusLights;
+				window.updateAllStatusLightsForced = updateAllStatusLightsForced;
+				window.updateStatusLightByCellId = updateStatusLightByCellId;
+
 				window.hangarInitQueue.push(function () {
 					// Status-Dropdown-Handler für ALLE Kacheln (primäre UND sekundäre)
 					function setupStatusHandlers() {
@@ -1890,13 +1913,19 @@
 					// Event-Listener für dynamisch erstellte sekundäre Kacheln
 					document.addEventListener("secondaryTilesCreated", function (event) {
 						// console.log('🎯 Sekundäre Kacheln erstellt, richte Status-Handler ein...');
-						setTimeout(setupStatusHandlers, 100); // Kurze Verzögerung für DOM-Update
+						setTimeout(() => {
+							setupStatusHandlers();
+							// Erzwinge Update der Status-Lichter für sekundäre Kacheln
+							updateAllStatusLightsForced();
+						}, 100); // Kurze Verzögerung für DOM-Update
 					});
 
 					// Event-Listener für Daten-Updates (nach dem Laden von gespeicherten Daten)
 					document.addEventListener("dataLoaded", function (event) {
 						// console.log('📊 Daten geladen, aktualisiere alle Status-Lichter...');
-						setTimeout(updateAllStatusLights, 200); // Verzögerung für DOM-Updates
+						setTimeout(() => {
+							updateAllStatusLightsForced(); // Erzwinge Update ALLER Lichter
+						}, 200); // Verzögerung für DOM-Updates
 					});
 				});
 			</script>

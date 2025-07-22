@@ -454,9 +454,11 @@ const uiSettings = {
 			const statusSelect = document.getElementById(`status-${cellId}`);
 			if (statusSelect && tileValue.status) {
 				statusSelect.value = tileValue.status;
-				// Status-Licht aktualisieren
-				if (typeof updateStatusLights === "function") {
-					updateStatusLights(cellId);
+				// Status-Licht aktualisieren - verwende die globale updateStatusLight Funktion
+				if (typeof updateStatusLight === "function") {
+					updateStatusLight(statusSelect);
+				} else if (typeof updateStatusLightByCellId === "function") {
+					updateStatusLightByCellId(cellId);
 				}
 			}
 
@@ -466,6 +468,17 @@ const uiSettings = {
 				notesTextarea.value = tileValue.notes;
 			}
 		});
+
+		// Nach dem Anwenden aller Werte: Event auslösen für Status-Lichter-Update
+		setTimeout(() => {
+			const dataLoadedEvent = new CustomEvent('dataLoaded', {
+				detail: { 
+					tilesUpdated: tileValues.length,
+					timestamp: new Date().toISOString()
+				}
+			});
+			document.dispatchEvent(dataLoadedEvent);
+		}, 100);
 	},
 };
 
@@ -592,6 +605,17 @@ function updateSecondaryTiles(count, layout, preserveData = true) {
 	// console.log(
 	//	`✅ ${count} sekundäre Kacheln aktiviert - Daten bleiben erhalten!`
 	// );
+
+	// Event feuern für andere Systeme
+	const event = new CustomEvent("secondaryTilesCreated", {
+		detail: {
+			count: count,
+			cellIds: Array.from(currentTiles)
+				.slice(0, count)
+				.map((tile, index) => 101 + index),
+		},
+	});
+	document.dispatchEvent(event);
 }
 
 /**
@@ -631,10 +655,75 @@ function createSingleSecondaryTile(cellId, container) {
 	// Zur sekundären Sektion hinzufügen
 	container.appendChild(cellClone);
 
+	// WICHTIG: Event-Listener für die neue Kachel hinzufügen
+	setupEventListenersForTile(cellClone, cellId);
+
 	// console.log(`✅ Sekundäre Kachel ${cellId} erstellt`);
 }
 
-function adjustScaling() {
+/**
+ * Fügt Event-Listener für eine spezifische Kachel hinzu
+ * @param {HTMLElement} tileElement - Das Kachel-Element
+ * @param {number} cellId - Die Kachel-ID
+ */
+function setupEventListenersForTile(tileElement, cellId) {
+	// Status-Selector Event-Listener (vereinfacht - nutzt globale updateStatusLight Funktion)
+	const statusSelector = tileElement.querySelector(`#status-${cellId}`);
+	if (statusSelector && !statusSelector.hasAttribute('data-status-listener-added')) {
+		statusSelector.addEventListener("change", function () {
+			// Nutze die globale updateStatusLight Funktion aus index.html
+			if (typeof updateStatusLight === 'function') {
+				updateStatusLight(this);
+			}
+		});
+		statusSelector.setAttribute('data-status-listener-added', 'true');
+		
+		// Initial Status setzen (nach DOM-Update)
+		setTimeout(() => {
+			if (typeof updateStatusLight === 'function') {
+				updateStatusLight(statusSelector);
+			}
+		}, 50);
+	}
+
+	// Aircraft ID Formatierung
+	const aircraftInput = tileElement.querySelector(`#aircraft-${cellId}`);
+	if (aircraftInput && !aircraftInput.hasAttribute('data-listener-added')) {
+		aircraftInput.addEventListener("input", function (e) {
+			if (typeof formatAircraftId === 'function') {
+				const formatted = formatAircraftId(e.target.value);
+				if (formatted !== e.target.value) {
+					e.target.value = formatted;
+				}
+			}
+		});
+		aircraftInput.addEventListener("blur", function (e) {
+			if (typeof formatAircraftId === 'function') {
+				const formatted = formatAircraftId(e.target.value);
+				if (formatted !== e.target.value) {
+					e.target.value = formatted;
+				}
+			}
+		});
+		aircraftInput.setAttribute('data-listener-added', 'true');
+	}
+
+	// Towing Status Event-Listener
+	const towSelector = tileElement.querySelector(`#tow-status-${cellId}`);
+	if (towSelector && !towSelector.hasAttribute('data-listener-added')) {
+		towSelector.addEventListener("change", function () {
+			if (typeof updateTowStatusStyles === 'function') {
+				updateTowStatusStyles(this);
+			}
+		});
+		towSelector.setAttribute('data-listener-added', 'true');
+		
+		// Initial Towing Status setzen
+		if (typeof updateTowStatusStyles === 'function') {
+			updateTowStatusStyles(towSelector);
+		}
+	}
+}function adjustScaling() {
 	// Dynamische Skalierung der UI-Elemente basierend auf Bildschirmgröße
 	const container = document.querySelector(".main-container");
 	if (!container) return;
@@ -797,6 +886,11 @@ function updateCellAttributes(cellElement, cellId) {
 					nameParts[nameParts.length - 1] = cellId.toString();
 					element.name = nameParts.join("-");
 				}
+			}
+
+			// WICHTIG: data-cell Attribut für Status-Lichter aktualisieren
+			if (element.classList.contains("status-light")) {
+				element.setAttribute("data-cell", cellId.toString());
 			}
 		});
 
@@ -973,6 +1067,7 @@ window.hangarUI = {
 	adjustScaling,
 	collectTileData,
 	checkElement, // Fehlende Funktion hinzugefügt
+	setupEventListenersForTile, // Neue Funktion hinzugefügt
 
 	/**
 	 * Initialisiert das Sektion-Layout
@@ -1234,6 +1329,14 @@ window.collectTileData = collectTileData;
 window.updateCellAttributes = updateCellAttributes;
 window.updateStatusLights = updateStatusLights;
 
+// Status-Lichter-Funktionen global verfügbar machen
+if (typeof updateAllStatusLights !== 'undefined') {
+	window.updateAllStatusLights = updateAllStatusLights;
+}
+if (typeof updateStatusLightByCellId !== 'undefined') {
+	window.updateStatusLightByCellId = updateStatusLightByCellId;
+}
+
 // setupSecondaryTileEventListeners als globale Funktion
 window.setupSecondaryTileEventListeners = function () {
 	if (window.hangarUI && window.hangarUI.setupSecondaryTileEventListeners) {
@@ -1362,6 +1465,12 @@ document.addEventListener("DOMContentLoaded", function () {
 			//	`🎯 Sekundäre IDs gefunden: ${secondaryIDs.length}`,
 			//	secondaryIDs
 			// );
+		}
+
+		// WICHTIG: Finale Status-Lichter-Aktualisierung nach vollständiger Initialisierung
+		if (typeof updateAllStatusLights === 'function') {
+			// console.log('🔄 Finale Status-Lichter-Aktualisierung...');
+			updateAllStatusLights();
 		}
 
 		// console.log("🎉 === HANGARPLANNER INITIALISIERUNG ABGESCHLOSSEN ===");

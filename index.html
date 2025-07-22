@@ -1802,41 +1802,108 @@
 
 			<!-- Event-Handler für die neue Statusdarstellung -->
 			<script>
+				// Globale Funktion zum Aktualisieren des Statuslichts (für alle Kacheln)
+				function updateStatusLight(select) {
+					const cellId = select.id.split("-")[1];
+					const statusValue = select.value;
+					
+					// Suche Status-Licht in primären ODER sekundären Kacheln
+					let statusLight = document.querySelector(
+						`.status-light[data-cell="${cellId}"]`
+					);
+					
+					// Fallback: Suche in der nächsten Container-Hierarchie
+					if (!statusLight) {
+						const container = select.closest('.hangar-cell');
+						if (container) {
+							statusLight = container.querySelector('.status-light');
+						}
+					}
+
+					if (statusLight) {
+						// CSS-basierte Lösung: Nur data-status Attribut setzen
+						statusLight.setAttribute("data-status", statusValue);
+						statusLight.setAttribute("data-cell", cellId);
+						
+						// Legacy CSS-Klassen entfernen (für alte Browser)
+						statusLight.classList.remove(
+							"status-ready",
+							"status-maintenance", 
+							"status-aog",
+							"status-neutral"
+						);
+						// Neue CSS-Klasse hinzufügen (Fallback)
+						statusLight.classList.add(`status-${statusValue}`);
+						
+						// console.log(`✅ Status-Licht für Kachel ${cellId} auf ${statusValue} gesetzt`);
+					} else {
+						console.warn(`❌ Status-Licht für Kachel ${cellId} nicht gefunden`);
+					}
+				}
+
+				// Globale Funktion zum Aktualisieren ALLER Status-Lichter
+				function updateAllStatusLights() {
+					// console.log('🔄 Aktualisiere alle Status-Lichter...');
+					const allStatusSelectors = document.querySelectorAll('.status-selector');
+					let updated = 0;
+					
+					allStatusSelectors.forEach(select => {
+						if (select.value && select.value !== 'neutral') {
+							updateStatusLight(select);
+							updated++;
+						}
+					});
+					
+					// console.log(`✅ ${updated} Status-Lichter aktualisiert`);
+					return updated;
+				}
+
+				// Globale Funktion zum Aktualisieren eines spezifischen Status-Lichts nach Kachel-ID
+				function updateStatusLightByCellId(cellId) {
+					const statusSelect = document.getElementById(`status-${cellId}`);
+					if (statusSelect) {
+						updateStatusLight(statusSelect);
+						return true;
+					}
+					return false;
+				}
+
 				// Verwende zentrale Initialisierung statt separate DOMContentLoaded Events
 				window.hangarInitQueue = window.hangarInitQueue || [];
 				window.hangarInitQueue.push(function () {
-					// Status-Dropdown-Handler für die neuen Statusfarben
-					document.querySelectorAll(".status-selector").forEach((select) => {
-						// Initial Status setzen
-						updateStatusLight(select);
+					// Status-Dropdown-Handler für ALLE Kacheln (primäre UND sekundäre)
+					function setupStatusHandlers() {
+						document.querySelectorAll(".status-selector").forEach((select) => {
+							// Prüfe ob Event-Listener bereits hinzugefügt wurde
+							if (!select.hasAttribute('data-status-listener-added')) {
+								// Initial Status setzen
+								updateStatusLight(select);
 
-						// Event-Listener für Änderungen
-						select.addEventListener("change", function () {
-							updateStatusLight(this);
+								// Event-Listener für Änderungen
+								select.addEventListener("change", function () {
+									updateStatusLight(this);
+								});
+								
+								// Markiere als verarbeitet
+								select.setAttribute('data-status-listener-added', 'true');
+							}
 						});
-					});
-
-					// Funktion zum Aktualisieren des Statuslichts
-					function updateStatusLight(select) {
-						const cellId = select.id.split("-")[1];
-						const statusValue = select.value;
-						const statusLight = document.querySelector(
-							`.status-light[data-cell="${cellId}"]`
-						);
-
-						if (statusLight) {
-							// Alle Status-Klassen entfernen
-							statusLight.classList.remove(
-								"status-ready",
-								"status-maintenance",
-								"status-aog"
-							);
-							// Neue Status-Klasse hinzufügen
-							statusLight.classList.add(`status-${statusValue}`);
-							// Status-Datenwert aktualisieren
-							statusLight.setAttribute("data-status", statusValue);
-						}
 					}
+					
+					// Initial alle Status-Handler einrichten
+					setupStatusHandlers();
+					
+					// Event-Listener für dynamisch erstellte sekundäre Kacheln
+					document.addEventListener('secondaryTilesCreated', function(event) {
+						// console.log('🎯 Sekundäre Kacheln erstellt, richte Status-Handler ein...');
+						setTimeout(setupStatusHandlers, 100); // Kurze Verzögerung für DOM-Update
+					});
+					
+					// Event-Listener für Daten-Updates (nach dem Laden von gespeicherten Daten)
+					document.addEventListener('dataLoaded', function(event) {
+						// console.log('📊 Daten geladen, aktualisiere alle Status-Lichter...');
+						setTimeout(updateAllStatusLights, 200); // Verzögerung für DOM-Updates
+					});
 				});
 			</script>
 
@@ -1879,6 +1946,16 @@
 					// Status-Dropdowns Hintergrundfarbe forcieren
 					document.querySelectorAll(".status-selector").forEach((select) => {
 						select.style.backgroundColor = "#e6eaef";
+
+						// Event-Listener für neue Status-Selektoren hinzufügen, falls noch nicht vorhanden
+						if (!select.hasAttribute("data-listener-added")) {
+							select.addEventListener("change", function () {
+								updateStatusLight(this);
+							});
+							select.setAttribute("data-listener-added", "true");
+							// Initial Status setzen
+							updateStatusLight(select);
+						}
 					});
 				}
 
@@ -1898,6 +1975,43 @@
 						updateTextareasAndSelects
 					);
 				});
+			</script>
+
+			<!-- Event-Handler für Aircraft ID Formatierung -->
+			<script>
+				// Zentrale Aircraft ID Formatierung
+				function setupAircraftIdFormatting() {
+					document
+						.querySelectorAll('input[id^="aircraft-"]')
+						.forEach((input) => {
+							input.addEventListener("input", function (e) {
+								formatAircraftId(e.target);
+							});
+
+							input.addEventListener("blur", function (e) {
+								formatAircraftId(e.target);
+							});
+						});
+				}
+
+				// Formatierung: Erster Buchstabe + Bindestrich + Rest in Großbuchstaben
+				function formatAircraftId(input) {
+					let value = input.value.trim();
+					if (value.length === 0) return;
+
+					// Entferne alle Bindestriche und konvertiere zu Großbuchstaben
+					let cleanValue = value.replace(/-/g, "").toUpperCase();
+
+					if (cleanValue.length > 0) {
+						// Erster Buchstabe + Bindestrich + Rest
+						let formatted = cleanValue.charAt(0);
+						if (cleanValue.length > 1) {
+							formatted += "-" + cleanValue.substring(1);
+						}
+
+						input.value = formatted;
+					}
+				}
 			</script>
 
 			<!-- Event-Handler für Towing-Status Dropdowns -->
@@ -1953,14 +2067,20 @@
 					// Initial ausführen
 					setupTowStatusHandlers();
 
+					// Aircraft ID Formatierung einrichten
+					setupAircraftIdFormatting();
+
 					// Auch bei UI-Updates ausführen
-					document.addEventListener(
-						"secondaryTilesCreated",
-						setupTowStatusHandlers
-					);
+					document.addEventListener("secondaryTilesCreated", function () {
+						setupTowStatusHandlers();
+						setupAircraftIdFormatting();
+					});
 
 					// Mit Verzögerung nochmal ausführen, um dynamisch erstellte Elemente zu erfassen
-					setTimeout(setupTowStatusHandlers, 500);
+					setTimeout(function () {
+						setupTowStatusHandlers();
+						setupAircraftIdFormatting();
+					}, 500);
 				});
 			</script>
 

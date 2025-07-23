@@ -1333,53 +1333,75 @@
 						</div>
 					</div>
 
-					<!-- Master-Slave Synchronization Section -->
+					<!-- Synchronization Section -->
 					<div class="sidebar-accordion-item">
 						<div
 							class="sidebar-accordion-header"
 							onclick="toggleAccordion(this)">
 							<div class="sidebar-header-content">
-								<i class="sidebar-icon">🔗</i>
-								<h3 class="sidebar-section-title">Master-Slave Sync</h3>
+								<i class="sidebar-icon">�</i>
+								<h3 class="sidebar-section-title">Synchronisation</h3>
 							</div>
 							<i class="dropdown-arrow">▼</i>
 						</div>
 						<div class="sidebar-accordion-content">
-							<!-- Enable Master-Slave Sync Toggle -->
+							<!-- Modern Sync Toggles Interface -->
 							<div class="sidebar-form-group">
-								<div class="sidebar-form-row">
-									<label for="liveSyncToggle"
-										>Master-Slave Synchronization:</label
-									>
-									<div class="input-container">
-										<label class="toggle-switch">
-											<input type="checkbox" id="liveSyncToggle" />
-											<span class="toggle-slider"></span>
-										</label>
-									</div>
-								</div>
-
-								<!-- Status Display -->
+								<!-- Sync Description -->
 								<div class="sidebar-form-group">
-									<div class="text-xs text-gray-400 mt-1">
-										Master: Kann Daten bearbeiten und speichern<br />
-										Slave: Empfängt Updates automatisch
+									<div class="sync-mode-description">
+										Configure how your data syncs with the server
 									</div>
 								</div>
 
-								<!-- Manual Sync Buttons - Kleinere Größe für Konsistenz -->
-								<div class="sidebar-input-group">
-									<button
-										id="manualSyncBtn"
-										class="sidebar-btn sidebar-btn-secondary text-sm px-2 py-1">
-										🔄 Manual Sync
-									</button>
-									<button
-										id="syncStatusBtn"
-										class="sidebar-btn sidebar-btn-info text-sm px-2 py-1"
-										title="Show sync status">
-										📊 Status
-									</button>
+								<!-- Read Data Toggle -->
+								<div class="sidebar-form-group">
+									<div class="sidebar-form-row">
+										<label class="sidebar-option-label">
+											<i class="sidebar-option-icon">📡</i>
+											<span class="sidebar-option-title">Read Data</span>
+											<span class="sidebar-option-desc"
+												>Receive updates from server</span
+											>
+										</label>
+										<div class="input-container">
+											<label class="toggle-switch">
+												<input type="checkbox" id="readDataToggle" />
+												<span class="toggle-slider"></span>
+											</label>
+										</div>
+									</div>
+								</div>
+
+								<!-- Write Data Toggle -->
+								<div class="sidebar-form-group">
+									<div class="sidebar-form-row">
+										<label class="sidebar-option-label">
+											<i class="sidebar-option-icon">👑</i>
+											<span class="sidebar-option-title">Write Data</span>
+											<span class="sidebar-option-desc"
+												>Send changes to server (Master mode)</span
+											>
+										</label>
+										<div class="input-container">
+											<label class="toggle-switch">
+												<input type="checkbox" id="writeDataToggle" />
+												<span class="toggle-slider"></span>
+											</label>
+										</div>
+									</div>
+								</div>
+
+								<!-- Current Mode Display (einzige Status-Anzeige) -->
+								<div class="sidebar-form-group">
+									<div class="sync-status-display">
+										<span class="sync-status-label">Current Mode:</span>
+										<span
+											id="currentSyncMode"
+											class="sync-mode-badge standalone"
+											>Standalone</span
+										>
+									</div>
 								</div>
 							</div>
 						</div>

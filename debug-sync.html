@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="de">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Sync-Modi Debug</title>
+		<style>
+			body {
+				font-family: monospace;
+				margin: 20px;
+				background: #1a1a1a;
+				color: #00ff00;
+			}
+			.debug-panel {
+				background: #000;
+				border: 2px solid #00ff00;
+				border-radius: 10px;
+				padding: 20px;
+				margin: 10px 0;
+			}
+			.button-group {
+				margin: 10px 0;
+			}
+			.debug-btn {
+				background: #333;
+				color: #00ff00;
+				border: 1px solid #00ff00;
+				padding: 10px 15px;
+				margin: 5px;
+				cursor: pointer;
+				border-radius: 5px;
+			}
+			.debug-btn:hover {
+				background: #00ff00;
+				color: #000;
+			}
+			.status-display {
+				background: #111;
+				border: 1px solid #444;
+				padding: 15px;
+				margin: 10px 0;
+				border-radius: 5px;
+				font-size: 14px;
+				line-height: 1.6;
+			}
+			.success {
+				color: #00ff00;
+			}
+			.warning {
+				color: #ffaa00;
+			}
+			.error {
+				color: #ff0000;
+			}
+			.info {
+				color: #00aaff;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>🔧 HangarPlanner Sync-Modi Debug</h1>
+
+		<div class="debug-panel">
+			<h2>Sync-Modi Tests</h2>
+			<div class="button-group">
+				<button class="debug-btn" onclick="testMode('standalone')">
+					🏠 Test Standalone
+				</button>
+				<button class="debug-btn" onclick="testMode('sync')">
+					📡 Test Sync
+				</button>
+				<button class="debug-btn" onclick="testMode('master')">
+					👑 Test Master
+				</button>
+			</div>
+			<div class="button-group">
+				<button class="debug-btn" onclick="testCycling()">
+					🔄 Test Cycling
+				</button>
+				<button class="debug-btn" onclick="showStatus()">📊 Show Status</button>
+				<button class="debug-btn" onclick="clearLog()">🧹 Clear Log</button>
+			</div>
+		</div>
+
+		<div class="debug-panel">
+			<h2>Aktueller Status</h2>
+			<div id="currentStatus" class="status-display">
+				Status wird geladen...
+			</div>
+		</div>
+
+		<div class="debug-panel">
+			<h2>Debug Log</h2>
+			<div id="debugLog" class="status-display">
+				Debug-Ausgaben erscheinen hier...
+			</div>
+		</div>
+
+		<script>
+			// Debug-Funktionen für Sync-Modi
+			let logContainer = null;
+			let statusContainer = null;
+
+			function initDebug() {
+				logContainer = document.getElementById("debugLog");
+				statusContainer = document.getElementById("currentStatus");
+
+				// Überschreibe console.log für Debug-Panel
+				const originalLog = console.log;
+				console.log = function (...args) {
+					originalLog.apply(console, args);
+					if (logContainer) {
+						const message = args.join(" ");
+						const logEntry = document.createElement("div");
+						logEntry.textContent =
+							new Date().toLocaleTimeString() + ": " + message;
+
+						// Farben basierend auf Inhalt
+						if (message.includes("✅") || message.includes("SUCCESS")) {
+							logEntry.className = "success";
+						} else if (message.includes("⚠️") || message.includes("WARNING")) {
+							logEntry.className = "warning";
+						} else if (message.includes("❌") || message.includes("ERROR")) {
+							logEntry.className = "error";
+						} else if (message.includes("ℹ️") || message.includes("INFO")) {
+							logEntry.className = "info";
+						}
+
+						logContainer.appendChild(logEntry);
+						logContainer.scrollTop = logContainer.scrollHeight;
+					}
+				};
+
+				log("🚀 Debug-System initialisiert");
+				updateStatus();
+			}
+
+			function log(message) {
+				console.log(message);
+			}
+
+			function updateStatus() {
+				if (!statusContainer) return;
+
+				// Prüfe ob HangarPlanner verfügbar ist
+				if (
+					typeof window.parent !== "undefined" &&
+					window.parent.sharingManager
+				) {
+					const sm = window.parent.sharingManager;
+					const ss = window.parent.serverSync;
+
+					statusContainer.innerHTML = `
+                    <strong>Sharing Manager:</strong><br>
+                    - syncMode: ${sm.syncMode}<br>
+                    - isLiveSyncEnabled: ${sm.isLiveSyncEnabled}<br>
+                    - isMasterMode: ${sm.isMasterMode}<br>
+                    <br>
+                    <strong>Server Sync:</strong><br>
+                    - isMaster: ${ss ? ss.isMaster : "N/A"}<br>
+                    - isSlaveActive: ${ss ? ss.isSlaveActive : "N/A"}<br>
+                    - Server URL: ${ss ? ss.serverSyncUrl : "N/A"}<br>
+                    <br>
+                    <strong>UI Elements:</strong><br>
+                    - Toggle: ${getToggleStatus()}<br>
+                    - Widget: ${getWidgetStatus()}<br>
+                    - Menu Button: ${getMenuStatus()}
+                `;
+				} else {
+					statusContainer.innerHTML =
+						'<span class="error">❌ HangarPlanner nicht verfügbar</span>';
+				}
+			}
+
+			function getToggleStatus() {
+				const toggle =
+					window.parent?.document?.getElementById("liveSyncToggle");
+				return toggle ? (toggle.checked ? "AN" : "AUS") : "N/A";
+			}
+
+			function getWidgetStatus() {
+				const widget = window.parent?.document?.getElementById("sync-mode");
+				return widget
+					? `"${widget.textContent}" (${Array.from(widget.classList).join(
+							", "
+					  )})`
+					: "N/A";
+			}
+
+			function getMenuStatus() {
+				const menu = window.parent?.document?.getElementById("syncStatusBtn");
+				return menu ? `"${menu.textContent}"` : "N/A";
+			}
+
+			function testMode(mode) {
+				log(`🧪 Teste ${mode.toUpperCase()}-Modus...`);
+
+				const sm = window.parent?.sharingManager;
+				if (!sm) {
+					log("❌ SharingManager nicht verfügbar");
+					return;
+				}
+
+				switch (mode.toLowerCase()) {
+					case "standalone":
+						sm.enableStandaloneMode()
+							.then(() => {
+								log("✅ Standalone-Modus aktiviert");
+								setTimeout(updateStatus, 1000);
+							})
+							.catch((err) => {
+								log("❌ Fehler beim Aktivieren des Standalone-Modus: " + err);
+							});
+						break;
+					case "sync":
+						sm.enableSyncMode()
+							.then(() => {
+								log("✅ Sync-Modus aktiviert");
+								setTimeout(updateStatus, 1000);
+							})
+							.catch((err) => {
+								log("❌ Fehler beim Aktivieren des Sync-Modus: " + err);
+							});
+						break;
+					case "master":
+						sm.enableMasterMode()
+							.then(() => {
+								log("✅ Master-Modus aktiviert");
+								setTimeout(updateStatus, 1000);
+							})
+							.catch((err) => {
+								log("❌ Fehler beim Aktivieren des Master-Modus: " + err);
+							});
+						break;
+					default:
+						log("❌ Unbekannter Modus: " + mode);
+				}
+			}
+
+			function testCycling() {
+				log("🔄 Starte Cycling-Test...");
+				const sm = window.parent?.sharingManager;
+				if (!sm) {
+					log("❌ SharingManager nicht verfügbar");
+					return;
+				}
+
+				// Starte mit Standalone
+				sm.enableStandaloneMode().then(() => {
+					log("Step 1: Standalone aktiviert");
+					updateStatus();
+
+					setTimeout(() => {
+						sm.cycleSyncMode().then(() => {
+							log("Step 2: Zu Sync gewechselt");
+							updateStatus();
+
+							setTimeout(() => {
+								sm.cycleSyncMode().then(() => {
+									log("Step 3: Zu Master gewechselt");
+									updateStatus();
+
+									setTimeout(() => {
+										sm.cycleSyncMode().then(() => {
+											log("Step 4: Zurück zu Standalone");
+											updateStatus();
+											log("✅ Cycling-Test abgeschlossen");
+										});
+									}, 2000);
+								});
+							}, 2000);
+						});
+					}, 2000);
+				});
+			}
+
+			function showStatus() {
+				const sm = window.parent?.sharingManager;
+				if (sm && sm.showSyncStatus) {
+					sm.showSyncStatus();
+				} else {
+					log("❌ showSyncStatus nicht verfügbar");
+				}
+			}
+
+			function clearLog() {
+				if (logContainer) {
+					logContainer.innerHTML = "Debug-Log geleert...";
+				}
+			}
+
+			// Status alle 5 Sekunden aktualisieren
+			setInterval(updateStatus, 5000);
+
+			// Initialisierung beim Laden
+			window.addEventListener("load", initDebug);
+		</script>
+	</body>
+</html>

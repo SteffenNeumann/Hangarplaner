@@ -298,12 +298,24 @@ window.globalInitialization = {
 	/**
 	 * Versucht automatisch, die letzten Daten vom Server zu laden
 	 * Wird beim Seitenstart ausgeführt nach einer kurzen Verzögerung
+	 * ANGEPASST: Berücksichtigt neue Sync-Modi
 	 */
 	attemptServerDataLoad: function () {
 		// Verzögerung, damit alle Module geladen sind
 		setTimeout(async () => {
 			try {
 				console.log("🔄 Versuche, letzte Daten vom Server zu laden...");
+
+				// NEUE PRÜFUNG: Respektiere Sharing-Manager Modi
+				if (
+					window.sharingManager &&
+					window.sharingManager.syncMode === "standalone"
+				) {
+					console.log(
+						"🏠 Standalone-Modus erkannt - Server-Datenladung wird über SharingManager verwaltet"
+					);
+					return;
+				}
 
 				// Prüfe ob ServerSync/StorageBrowser verfügbar ist
 				if (!window.serverSync || !window.serverSync.loadFromServer) {

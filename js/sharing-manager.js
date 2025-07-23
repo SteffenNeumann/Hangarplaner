@@ -6,6 +6,8 @@
 
 class SharingManager {
 	constructor() {
+		// NEUE MODI-DEFINITIONEN
+		this.syncMode = "standalone"; // "standalone", "sync", "master"
 		this.isLiveSyncEnabled = false;
 		this.isMasterMode = false;
 		this.initialized = false;
@@ -29,25 +31,31 @@ class SharingManager {
 		this.setupEventHandlers();
 		this.loadSavedSharingSettings();
 
-		// Initial-Status setzen wenn noch nicht gesetzt
-		if (!this.isLiveSyncEnabled) {
-			this.updateAllSyncDisplays("Standalone", false);
-		}
+		// Initial-Status setzen basierend auf gespeicherten Einstellungen
+		this.updateAllSyncDisplays();
 
 		this.initialized = true;
 
-		console.log("🔗 Master-Slave Manager initialisiert");
+		console.log("🔗 Sharing Manager initialisiert - Modus:", this.syncMode);
 	}
 
 	/**
-	 * Setzt Event-Handler für Master-Slave-UI-Elemente
+	 * ÜBERARBEITET: Setzt Event-Handler für neue Dual-Toggle-UI
 	 */
 	setupEventHandlers() {
-		// Live Sync Toggle -> Master-Slave Toggle
-		const liveSyncToggle = document.getElementById("liveSyncToggle");
-		if (liveSyncToggle) {
-			liveSyncToggle.addEventListener("change", (e) => {
-				this.handleMasterSlaveToggle(e.target.checked);
+		// Read Data Toggle - Empfängt Server-Updates
+		const readDataToggle = document.getElementById("readDataToggle");
+		if (readDataToggle) {
+			readDataToggle.addEventListener("change", (e) => {
+				this.handleReadDataToggle(e.target.checked);
+			});
+		}
+
+		// Write Data Toggle - Sendet Daten an Server (Master-Modus)
+		const writeDataToggle = document.getElementById("writeDataToggle");
+		if (writeDataToggle) {
+			writeDataToggle.addEventListener("change", (e) => {
+				this.handleWriteDataToggle(e.target.checked);
 			});
 		}
 
@@ -59,114 +67,222 @@ class SharingManager {
 			});
 		}
 
-		// Sync Status Button
+		// Sync Status Button - Zeigt detaillierten Status
 		const syncStatusBtn = document.getElementById("syncStatusBtn");
 		if (syncStatusBtn) {
+			// Rechtsklick für Status-Anzeige
+			syncStatusBtn.addEventListener("contextmenu", (e) => {
+				e.preventDefault();
+				this.showSyncStatus();
+			});
+
+			// Linksklick für Status-Anzeige
 			syncStatusBtn.addEventListener("click", () => {
 				this.showSyncStatus();
 			});
 		}
 
-		console.log("🎯 Master-Slave Event-Handler registriert");
+		console.log("🎯 Dual-Toggle Event-Handler registriert");
 	}
 
 	/**
-	 * NEUE METHODE: Behandelt Master-Slave Toggle
+	 * NEUE Dual-Toggle-Handler: Read Data Toggle
 	 */
-	async handleMasterSlaveToggle(enabled) {
-		this.isLiveSyncEnabled = enabled;
+	async handleReadDataToggle(enabled) {
+		const writeDataToggle = document.getElementById("writeDataToggle");
+		const isWriteEnabled = writeDataToggle?.checked || false;
 
-		if (enabled) {
-			await this.enableMasterSlaveSync();
+		await this.updateSyncMode(enabled, isWriteEnabled);
+		console.log(`📥 Read Data Toggle: ${enabled ? "AN" : "AUS"}`);
+	}
+
+	/**
+	 * NEUE Dual-Toggle-Handler: Write Data Toggle
+	 */
+	async handleWriteDataToggle(enabled) {
+		const readDataToggle = document.getElementById("readDataToggle");
+		const isReadEnabled = readDataToggle?.checked || false;
+
+		await this.updateSyncMode(isReadEnabled, enabled);
+		console.log(`📤 Write Data Toggle: ${enabled ? "AN" : "AUS"}`);
+	}
+
+	/**
+	 * NEUE Zentrale Sync-Modus-Koordination basierend auf beiden Toggles
+	 * @param {boolean} readEnabled - Lesen von Server aktiviert
+	 * @param {boolean} writeEnabled - Schreiben zum Server aktiviert
+	 */
+	async updateSyncMode(readEnabled, writeEnabled) {
+		// 4 mögliche Kombinationen:
+		if (!readEnabled && !writeEnabled) {
+			// Beide AUS -> Standalone Mode
+			await this.enableStandaloneMode();
+		} else if (readEnabled && !writeEnabled) {
+			// Nur Read -> Sync Mode (Read-Only)
+			await this.enableSyncMode();
+		} else if (!readEnabled && writeEnabled) {
+			// Nur Write -> Master Mode (Write-Only) - ungewöhnlich, aber möglich
+			await this.enableMasterMode();
 		} else {
-			this.disableMasterSlaveSync();
+			// Beide AN -> Master Mode mit Read-Write
+			await this.enableMasterMode();
 		}
 
 		// Einstellungen speichern
 		this.saveSharingSettings();
+
+		console.log(
+			`🔄 Sync-Modus aktualisiert: Read=${readEnabled}, Write=${writeEnabled}, Mode=${this.currentSyncMode}`
+		);
 	}
 
 	/**
-	 * NEUE METHODE: Aktiviert Master-Slave Synchronisation
+	 * NEU: Aktiviert Standalone-Modus (nur localStorage, einmalige Server-Ladung)
 	 */
-	async enableMasterSlaveSync() {
+	async enableStandaloneMode() {
 		try {
-			// Lasse ServerSync die Master-Slave Rolle bestimmen
+			console.log("🏠 Aktiviere Standalone-Modus...");
+
+			// ServerSync komplett stoppen
 			if (window.serverSync) {
-				await window.serverSync.determineMasterSlaveRole();
+				window.serverSync.stopPeriodicSync();
 
-				// Starte entsprechenden Modus basierend auf Rollenerkennung
-				if (window.serverSync.isMaster) {
-					this.isMasterMode = true;
-					// Starte Master-Modus in ServerSync
-					await window.serverSync.startMasterMode();
-
-					this.showNotification(
-						"Master-Modus aktiviert - Sie können Daten bearbeiten",
-						"success"
-					);
-					this.updateAllSyncDisplays("Master", true);
-				} else {
-					this.isMasterMode = false;
-					// Starte Slave-Modus in ServerSync
-					await window.serverSync.startSlaveMode();
-
-					this.showNotification(
-						"Slave-Modus aktiviert - Empfange Updates automatisch",
-						"info"
-					);
-					this.updateAllSyncDisplays("Slave", true);
+				if (window.serverSync.slaveCheckInterval) {
+					clearInterval(window.serverSync.slaveCheckInterval);
+					window.serverSync.slaveCheckInterval = null;
 				}
 
-				console.log(
-					`✅ Master-Slave Sync aktiviert - Rolle: ${
-						window.serverSync.isMaster ? "Master" : "Slave"
-					}`
+				window.serverSync.isMaster = false;
+				window.serverSync.isSlaveActive = false;
+			}
+
+			// Lokale Flags setzen
+			this.syncMode = "standalone";
+			this.isLiveSyncEnabled = false;
+			this.isMasterMode = false;
+
+			// UI aktualisieren
+			this.updateAllSyncDisplays("Standalone", false);
+			this.showNotification(
+				"Standalone-Modus aktiviert - Nur lokale Speicherung",
+				"info"
+			);
+
+			console.log("✅ Standalone-Modus aktiviert");
+		} catch (error) {
+			console.error("❌ Fehler beim Aktivieren des Standalone-Modus:", error);
+			this.showNotification("Fehler beim Wechsel zu Standalone-Modus", "error");
+		}
+	}
+
+	/**
+	 * NEU: Aktiviert Sync-Modus (Slave) - Empfängt Server-Updates
+	 */
+	async enableSyncMode() {
+		try {
+			console.log("📡 Aktiviere Sync-Modus (Slave)...");
+
+			if (window.serverSync) {
+				// Bestimme Rolle - für Sync-Modus immer Slave
+				window.serverSync.isMaster = false;
+				window.serverSync.isSlaveActive = true;
+
+				// Starte Slave-Polling
+				await window.serverSync.startSlaveMode();
+
+				// Lokale Flags setzen
+				this.syncMode = "sync";
+				this.isLiveSyncEnabled = true;
+				this.isMasterMode = false;
+
+				// UI aktualisieren
+				this.updateAllSyncDisplays("Sync", true);
+				this.showNotification(
+					"Sync-Modus aktiviert - Empfange Server-Updates",
+					"info"
 				);
+
+				console.log("✅ Sync-Modus (Slave) aktiviert");
 			} else {
 				throw new Error("ServerSync nicht verfügbar");
 			}
 		} catch (error) {
-			console.error("❌ Fehler beim Aktivieren von Master-Slave Sync:", error);
+			console.error("❌ Fehler beim Aktivieren des Sync-Modus:", error);
 			this.showNotification(
 				"Fehler beim Aktivieren der Synchronisation",
 				"error"
 			);
 
-			// Toggle zurücksetzen bei Fehler
-			const liveSyncToggle = document.getElementById("liveSyncToggle");
-			if (liveSyncToggle) {
-				liveSyncToggle.checked = false;
-				this.isLiveSyncEnabled = false;
-			}
+			// Bei Fehler zurück zu Standalone
+			await this.enableStandaloneMode();
 		}
 	}
 
 	/**
-	 * NEUE METHODE: Deaktiviert Master-Slave Synchronisation
+	 * NEU: Aktiviert Master-Modus - Sendet Daten an Server
 	 */
-	disableMasterSlaveSync() {
-		// Stoppe ServerSync
-		if (window.serverSync) {
-			window.serverSync.stopPeriodicSync();
+	async enableMasterMode() {
+		try {
+			console.log("👑 Aktiviere Master-Modus...");
 
-			if (window.serverSync.slaveCheckInterval) {
-				clearInterval(window.serverSync.slaveCheckInterval);
-				window.serverSync.slaveCheckInterval = null;
+			if (window.serverSync) {
+				// Master-Rolle setzen
+				window.serverSync.isMaster = true;
+				window.serverSync.isSlaveActive = false;
+
+				// Starte Master-Sync
+				await window.serverSync.startMasterMode();
+
+				// Lokale Flags setzen
+				this.syncMode = "master";
+				this.isLiveSyncEnabled = true;
+				this.isMasterMode = true;
+
+				// UI aktualisieren
+				this.updateAllSyncDisplays("Master", true);
+				this.showNotification(
+					"Master-Modus aktiviert - Sende Daten an Server",
+					"success"
+				);
+
+				console.log("✅ Master-Modus aktiviert");
+			} else {
+				throw new Error("ServerSync nicht verfügbar");
 			}
+		} catch (error) {
+			console.error("❌ Fehler beim Aktivieren des Master-Modus:", error);
+			this.showNotification("Fehler beim Aktivieren des Master-Modus", "error");
 
-			window.serverSync.isMaster = false;
-			window.serverSync.isSlaveActive = false;
+			// Bei Fehler zurück zu Sync-Modus
+			await this.enableSyncMode();
+		}
+	}
+
+	/**
+	 * NEU: Schaltet zwischen den Modi um (für Button-Klicks)
+	 * Standalone -> Sync -> Master -> Standalone
+	 */
+	async cycleSyncMode() {
+		switch (this.syncMode) {
+			case "standalone":
+				await this.enableSyncMode();
+				break;
+			case "sync":
+				await this.enableMasterMode();
+				break;
+			case "master":
+				await this.enableStandaloneMode();
+				// Toggle ausschalten da zurück zu Standalone
+				const liveSyncToggle = document.getElementById("liveSyncToggle");
+				if (liveSyncToggle) {
+					liveSyncToggle.checked = false;
+				}
+				break;
+			default:
+				await this.enableStandaloneMode();
 		}
 
-		// Lokale Flags zurücksetzen
-		this.isMasterMode = false;
-		this.isLiveSyncEnabled = false;
-
-		// UI aktualisieren
-		this.updateAllSyncDisplays("Standalone", false);
-		this.showNotification("Master-Slave Sync deaktiviert", "info");
-		console.log("⏹️ Master-Slave Sync deaktiviert");
+		this.saveSharingSettings();
 	}
 
 	/**
@@ -214,20 +330,82 @@ class SharingManager {
 	}
 
 	/**
-	 * ZENTRALISIERT: Aktualisiert alle Sync-Status-Anzeigen synchron
+	 * ÜBERARBEITET: Aktualisiert alle Sync-Status-Anzeigen für Dual-Toggle-UI
 	 */
-	updateAllSyncDisplays(status, isActive) {
-		this.updateSyncStatusDisplay(status, isActive); // Menü-Button
-		this.updateWidgetSyncDisplay(status, isActive); // Info-Widget
+	updateAllSyncDisplays() {
+		this.updateSyncStatusDisplayNew(); // Neue Dual-Toggle-Version
+		console.log(`🔄 Alle Sync-Anzeigen für Dual-Toggle aktualisiert`);
+	}
+
+	/**
+	 * NEUE: Sync-Status-Anzeige für Dual-Toggle-UI
+	 */
+	updateSyncStatusDisplayNew() {
+		const readToggle = document.getElementById("readDataToggle");
+		const writeToggle = document.getElementById("writeDataToggle");
+		const currentModeSpan = document.getElementById("currentSyncMode");
+		const syncStatusBtn = document.getElementById("syncStatusBtn");
+
+		// Toggle-Zustände auslesen
+		const readEnabled = readToggle?.checked || false;
+		const writeEnabled = writeToggle?.checked || false;
+
+		// Aktuellen Modus bestimmen und anzeigen
+		let modeText = "Standalone";
+		let modeEmoji = "🏠";
+		let cssClass = "mode-standalone";
+
+		if (readEnabled && writeEnabled) {
+			modeText = "Master";
+			modeEmoji = "👑";
+			cssClass = "mode-master";
+		} else if (readEnabled && !writeEnabled) {
+			modeText = "Sync";
+			modeEmoji = "📡";
+			cssClass = "mode-sync";
+		} else if (!readEnabled && writeEnabled) {
+			modeText = "Write-Only";
+			modeEmoji = "📤";
+			cssClass = "mode-write";
+		}
+
+		// Modus-Anzeige aktualisieren
+		if (currentModeSpan) {
+			currentModeSpan.textContent = modeText;
+			currentModeSpan.className = `sync-mode-badge ${cssClass}`;
+		}
+
+		// Sync Status Button aktualisieren
+		if (syncStatusBtn) {
+			syncStatusBtn.classList.remove(
+				"status-success",
+				"status-warning",
+				"status-error"
+			);
+
+			if (this.currentSyncMode !== "standalone") {
+				syncStatusBtn.textContent = `${modeEmoji} ${modeText}`;
+				syncStatusBtn.classList.add("status-success");
+				syncStatusBtn.title = `${modeText}-Modus aktiv - Klick für Details`;
+			} else {
+				syncStatusBtn.textContent = "📊 Status";
+				syncStatusBtn.title = "Sync inaktiv - Klick für Details";
+			}
+		}
+
+		// Widget-Display auch aktualisieren
+		this.updateWidgetSyncDisplay(
+			modeText,
+			this.currentSyncMode !== "standalone"
+		);
+
 		console.log(
-			`🔄 Alle Sync-Anzeigen aktualisiert: ${status} (${
-				isActive ? "aktiv" : "inaktiv"
-			})`
+			`🎯 UI aktualisiert: Read=${readEnabled}, Write=${writeEnabled}, Mode=${this.currentSyncMode}`
 		);
 	}
 
 	/**
-	 * AKTUALISIERT: Sync-Status-Anzeige für Menü-Button
+	 * ÜBERARBEITET: Sync-Status-Anzeige für Menü-Button mit neuen Modi
 	 */
 	updateSyncStatusDisplay(status, isActive) {
 		// Verstecke Share URL Container (nicht mehr benötigt)
@@ -250,18 +428,23 @@ class SharingManager {
 				// Bestimme Emoji und CSS-Klasse basierend auf Status
 				let emoji = "📊";
 				let cssClass = "status-success";
+				let title = "Sync Status";
 
 				if (status === "Master") {
 					emoji = "👑"; // Krone für Master
 					cssClass = "status-success";
-				} else if (status === "Slave") {
-					emoji = "📊"; // Diagramm für Slave - anders als Master
-					cssClass = "status-success";
+					title =
+						"Master-Modus aktiv - Klick für Modus-Wechsel, Rechtsklick für Details";
+				} else if (status === "Sync" || status === "Slave") {
+					emoji = "�"; // Antenne für Sync/Slave
+					cssClass = "status-warning";
+					title =
+						"Sync-Modus aktiv - Klick für Modus-Wechsel, Rechtsklick für Details";
 				}
 
 				syncStatusBtn.textContent = `${emoji} ${status}`;
 				syncStatusBtn.classList.add(cssClass);
-				syncStatusBtn.title = `Sync aktiv im ${status}-Modus`;
+				syncStatusBtn.title = title;
 
 				console.log(
 					`🎯 Menü-Button aktualisiert: ${syncStatusBtn.textContent} (${status}-Modus)`
@@ -276,7 +459,7 @@ class SharingManager {
 	}
 
 	/**
-	 * NEU: Widget-Sync-Display-Update für Info-Widget
+	 * ÜBERARBEITET: Widget-Sync-Display-Update für Info-Widget mit neuen Modi
 	 */
 	updateWidgetSyncDisplay(status, isActive) {
 		const syncModeElement = document.getElementById("sync-mode");
@@ -285,17 +468,17 @@ class SharingManager {
 			syncModeElement.classList.remove("master", "slave", "standalone");
 
 			if (isActive) {
-				// Zeige echten Status (Master/Slave) - nicht mehr nur "Master"
+				// Zeige echten Status basierend auf neuen Modi
 				if (status === "Master") {
 					syncModeElement.textContent = "Master";
 					syncModeElement.classList.add("master");
-				} else if (status === "Slave") {
-					syncModeElement.textContent = "Slave";
-					syncModeElement.classList.add("slave");
+				} else if (status === "Sync" || status === "Slave") {
+					syncModeElement.textContent = "Sync";
+					syncModeElement.classList.add("slave"); // Verwende slave-CSS für gelbe Farbe
 				} else {
-					// Fallback für andere aktive Status
+					// Fallback für unbekannte aktive Status
 					syncModeElement.textContent = status;
-					syncModeElement.classList.add("master"); // Standard für aktive Modi
+					syncModeElement.classList.add("master");
 				}
 			} else {
 				// Deaktiviert/Standalone
@@ -443,18 +626,24 @@ class SharingManager {
 	}
 
 	/**
-	 * AKTUALISIERT: Zeigt Master-Slave Status
+	 * ÜBERARBEITET: Zeigt neuen Sync-Status mit 3 Modi
 	 */
 	showSyncStatus() {
-		let statusInfo = "🔍 MASTER-SLAVE SYNC STATUS:\n\n";
+		let statusInfo = "🔍 SYNCHRONISATION STATUS:\n\n";
 
-		statusInfo += `Master-Slave Sync: ${
+		statusInfo += `Aktueller Modus: ${this.syncMode.toUpperCase()}\n`;
+		statusInfo += `Sync Toggle: ${
 			this.isLiveSyncEnabled ? "✅ Aktiviert" : "❌ Deaktiviert"
-		}\n`;
-		statusInfo += `Modus: ${this.isMasterMode ? "👑 Master" : "👤 Slave"}\n`;
+		}\n\n`;
+
+		statusInfo += `MODUS-BESCHREIBUNGEN:\n`;
+		statusInfo += `🏠 STANDALONE: Nur localStorage, einmalige Server-Ladung beim Start\n`;
+		statusInfo += `📡 SYNC: Empfängt Server-Updates automatisch (Leserechte)\n`;
+		statusInfo += `👑 MASTER: Sendet Daten an Server (Schreibrechte)\n\n`;
 
 		if (window.serverSync) {
 			const serverStatus = window.serverSync.getStatus();
+			statusInfo += `SERVER-DETAILS:\n`;
 			statusInfo += `Server URL: ${
 				serverStatus.serverUrl || "Nicht konfiguriert"
 			}\n`;
@@ -469,13 +658,18 @@ class SharingManager {
 			}\n`;
 			statusInfo += `Letzter Server-Timestamp: ${
 				window.serverSync.lastServerTimestamp || "Nie"
-			}\n`;
+			}\n\n`;
 		}
 
-		statusInfo += `\nGlobale Flags:\n`;
+		statusInfo += `GLOBALE FLAGS:\n`;
 		statusInfo += `- isApplyingServerData: ${window.isApplyingServerData}\n`;
 		statusInfo += `- isLoadingServerData: ${window.isLoadingServerData}\n`;
-		statusInfo += `- isSavingToServer: ${window.isSavingToServer}\n`;
+		statusInfo += `- isSavingToServer: ${window.isSavingToServer}\n\n`;
+
+		statusInfo += `BEDIENUNG:\n`;
+		statusInfo += `- Toggle: Wechselt zwischen Standalone ↔ Sync\n`;
+		statusInfo += `- Status-Button-Klick: Wechselt zwischen Sync ↔ Master (wenn aktiv)\n`;
+		statusInfo += `- Status-Button-Rechtsklick: Zeigt diesen Dialog\n`;
 
 		alert(statusInfo);
 		console.log(statusInfo);
@@ -618,65 +812,79 @@ class SharingManager {
 	}
 
 	/**
-	 * AKTUALISIERT: Lädt gespeicherte Master-Slave-Einstellungen
+	 * ÜBERARBEITET: Lädt gespeicherte Sync-Einstellungen mit neuen Modi
 	 */
 	loadSavedSharingSettings() {
 		try {
 			const settings = JSON.parse(
-				localStorage.getItem("hangarMasterSlaveSettings") || "{}"
+				localStorage.getItem("hangarSyncSettings") || "{}"
 			);
 
-			if (settings.isLiveSyncEnabled) {
-				const liveSyncToggle = document.getElementById("liveSyncToggle");
-				if (liveSyncToggle) {
-					liveSyncToggle.checked = true;
-					// Aktiviere Sync asynchron um Race-Conditions zu vermeiden
-					setTimeout(() => {
-						this.handleMasterSlaveToggle(true);
-					}, 100);
-				}
-			} else {
-				// Falls Sync deaktiviert ist, zeige Standalone-Status
-				this.updateAllSyncDisplays("Standalone", false);
-			}
-
-			// Lade gespeicherten Master-Modus (wird bei Sync-Aktivierung überschrieben)
+			// Lade gespeicherten Modus
+			this.syncMode = settings.syncMode || "standalone";
+			this.isLiveSyncEnabled = settings.isLiveSyncEnabled || false;
 			this.isMasterMode = settings.isMasterMode || false;
 
-			console.log("📁 Gespeicherte Einstellungen geladen:", {
-				isLiveSyncEnabled: settings.isLiveSyncEnabled,
-				isMasterMode: this.isMasterMode,
-			});
-		} catch (error) {
-			console.error(
-				"❌ Fehler beim Laden der Master-Slave-Einstellungen:",
-				error
+			// Setze Dual-Toggles basierend auf Modus
+			const readToggle = document.getElementById("readDataToggle");
+			const writeToggle = document.getElementById("writeDataToggle");
+
+			if (readToggle && writeToggle) {
+				// Toggle-Zustände basierend auf Sync-Modus setzen
+				switch (this.syncMode) {
+					case "sync":
+						readToggle.checked = true;
+						writeToggle.checked = false;
+						setTimeout(() => this.enableSyncMode(), 100);
+						break;
+					case "master":
+						readToggle.checked = true;
+						writeToggle.checked = true;
+						setTimeout(() => this.enableMasterMode(), 100);
+						break;
+					default: // "standalone"
+						readToggle.checked = false;
+						writeToggle.checked = false;
+						this.updateAllSyncDisplays();
+				}
+			}
+
+			console.log(
+				"📁 Gespeicherte Sync-Einstellungen für Dual-Toggle geladen:",
+				{
+					syncMode: this.syncMode,
+					readEnabled: readToggle?.checked,
+					writeEnabled: writeToggle?.checked,
+				}
 			);
-			// Bei Fehler Standard-Status anzeigen
-			this.updateAllSyncDisplays("Standalone", false);
+		} catch (error) {
+			console.error("❌ Fehler beim Laden der Sync-Einstellungen:", error);
+			// Fallback: Alle Toggles auf AUS
+			const readToggle = document.getElementById("readDataToggle");
+			const writeToggle = document.getElementById("writeDataToggle");
+			if (readToggle) readToggle.checked = false;
+			if (writeToggle) writeToggle.checked = false;
+			this.syncMode = "standalone";
 		}
 	}
 
 	/**
-	 * AKTUALISIERT: Speichert Master-Slave-Einstellungen
+	 * ÜBERARBEITET: Speichert neue Sync-Einstellungen
 	 */
 	saveSharingSettings() {
 		try {
 			const settings = {
+				syncMode: this.syncMode,
 				isLiveSyncEnabled: this.isLiveSyncEnabled,
 				isMasterMode: this.isMasterMode,
 				lastSaved: new Date().toISOString(),
 			};
 
-			localStorage.setItem(
-				"hangarMasterSlaveSettings",
-				JSON.stringify(settings)
-			);
+			localStorage.setItem("hangarSyncSettings", JSON.stringify(settings));
+
+			console.log("💾 Sync-Einstellungen gespeichert:", settings);
 		} catch (error) {
-			console.error(
-				"❌ Fehler beim Speichern der Master-Slave-Einstellungen:",
-				error
-			);
+			console.error("❌ Fehler beim Speichern der Sync-Einstellungen:", error);
 		}
 	}
 

@@ -32,15 +32,50 @@ class ServerSync {
 		this.serverSyncUrl = serverUrl;
 		console.log("🔄 Server-Sync initialisiert:", serverUrl);
 
-		// Automatische Master-Slave Erkennung
-		await this.determineMasterSlaveRole();
-
-		if (this.isMaster) {
-			console.log("👑 Master-Modus aktiviert");
-			this.startMasterMode();
+		// Prüfe Sharing-Manager Modus für unterschiedliche Initialisierung
+		if (
+			window.sharingManager &&
+			window.sharingManager.syncMode === "standalone"
+		) {
+			console.log("🏠 Standalone-Modus: Nur einmalige Server-Datenladung");
+			await this.loadInitialServerData();
 		} else {
-			console.log("👤 Slave-Modus aktiviert");
-			this.startSlaveMode();
+			// Automatische Master-Slave Erkennung für aktive Modi
+			await this.determineMasterSlaveRole();
+
+			if (this.isMaster) {
+				console.log("👑 Master-Modus aktiviert");
+				this.startMasterMode();
+			} else {
+				console.log("👤 Slave-Modus aktiviert");
+				this.startSlaveMode();
+			}
+		}
+	}
+
+	/**
+	 * NEU: Lädt einmalig Server-Daten für Standalone-Modus
+	 */
+	async loadInitialServerData() {
+		try {
+			console.log("📥 Lade einmalige Server-Daten für Standalone-Modus...");
+
+			const serverData = await this.loadFromServer();
+			if (serverData && serverData.primaryTiles) {
+				await this.applyServerData(serverData);
+				console.log("✅ Einmalige Server-Daten für Standalone-Modus geladen");
+
+				if (window.showNotification) {
+					window.showNotification(
+						"Server-Daten einmalig geladen (Standalone)",
+						"info"
+					);
+				}
+			} else {
+				console.log("ℹ️ Keine Server-Daten verfügbar für Standalone-Modus");
+			}
+		} catch (error) {
+			console.error("❌ Fehler beim Laden der einmaligen Server-Daten:", error);
 		}
 	}
 
@@ -605,13 +640,20 @@ class ServerSync {
 	hasDataChanged() {
 		try {
 			// WICHTIG: Prüfe ob kürzlich API-Updates stattgefunden haben
-			if (window.HangarDataCoordinator && window.HangarDataCoordinator.dataSource === "api") {
+			if (
+				window.HangarDataCoordinator &&
+				window.HangarDataCoordinator.dataSource === "api"
+			) {
 				const lastApiUpdate = window.HangarDataCoordinator.lastUpdate;
 				if (lastApiUpdate) {
-					const timeSinceApiUpdate = Date.now() - new Date(lastApiUpdate).getTime();
+					const timeSinceApiUpdate =
+						Date.now() - new Date(lastApiUpdate).getTime();
 					// Blockiere Server-Sync für 5 Minuten nach API-Update
-					if (timeSinceApiUpdate < 300000) { // 5 Minuten in Millisekunden
-						console.log("⏸️ Server-Sync pausiert: Kürzliche API-Updates schützen");
+					if (timeSinceApiUpdate < 300000) {
+						// 5 Minuten in Millisekunden
+						console.log(
+							"⏸️ Server-Sync pausiert: Kürzliche API-Updates schützen"
+						);
 						return false;
 					}
 				}

@@ -19,9 +19,9 @@
 /* Responsive Anpassungen - einheitlich mit Weather-Widget */
 @media (max-width: 640px) {
 	#info-widget {
-		width: 160px;
+		width: auto; /* Automatische Breite wie Weather-Widget */
 		min-width: 160px;
-		padding: 8px 12px;
+		padding: 6px 10px; /* Exakt wie Weather-Widget */
 	}
 
 	.time-group {
@@ -30,15 +30,15 @@
 
 	.time-label,
 	.mode-label {
-		font-size: 0.65rem;
+		font-size: 0.875rem; /* Angleichen an Weather-Widget Sekundär-Bereich */
 	}
 
 	.time-value {
-		font-size: 0.8rem;
+		font-size: 0.9rem; /* Angleichen an Weather-Widget responsive */
 	}
 
 	.sync-mode-value {
-		font-size: 0.7rem;
+		font-size: 0.875rem; /* Konsistent mit Labels */
 		padding: 1px 6px;
 	}
 }
@@ -144,67 +144,77 @@
 	padding-bottom: 4px;
 }
 
-.time-display-row .time-label,
+.time-display-row .time-label {
+	font-weight: 700;
+	color: #3a4354;
+	font-size: 1rem;
+	min-width: 40px;
+}
+
 .time-display-row .time-value {
-	display: inline-block;
-	white-space: nowrap;
+	font-weight: 600;
+	font-size: 1.125rem;
+	min-width: 45px;
+	text-align: right;
+	margin-right: 8px;
+	color: #3a4354;
+	font-family: "SF Mono", "Monaco", "Inconsolata", "Roboto Mono", monospace;
+	letter-spacing: 0.5px;
 }
 
 /* Mode Display - exakt wie Weather Widget Secondary */
 .mode-display {
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
+	justify-content: space-between; /* Gleichmäßige Verteilung */
 	font-size: 0.875rem;
 	color: #64748b;
 	margin-top: 4px;
 	flex-wrap: nowrap;
 	height: 1.2em;
 	line-height: 1.2;
-	width: 100%;
+	width: 100%; /* Volle Breite nutzen */
 }
 
-.time-label,
-.mode-label {
-	color: #64748b;
+/* Gemeinsame Basisstile für alle Elemente im sekundären Bereich */
+.mode-display > span {
+	display: inline-block;
+	white-space: nowrap;
 	font-size: 0.875rem;
 	font-weight: normal;
-	display: inline-block;
-	white-space: nowrap;
+	color: #64748b;
 }
 
-.time-value {
-	color: #1e293b;
-	font-weight: 600;
-	font-family: "SF Mono", "Monaco", "Inconsolata", "Roboto Mono", monospace;
-	letter-spacing: 0.5px;
-	font-size: 0.875rem;
-	display: inline-block;
-	white-space: nowrap;
-	margin-right: 12px;
-}
-
+/* Mode-Wert Styling - Verbessert für bessere Sichtbarkeit */
 .sync-mode-value {
 	color: #64748b;
-	font-weight: normal;
+	font-weight: 500; /* Etwas stärker */
 	font-size: 0.875rem;
 	display: inline-block;
 	white-space: nowrap;
+	padding: 2px 6px; /* Padding für Hintergrund */
+	border-radius: 4px; /* Abgerundete Ecken */
+	transition: all 0.2s ease; /* Sanfte Übergänge */
+	min-width: 70px; /* Mindestbreite für Konsistenz */
+	text-align: center; /* Zentrierter Text */
 }
 
 .sync-mode-value.master {
 	background: #dcfce7;
 	color: #166534;
+	border: 1px solid #bbf7d0;
 }
 
 .sync-mode-value.slave {
 	background: #fef3c7;
 	color: #92400e;
+	border: 1px solid #fde68a;
 }
 
 .sync-mode-value.standalone {
 	background: #f1f5f9;
 	color: #475569;
+	border: 1px solid #e2e8f0;
 }
 
 /* Lade-Animation */
@@ -223,13 +233,4 @@
 #header-status:contains("Laden..."),
 #header-status:contains("Aktualisiere...") {
 	animation: pulse 1.5s infinite;
-}
-
-/* Responsive Anpassungen identisch zum Wetter-Widget */
-@media (max-width: 640px) {
-	#info-widget {
-		width: 160px; /* Feste Breite auch im responsiven Modus */
-		min-width: 160px;
-		padding: 6px 10px;
-	}
 }

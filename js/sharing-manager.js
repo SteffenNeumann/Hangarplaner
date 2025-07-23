@@ -28,6 +28,12 @@ class SharingManager {
 
 		this.setupEventHandlers();
 		this.loadSavedSharingSettings();
+
+		// Initial-Status setzen wenn noch nicht gesetzt
+		if (!this.isLiveSyncEnabled) {
+			this.updateAllSyncDisplays("Standalone", false);
+		}
+
 		this.initialized = true;
 
 		console.log("🔗 Master-Slave Manager initialisiert");
@@ -95,14 +101,14 @@ class SharingManager {
 						"Master-Modus aktiviert - Sie können Daten bearbeiten",
 						"success"
 					);
-					this.updateSyncStatusDisplay("Master", true);
+					this.updateAllSyncDisplays("Master", true);
 				} else {
 					this.isMasterMode = false;
 					this.showNotification(
 						"Slave-Modus aktiviert - Empfange Updates automatisch",
 						"info"
 					);
-					this.updateSyncStatusDisplay("Slave", true);
+					this.updateAllSyncDisplays("Slave", true);
 				}
 
 				console.log("✅ Master-Slave Sync aktiviert");
@@ -142,7 +148,7 @@ class SharingManager {
 		}
 
 		this.isMasterMode = false;
-		this.updateSyncStatusDisplay("Deaktiviert", false);
+		this.updateAllSyncDisplays("Deaktiviert", false);
 		this.showNotification("Master-Slave Sync deaktiviert", "info");
 		console.log("⏹️ Master-Slave Sync deaktiviert");
 	}
@@ -192,7 +198,20 @@ class SharingManager {
 	}
 
 	/**
-	 * NEUE METHODE: Aktualisiert Sync-Status-Anzeige
+	 * ZENTRALISIERT: Aktualisiert alle Sync-Status-Anzeigen synchron
+	 */
+	updateAllSyncDisplays(status, isActive) {
+		this.updateSyncStatusDisplay(status, isActive); // Menü-Button
+		this.updateWidgetSyncDisplay(status, isActive); // Info-Widget
+		console.log(
+			`🔄 Alle Sync-Anzeigen aktualisiert: ${status} (${
+				isActive ? "aktiv" : "inaktiv"
+			})`
+		);
+	}
+
+	/**
+	 * AKTUALISIERT: Sync-Status-Anzeige für Menü-Button
 	 */
 	updateSyncStatusDisplay(status, isActive) {
 		// Verstecke Share URL Container (nicht mehr benötigt)
@@ -232,10 +251,32 @@ class SharingManager {
 				syncStatusBtn.title = "Sync inaktiv - Klicken für Details";
 			}
 		}
+	}
 
-		console.log(
-			`🔄 Sync-Status angezeigt: ${status} (${isActive ? "aktiv" : "inaktiv"})`
-		);
+	/**
+	 * NEU: Widget-Sync-Display-Update für Info-Widget
+	 */
+	updateWidgetSyncDisplay(status, isActive) {
+		const syncModeElement = document.getElementById("sync-mode");
+		if (syncModeElement) {
+			// CSS-Klassen zurücksetzen
+			syncModeElement.classList.remove("master", "slave", "standalone");
+
+			if (isActive) {
+				// Zeige echten Status (Master/Slave)
+				syncModeElement.textContent = status;
+
+				if (status === "Master") {
+					syncModeElement.classList.add("master");
+				} else if (status === "Slave") {
+					syncModeElement.classList.add("slave");
+				}
+			} else {
+				// Deaktiviert/Standalone
+				syncModeElement.textContent = "Standalone";
+				syncModeElement.classList.add("standalone");
+			}
+		}
 	}
 
 	// *** OBSOLETE METHODEN - WERDEN NICHT MEHR VERWENDET ***
@@ -561,7 +602,7 @@ class SharingManager {
 				}
 			} else {
 				// Falls Sync deaktiviert ist, zeige Standard-Status
-				this.updateSyncStatusDisplay("Status", false);
+				this.updateAllSyncDisplays("Status", false);
 			}
 
 			this.isMasterMode = settings.isMasterMode || false;
@@ -571,7 +612,7 @@ class SharingManager {
 				error
 			);
 			// Bei Fehler Standard-Status anzeigen
-			this.updateSyncStatusDisplay("Status", false);
+			this.updateAllSyncDisplays("Status", false);
 		}
 	}
 

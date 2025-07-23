@@ -30,10 +30,74 @@ function testMasterSlaveSync() {
 		isMasterMode: window.sharingManager.isMasterMode,
 	});
 
-	// 4. Teste PHP Backend
+	// 4. NEUE TESTS: UI-Synchronisation
+	testUISynchronization();
+
+	// 5. Teste PHP Backend
 	testBackendEndpoints();
 
 	console.log("✅ Master-Slave Test abgeschlossen");
+	return true;
+}
+
+/**
+ * NEU: Teste UI-Synchronisation zwischen Widget und Menü
+ */
+function testUISynchronization() {
+	console.log("🎯 Teste UI-Synchronisation...");
+
+	const widgetElement = document.getElementById("sync-mode");
+	const menuButton = document.getElementById("syncStatusBtn");
+
+	if (!widgetElement) {
+		console.error("❌ Widget-Element (#sync-mode) nicht gefunden");
+		return false;
+	}
+
+	if (!menuButton) {
+		console.error("❌ Menü-Button (#syncStatusBtn) nicht gefunden");
+		return false;
+	}
+
+	console.log("📱 Aktuelle UI-Zustände:", {
+		widget: {
+			text: widgetElement.textContent,
+			classes: Array.from(widgetElement.classList),
+		},
+		menu: {
+			text: menuButton.textContent,
+			classes: Array.from(menuButton.classList),
+		},
+	});
+
+	// Teste zentrale Update-Funktion
+	if (
+		window.sharingManager &&
+		typeof window.sharingManager.updateAllSyncDisplays === "function"
+	) {
+		console.log("✅ Zentrale Update-Funktion verfügbar");
+
+		// Teste verschiedene Status
+		console.log("🔄 Teste Status-Updates...");
+		setTimeout(
+			() => window.sharingManager.updateAllSyncDisplays("Master", true),
+			500
+		);
+		setTimeout(
+			() => window.sharingManager.updateAllSyncDisplays("Slave", true),
+			1500
+		);
+		setTimeout(
+			() => window.sharingManager.updateAllSyncDisplays("Standalone", false),
+			2500
+		);
+
+		console.log("⏳ Status-Updates werden in 0.5s, 1.5s und 2.5s ausgeführt");
+	} else {
+		console.error("❌ Zentrale Update-Funktion nicht verfügbar");
+		return false;
+	}
+
 	return true;
 }
 

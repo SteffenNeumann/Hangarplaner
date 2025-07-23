@@ -1,5 +1,27 @@
 # 📋 MASTER-SLAVE SYNCHRONISIERUNG - IMPLEMENTIERUNG ABGESCHLOSSEN
 
+## 🔧 BUGFIX: INKONSISTENTE STATUS-ANZEIGEN BEHOBEN
+
+### Problem identifiziert
+
+- **Widget**: Zeigte nur "Master" oder "Standalone" (vereinfacht)
+- **Menü**: Zeigte korrekte "Master", "Slave", "Status" (detailliert)
+- **Ursache**: Zwei getrennte Update-Funktionen ohne Synchronisation
+
+### Lösung implementiert
+
+- **Zentralisiert**: `updateAllSyncDisplays()` für beide UI-Elemente
+- **Konsistent**: Beide zeigen jetzt identische Status-Information
+- **Vereinfacht**: Widget-spezifische Update-Logik entfernt
+- **Erweitert**: Test-Suite um UI-Synchronisation erweitert
+
+### Geänderte Dateien
+
+1. **js/sharing-manager.js**: Zentrale Update-Funktion hinzugefügt
+2. **index.html**: Widget-Update-Logik deaktiviert
+3. **css/info-widget.css**: Verbesserte Styling für Widget-Status
+4. **test-master-slave.js**: UI-Synchronisation-Tests hinzugefügt
+
 ## ✅ ERFOLGREICH UMGESETZT
 
 ### 1. Backend-Modifikation (sync/data.php)

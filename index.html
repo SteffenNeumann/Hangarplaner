@@ -2168,8 +2168,16 @@
 					}
 				}
 
-				// Master/Slave Status Update Funktion
+				// DEAKTIVIERT: Master/Slave Status Update Funktion
+				// Diese Funktion wurde durch SharingManager.updateAllSyncDisplays() ersetzt
 				function updateSyncModeDisplay() {
+					// ⚠️ OBSOLET: Diese Funktion wird nicht mehr verwendet
+					// Status-Updates erfolgen jetzt zentral über SharingManager
+					console.warn(
+						"⚠️ updateSyncModeDisplay() ist obsolet - verwende SharingManager.updateAllSyncDisplays()"
+					);
+					return;
+
 					const syncModeElement = document.getElementById("sync-mode");
 					const liveSyncToggle = document.getElementById("liveSyncToggle");
 
@@ -2193,19 +2201,20 @@
 				window.hangarInitQueue.push(function () {
 					// Sofort einmal ausführen
 					updateTimeDisplay();
-					updateSyncModeDisplay();
+					// ENTFERNT: updateSyncModeDisplay() - wird jetzt zentral von SharingManager verwaltet
 
 					// Dann jede Minute aktualisieren (weniger häufig für Zeit ohne Sekunden)
 					setInterval(updateTimeDisplay, 60000);
 
-					// Event-Listener für Sync-Toggle
-					const liveSyncToggle = document.getElementById("liveSyncToggle");
-					if (liveSyncToggle) {
-						liveSyncToggle.addEventListener("change", updateSyncModeDisplay);
-					}
+					// ENTFERNT: Event-Listener für Sync-Toggle
+					// Toggle-Events werden jetzt direkt vom SharingManager verwaltet
+					// const liveSyncToggle = document.getElementById("liveSyncToggle");
+					// if (liveSyncToggle) {
+					//     liveSyncToggle.addEventListener("change", updateSyncModeDisplay);
+					// }
 
 					console.log(
-						"⏰ Zeit-Anzeige und Sync-Status im Info Widget initialisiert"
+						"⏰ Zeit-Anzeige im Info Widget initialisiert (Sync-Status wird von SharingManager verwaltet)"
 					);
 				});
 			</script>

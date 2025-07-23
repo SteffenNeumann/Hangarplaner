@@ -264,7 +264,7 @@ window.globalInitialization = {
 			const currentDateInput = document.getElementById("currentDateInput");
 			if (currentDateInput && !currentDateInput.value) {
 				const today = new Date();
-				const todayString = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+				const todayString = today.toISOString().split("T")[0]; // Format: YYYY-MM-DD
 				currentDateInput.value = todayString;
 				console.log(`✅ Aktuelles Datum gesetzt: ${todayString}`);
 			}
@@ -274,12 +274,15 @@ window.globalInitialization = {
 			if (nextDateInput && !nextDateInput.value) {
 				const tomorrow = new Date();
 				tomorrow.setDate(tomorrow.getDate() + 1);
-				const tomorrowString = tomorrow.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+				const tomorrowString = tomorrow.toISOString().split("T")[0]; // Format: YYYY-MM-DD
 				nextDateInput.value = tomorrowString;
 				console.log(`✅ Folgetag gesetzt: ${tomorrowString}`);
 			}
 		} catch (error) {
-			console.error("❌ Fehler beim Setzen der Flugdaten-Datumsangaben:", error);
+			console.error(
+				"❌ Fehler beim Setzen der Flugdaten-Datumsangaben:",
+				error
+			);
 		}
 	},
 

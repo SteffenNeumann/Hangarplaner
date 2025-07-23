@@ -160,22 +160,28 @@ function initialize() {
 			console.log("✅ API-Fassade final initialisiert und verbunden");
 		}, 500);
 	} else {
-		console.warn("⚠️ FlightDataAPI nicht sofort verfügbar, installiere Fallback-Mechanismus");
+		console.warn(
+			"⚠️ FlightDataAPI nicht sofort verfügbar, installiere Fallback-Mechanismus"
+		);
 		// Fallback: Regelmäßig prüfen bis FlightDataAPI verfügbar ist
 		const checkInterval = setInterval(() => {
 			if (window.FlightDataAPI) {
-				console.log("✅ FlightDataAPI nachträglich gefunden, initialisiere Event-Handler");
+				console.log(
+					"✅ FlightDataAPI nachträglich gefunden, initialisiere Event-Handler"
+				);
 				setupFlightDataEventHandlers();
 				clearInterval(checkInterval);
 			} else {
 				console.log("⏳ Warte noch auf FlightDataAPI...");
 			}
 		}, 1000);
-		
+
 		// Nach 10 Sekunden aufhören zu prüfen
 		setTimeout(() => {
 			clearInterval(checkInterval);
-			console.error("❌ FlightDataAPI nach 10 Sekunden immer noch nicht verfügbar!");
+			console.error(
+				"❌ FlightDataAPI nach 10 Sekunden immer noch nicht verfügbar!"
+			);
 		}, 10000);
 	}
 
@@ -199,22 +205,29 @@ window.hangarInitQueue.push(function () {
 });
 
 // SOFORTIGER FALLBACK für Update Data Button
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function () {
 	console.log("🔧 Installiere sofortigen Fallback für Update Data Button...");
-	
+
 	setTimeout(() => {
 		const fetchFlightBtn = document.getElementById("fetchFlightData");
 		if (fetchFlightBtn && !fetchFlightBtn.onclick) {
-			console.log("🆘 Button hat noch keinen Handler, installiere Notfall-Handler");
-			fetchFlightBtn.onclick = function(event) {
+			console.log(
+				"🆘 Button hat noch keinen Handler, installiere Notfall-Handler"
+			);
+			fetchFlightBtn.onclick = function (event) {
 				event.preventDefault();
 				console.log("🚨 NOTFALL-HANDLER: Update Data Button wurde geklickt!");
 				console.log("FlightDataAPI verfügbar:", !!window.FlightDataAPI);
-				console.log("Setupfunktion verfügbar:", typeof setupFlightDataEventHandlers);
-				
+				console.log(
+					"Setupfunktion verfügbar:",
+					typeof setupFlightDataEventHandlers
+				);
+
 				// Versuche, die echte Funktion aufzurufen
 				if (typeof setupFlightDataEventHandlers === "function") {
-					console.log("📞 Rufe setupFlightDataEventHandlers nachträglich auf...");
+					console.log(
+						"📞 Rufe setupFlightDataEventHandlers nachträglich auf..."
+					);
 					setupFlightDataEventHandlers();
 				}
 			};
@@ -229,14 +242,14 @@ document.addEventListener("DOMContentLoaded", function() {
 // Funktion, um sicherzustellen, dass die API-Fassade korrekt verbunden ist
 function setupFlightDataEventHandlers() {
 	console.log("🔧 setupFlightDataEventHandlers aufgerufen");
-	
+
 	// WICHTIG: Zuerst den bestehenden Event-Handler vom fetchFlightBtn entfernen
 	const fetchFlightBtn = document.getElementById("fetchFlightData");
 	console.log("Button gefunden:", !!fetchFlightBtn);
-	
+
 	if (fetchFlightBtn) {
 		console.log("✅ Update Data Button gefunden, installiere Event-Handler");
-		
+
 		// Alle bestehenden Event-Handler entfernen
 		const oldClone = fetchFlightBtn.cloneNode(true);
 		fetchFlightBtn.parentNode.replaceChild(oldClone, fetchFlightBtn);
@@ -253,25 +266,29 @@ function setupFlightDataEventHandlers() {
 			console.log("*** UPDATE DATA BUTTON WURDE GEKLICKT ***");
 
 			// Sammle alle Aircraft IDs aus den Kacheln (primäre und sekundäre)
-			const primaryTiles = document.querySelectorAll('#hangarGrid .hangar-cell input[id^="aircraft-"]');
-			const secondaryTiles = document.querySelectorAll('#secondaryHangarGrid .hangar-cell input[id^="aircraft-"]');
+			const primaryTiles = document.querySelectorAll(
+				'#hangarGrid .hangar-cell input[id^="aircraft-"]'
+			);
+			const secondaryTiles = document.querySelectorAll(
+				'#secondaryHangarGrid .hangar-cell input[id^="aircraft-"]'
+			);
 			const allAircraftInputs = [...primaryTiles, ...secondaryTiles];
-			
+
 			// Sammle alle nicht-leeren Aircraft IDs
 			const aircraftIds = [];
-			allAircraftInputs.forEach(input => {
+			allAircraftInputs.forEach((input) => {
 				const value = input.value.trim();
 				if (value) {
 					aircraftIds.push({
 						id: value,
 						element: input,
-						cellId: input.id.split('-')[1]
+						cellId: input.id.split("-")[1],
 					});
 				}
 			});
 
 			console.log(`Gefundene Aircraft IDs in Kacheln: ${aircraftIds.length}`);
-			aircraftIds.forEach(aircraft => {
+			aircraftIds.forEach((aircraft) => {
 				console.log(`- ${aircraft.id} (Kachel ${aircraft.cellId})`);
 			});
 
@@ -283,7 +300,7 @@ function setupFlightDataEventHandlers() {
 				aircraftIds: aircraftIds.length,
 				currentDateInput: !!currentDateInput,
 				nextDateInput: !!nextDateInput,
-				airportCodeInput: !!airportCodeInput
+				airportCodeInput: !!airportCodeInput,
 			});
 
 			const currentDate = currentDateInput?.value;
@@ -299,8 +316,10 @@ function setupFlightDataEventHandlers() {
 
 			// Verarbeite alle gefundenen Aircraft IDs
 			for (const aircraft of aircraftIds) {
-				console.log(`\n🛫 Verarbeite Aircraft ID: ${aircraft.id} (Kachel ${aircraft.cellId})`);
-				
+				console.log(
+					`\n🛫 Verarbeite Aircraft ID: ${aircraft.id} (Kachel ${aircraft.cellId})`
+				);
+
 				console.log("Eingabewerte:", {
 					aircraftId: aircraft.id,
 					currentDate,
@@ -330,16 +349,30 @@ function setupFlightDataEventHandlers() {
 							nextDate
 						);
 
-						console.log(`API-Fassade Aufruf für ${aircraft.id} erfolgreich abgeschlossen`);
+						console.log(
+							`API-Fassade Aufruf für ${aircraft.id} erfolgreich abgeschlossen`
+						);
 						console.log("Empfangene Daten:", result);
 
 						// ✅ WICHTIG: Ergebnisse in die UI übertragen
-						if (result && window.HangarData && typeof window.HangarData.updateAircraftFromFlightData === "function") {
+						if (
+							result &&
+							window.HangarData &&
+							typeof window.HangarData.updateAircraftFromFlightData ===
+								"function"
+						) {
 							// Aktualisiere die UI-Kacheln mit den Flugdaten
-							window.HangarData.updateAircraftFromFlightData(aircraft.id, result);
-							console.log(`✅ UI-Kacheln für ${aircraft.id} erfolgreich aktualisiert`);
+							window.HangarData.updateAircraftFromFlightData(
+								aircraft.id,
+								result
+							);
+							console.log(
+								`✅ UI-Kacheln für ${aircraft.id} erfolgreich aktualisiert`
+							);
 						} else if (result) {
-							console.warn("❌ HangarData.updateAircraftFromFlightData nicht verfügbar - UI wird nicht aktualisiert");
+							console.warn(
+								"❌ HangarData.updateAircraftFromFlightData nicht verfügbar - UI wird nicht aktualisiert"
+							);
 						}
 
 						// Optional: Überprüfen, ob die Daten zum gewünschten Flughafen gehören
@@ -355,7 +388,10 @@ function setupFlightDataEventHandlers() {
 							);
 						}
 					} catch (error) {
-						console.error(`❌ Fehler beim API-Fassaden-Aufruf für ${aircraft.id}:`, error);
+						console.error(
+							`❌ Fehler beim API-Fassaden-Aufruf für ${aircraft.id}:`,
+							error
+						);
 					}
 				} else {
 					console.error("❌ FlightDataAPI nicht verfügbar!");
@@ -363,7 +399,9 @@ function setupFlightDataEventHandlers() {
 			}
 		};
 
-		console.log("✅ Event-Handler für Update Data Button erfolgreich registriert");
+		console.log(
+			"✅ Event-Handler für Update Data Button erfolgreich registriert"
+		);
 	} else {
 		console.error("❌ Update Data Button nicht gefunden!");
 	}

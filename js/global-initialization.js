@@ -73,15 +73,21 @@ window.globalInitialization = {
 			// console.log("📦 window.hangarUI initialisiert");
 		}
 
-		// 3. ServerSync/StorageBrowser sicherstellen
+		// 3. ServerSync/StorageBrowser sicherstellen (nur Fallback wenn nicht vorhanden)
 		if (!window.serverSync && !window.storageBrowser) {
-			console.warn("⚠️ ServerSync nicht verfügbar, erstelle Dummy");
+			console.warn("⚠️ ServerSync nicht verfügbar, erstelle Dummy-Fallback");
 			window.serverSync = {
 				syncWithServer: () => Promise.resolve(false),
 				loadFromServer: () => Promise.resolve(null),
 				getStatus: () => ({ serverUrl: null, isActive: false }),
+				applyServerData: () => Promise.resolve(false),
+				testServerConnection: () => Promise.resolve(false),
 			};
 			window.storageBrowser = window.serverSync;
+		} else {
+			console.log(
+				"✅ ServerSync bereits verfügbar - verwende echte Implementierung"
+			);
 		}
 
 		// 4. Improved Event Manager sicherstellen
@@ -97,6 +103,9 @@ window.globalInitialization = {
 
 		// 7. Automatische Datumseintragung für Flugdaten-API
 		this.setupFlightDataDates();
+
+		// 8. Automatische Server-Datenladung beim Seitenstart
+		this.attemptServerDataLoad();
 
 		this.initialized = true;
 		// console.log("✅ Globale Initialisierung abgeschlossen");
@@ -284,6 +293,79 @@ window.globalInitialization = {
 				error
 			);
 		}
+	},
+
+	/**
+	 * Versucht automatisch, die letzten Daten vom Server zu laden
+	 * Wird beim Seitenstart ausgeführt nach einer kurzen Verzögerung
+	 */
+	attemptServerDataLoad: function () {
+		// Verzögerung, damit alle Module geladen sind
+		setTimeout(async () => {
+			try {
+				console.log("🔄 Versuche, letzte Daten vom Server zu laden...");
+
+				// Prüfe ob ServerSync/StorageBrowser verfügbar ist
+				if (!window.serverSync || !window.serverSync.loadFromServer) {
+					console.log(
+						"ℹ️ ServerSync nicht verfügbar - überspringe automatische Datenladung"
+					);
+					return;
+				}
+
+				// Prüfe ob Server-URL konfiguriert ist
+				const serverStatus = window.serverSync.getStatus
+					? window.serverSync.getStatus()
+					: null;
+				if (!serverStatus || !serverStatus.serverUrl) {
+					console.log(
+						"ℹ️ Server-URL nicht konfiguriert - überspringe automatische Datenladung"
+					);
+					return;
+				}
+
+				// Versuche Daten vom Server zu laden
+				const serverData = await window.serverSync.loadFromServer();
+
+				if (serverData && serverData.primaryTiles) {
+					console.log("✅ Server-Daten gefunden - wende sie an...");
+
+					// Setze Flag um zu verhindern, dass localStorage-Events gefeuert werden
+					window.isApplyingServerData = true;
+
+					// Wende Server-Daten an
+					if (window.serverSync.applyServerData) {
+						await window.serverSync.applyServerData(serverData);
+						console.log("✅ Server-Daten erfolgreich angewendet");
+					} else {
+						console.warn("⚠️ applyServerData Methode nicht verfügbar");
+					}
+
+					// Flag zurücksetzen
+					window.isApplyingServerData = false;
+
+					// UI aktualisieren falls möglich
+					if (window.hangarUI && window.hangarUI.updateStatusLights) {
+						window.hangarUI.updateStatusLights();
+					}
+
+					// Notification anzeigen falls verfügbar
+					if (window.showNotification) {
+						window.showNotification("Server-Daten geladen", "success");
+					}
+				} else {
+					console.log("ℹ️ Keine aktuellen Daten auf dem Server gefunden");
+				}
+			} catch (error) {
+				console.error(
+					"❌ Fehler beim automatischen Laden der Server-Daten:",
+					error
+				);
+
+				// Flag zurücksetzen bei Fehler
+				window.isApplyingServerData = false;
+			}
+		}, 1500); // 1.5 Sekunden Verzögerung für sichere Initialisierung
 	},
 
 	/**

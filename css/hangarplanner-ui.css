@@ -1812,7 +1812,7 @@ input:checked + .toggle-slider:before {
    SIDEBAR SYNC OPTIONS STYLES (Konsistent mit Rest des Menüs)
    ========================================================================== */
 
-/* Sidebar Option Label für Sync-Toggles */
+/* Sidebar Option Label für Sync-Toggles - konsistent mit Menü-Farben */
 .sidebar-option-label {
 	display: flex;
 	flex-direction: column;
@@ -1821,22 +1821,17 @@ input:checked + .toggle-slider:before {
 	cursor: pointer;
 }
 
-.sidebar-option-icon {
-	font-size: 16px;
-	margin-right: 8px;
-}
-
 .sidebar-option-title {
 	font-size: 14px;
-	font-weight: 600;
-	color: var(--color-text-primary, #374151);
+	font-weight: 500;
+	color: #ffffff;
 	display: flex;
 	align-items: center;
 }
 
 .sidebar-option-desc {
 	font-size: 12px;
-	color: var(--color-text-secondary, #6b7280);
+	color: #b8c5d6;
 	margin-top: 2px;
 	line-height: 1.3;
 }
@@ -1854,8 +1849,8 @@ input:checked + .toggle-slider:before {
 
 .sync-status-label {
 	font-size: 14px;
-	color: var(--color-text-primary, #374151);
-	font-weight: 600;
+	color: #ffffff;
+	font-weight: 500;
 }
 
 /* Sync Mode Badge - angepasst für Orange als Sekundärfarbe */
@@ -1895,10 +1890,10 @@ input:checked + .toggle-slider:before {
 	font-weight: 800;
 }
 
-/* Sync Mode Description */
+/* Sync Mode Description - konsistent mit Menü-Design */
 .sync-mode-description {
 	font-size: 13px;
-	color: var(--color-text-secondary, #6b7280);
+	color: #b8c5d6;
 	line-height: 1.4;
 	margin-bottom: 8px;
 	padding: 8px 12px;

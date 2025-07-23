@@ -1195,6 +1195,82 @@ window.hangarData.applyLoadedTileData = applyLoadedTileData;
 window.hangarData.collectAllHangarData = hangarData.collectAllHangarData;
 window.collectAllHangarData = hangarData.collectAllHangarData; // Auch direkt global für Kompatibilität
 
+/**
+ * Aktualisiert Flugzeugdaten in den UI-Kacheln basierend auf API-Ergebnissen
+ * @param {string} aircraftId - Die Flugzeugkennung
+ * @param {Object} flightData - Die von der API erhaltenen Flugdaten
+ */
+window.hangarData.updateAircraftFromFlightData = function(aircraftId, flightData) {
+	console.log(`🛫 Aktualisiere UI-Kacheln für ${aircraftId} mit Flugdaten:`, flightData);
+	
+	if (!aircraftId || !flightData) {
+		console.warn("❌ Fehlende Parameter für updateAircraftFromFlightData");
+		return;
+	}
+
+	// Suche nach Kacheln mit der entsprechenden Aircraft ID
+	const primaryTiles = document.querySelectorAll('#hangarGrid .hangar-cell');
+	const secondaryTiles = document.querySelectorAll('#secondaryHangarGrid .hangar-cell');
+	const allTiles = [...primaryTiles, ...secondaryTiles];
+	
+	let updatedTiles = 0;
+	
+	for (const tile of allTiles) {
+		const aircraftInput = tile.querySelector('input[id^="aircraft-"]');
+		if (!aircraftInput) continue;
+		
+		const currentValue = aircraftInput.value.trim();
+		if (currentValue.toLowerCase() === aircraftId.toLowerCase()) {
+			// Gefundene Kachel aktualisieren
+			const cellId = aircraftInput.id.split('-')[1];
+			
+			// Ankunftszeit aktualisieren
+			const arrivalInput = tile.querySelector(`#arrival-${cellId}`);
+			if (arrivalInput && flightData.arrivalTime && flightData.arrivalTime !== "--:--") {
+				arrivalInput.value = flightData.arrivalTime;
+				console.log(`✅ Ankunftszeit für Kachel ${cellId}: ${flightData.arrivalTime}`);
+			}
+			
+			// Abflugzeit aktualisieren
+			const departureInput = tile.querySelector(`#departure-${cellId}`);
+			if (departureInput && flightData.departureTime && flightData.departureTime !== "--:--") {
+				departureInput.value = flightData.departureTime;
+				console.log(`✅ Abflugzeit für Kachel ${cellId}: ${flightData.departureTime}`);
+			}
+			
+			// Position aktualisieren
+			const positionInput = tile.querySelector(`#position-${cellId}`);
+			if (positionInput && flightData.positionText && flightData.positionText !== "---") {
+				positionInput.value = flightData.positionText;
+				console.log(`✅ Position für Kachel ${cellId}: ${flightData.positionText}`);
+			}
+			
+			// Optional: Notizen mit zusätzlichen Informationen aktualisieren
+			const notesTextarea = tile.querySelector(`#notes-${cellId}`);
+			if (notesTextarea && flightData.data && flightData.data.length > 0) {
+				// Zusätzliche Fluginformationen in die Notizen eintragen (optional)
+				const additionalInfo = `Flight data from API (${new Date().toLocaleTimeString()})`;
+				if (!notesTextarea.value.includes(additionalInfo)) {
+					notesTextarea.value = (notesTextarea.value + '\n' + additionalInfo).trim();
+				}
+			}
+			
+			updatedTiles++;
+		}
+	}
+	
+	if (updatedTiles > 0) {
+		console.log(`✅ ${updatedTiles} Kachel(n) für ${aircraftId} erfolgreich aktualisiert`);
+		
+		// Event für andere Module abfeuern
+		document.dispatchEvent(new CustomEvent('aircraftDataUpdated', {
+			detail: { aircraftId, flightData, updatedTiles }
+		}));
+	} else {
+		console.warn(`⚠️ Keine Kacheln mit Aircraft ID "${aircraftId}" gefunden`);
+	}
+};
+
 // SICHERHEIT: Sofortige Verfügbarkeit nach DOM-Load
 document.addEventListener("DOMContentLoaded", function () {
 	if (!window.collectAllHangarData) {
@@ -1744,3 +1820,6 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 console.log("🔧 HangarPlanner Aircraft ID Koordinationssystem initialisiert");
+
+// Alias für Kompatibilität: Globale Verfügbarkeit unter beiden Namen
+window.HangarData = window.hangarData;

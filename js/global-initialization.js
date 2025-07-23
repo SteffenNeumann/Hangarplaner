@@ -95,6 +95,9 @@ window.globalInitialization = {
 		// 6. Module-Status prüfen
 		this.checkAllModules();
 
+		// 7. Automatische Datumseintragung für Flugdaten-API
+		this.setupFlightDataDates();
+
 		this.initialized = true;
 		// console.log("✅ Globale Initialisierung abgeschlossen");
 
@@ -249,6 +252,35 @@ window.globalInitialization = {
 
 			checkModules();
 		});
+	},
+
+	/**
+	 * Automatische Datumseintragung für Flugdaten-API
+	 * Setzt heutiges Datum als "letzter Flug" und morgiges Datum als "erster Flug"
+	 */
+	setupFlightDataDates: function () {
+		try {
+			// Heutiges Datum für "letzter Flug" (aktueller Tag)
+			const currentDateInput = document.getElementById("currentDateInput");
+			if (currentDateInput && !currentDateInput.value) {
+				const today = new Date();
+				const todayString = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+				currentDateInput.value = todayString;
+				console.log(`✅ Aktuelles Datum gesetzt: ${todayString}`);
+			}
+
+			// Morgiges Datum für "erster Flug" (Folgetag)
+			const nextDateInput = document.getElementById("nextDateInput");
+			if (nextDateInput && !nextDateInput.value) {
+				const tomorrow = new Date();
+				tomorrow.setDate(tomorrow.getDate() + 1);
+				const tomorrowString = tomorrow.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+				nextDateInput.value = tomorrowString;
+				console.log(`✅ Folgetag gesetzt: ${tomorrowString}`);
+			}
+		} catch (error) {
+			console.error("❌ Fehler beim Setzen der Flugdaten-Datumsangaben:", error);
+		}
 	},
 
 	/**

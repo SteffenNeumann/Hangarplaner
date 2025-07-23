@@ -1,6 +1,42 @@
 /**
  * TEST-SCRIPT FÜR MASTER-SLAVE SYNCHRONISIERUNG
- * Führe in Browser-Konsole aus: loadScript('/test-master-slave.js')
+ * Führe	console.log("📱 Aktuelle UI-Zustände:", {
+		widget: {
+			text: widgetElement.textContent,
+			classes: Array.from(widgetElement.classList)
+		},
+		menu: {
+			text: menuButton.textContent,
+			classes: Array.from(menuButton.classList)
+		}
+	});
+	
+	// ERWEITERT: Prüfe Toggle-Status vs. angezeigte Rolle
+	const liveSyncToggle = document.getElementById("liveSyncToggle");
+	if (liveSyncToggle) {
+		console.log("🔄 Toggle-Status vs. ServerSync-Rolle:", {
+			toggleChecked: liveSyncToggle.checked,
+			displayedWidget: widgetElement.textContent,
+			displayedMenu: menuButton.textContent,
+			serverSyncMaster: window.serverSync?.isMaster,
+			serverSyncSlave: window.serverSync?.isSlaveActive,
+			sharingManagerMaster: window.sharingManager?.isMasterMode
+		});
+		
+		// KONSISTENZ-CHECK
+		if (liveSyncToggle.checked) {
+			if (widgetElement.textContent === "Standalone") {
+				console.error("❌ INKONSISTENZ: Toggle AN aber Widget zeigt 'Standalone'");
+			}
+			if (menuButton.textContent === "📊 Status") {
+				console.error("❌ INKONSISTENZ: Toggle AN aber Menü zeigt 'Status'");
+			}
+		} else {
+			if (widgetElement.textContent !== "Standalone") {
+				console.error("❌ INKONSISTENZ: Toggle AUS aber Widget zeigt nicht 'Standalone'");
+			}
+		}
+	}r-Konsole aus: loadScript('/test-master-slave.js')
  */
 
 function testMasterSlaveSync() {
@@ -77,22 +113,47 @@ function testUISynchronization() {
 	) {
 		console.log("✅ Zentrale Update-Funktion verfügbar");
 
-		// Teste verschiedene Status
+		// Teste verschiedene Status mit detailliertem Logging
 		console.log("🔄 Teste Status-Updates...");
-		setTimeout(
-			() => window.sharingManager.updateAllSyncDisplays("Master", true),
-			500
-		);
-		setTimeout(
-			() => window.sharingManager.updateAllSyncDisplays("Slave", true),
-			1500
-		);
-		setTimeout(
-			() => window.sharingManager.updateAllSyncDisplays("Standalone", false),
-			2500
-		);
 
-		console.log("⏳ Status-Updates werden in 0.5s, 1.5s und 2.5s ausgeführt");
+		setTimeout(() => {
+			console.log("▶️ Teste Master-Status...");
+			window.sharingManager.updateAllSyncDisplays("Master", true);
+		}, 500);
+
+		setTimeout(() => {
+			console.log("▶️ Teste Slave-Status...");
+			window.sharingManager.updateAllSyncDisplays("Slave", true);
+		}, 1500);
+
+		setTimeout(() => {
+			console.log("▶️ Teste Standalone-Status...");
+			window.sharingManager.updateAllSyncDisplays("Standalone", false);
+		}, 2500);
+
+		setTimeout(() => {
+			console.log("🔍 Finale UI-Prüfung nach Tests...");
+			const finalWidget = document.getElementById("sync-mode");
+			const finalMenu = document.getElementById("syncStatusBtn");
+			if (finalWidget && finalMenu) {
+				console.log(
+					"Widget:",
+					finalWidget.textContent,
+					"| CSS:",
+					Array.from(finalWidget.classList)
+				);
+				console.log(
+					"Menü:",
+					finalMenu.textContent,
+					"| CSS:",
+					Array.from(finalMenu.classList)
+				);
+			}
+		}, 3500);
+
+		console.log(
+			"⏳ Status-Updates werden in 0.5s, 1.5s, 2.5s ausgeführt (Finale Prüfung in 3.5s)"
+		);
 	} else {
 		console.error("❌ Zentrale Update-Funktion nicht verfügbar");
 		return false;

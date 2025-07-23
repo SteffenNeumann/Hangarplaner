@@ -158,7 +158,7 @@
 	text-align: right;
 	margin-right: 8px;
 	color: #3a4354;
-	font-family: "SF Mono", "Monaco", "Inconsolata", "Roboto Mono", monospace;
+	/* font-family: "SF Mono", "Monaco", "Inconsolata", "Roboto Mono", monospace; */
 	letter-spacing: 0.5px;
 }
 

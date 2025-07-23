@@ -95,8 +95,12 @@ class SharingManager {
 			if (window.serverSync) {
 				await window.serverSync.determineMasterSlaveRole();
 
+				// Starte entsprechenden Modus basierend auf Rollenerkennung
 				if (window.serverSync.isMaster) {
 					this.isMasterMode = true;
+					// Starte Master-Modus in ServerSync
+					await window.serverSync.startMasterMode();
+
 					this.showNotification(
 						"Master-Modus aktiviert - Sie können Daten bearbeiten",
 						"success"
@@ -104,6 +108,9 @@ class SharingManager {
 					this.updateAllSyncDisplays("Master", true);
 				} else {
 					this.isMasterMode = false;
+					// Starte Slave-Modus in ServerSync
+					await window.serverSync.startSlaveMode();
+
 					this.showNotification(
 						"Slave-Modus aktiviert - Empfange Updates automatisch",
 						"info"
@@ -111,7 +118,11 @@ class SharingManager {
 					this.updateAllSyncDisplays("Slave", true);
 				}
 
-				console.log("✅ Master-Slave Sync aktiviert");
+				console.log(
+					`✅ Master-Slave Sync aktiviert - Rolle: ${
+						window.serverSync.isMaster ? "Master" : "Slave"
+					}`
+				);
 			} else {
 				throw new Error("ServerSync nicht verfügbar");
 			}
@@ -126,6 +137,7 @@ class SharingManager {
 			const liveSyncToggle = document.getElementById("liveSyncToggle");
 			if (liveSyncToggle) {
 				liveSyncToggle.checked = false;
+				this.isLiveSyncEnabled = false;
 			}
 		}
 	}
@@ -147,8 +159,12 @@ class SharingManager {
 			window.serverSync.isSlaveActive = false;
 		}
 
+		// Lokale Flags zurücksetzen
 		this.isMasterMode = false;
-		this.updateAllSyncDisplays("Deaktiviert", false);
+		this.isLiveSyncEnabled = false;
+
+		// UI aktualisieren
+		this.updateAllSyncDisplays("Standalone", false);
 		this.showNotification("Master-Slave Sync deaktiviert", "info");
 		console.log("⏹️ Master-Slave Sync deaktiviert");
 	}
@@ -239,16 +255,22 @@ class SharingManager {
 					emoji = "👑"; // Krone für Master
 					cssClass = "status-success";
 				} else if (status === "Slave") {
-					emoji = "📊"; // Diagramm für Slave
+					emoji = "📊"; // Diagramm für Slave - anders als Master
 					cssClass = "status-success";
 				}
 
 				syncStatusBtn.textContent = `${emoji} ${status}`;
 				syncStatusBtn.classList.add(cssClass);
 				syncStatusBtn.title = `Sync aktiv im ${status}-Modus`;
+
+				console.log(
+					`🎯 Menü-Button aktualisiert: ${syncStatusBtn.textContent} (${status}-Modus)`
+				);
 			} else {
 				syncStatusBtn.textContent = "📊 Status";
 				syncStatusBtn.title = "Sync inaktiv - Klicken für Details";
+
+				console.log(`🎯 Menü-Button auf inaktiv gesetzt`);
 			}
 		}
 	}
@@ -263,19 +285,29 @@ class SharingManager {
 			syncModeElement.classList.remove("master", "slave", "standalone");
 
 			if (isActive) {
-				// Zeige echten Status (Master/Slave)
-				syncModeElement.textContent = status;
-
+				// Zeige echten Status (Master/Slave) - nicht mehr nur "Master"
 				if (status === "Master") {
+					syncModeElement.textContent = "Master";
 					syncModeElement.classList.add("master");
 				} else if (status === "Slave") {
+					syncModeElement.textContent = "Slave";
 					syncModeElement.classList.add("slave");
+				} else {
+					// Fallback für andere aktive Status
+					syncModeElement.textContent = status;
+					syncModeElement.classList.add("master"); // Standard für aktive Modi
 				}
 			} else {
 				// Deaktiviert/Standalone
 				syncModeElement.textContent = "Standalone";
 				syncModeElement.classList.add("standalone");
 			}
+
+			console.log(
+				`🎯 Widget-Status aktualisiert: ${
+					syncModeElement.textContent
+				} (CSS: ${Array.from(syncModeElement.classList).join(", ")})`
+			);
 		}
 	}
 
@@ -598,21 +630,30 @@ class SharingManager {
 				const liveSyncToggle = document.getElementById("liveSyncToggle");
 				if (liveSyncToggle) {
 					liveSyncToggle.checked = true;
-					this.handleMasterSlaveToggle(true);
+					// Aktiviere Sync asynchron um Race-Conditions zu vermeiden
+					setTimeout(() => {
+						this.handleMasterSlaveToggle(true);
+					}, 100);
 				}
 			} else {
-				// Falls Sync deaktiviert ist, zeige Standard-Status
-				this.updateAllSyncDisplays("Status", false);
+				// Falls Sync deaktiviert ist, zeige Standalone-Status
+				this.updateAllSyncDisplays("Standalone", false);
 			}
 
+			// Lade gespeicherten Master-Modus (wird bei Sync-Aktivierung überschrieben)
 			this.isMasterMode = settings.isMasterMode || false;
+
+			console.log("📁 Gespeicherte Einstellungen geladen:", {
+				isLiveSyncEnabled: settings.isLiveSyncEnabled,
+				isMasterMode: this.isMasterMode,
+			});
 		} catch (error) {
 			console.error(
 				"❌ Fehler beim Laden der Master-Slave-Einstellungen:",
 				error
 			);
 			// Bei Fehler Standard-Status anzeigen
-			this.updateAllSyncDisplays("Status", false);
+			this.updateAllSyncDisplays("Standalone", false);
 		}
 	}
 

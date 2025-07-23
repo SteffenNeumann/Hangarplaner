@@ -361,8 +361,8 @@ function setupFlightDataEventHandlers() {
 							typeof window.HangarData.updateAircraftFromFlightData ===
 								"function"
 						) {
-							// Aktualisiere die UI-Kacheln mit den Flugdaten
-							window.HangarData.updateAircraftFromFlightData(
+							// Aktualisiere die UI-Kacheln mit den Flugdaten (async)
+							await window.HangarData.updateAircraftFromFlightData(
 								aircraft.id,
 								result
 							);

@@ -604,6 +604,19 @@ class ServerSync {
 	 */
 	hasDataChanged() {
 		try {
+			// WICHTIG: Prüfe ob kürzlich API-Updates stattgefunden haben
+			if (window.HangarDataCoordinator && window.HangarDataCoordinator.dataSource === "api") {
+				const lastApiUpdate = window.HangarDataCoordinator.lastUpdate;
+				if (lastApiUpdate) {
+					const timeSinceApiUpdate = Date.now() - new Date(lastApiUpdate).getTime();
+					// Blockiere Server-Sync für 5 Minuten nach API-Update
+					if (timeSinceApiUpdate < 300000) { // 5 Minuten in Millisekunden
+						console.log("⏸️ Server-Sync pausiert: Kürzliche API-Updates schützen");
+						return false;
+					}
+				}
+			}
+
 			const currentData = this.collectCurrentData();
 
 			// Entferne zeitabhängige Felder für Vergleich

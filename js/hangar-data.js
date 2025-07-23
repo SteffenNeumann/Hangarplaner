@@ -1200,7 +1200,7 @@ window.collectAllHangarData = hangarData.collectAllHangarData; // Auch direkt gl
  * @param {string} aircraftId - Die Flugzeugkennung
  * @param {Object} flightData - Die von der API erhaltenen Flugdaten
  */
-window.hangarData.updateAircraftFromFlightData = function (
+window.hangarData.updateAircraftFromFlightData = async function (
 	aircraftId,
 	flightData
 ) {
@@ -1231,9 +1231,20 @@ window.hangarData.updateAircraftFromFlightData = function (
 		if (currentValue.toLowerCase() === aircraftId.toLowerCase()) {
 			// Gefundene Kachel aktualisieren
 			const cellId = aircraftInput.id.split("-")[1];
+			
+			// DEBUG: Zeige verfügbare Flugdaten
+			console.log(`🔍 DEBUG für Kachel ${cellId}:`, {
+				arrivalTime: flightData.arrivalTime,
+				departureTime: flightData.departureTime,
+				positionText: flightData.positionText,
+				originCode: flightData.originCode,
+				destCode: flightData.destCode,
+				allData: flightData
+			});
 
 			// Ankunftszeit aktualisieren
-			const arrivalInput = tile.querySelector(`#arrival-${cellId}`);
+			const arrivalInput = tile.querySelector(`#arrival-time-${cellId}`);
+			console.log(`🔍 Arrival Input gefunden für ${cellId}:`, !!arrivalInput, arrivalInput?.id);
 			if (
 				arrivalInput &&
 				flightData.arrivalTime &&
@@ -1243,10 +1254,17 @@ window.hangarData.updateAircraftFromFlightData = function (
 				console.log(
 					`✅ Ankunftszeit für Kachel ${cellId}: ${flightData.arrivalTime}`
 				);
+			} else {
+				console.warn(`❌ Ankunftszeit NICHT gesetzt für Kachel ${cellId}:`, {
+					inputExists: !!arrivalInput,
+					hasArrivalTime: !!flightData.arrivalTime,
+					arrivalTime: flightData.arrivalTime
+				});
 			}
 
 			// Abflugzeit aktualisieren
-			const departureInput = tile.querySelector(`#departure-${cellId}`);
+			const departureInput = tile.querySelector(`#departure-time-${cellId}`);
+			console.log(`🔍 Departure Input gefunden für ${cellId}:`, !!departureInput, departureInput?.id);
 			if (
 				departureInput &&
 				flightData.departureTime &&
@@ -1256,10 +1274,20 @@ window.hangarData.updateAircraftFromFlightData = function (
 				console.log(
 					`✅ Abflugzeit für Kachel ${cellId}: ${flightData.departureTime}`
 				);
+			} else {
+				console.warn(`❌ Abflugzeit NICHT gesetzt für Kachel ${cellId}:`, {
+					inputExists: !!departureInput,
+					hasDepartureTime: !!flightData.departureTime,
+					departureTime: flightData.departureTime
+				});
 			}
 
-			// Position aktualisieren
-			const positionInput = tile.querySelector(`#position-${cellId}`);
+			// Position aktualisieren (versuche beide möglichen Felder)
+			let positionInput = tile.querySelector(`#position-${cellId}`);
+			if (!positionInput) {
+				positionInput = tile.querySelector(`#hangar-position-${cellId}`);
+			}
+			console.log(`🔍 Position Input gefunden für ${cellId}:`, !!positionInput, positionInput?.id);
 			if (
 				positionInput &&
 				flightData.positionText &&
@@ -1269,6 +1297,12 @@ window.hangarData.updateAircraftFromFlightData = function (
 				console.log(
 					`✅ Position für Kachel ${cellId}: ${flightData.positionText}`
 				);
+			} else {
+				console.warn(`❌ Position NICHT gesetzt für Kachel ${cellId}:`, {
+					inputExists: !!positionInput,
+					hasPositionText: !!flightData.positionText,
+					positionText: flightData.positionText
+				});
 			}
 
 			// Optional: Notizen mit zusätzlichen Informationen aktualisieren
@@ -1293,6 +1327,54 @@ window.hangarData.updateAircraftFromFlightData = function (
 		console.log(
 			`✅ ${updatedTiles} Kachel(n) für ${aircraftId} erfolgreich aktualisiert`
 		);
+
+		// WICHTIG: Daten in HangarDataCoordinator persistieren um Überschreibung zu verhindern
+		if (window.HangarDataCoordinator) {
+			console.log(`🔄 Persistiere Flugdaten für ${aircraftId} im DataCoordinator...`);
+			
+			// Sammle die aktualisierten Daten aus den DOM-Elementen
+			const coordData = {};
+			for (const tile of allTiles) {
+				const aircraftInput = tile.querySelector('input[id^="aircraft-"]');
+				if (!aircraftInput) continue;
+				
+				const currentValue = aircraftInput.value.trim();
+				if (currentValue.toLowerCase() === aircraftId.toLowerCase()) {
+					const cellId = aircraftInput.id.split('-')[1];
+					
+					// Sammle die aktualisierten Werte mit korrekten Feld-IDs
+					const arrivalInput = tile.querySelector(`#arrival-time-${cellId}`);
+					const departureInput = tile.querySelector(`#departure-time-${cellId}`);
+					let positionInput = tile.querySelector(`#position-${cellId}`);
+					if (!positionInput) {
+						positionInput = tile.querySelector(`#hangar-position-${cellId}`);
+					}
+					
+					coordData[`cell_${cellId}`] = {
+						aircraftId: currentValue,
+						arrivalTime: arrivalInput?.value || "",
+						departureTime: departureInput?.value || "",
+						position: positionInput?.value || "",
+						source: "api",
+						timestamp: new Date().toISOString()
+					};
+				}
+			}
+			
+			// Schreibe die Daten in den Coordinator
+			try {
+				window.HangarDataCoordinator.queueOperation({
+					type: "api_update",
+					source: "api",
+					data: coordData,
+					timestamp: new Date().toISOString(),
+					aircraftId: aircraftId
+				});
+				console.log(`✅ Flugdaten für ${aircraftId} erfolgreich persistiert`);
+			} catch (error) {
+				console.error(`❌ Fehler beim Persistieren der Flugdaten für ${aircraftId}:`, error);
+			}
+		}
 
 		// Event für andere Module abfeuern
 		document.dispatchEvent(
@@ -1385,8 +1467,17 @@ window.HangarDataCoordinator = {
 			`🔧 Ausführung: ${operation.type} (Quelle: ${operation.source})`
 		);
 
-		// Prioritätsprüfung: Server-Daten haben höchste Priorität
-		if (this.dataSource === "server" && operation.source !== "server") {
+		// ERWEITERTE Prioritätsprüfung: API-Daten für 5 Minuten schützen
+		if (this.dataSource === "api" && operation.source === "server") {
+			const timeSinceApiUpdate = Date.now() - new Date(this.lastUpdate).getTime();
+			if (timeSinceApiUpdate < 300000) { // 5 Minuten Schutzzeit
+				console.log("🛡️ API-Daten geschützt: Server-Operation blockiert für", Math.round((300000 - timeSinceApiUpdate) / 1000), "Sekunden");
+				return;
+			}
+		}
+
+		// Ursprüngliche Prioritätsprüfung: Server-Daten haben höchste Priorität (nach Schutzzeit)
+		if (this.dataSource === "server" && operation.source !== "server" && operation.source !== "api") {
 			console.log("⚠️ Server-Daten haben Priorität, Operation übersprungen");
 			return;
 		}
@@ -1413,6 +1504,9 @@ window.HangarDataCoordinator = {
 				break;
 			case "applyFlightData":
 				await this.applyFlightDataSafe(operation.data, operation.source);
+				break;
+			case "api_update":
+				await this.applyApiUpdateSafe(operation.data, operation.source, operation.aircraftId);
 				break;
 		}
 
@@ -1552,6 +1646,46 @@ window.HangarDataCoordinator = {
 				});
 			}
 		});
+	},
+
+	/**
+	 * Sichere API-Update-Anwendung - Persistiert API-Flugdaten dauerhaft
+	 */
+	async applyApiUpdateSafe(coordData, source, aircraftId) {
+		console.log(`🛫 Persistiere API-Update für ${aircraftId} (Quelle: ${source})`);
+
+		// Aktualisiere interne Datenhaltung
+		this.currentData = this.currentData || {};
+		
+		// Erstelle oder aktualisiere die Flugdaten-Struktur
+		if (!this.currentData.tiles) {
+			this.currentData.tiles = {};
+		}
+
+		// Persistiere jede Cell separat
+		Object.keys(coordData).forEach(cellKey => {
+			const cellData = coordData[cellKey];
+			const cellId = cellKey.split('_')[1];
+			
+			// Aktualisiere die persistente Datenhaltung
+			this.currentData.tiles[cellKey] = {
+				...this.currentData.tiles[cellKey],
+				aircraftId: cellData.aircraftId,
+				arrivalTime: cellData.arrivalTime,
+				departureTime: cellData.departureTime,
+				position: cellData.position,
+				lastApiUpdate: cellData.timestamp,
+				source: source
+			};
+
+			console.log(`✅ Persistiert: Cell ${cellId} für ${cellData.aircraftId}`);
+		});
+
+		// Aktualisiere Metadaten
+		this.dataSource = source;
+		this.lastUpdate = new Date().toISOString();
+		
+		console.log(`✅ API-Update für ${aircraftId} erfolgreich persistiert`);
 	},
 
 	/**

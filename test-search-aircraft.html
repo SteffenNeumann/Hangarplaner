@@ -1,167 +1,195 @@
 <!DOCTYPE html>
 <html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Search Aircraft Test - HangarPlanner</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .test-container {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        .status {
-            padding: 10px;
-            border-radius: 4px;
-            margin: 10px 0;
-        }
-        .success { background-color: #d4edda; color: #155724; }
-        .error { background-color: #f8d7da; color: #721c24; }
-        .info { background-color: #d1ecf1; color: #0c5460; }
-        button {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        .code-block {
-            background-color: #f8f9fa;
-            padding: 10px;
-            border-radius: 4px;
-            font-family: monospace;
-            margin: 10px 0;
-        }
-    </style>
-</head>
-<body>
-    <div class="test-container">
-        <h1>🔍 Search Aircraft Funktionalität - Test & Fix</h1>
-        
-        <div class="status info">
-            <h3>Problem identifiziert:</h3>
-            <p>Die "Search Aircraft" Funktion im Seitenmenü war nicht aktiv, da der Event-Listener fehlte.</p>
-        </div>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Search Aircraft Test - HangarPlanner</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				max-width: 800px;
+				margin: 0 auto;
+				padding: 20px;
+				background-color: #f5f5f5;
+			}
+			.test-container {
+				background: white;
+				padding: 20px;
+				border-radius: 8px;
+				box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+				margin-bottom: 20px;
+			}
+			.status {
+				padding: 10px;
+				border-radius: 4px;
+				margin: 10px 0;
+			}
+			.success {
+				background-color: #d4edda;
+				color: #155724;
+			}
+			.error {
+				background-color: #f8d7da;
+				color: #721c24;
+			}
+			.info {
+				background-color: #d1ecf1;
+				color: #0c5460;
+			}
+			button {
+				background-color: #007bff;
+				color: white;
+				border: none;
+				padding: 10px 20px;
+				border-radius: 4px;
+				cursor: pointer;
+			}
+			button:hover {
+				background-color: #0056b3;
+			}
+			.code-block {
+				background-color: #f8f9fa;
+				padding: 10px;
+				border-radius: 4px;
+				font-family: monospace;
+				margin: 10px 0;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="test-container">
+			<h1>🔍 Search Aircraft Funktionalität - Test & Fix</h1>
 
-        <div class="status success">
-            <h3>✅ Korrektur implementiert:</h3>
-            <ul>
-                <li><strong>Event-Listener für Search-Button hinzugefügt</strong> in <code>js/hangar.js</code></li>
-                <li><strong>Enter-Taste Support</strong> für das Suchfeld hinzugefügt</li>
-                <li><strong>Fehlerbehandlung und Logging</strong> implementiert</li>
-                <li><strong>Fallback-Mechanismen</strong> für verschiedene Funktionszugriffe</li>
-            </ul>
-        </div>
+			<div class="status info">
+				<h3>Problem identifiziert:</h3>
+				<p>
+					Die "Search Aircraft" Funktion im Seitenmenü war nicht aktiv, da der
+					Event-Listener fehlte.
+				</p>
+			</div>
 
-        <div class="status info">
-            <h3>📋 Implementierte Funktionen:</h3>
-            <ul>
-                <li><strong>Button-Klick:</strong> Klicken auf "Search" Button</li>
-                <li><strong>Enter-Taste:</strong> Enter im Suchfeld drücken</li>
-                <li><strong>Visual Feedback:</strong> Gefundene Aircraft werden gelb hervorgehoben</li>
-                <li><strong>Scroll-to-Element:</strong> Automatisches Scrollen zum gefundenen Aircraft</li>
-                <li><strong>Notification:</strong> Anzeige wenn Aircraft nicht gefunden wird</li>
-            </ul>
-        </div>
+			<div class="status success">
+				<h3>✅ Korrektur implementiert:</h3>
+				<ul>
+					<li>
+						<strong>Event-Listener für Search-Button hinzugefügt</strong> in
+						<code>js/hangar.js</code>
+					</li>
+					<li>
+						<strong>Enter-Taste Support</strong> für das Suchfeld hinzugefügt
+					</li>
+					<li><strong>Fehlerbehandlung und Logging</strong> implementiert</li>
+					<li>
+						<strong>Fallback-Mechanismen</strong> für verschiedene
+						Funktionszugriffe
+					</li>
+				</ul>
+			</div>
 
-        <h2>🧪 Test der Search Aircraft Funktion</h2>
-        
-        <div class="test-container">
-            <h3>Test-Anweisungen:</h3>
-            <ol>
-                <li><strong>Hauptanwendung öffnen:</strong> 
-                    <a href="index.html" target="_blank">
-                        <button>HangarPlanner öffnen</button>
-                    </a>
-                </li>
-                <li><strong>Aircraft ID eingeben:</strong> In eine beliebige Kachel z.B. "D-TEST" eingeben</li>
-                <li><strong>Seitenmenü öffnen:</strong> Rechts auf "»" klicken</li>
-                <li><strong>Search Aircraft Sektion öffnen:</strong> Auf "🔍 Search Aircraft" klicken</li>
-                <li><strong>Suchen:</strong> "D-TEST" in das Suchfeld eingeben und entweder:
-                    <ul>
-                        <li>Auf "Search" Button klicken</li>
-                        <li>Enter-Taste drücken</li>
-                    </ul>
-                </li>
-                <li><strong>Erwartetes Ergebnis:</strong> Die Kachel mit "D-TEST" wird gelb hervorgehoben und in den Bildschirm gescrollt</li>
-            </ol>
-        </div>
+			<div class="status info">
+				<h3>📋 Implementierte Funktionen:</h3>
+				<ul>
+					<li><strong>Button-Klick:</strong> Klicken auf "Search" Button</li>
+					<li><strong>Enter-Taste:</strong> Enter im Suchfeld drücken</li>
+					<li>
+						<strong>Visual Feedback:</strong> Gefundene Aircraft werden gelb
+						hervorgehoben
+					</li>
+					<li>
+						<strong>Scroll-to-Element:</strong> Automatisches Scrollen zum
+						gefundenen Aircraft
+					</li>
+					<li>
+						<strong>Notification:</strong> Anzeige wenn Aircraft nicht gefunden
+						wird
+					</li>
+				</ul>
+			</div>
 
-        <div class="test-container">
-            <h3>📝 Code-Änderungen:</h3>
-            
-            <h4>Event-Listener für Search-Button:</h4>
-            <div class="code-block">
-// In js/hangar.js - setupSaveLoadEventHandlers() Funktion:
+			<h2>🧪 Test der Search Aircraft Funktion</h2>
 
-// Search Aircraft Button Event-Handler
-const btnSearch = document.getElementById("btnSearch");
-if (btnSearch) {
-    btnSearch.addEventListener("click", function (event) {
-        event.preventDefault();
-        console.log("🔍 Search Aircraft Button geklickt");
+			<div class="test-container">
+				<h3>Test-Anweisungen:</h3>
+				<ol>
+					<li>
+						<strong>Hauptanwendung öffnen:</strong>
+						<a href="index.html" target="_blank">
+							<button>HangarPlanner öffnen</button>
+						</a>
+					</li>
+					<li>
+						<strong>Aircraft ID eingeben:</strong> In eine beliebige Kachel z.B.
+						"D-TEST" eingeben
+					</li>
+					<li><strong>Seitenmenü öffnen:</strong> Rechts auf "»" klicken</li>
+					<li>
+						<strong>Search Aircraft Sektion öffnen:</strong> Auf "🔍 Search
+						Aircraft" klicken
+					</li>
+					<li>
+						<strong>Suchen:</strong> "D-TEST" in das Suchfeld eingeben und
+						entweder:
+						<ul>
+							<li>Auf "Search" Button klicken</li>
+							<li>Enter-Taste drücken</li>
+						</ul>
+					</li>
+					<li>
+						<strong>Erwartetes Ergebnis:</strong> Die Kachel mit "D-TEST" wird
+						gelb hervorgehoben und in den Bildschirm gescrollt
+					</li>
+				</ol>
+			</div>
 
-        try {
-            if (window.hangarEvents && 
-                typeof window.hangarEvents.searchAircraft === "function") {
-                window.hangarEvents.searchAircraft();
-            } else if (typeof searchAircraft === "function") {
-                searchAircraft();
-            } else {
-                throw new Error("Search Aircraft-Funktion nicht verfügbar");
-            }
-        } catch (error) {
-            console.error("Fehler bei Aircraft Search:", error);
-            showNotification("Fehler bei Aircraft Search: " + error.message, "error");
-        }
-    });
-    console.log("✅ Search Aircraft Button Event-Handler eingerichtet");
-}
-            </div>
+			<div class="test-container">
+				<h3>📝 Code-Änderungen:</h3>
 
-            <h4>Enter-Taste Support:</h4>
-            <div class="code-block">
-// Search Aircraft Input Event-Handler (Enter-Taste)
-const searchAircraftInput = document.getElementById("searchAircraft");
-if (searchAircraftInput) {
-    searchAircraftInput.addEventListener("keypress", function (event) {
-        if (event.key === "Enter") {
-            event.preventDefault();
-            // Gleiche Such-Logik wie beim Button-Klick
-            window.hangarEvents.searchAircraft();
-        }
-    });
-}
-            </div>
-        </div>
+				<h4>Event-Listener für Search-Button:</h4>
+				<div class="code-block">
+					// In js/hangar.js - setupSaveLoadEventHandlers() Funktion: // Search
+					Aircraft Button Event-Handler const btnSearch =
+					document.getElementById("btnSearch"); if (btnSearch) {
+					btnSearch.addEventListener("click", function (event) {
+					event.preventDefault(); console.log("🔍 Search Aircraft Button
+					geklickt"); try { if (window.hangarEvents && typeof
+					window.hangarEvents.searchAircraft === "function") {
+					window.hangarEvents.searchAircraft(); } else if (typeof searchAircraft
+					=== "function") { searchAircraft(); } else { throw new Error("Search
+					Aircraft-Funktion nicht verfügbar"); } } catch (error) {
+					console.error("Fehler bei Aircraft Search:", error);
+					showNotification("Fehler bei Aircraft Search: " + error.message,
+					"error"); } }); console.log("✅ Search Aircraft Button Event-Handler
+					eingerichtet"); }
+				</div>
 
-        <div class="status success">
-            <h3>🎯 Status: Vollständig behoben</h3>
-            <p>Die Search Aircraft Funktion ist jetzt vollständig aktiv und funktionsfähig. 
-               Alle Event-Listener sind korrekt registriert und die Funktion ist über verschiedene 
-               Eingabemethoden zugänglich.</p>
-        </div>
-    </div>
+				<h4>Enter-Taste Support:</h4>
+				<div class="code-block">
+					// Search Aircraft Input Event-Handler (Enter-Taste) const
+					searchAircraftInput = document.getElementById("searchAircraft"); if
+					(searchAircraftInput) {
+					searchAircraftInput.addEventListener("keypress", function (event) { if
+					(event.key === "Enter") { event.preventDefault(); // Gleiche
+					Such-Logik wie beim Button-Klick window.hangarEvents.searchAircraft();
+					} }); }
+				</div>
+			</div>
 
-    <script>
-        // Einfacher Status-Check
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🔍 Search Aircraft Test-Seite geladen');
-            console.log('💡 Nutzen Sie die Browser-Konsole für detaillierte Logs');
-        });
-    </script>
-</body>
+			<div class="status success">
+				<h3>🎯 Status: Vollständig behoben</h3>
+				<p>
+					Die Search Aircraft Funktion ist jetzt vollständig aktiv und
+					funktionsfähig. Alle Event-Listener sind korrekt registriert und die
+					Funktion ist über verschiedene Eingabemethoden zugänglich.
+				</p>
+			</div>
+		</div>
+
+		<script>
+			// Einfacher Status-Check
+			document.addEventListener("DOMContentLoaded", function () {
+				console.log("🔍 Search Aircraft Test-Seite geladen");
+				console.log("💡 Nutzen Sie die Browser-Konsole für detaillierte Logs");
+			});
+		</script>
+	</body>
 </html>

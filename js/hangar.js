@@ -453,7 +453,10 @@ function setupSaveLoadEventHandlers() {
 				}
 			} catch (error) {
 				console.error("Fehler bei Aircraft Search:", error);
-				showNotification("Fehler bei Aircraft Search: " + error.message, "error");
+				showNotification(
+					"Fehler bei Aircraft Search: " + error.message,
+					"error"
+				);
 			}
 		});
 		console.log("✅ Search Aircraft Button Event-Handler eingerichtet");
@@ -483,7 +486,10 @@ function setupSaveLoadEventHandlers() {
 					}
 				} catch (error) {
 					console.error("Fehler bei Aircraft Search:", error);
-					showNotification("Fehler bei Aircraft Search: " + error.message, "error");
+					showNotification(
+						"Fehler bei Aircraft Search: " + error.message,
+						"error"
+					);
 				}
 			}
 		});

@@ -1579,18 +1579,18 @@ window.hangarData.updateAircraftFromFlightData = async function (
 			}
 
 			// Optional: Notizen mit zusätzlichen Informationen aktualisieren
-			const notesTextarea = tile.querySelector(`#notes-${cellId}`);
-			if (notesTextarea && flightData.data && flightData.data.length > 0) {
-				// Zusätzliche Fluginformationen in die Notizen eintragen (optional)
-				const additionalInfo = `Flight data from API (${new Date().toLocaleTimeString()})`;
-				if (!notesTextarea.value.includes(additionalInfo)) {
-					notesTextarea.value = (
-						notesTextarea.value +
-						"\n" +
-						additionalInfo
-					).trim();
-				}
-			}
+			// const notesTextarea = tile.querySelector(`#notes-${cellId}`);
+			// if (notesTextarea && flightData.data && flightData.data.length > 0) {
+			// 	// Zusätzliche Fluginformationen in die Notizen eintragen (optional)
+			// 	const additionalInfo = `Flight data from API (${new Date().toLocaleTimeString()})`;
+			// 	if (!notesTextarea.value.includes(additionalInfo)) {
+			// 		notesTextarea.value = (
+			// 			notesTextarea.value +
+			// 			"\n" +
+			// 			additionalInfo
+			// 		).trim();
+			// 	}
+			// }
 
 			updatedTiles++;
 		}

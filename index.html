@@ -2211,23 +2211,6 @@
 						"⚠️ updateSyncModeDisplay() ist obsolet - verwende SharingManager.updateAllSyncDisplays()"
 					);
 					return;
-
-					const syncModeElement = document.getElementById("sync-mode");
-					const liveSyncToggle = document.getElementById("liveSyncToggle");
-
-					if (syncModeElement && liveSyncToggle) {
-						const isEnabled = liveSyncToggle.checked;
-						const mode = isEnabled ? "Master" : "Standalone";
-
-						syncModeElement.textContent = mode;
-						syncModeElement.classList.remove("master", "slave", "standalone");
-
-						if (isEnabled) {
-							syncModeElement.classList.add("master");
-						} else {
-							syncModeElement.classList.add("standalone");
-						}
-					}
 				}
 
 				// Zeit-Update zur zentralen Initialisierung hinzufügen

@@ -512,6 +512,25 @@ class ServerSync {
 
 			console.log("📥 Wende Server-Daten über Koordinator an:", serverData);
 
+			// DEBUG: Prüfe verfügbare Datenhandler
+			console.log("🔍 DEBUG: Verfügbare Datenhandler:");
+			console.log("- window.dataCoordinator:", !!window.dataCoordinator);
+			console.log("- window.hangarData:", !!window.hangarData);
+			console.log(
+				"- window.hangarData.applyLoadedHangarPlan:",
+				typeof window.hangarData?.applyLoadedHangarPlan
+			);
+			console.log("- serverData Struktur:", {
+				hasPrimaryTiles: !!(
+					serverData.primaryTiles && serverData.primaryTiles.length > 0
+				),
+				hasSecondaryTiles: !!(
+					serverData.secondaryTiles && serverData.secondaryTiles.length > 0
+				),
+				hasSettings: !!serverData.settings,
+				hasMetadata: !!serverData.metadata,
+			});
+
 			// *** PRIORITÄT 1: Display Options aus Serverdaten anwenden ***
 			if (
 				serverData.settings &&
@@ -553,7 +572,7 @@ class ServerSync {
 			// *** PRIORITÄT 2: Kachel-Daten anwenden ***
 			// NEUE LOGIK: Verwende zentralen Datenkoordinator
 			if (window.dataCoordinator) {
-				// Server-Daten haben höchste Priorität
+				console.log("🔄 Verwende dataCoordinator für Server-Daten...");
 				window.dataCoordinator.loadProject(serverData, "server");
 				console.log("✅ Server-Daten über Datenkoordinator angewendet");
 				return true;
@@ -564,12 +583,37 @@ class ServerSync {
 				window.hangarData &&
 				typeof window.hangarData.applyLoadedHangarPlan === "function"
 			) {
+				console.log(
+					"🔄 Verwende hangarData.applyLoadedHangarPlan für Server-Daten..."
+				);
 				const result = window.hangarData.applyLoadedHangarPlan(serverData);
-				console.log("✅ Server-Daten über hangarData angewendet (Fallback)");
+				console.log(
+					"✅ Server-Daten über hangarData angewendet (Fallback), Ergebnis:",
+					result
+				);
 				return result;
 			}
 
-			// Basis-Fallback
+			// ERWEITERT: Direkter Fallback für Kachel-Daten
+			console.log(
+				"⚠️ Keine Standard-Datenhandler verfügbar, verwende direkten Fallback..."
+			);
+			let applied = false;
+
+			// Direkte Anwendung der Kachel-Daten
+			if (serverData.primaryTiles && serverData.primaryTiles.length > 0) {
+				console.log("🔄 Wende primäre Kachel-Daten direkt an...");
+				this.applyTileData(serverData.primaryTiles, false);
+				applied = true;
+			}
+
+			if (serverData.secondaryTiles && serverData.secondaryTiles.length > 0) {
+				console.log("🔄 Wende sekundäre Kachel-Daten direkt an...");
+				this.applyTileData(serverData.secondaryTiles, true);
+				applied = true;
+			}
+
+			// Basis-Fallback für Projektname
 			if (serverData.metadata && serverData.metadata.projectName) {
 				const projectNameInput = document.getElementById("projectName");
 				if (projectNameInput) {
@@ -578,11 +622,18 @@ class ServerSync {
 						"📝 Projektname gesetzt:",
 						serverData.metadata.projectName
 					);
+					applied = true;
 				}
 			}
 
-			console.log("✅ Server-Daten angewendet (Basis-Fallback)");
-			return true;
+			if (applied) {
+				console.log("✅ Server-Daten über direkten Fallback angewendet");
+				return true;
+			} else {
+				console.warn("⚠️ Keine Server-Daten konnten angewendet werden");
+				console.warn("⚠️ Keine Server-Daten konnten angewendet werden");
+				return false;
+			}
 		} catch (error) {
 			console.error("❌ Fehler beim Anwenden der Server-Daten:", error);
 			return false;
@@ -1133,10 +1184,25 @@ window.testReadMode = function () {
 
 		console.log("4. Führe manuellen Slave-Check durch:");
 		window.serverSync.slaveCheckForUpdates();
-	}, 2000);
-};
 
-// Hilfe-Funktion
+		console.log("5. Teste Server-Daten-Anwendung in 5 Sekunden...");
+		setTimeout(async () => {
+			console.log("🧪 TESTE SERVER-DATEN-ANWENDUNG:");
+
+			// Lade aktuelle Server-Daten
+			const serverData = await window.serverSync.loadFromServer();
+			if (serverData) {
+				console.log("📥 Server-Daten geladen:", serverData);
+
+				// Teste applyServerData direkt
+				const applied = await window.serverSync.applyServerData(serverData);
+				console.log("✅ Server-Daten-Anwendung Ergebnis:", applied);
+			} else {
+				console.log("❌ Keine Server-Daten verfügbar für Test");
+			}
+		}, 5000);
+	}, 2000);
+}; // Hilfe-Funktion
 window.syncHelp = function () {
 	console.log(`
 🔧 SYNCHRONISATION DEBUG HILFE

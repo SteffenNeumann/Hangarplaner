@@ -11,7 +11,7 @@ const AeroDataBoxAPI = (() => {
 		flightsEndpoint: "/flights",
 		statusEndpoint: "/status",
 		rapidApiHost: "aerodatabox.p.rapidapi.com",
-		rapidApiKey: "b051f99303msh92025a689f821d8p148911jsn8b40d9711134", // RapidAPI Key
+		rapidApiKey: "b76afbf516mshf864818d919de86p10475ejsna65b718a8602", // Neuer RapidAPI Key
 		debugMode: true, // Debug-Modus für zusätzliche Konsolenausgaben
 		rateLimitDelay: 1200, // 1.2 Sekunden Verzögerung zwischen API-Anfragen
 	};
@@ -966,7 +966,9 @@ const AeroDataBoxAPI = (() => {
 	};
 
 	/**
+	 * NEUE OPTIMIERTE HAUPTFUNKTION
 	 * Sammelt alle Aircraft IDs aus den Kacheln und ruft für jede die entsprechenden Flugdaten ab
+	 * EFFIZIENTER ANSATZ: Erst eine Flughafen-Abfrage, dann alle Aircraft IDs darauf prüfen
 	 * @param {string} airportCode - IATA-Code des Flughafens (z.B. "MUC")
 	 * @param {string} startDateTime - Startzeit für die Abfrage (Format: YYYY-MM-DDTHH:MM)
 	 * @param {string} endDateTime - Endzeit für die Abfrage (Format: YYYY-MM-DDTHH:MM)
@@ -978,9 +980,9 @@ const AeroDataBoxAPI = (() => {
 		endDateTime
 	) => {
 		try {
-			updateFetchStatus("Sammle Aircraft IDs aus Kacheln...");
+			updateFetchStatus("🔍 Sammle Aircraft IDs aus Kacheln...");
 
-			// Alle Aircraft IDs aus den Kacheln sammeln
+			// SCHRITT 1: Alle Aircraft IDs aus den Kacheln sammeln
 			const aircraftIds = [];
 			const aircraftInputs = document.querySelectorAll(
 				'input[id^="aircraft-"]'
@@ -997,15 +999,25 @@ const AeroDataBoxAPI = (() => {
 			});
 
 			if (aircraftIds.length === 0) {
-				updateFetchStatus("Keine Aircraft IDs in den Kacheln gefunden", true);
+				updateFetchStatus(
+					"❌ Keine Aircraft IDs in den Kacheln gefunden",
+					true
+				);
 				return;
 			}
 
+			console.log(
+				`🎯 Gefundene Aircraft IDs: ${aircraftIds.map((a) => a.id).join(", ")}`
+			);
 			updateFetchStatus(
-				`${aircraftIds.length} Aircraft IDs gefunden. Rufe Flugdaten ab...`
+				`🎯 ${aircraftIds.length} Aircraft IDs gefunden. Flughafen-Abfrage wird gestartet...`
 			);
 
-			// Flugdaten vom Flughafen für den angegebenen Zeitraum abrufen
+			// SCHRITT 2: EINE einzige effiziente Flughafen-Abfrage für den Zeitraum
+			console.log(
+				`✈️ Starte EINE API-Abfrage für Flughafen ${airportCode}: ${startDateTime} bis ${endDateTime}`
+			);
+
 			const flightData = await getAirportFlights(
 				airportCode,
 				startDateTime,
@@ -1018,11 +1030,11 @@ const AeroDataBoxAPI = (() => {
 					!flightData.arrivals &&
 					!Array.isArray(flightData))
 			) {
-				updateFetchStatus("Keine Flugdaten vom Flughafen erhalten", true);
+				updateFetchStatus("❌ Keine Flugdaten vom Flughafen erhalten", true);
 				return;
 			}
 
-			// Alle Flüge in einem Array sammeln (sowohl departures als auch arrivals)
+			// SCHRITT 3: Alle Flüge in einem Array sammeln (sowohl departures als auch arrivals)
 			let allFlights = [];
 			if (Array.isArray(flightData)) {
 				allFlights = flightData;
@@ -1033,11 +1045,11 @@ const AeroDataBoxAPI = (() => {
 					allFlights = allFlights.concat(flightData.arrivals);
 			}
 
-			if (config.debugMode) {
-				console.log(
-					`Verarbeite ${allFlights.length} Flüge für ${aircraftIds.length} Aircraft IDs`
-				);
+			console.log(
+				`📊 Insgesamt ${allFlights.length} Flüge vom Flughafen ${airportCode} erhalten`
+			);
 
+			if (config.debugMode) {
 				// DEBUG: Sammle und zeige alle Aircraft Registrierungen
 				const allAircraftRegs = allFlights
 					.map((flight) => {
@@ -1053,58 +1065,64 @@ const AeroDataBoxAPI = (() => {
 
 				const uniqueRegs = [...new Set(allAircraftRegs)];
 				console.log(
-					`Gefundene Aircraft Registrierungen (${uniqueRegs.length} unique):`,
+					`🔍 Gefundene Aircraft Registrierungen am Flughafen (${uniqueRegs.length} unique):`,
 					uniqueRegs.slice(0, 20)
 				);
 
 				// Zeige welche Aircraft IDs wir suchen
 				const searchIds = aircraftIds.map((a) => a.id);
-				console.log(`Gesuchte Aircraft IDs:`, searchIds);
+				console.log(`🎯 Gesuchte Aircraft IDs:`, searchIds);
+
+				// Zeige Matches vorab
+				const matches = searchIds.filter((searchId) =>
+					uniqueRegs.some((reg) => reg === searchId)
+				);
+				console.log(
+					`✅ Direkte Matches gefunden: ${matches.length} von ${searchIds.length}`,
+					matches
+				);
 			}
 
-			// DEBUG: Zeige die ersten paar Flüge um die Datenstruktur zu verstehen
-			if (config.debugMode && allFlights.length > 0) {
-				console.log("DEBUG: Erste 3 Flüge zur Strukturanalyse:");
-				for (let i = 0; i < Math.min(3, allFlights.length); i++) {
-					const flight = allFlights[i];
-					console.log(`Flug ${i + 1}:`, {
-						aircraft: flight.aircraft,
-						departure: flight.departure?.airport?.iata,
-						arrival: flight.arrival?.airport?.iata,
-						flightNumber: flight.number || flight.flightNumber,
-						fullFlight: flight,
-					});
-				}
-			}
+			// SCHRITT 4: Für jede Aircraft ID die passenden Flüge suchen und eintragen
+			let successfulUpdates = 0;
+			updateFetchStatus(`🔄 Verarbeite ${aircraftIds.length} Aircraft IDs...`);
 
-			// Für jede Aircraft ID die passenden Flüge suchen und eintragen
 			for (const aircraft of aircraftIds) {
-				await processAircraftFlights(
+				const updated = await processAircraftFlights(
 					aircraft,
 					allFlights,
 					startDateTime,
 					endDateTime
 				);
+				if (updated) successfulUpdates++;
 			}
 
-			updateFetchStatus(
-				`Flugdaten für ${aircraftIds.length} Aircraft erfolgreich aktualisiert`
-			);
+			if (successfulUpdates > 0) {
+				updateFetchStatus(
+					`✅ Flugdaten für ${successfulUpdates}/${aircraftIds.length} Aircraft erfolgreich aktualisiert`
+				);
+			} else {
+				updateFetchStatus(
+					`⚠️ Keine passenden Flüge für die ${aircraftIds.length} Aircraft IDs gefunden`,
+					false
+				);
+			}
 		} catch (error) {
-			console.error("Fehler beim Update der Flugdaten:", error);
+			console.error("❌ Fehler beim Update der Flugdaten:", error);
 			updateFetchStatus(
-				`Fehler beim Update der Flugdaten: ${error.message}`,
+				`❌ Fehler beim Update der Flugdaten: ${error.message}`,
 				true
 			);
 		}
 	};
 
 	/**
-	 * Verarbeitet die Flugdaten für eine spezifische Aircraft ID
+	 * VERBESSERTE Verarbeitung der Flugdaten für eine spezifische Aircraft ID
 	 * @param {Object} aircraft - Objekt mit id und cellNumber
 	 * @param {Array} allFlights - Array aller Flüge vom Flughafen
 	 * @param {string} startDateTime - Startzeit der Abfrage (YYYY-MM-DDTHH:MM)
 	 * @param {string} endDateTime - Endzeit der Abfrage (YYYY-MM-DDTHH:MM)
+	 * @returns {boolean} - True wenn Flugdaten gefunden und gesetzt wurden
 	 */
 	const processAircraftFlights = async (
 		aircraft,
@@ -1113,7 +1131,11 @@ const AeroDataBoxAPI = (() => {
 		endDateTime
 	) => {
 		try {
-			let exampleRegShown = false; // Flag für Debug-Output
+			if (config.debugMode) {
+				console.log(
+					`\n🔍 === VERARBEITE AIRCRAFT ${aircraft.id} (Kachel ${aircraft.cellNumber}) ===`
+				);
+			}
 
 			// Nach Flügen mit dieser Aircraft Registration suchen
 			const matchingFlights = allFlights.filter((flight) => {
@@ -1125,35 +1147,12 @@ const AeroDataBoxAPI = (() => {
 					flight.aircraftRegistration ||
 					flight.registration;
 
-				if (config.debugMode && aircraftReg && !exampleRegShown) {
-					// Zeige erste gefundene Registrierung zur Kontrolle
-					console.log(
-						`Beispiel Aircraft Registration gefunden: "${aircraftReg}" (Typ: ${typeof aircraftReg})`
-					);
-					exampleRegShown = true;
-				}
-
 				return aircraftReg && aircraftReg.toUpperCase() === aircraft.id;
 			});
 
 			if (config.debugMode) {
-				console.log(`🔍 Suche nach Aircraft ID: "${aircraft.id}"`);
 				console.log(
 					`📊 Gefundene Matches: ${matchingFlights.length} von ${allFlights.length} Flügen`
-				);
-
-				// Zeige ein paar Beispiel-Registrierungen aus den API-Daten
-				const sampleRegs = allFlights.slice(0, 5).map((flight) => {
-					const reg =
-						flight.aircraft?.reg ||
-						flight.aircraft?.registration ||
-						flight.aircraft?.tail ||
-						flight.aircraftRegistration ||
-						flight.registration;
-					return reg ? `"${reg}"` : "null";
-				});
-				console.log(
-					`📝 Beispiel-Registrierungen aus API: [${sampleRegs.join(", ")}]`
 				);
 			}
 
@@ -1161,18 +1160,12 @@ const AeroDataBoxAPI = (() => {
 				if (config.debugMode) {
 					console.log(`❌ Keine Flüge für Aircraft ${aircraft.id} gefunden`);
 				}
-				return;
+				return false;
 			}
 
 			// Zeitfenster parsen
 			const startTime = new Date(startDateTime);
 			const endTime = new Date(endDateTime);
-
-			if (config.debugMode) {
-				console.log(
-					`Verarbeite ${matchingFlights.length} Flüge für Aircraft ${aircraft.id} im Zeitfenster ${startDateTime} bis ${endDateTime}`
-				);
-			}
 
 			// Flüge im spezifischen Zeitfenster filtern und nach Zeit sortieren
 			const relevantFlights = matchingFlights
@@ -1215,8 +1208,17 @@ const AeroDataBoxAPI = (() => {
 
 			if (config.debugMode) {
 				console.log(
-					`${relevantFlights.length} Flüge von Aircraft ${aircraft.id} liegen im Zeitfenster`
+					`🕒 ${relevantFlights.length} Flüge von Aircraft ${aircraft.id} liegen im Zeitfenster ${startDateTime} bis ${endDateTime}`
 				);
+			}
+
+			if (relevantFlights.length === 0) {
+				if (config.debugMode) {
+					console.log(
+						`⏰ Keine Flüge für ${aircraft.id} im angegebenen Zeitfenster`
+					);
+				}
+				return false;
 			}
 
 			// Letzten Ankunftsflug und ersten Abflugflug identifizieren
@@ -1231,55 +1233,73 @@ const AeroDataBoxAPI = (() => {
 					? new Date(flight.arrival.scheduledTime.utc)
 					: null;
 
-				// Ankunftsflüge (im Zeitfenster)
+				// Ankunftsflüge (im Zeitfenster) - letzter ist der späteste
 				if (arrTime && arrTime >= startTime && arrTime <= endTime) {
-					lastArrival = flight; // Da sortiert, ist der letzte auch der späteste
+					lastArrival = flight;
 				}
 
-				// Abflugflüge (im Zeitfenster)
+				// Abflugflüge (im Zeitfenster) - erster ist der früheste
 				if (depTime && depTime >= startTime && depTime <= endTime) {
 					if (!firstDeparture) {
-						firstDeparture = flight; // Der erste Abflug im Zeitfenster
+						firstDeparture = flight;
 					}
 				}
 			}
 
+			// Debug-Information zu den ausgewählten Flügen
 			if (config.debugMode) {
 				if (lastArrival) {
 					const arrTime = new Date(lastArrival.arrival.scheduledTime.utc);
 					console.log(
-						`Letzter Ankunftsflug für ${aircraft.id}: ${arrTime.toISOString()}`
+						`🛬 Letzter Ankunftsflug: ${arrTime
+							.toISOString()
+							.substring(11, 16)} UTC (${
+							lastArrival.departure?.airport?.iata || "???"
+						} → ${lastArrival.arrival?.airport?.iata || "???"})`
 					);
 				}
 				if (firstDeparture) {
 					const depTime = new Date(firstDeparture.departure.scheduledTime.utc);
 					console.log(
-						`Erster Abflugflug für ${aircraft.id}: ${depTime.toISOString()}`
+						`🛫 Erster Abflugflug: ${depTime
+							.toISOString()
+							.substring(11, 16)} UTC (${
+							firstDeparture.departure?.airport?.iata || "???"
+						} → ${firstDeparture.arrival?.airport?.iata || "???"})`
 					);
 				}
 			}
 
-			// Daten in die entsprechenden Felder eintragen
-			updateCellWithFlightData(
-				aircraft.cellNumber,
-				lastArrival,
-				firstDeparture
-			);
-
-			if (config.debugMode) {
-				console.log(
-					`Aircraft ${aircraft.id}: Kachel ${
-						aircraft.cellNumber
-					} aktualisiert - Ankunft: ${
-						lastArrival ? "gesetzt" : "keine"
-					}, Abflug: ${firstDeparture ? "gesetzt" : "keine"}`
+			// DATEN IN KACHEL EINTRAGEN
+			if (lastArrival || firstDeparture) {
+				updateCellWithFlightData(
+					aircraft.cellNumber,
+					lastArrival,
+					firstDeparture
 				);
+
+				if (config.debugMode) {
+					console.log(
+						`✅ Kachel ${aircraft.cellNumber} aktualisiert - Ankunft: ${
+							lastArrival ? "✓" : "✗"
+						}, Abflug: ${firstDeparture ? "✓" : "✗"}`
+					);
+				}
+				return true;
+			} else {
+				if (config.debugMode) {
+					console.log(
+						`❌ Keine verwertbaren Flugdaten für ${aircraft.id} gefunden`
+					);
+				}
+				return false;
 			}
 		} catch (error) {
 			console.error(
-				`Fehler bei der Verarbeitung von Aircraft ${aircraft.id}:`,
+				`❌ Fehler bei der Verarbeitung von Aircraft ${aircraft.id}:`,
 				error
 			);
+			return false;
 		}
 	};
 
@@ -1304,7 +1324,7 @@ const AeroDataBoxAPI = (() => {
 					const arrivalTime = lastArrival.arrival?.scheduledTime?.utc;
 					if (arrivalTime) {
 						const timeOnly = arrivalTime.substring(11, 16); // HH:MM Format
-						arrivalElement.textContent = timeOnly;
+						arrivalElement.value = timeOnly; // KORRIGIERT: value statt textContent
 						arrivalElement.setAttribute("title", `Ankunft: ${timeOnly} (UTC)`);
 
 						if (config.debugMode) {
@@ -1320,7 +1340,7 @@ const AeroDataBoxAPI = (() => {
 					`position-${cellNumber}`
 				);
 				if (positionElement && lastArrival.arrival?.airport?.iata) {
-					positionElement.textContent = lastArrival.arrival.airport.iata;
+					positionElement.value = lastArrival.arrival.airport.iata; // KORRIGIERT: value statt textContent
 
 					if (config.debugMode) {
 						console.log(
@@ -1339,7 +1359,7 @@ const AeroDataBoxAPI = (() => {
 					const departureTime = firstDeparture.departure?.scheduledTime?.utc;
 					if (departureTime) {
 						const timeOnly = departureTime.substring(11, 16); // HH:MM Format
-						departureElement.textContent = timeOnly;
+						departureElement.value = timeOnly; // KORRIGIERT: value statt textContent
 						departureElement.setAttribute("title", `Abflug: ${timeOnly} (UTC)`);
 
 						if (config.debugMode) {
@@ -1493,6 +1513,62 @@ const AeroDataBoxAPI = (() => {
 		updateFetchStatus,
 		getAirportFlights,
 		updateFlightDataForAllAircraft,
+
+		/**
+		 * NEUE HAUPTFUNKTION: Optimierte Abfrage aller Aircraft IDs im aktuellen Setup
+		 * Sammelt alle Aircraft IDs aus den Kacheln und aktualisiert sie mit einer einzigen effizienten API-Abfrage
+		 */
+		updateAllAircraftFromAirport: async () => {
+			try {
+				// Hole Konfiguration aus der UI
+				const currentDateInput = document.getElementById("currentDateInput");
+				const nextDateInput = document.getElementById("nextDateInput");
+				const airportCodeInput = document.getElementById("airportCodeInput");
+
+				// Standardwerte setzen falls Eingaben fehlen
+				const today = formatDate(new Date());
+				const tomorrow = formatDate(
+					new Date(new Date().setDate(new Date().getDate() + 1))
+				);
+
+				const currentDate = currentDateInput?.value || today;
+				const nextDate = nextDateInput?.value || tomorrow;
+				const airportCode =
+					airportCodeInput?.value?.trim().toUpperCase() || "MUC";
+
+				// Zeitfenster erstellen: vom aktuellen Tag 20:00 bis zum nächsten Tag 08:00
+				const startDateTime = `${currentDate}T20:00`;
+				const endDateTime = `${nextDate}T08:00`;
+
+				console.log(`🚀 === STARTE OPTIMIERTE FLUGDATEN-ABFRAGE ===`);
+				console.log(`🏢 Flughafen: ${airportCode}`);
+				console.log(`📅 Zeitfenster: ${startDateTime} bis ${endDateTime}`);
+
+				// Rufe die optimierte Hauptfunktion auf
+				await updateFlightDataForAllAircraft(
+					airportCode,
+					startDateTime,
+					endDateTime
+				);
+
+				console.log(`✅ === OPTIMIERTE FLUGDATEN-ABFRAGE ABGESCHLOSSEN ===`);
+
+				return {
+					success: true,
+					message: `Flugdaten für Flughafen ${airportCode} erfolgreich abgerufen`,
+					airportCode,
+					timeframe: `${startDateTime} bis ${endDateTime}`,
+				};
+			} catch (error) {
+				console.error(`❌ Fehler bei optimierter Flugdaten-Abfrage:`, error);
+				updateFetchStatus(
+					`❌ Fehler bei der Flugdaten-Abfrage: ${error.message}`,
+					true
+				);
+				throw error;
+			}
+		},
+
 		init,
 
 		setMockMode: (useMock) => {

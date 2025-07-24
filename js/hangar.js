@@ -430,6 +430,67 @@ function setupSaveLoadEventHandlers() {
 	} else {
 		console.warn("❌ PDF Export Button nicht gefunden");
 	}
+
+	// Search Aircraft Button Event-Handler
+	const btnSearch = document.getElementById("btnSearch");
+	if (btnSearch) {
+		btnSearch.addEventListener("click", function (event) {
+			event.preventDefault();
+			console.log("🔍 Search Aircraft Button geklickt");
+
+			try {
+				// Prüfe ob Search-Funktion verfügbar ist
+				if (
+					window.hangarEvents &&
+					typeof window.hangarEvents.searchAircraft === "function"
+				) {
+					window.hangarEvents.searchAircraft();
+				} else if (typeof searchAircraft === "function") {
+					// Fallback auf globale Funktion
+					searchAircraft();
+				} else {
+					throw new Error("Search Aircraft-Funktion nicht verfügbar");
+				}
+			} catch (error) {
+				console.error("Fehler bei Aircraft Search:", error);
+				showNotification("Fehler bei Aircraft Search: " + error.message, "error");
+			}
+		});
+		console.log("✅ Search Aircraft Button Event-Handler eingerichtet");
+	} else {
+		console.warn("❌ Search Aircraft Button nicht gefunden");
+	}
+
+	// Search Aircraft Input Event-Handler (Enter-Taste)
+	const searchAircraftInput = document.getElementById("searchAircraft");
+	if (searchAircraftInput) {
+		searchAircraftInput.addEventListener("keypress", function (event) {
+			if (event.key === "Enter") {
+				event.preventDefault();
+				console.log("🔍 Enter-Taste im Search Aircraft Input gedrückt");
+
+				// Gleiche Logik wie beim Button-Klick
+				try {
+					if (
+						window.hangarEvents &&
+						typeof window.hangarEvents.searchAircraft === "function"
+					) {
+						window.hangarEvents.searchAircraft();
+					} else if (typeof searchAircraft === "function") {
+						searchAircraft();
+					} else {
+						throw new Error("Search Aircraft-Funktion nicht verfügbar");
+					}
+				} catch (error) {
+					console.error("Fehler bei Aircraft Search:", error);
+					showNotification("Fehler bei Aircraft Search: " + error.message, "error");
+				}
+			}
+		});
+		console.log("✅ Search Aircraft Input Enter-Handler eingerichtet");
+	} else {
+		console.warn("❌ Search Aircraft Input nicht gefunden");
+	}
 }
 
 // Funktion, um sicherzustellen, dass die API-Fassade korrekt verbunden ist

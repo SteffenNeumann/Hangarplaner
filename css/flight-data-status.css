@@ -1,0 +1,246 @@
+/**
+ * Flight Data Status Display CSS
+ * Visueller Status-Indikator für Flugdaten-Updates unten rechts
+ */
+
+/* Hauptcontainer für die Statusanzeige */
+#flight-data-status {
+	position: fixed;
+	bottom: 20px;
+	right: 20px;
+	min-width: 320px;
+	max-width: 400px;
+	background: rgba(255, 255, 255, 0.97);
+	border: 1px solid rgba(93, 107, 137, 0.2);
+	border-radius: 12px;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+	z-index: 9500; /* Unter Toast-Notifications, aber über Hauptinhalt */
+	font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	transition: all 0.3s ease;
+	transform: translateY(100%);
+	opacity: 0;
+	visibility: hidden;
+}
+
+/* Sichtbar-Status */
+#flight-data-status.show {
+	transform: translateY(0);
+	opacity: 1;
+	visibility: visible;
+}
+
+/* Header-Bereich */
+.status-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 12px 16px;
+	border-bottom: 1px solid rgba(93, 107, 137, 0.15);
+	background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+	border-radius: 12px 12px 0 0;
+}
+
+.status-title {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-weight: 600;
+	font-size: 14px;
+	color: #1e293b;
+}
+
+.status-icon {
+	font-size: 16px;
+	animation: rotate 2s linear infinite;
+}
+
+.status-icon.success {
+	animation: none;
+	color: #10b981;
+}
+
+.status-icon.error {
+	animation: none;
+	color: #ef4444;
+}
+
+.status-close {
+	cursor: pointer;
+	font-size: 16px;
+	color: #64748b;
+	padding: 4px;
+	border-radius: 4px;
+	transition: all 0.2s ease;
+}
+
+.status-close:hover {
+	background: rgba(0, 0, 0, 0.1);
+	color: #374151;
+}
+
+/* Haupt-Status-Bereich */
+.status-content {
+	padding: 16px;
+}
+
+.status-main-message {
+	font-weight: 500;
+	font-size: 14px;
+	color: #374151;
+	margin-bottom: 8px;
+	line-height: 1.4;
+}
+
+/* Fortschrittsbalken */
+.status-progress {
+	width: 100%;
+	height: 6px;
+	background: #e5e7eb;
+	border-radius: 3px;
+	overflow: hidden;
+	margin-bottom: 12px;
+}
+
+.status-progress-bar {
+	height: 100%;
+	background: linear-gradient(90deg, #3b82f6, #60a5fa);
+	border-radius: 3px;
+	transition: width 0.3s ease;
+	width: 0%;
+}
+
+.status-progress-bar.success {
+	background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.status-progress-bar.error {
+	background: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+/* Details-Bereich */
+.status-details {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.status-detail-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-size: 12px;
+	color: #64748b;
+}
+
+.status-detail-label {
+	font-weight: 500;
+}
+
+.status-detail-value {
+	color: #374151;
+	font-weight: 400;
+}
+
+/* Erfolgs- und Fehler-Icons */
+.status-result-icon {
+	font-size: 20px;
+	margin-right: 8px;
+}
+
+.status-result-icon.success {
+	color: #10b981;
+}
+
+.status-result-icon.error {
+	color: #ef4444;
+}
+
+/* Animationen */
+@keyframes rotate {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.6; }
+}
+
+.status-processing {
+	animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Dark Mode Support */
+.dark-mode #flight-data-status {
+	background: rgba(58, 67, 84, 0.95);
+	border-color: rgba(255, 255, 255, 0.1);
+	color: #e2e8f0;
+}
+
+.dark-mode .status-header {
+	background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+	border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark-mode .status-title {
+	color: #f1f5f9;
+}
+
+.dark-mode .status-main-message {
+	color: #e2e8f0;
+}
+
+.dark-mode .status-detail-row {
+	color: #9ca3af;
+}
+
+.dark-mode .status-detail-value {
+	color: #d1d5db;
+}
+
+.dark-mode .status-close {
+	color: #9ca3af;
+}
+
+.dark-mode .status-close:hover {
+	background: rgba(255, 255, 255, 0.1);
+	color: #f3f4f6;
+}
+
+.dark-mode .status-progress {
+	background: #374151;
+}
+
+/* Responsive Anpassungen */
+@media (max-width: 640px) {
+	#flight-data-status {
+		right: 12px;
+		bottom: 12px;
+		min-width: 280px;
+		max-width: calc(100vw - 24px);
+	}
+	
+	.status-header {
+		padding: 10px 14px;
+	}
+	
+	.status-content {
+		padding: 14px;
+	}
+	
+	.status-title {
+		font-size: 13px;
+	}
+	
+	.status-main-message {
+		font-size: 13px;
+	}
+}
+
+/* Hover-Effekte für Desktop */
+@media (hover: hover) {
+	#flight-data-status:hover {
+		box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+		transform: translateY(-2px);
+	}
+}

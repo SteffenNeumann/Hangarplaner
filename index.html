@@ -64,6 +64,7 @@
 		<link rel="stylesheet" href="css/dark-mode-zoom.css" />
 		<link rel="stylesheet" href="css/weather-widget.css" />
 		<link rel="stylesheet" href="css/info-widget.css" />
+		<link rel="stylesheet" href="css/flight-data-status.css" />
 		<!-- Neue separate CSS-Datei -->
 		<style>
 			.status-neutral {
@@ -1611,6 +1612,14 @@
 								Show Airport Flights
 							</button>
 
+							<!-- Test Button für neue Statusanzeige -->
+							<button
+								id="testStatusDisplay"
+								class="sidebar-btn sidebar-btn-secondary w-full mt-2"
+								onclick="if(window.FlightDataStatusDisplay) window.FlightDataStatusDisplay.show('Test der neuen Statusanzeige', {airport: 'MUC', aircraftCount: 5, currentStatus: 'Demo läuft...'});">
+								Test Status Display
+							</button>
+
 							<div id="fetchStatus" class="text-sm text-center"></div>
 							Ready to retrieve flight data
 						</div>
@@ -2244,5 +2253,8 @@
 				});
 			</script>
 		</div>
+		
+		<!-- Flight Data Status Display -->
+		<script src="js/flight-data-status.js"></script>
 	</body>
 </html>

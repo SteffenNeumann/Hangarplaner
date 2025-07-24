@@ -32,50 +32,54 @@ class ServerSync {
 		this.serverSyncUrl = serverUrl;
 		console.log("🔄 Server-Sync initialisiert:", serverUrl);
 
-		// Prüfe Sharing-Manager Modus für unterschiedliche Initialisierung
-		if (
-			window.sharingManager &&
-			window.sharingManager.syncMode === "standalone"
-		) {
-			console.log("🏠 Standalone-Modus: Nur einmalige Server-Datenladung");
-			await this.loadInitialServerData();
-		} else {
-			// Automatische Master-Slave Erkennung für aktive Modi
-			await this.determineMasterSlaveRole();
+		// Automatische Master-Slave Erkennung
+		await this.determineMasterSlaveRole();
 
-			if (this.isMaster) {
-				console.log("👑 Master-Modus aktiviert");
-				this.startMasterMode();
-			} else {
-				console.log("👤 Slave-Modus aktiviert");
-				this.startSlaveMode();
-			}
+		// WICHTIG: Erststart-Load für BEIDE Modi
+		console.log("📥 Lade Server-Daten beim Erststart...");
+		await this.loadInitialServerData();
+
+		if (this.isMaster) {
+			console.log("👑 Master-Modus aktiviert");
+			this.startMasterMode();
+		} else {
+			console.log("👤 Slave-Modus aktiviert");
+			this.startSlaveMode();
 		}
 	}
 
 	/**
-	 * NEU: Lädt einmalig Server-Daten für Standalone-Modus
+	 * Lädt Server-Daten beim Erststart (für beide Modi)
 	 */
 	async loadInitialServerData() {
 		try {
-			console.log("📥 Lade einmalige Server-Daten für Standalone-Modus...");
+			console.log("📥 Lade einmalige Server-Daten beim Erststart...");
 
 			const serverData = await this.loadFromServer();
-			if (serverData && serverData.primaryTiles) {
-				await this.applyServerData(serverData);
-				console.log("✅ Einmalige Server-Daten für Standalone-Modus geladen");
+			if (serverData && !serverData.error) {
+				// Prüfe ob gültige Daten vorhanden sind
+				const hasValidData =
+					(serverData.primaryTiles && serverData.primaryTiles.length > 0) ||
+					(serverData.secondaryTiles && serverData.secondaryTiles.length > 0) ||
+					(serverData.settings &&
+						Object.keys(serverData.settings).length > 0) ||
+					(serverData.metadata && serverData.metadata.projectName);
 
-				if (window.showNotification) {
-					window.showNotification(
-						"Server-Daten einmalig geladen (Standalone)",
-						"info"
-					);
+				if (hasValidData) {
+					await this.applyServerData(serverData);
+					console.log("✅ Erststart Server-Daten erfolgreich geladen");
+
+					if (window.showNotification) {
+						window.showNotification("Server-Daten beim Start geladen", "info");
+					}
+				} else {
+					console.log("📭 Keine gültigen Server-Daten beim Erststart gefunden");
 				}
 			} else {
-				console.log("ℹ️ Keine Server-Daten verfügbar für Standalone-Modus");
+				console.log("ℹ️ Keine Server-Daten beim Erststart verfügbar");
 			}
 		} catch (error) {
-			console.error("❌ Fehler beim Laden der einmaligen Server-Daten:", error);
+			console.error("❌ Fehler beim Laden der Erststart Server-Daten:", error);
 		}
 	}
 
@@ -206,84 +210,31 @@ class ServerSync {
 		// Stoppe normale Sync falls aktiv
 		this.stopPeriodicSync();
 
-		// ERWEITERT: Cleanup bestehende Slave-Intervalle
+		// Cleanup bestehende Slave-Intervalle
 		if (this.slaveCheckInterval) {
 			clearInterval(this.slaveCheckInterval);
 			this.slaveCheckInterval = null;
-			console.log("🧹 Bestehende Slave-Intervalle bereinigt");
 		}
 
-		// ERWEITERT: Robustere Slave-Polling-Implementierung
-		console.log("🔄 Initialisiere Slave-Polling...");
-
-		// Starte Slave-Polling mit expliziter Fehlerbehandlung
+		// Starte Slave-Polling (nur Laden bei Änderungen)
 		this.slaveCheckInterval = setInterval(async () => {
-			try {
-				await this.slaveCheckForUpdates();
-			} catch (error) {
-				console.error("❌ Slave-Polling Fehler:", error);
-				// Bei wiederholten Fehlern Intervall nicht stoppen
-			}
-		}, 15000); // 15 Sekunden Polling-Intervall für bessere Responsivität
+			await this.slaveCheckForUpdates();
+		}, 15000); // 15 Sekunden Polling-Intervall
 
 		console.log(
-			"👤 Slave-Modus gestartet - Kontinuierliches Polling alle 15 Sekunden aktiv (ID:",
-			this.slaveCheckInterval,
-			")"
+			"👤 Slave-Modus gestartet - Polling für Updates alle 15 Sekunden aktiv"
 		);
-
-		// ERWEITERT: Initialer Load mit Retry-Logik
-		this.performInitialSlaveLoad();
+		// HINWEIS: Initialer Load erfolgt bereits in initSync()
 	}
 
 	/**
-	 * NEUE METHODE: Führt initialen Slave-Load durch mit Retry
-	 */
-	async performInitialSlaveLoad() {
-		console.log("📥 Starte initialen Slave-Load...");
-
-		let retryCount = 0;
-		const maxRetries = 3;
-
-		const attemptLoad = async () => {
-			try {
-				await this.slaveCheckForUpdates();
-				console.log("✅ Initialer Slave-Load erfolgreich");
-			} catch (error) {
-				retryCount++;
-				console.warn(
-					`⚠️ Initialer Slave-Load Fehler (Versuch ${retryCount}/${maxRetries}):`,
-					error
-				);
-
-				if (retryCount < maxRetries) {
-					setTimeout(attemptLoad, 2000 * retryCount); // Exponential backoff
-				} else {
-					console.error(
-						"❌ Initialer Slave-Load nach",
-						maxRetries,
-						"Versuchen fehlgeschlagen"
-					);
-				}
-			}
-		};
-
-		// Starte ersten Versuch nach kurzer Verzögerung
-		setTimeout(attemptLoad, 1000);
-	}
-
-	/**
-	 * ERWEITERTE METHODE: Slave prüft auf Server-Updates
+	 * NEUE METHODE: Slave prüft auf Server-Updates
 	 */
 	async slaveCheckForUpdates() {
-		if (!this.isSlaveActive) {
-			console.log("⏸️ Slave-Check übersprungen - Slave-Modus nicht aktiv");
-			return;
-		}
+		if (!this.isSlaveActive) return;
 
 		try {
 			console.log("🔍 Slave: Prüfe auf Server-Updates...");
-
 			const currentServerTimestamp = await this.getServerTimestamp();
 			console.log(
 				`📊 Server-Timestamp: ${currentServerTimestamp}, Letzter: ${this.lastServerTimestamp}`
@@ -312,11 +263,6 @@ class ServerSync {
 			}
 		} catch (error) {
 			console.error("❌ Slave: Fehler beim Prüfen auf Updates:", error);
-
-			// Bei Netzwerkfehlern nicht den Slave-Modus beenden
-			if (error.name === "NetworkError" || error.name === "TypeError") {
-				console.log("🔄 Slave: Netzwerkfehler, versuche weiter...");
-			}
 		}
 	}
 
@@ -1144,74 +1090,8 @@ setTimeout(async () => {
 	}
 }, 2000);
 
-// KOORDINIERTES AUTO-LOAD: Verhindert Race Conditions und mehrfaches Laden
-setTimeout(async () => {
-	if (!window.serverSync) return;
-
-	// Race Condition Guard - verhindert mehrfaches gleichzeitiges Laden
-	if (window.serverSync.isApplyingServerData || window.isLoadingServerData) {
-		console.log("⏸️ Server-Load bereits aktiv, überspringe Auto-Load");
-		return;
-	}
-
-	window.isLoadingServerData = true;
-
-	try {
-		console.log("📥 Versuche koordinierten Server-Daten-Load beim Start...");
-
-		const serverData = await window.serverSync.loadFromServer();
-
-		if (serverData && !serverData.error) {
-			// KRITISCHE PRÜFUNG: Nur laden wenn Server-Daten nicht leer sind
-			const hasValidServerData =
-				(serverData.primaryTiles && serverData.primaryTiles.length > 0) ||
-				(serverData.secondaryTiles && serverData.secondaryTiles.length > 0) ||
-				(serverData.settings && serverData.settings.displayOptions) ||
-				(serverData.settings && Object.keys(serverData.settings).length > 0);
-
-			if (hasValidServerData) {
-				console.log("📥 Gültige Server-Daten gefunden, wende sie an...");
-				const applied = await window.serverSync.applyServerData(serverData);
-
-				if (applied) {
-					console.log("✅ Server-Daten erfolgreich angewendet");
-				} else {
-					console.log("⚠️ Server-Daten konnten nicht angewendet werden");
-				}
-			} else {
-				console.log("📭 Server-Daten sind leer, behalte lokale Einstellungen");
-
-				// Bei leeren Server-Daten: Speichere aktuelle lokale Daten auf Server (debounced)
-				if (window.displayOptions) {
-					// Verzögert um Server-Last zu reduzieren
-					setTimeout(async () => {
-						await window.displayOptions.saveToServer();
-						console.log(
-							"💾 Lokale Einstellungen auf Server gesichert (debounced)"
-						);
-					}, 5000);
-				}
-			}
-		} else {
-			console.log("📭 Keine Server-Daten vorhanden, erstelle Basis-Daten");
-
-			// Erstelle Basis-Datenstruktur auf Server (debounced)
-			if (window.displayOptions) {
-				setTimeout(async () => {
-					await window.displayOptions.saveToServer();
-					console.log("🏗️ Basis-Einstellungen auf Server erstellt (debounced)");
-				}, 8000);
-			}
-		}
-	} catch (error) {
-		console.log("⚠️ Server-Daten konnten nicht geladen werden:", error.message);
-	} finally {
-		window.isLoadingServerData = false;
-	}
-}, 5000); // Erhöht auf 5 Sekunden für bessere Performance
-
 console.log(
-	"📦 Server-Sync-Modul geladen (Performance-optimiert: Master 120s, Slave 15s Intervalle, Change-Detection, Debouncing)"
+	"📦 Server-Sync-Modul geladen (Performance-optimiert: Master 120s, Slave 15s Intervalle, Change-Detection, initSync mit Erststart-Load)"
 );
 
 // Globale Debug-Funktion für Synchronisations-Probleme
@@ -1223,6 +1103,31 @@ window.debugSync = function () {
 	}
 };
 
+// NEUE FUNKTION: Setzt hängende Sync-Flags zurück
+window.resetSyncFlags = function () {
+	console.log("🔧 SETZE SYNC-FLAGS ZURÜCK...");
+
+	const wasFlagged =
+		window.serverSync?.isApplyingServerData ||
+		window.isApplyingServerData ||
+		window.isLoadingServerData ||
+		window.isSavingToServer;
+
+	if (window.serverSync) {
+		window.serverSync.isApplyingServerData = false;
+	}
+	window.isApplyingServerData = false;
+	window.isLoadingServerData = false;
+	window.isSavingToServer = false;
+
+	if (wasFlagged) {
+		console.log("✅ Hängende Sync-Flags wurden zurückgesetzt");
+		window.debugSync(); // Zeige neuen Status
+	} else {
+		console.log("ℹ️ Keine hängenden Flags gefunden");
+	}
+};
+
 // NEUER DEBUG-BEFEHL: Testet explizit Read-Modus
 window.testReadMode = function () {
 	console.log("🧪 TESTE READ-MODUS FUNKTIONALITÄT");
@@ -1230,6 +1135,14 @@ window.testReadMode = function () {
 	if (!window.serverSync) {
 		console.log("❌ ServerSync nicht verfügbar");
 		return;
+	}
+
+	// KRITISCH: Flags zurücksetzen falls sie hängen
+	if (window.serverSync.isApplyingServerData || window.isApplyingServerData) {
+		console.log("🔧 RESETZE HÄNGENDE FLAGS...");
+		window.serverSync.isApplyingServerData = false;
+		window.isApplyingServerData = false;
+		console.log("✅ Flags zurückgesetzt");
 	}
 
 	console.log("1. Aktueller Status:");

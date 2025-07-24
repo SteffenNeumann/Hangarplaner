@@ -506,38 +506,153 @@ function applyLoadedTileData(data) {
 	console.log("=== APPLY LOADED TILE DATA ===");
 	console.log("Erhaltene Daten:", data);
 
-	// Primäre Kacheln füllen
-	if (data.primaryTiles && Array.isArray(data.primaryTiles)) {
-		console.log(`Wende ${data.primaryTiles.length} primäre Kacheln an:`);
-		data.primaryTiles.forEach((tile, index) => {
-			console.log(`Primäre Kachel ${index + 1}:`, tile);
-			applySingleTileData(tile, false);
-		});
-	} else {
-		console.log("Keine primären Kacheln in den Daten gefunden");
-	}
+	// Prüfe, welches Datenformat vorliegt
+	const hasNewFormat = data.primaryTiles || data.secondaryTiles;
+	const hasLegacyFormat = data.tilesData && Array.isArray(data.tilesData);
 
-	// Sekundäre Kacheln füllen
-	if (data.secondaryTiles && Array.isArray(data.secondaryTiles)) {
-		console.log(`Wende ${data.secondaryTiles.length} sekundäre Kacheln an:`);
+	if (hasNewFormat) {
+		console.log("🔄 Verwende neues Datenformat (primaryTiles/secondaryTiles)");
 
-		// Stelle sicher, dass genügend sekundäre Kacheln existieren
-		if (data.secondaryTiles.length > 0 && data.settings) {
-			window.hangarUI.uiSettings.secondaryTilesCount =
-				data.settings.secondaryTilesCount;
-			window.hangarUI.updateSecondaryTiles(
-				window.hangarUI.uiSettings.secondaryTilesCount,
-				window.hangarUI.uiSettings.layout
-			);
+		// Primäre Kacheln füllen
+		if (data.primaryTiles && Array.isArray(data.primaryTiles)) {
+			console.log(`Wende ${data.primaryTiles.length} primäre Kacheln an:`);
+			data.primaryTiles.forEach((tile, index) => {
+				console.log(`Primäre Kachel ${index + 1}:`, tile);
+				applySingleTileData(tile, false);
+			});
+		} else {
+			console.log("Keine primären Kacheln in den Daten gefunden");
 		}
 
-		// Dann Daten zuweisen
-		data.secondaryTiles.forEach((tile, index) => {
-			console.log(`Sekundäre Kachel ${index + 1}:`, tile);
-			applySingleTileData(tile, true);
-		});
+		// Sekundäre Kacheln füllen
+		if (data.secondaryTiles && Array.isArray(data.secondaryTiles)) {
+			console.log(`Wende ${data.secondaryTiles.length} sekundäre Kacheln an:`);
+
+			// Stelle sicher, dass genügend sekundäre Kacheln existieren
+			if (data.secondaryTiles.length > 0 && data.settings) {
+				window.hangarUI.uiSettings.secondaryTilesCount =
+					data.settings.secondaryTilesCount;
+				window.hangarUI.updateSecondaryTiles(
+					window.hangarUI.uiSettings.secondaryTilesCount,
+					window.hangarUI.uiSettings.layout
+				);
+			}
+
+			// Dann Daten zuweisen
+			data.secondaryTiles.forEach((tile, index) => {
+				console.log(`Sekundäre Kachel ${index + 1}:`, tile);
+				applySingleTileData(tile, true);
+			});
+		} else {
+			console.log("Keine sekundären Kacheln in den Daten gefunden");
+		}
+	} else if (hasLegacyFormat) {
+		console.log(
+			"🔄 Verwende Legacy-Datenformat (tilesData) - Fallback zur applyProjectData"
+		);
+
+		// Fallback: Verwende die bestehende applyProjectData Logik für tilesData
+		console.log(`Lade ${data.tilesData.length} Kacheln aus Legacy-Format`);
+
+		// Setze zunächst die UI-Einstellungen, falls vorhanden
+		if (data.settings) {
+			const { tilesCount, secondaryTilesCount, layout } = data.settings;
+
+			if (window.hangarUI && window.hangarUI.uiSettings) {
+				window.hangarUI.uiSettings.tilesCount = tilesCount || 8;
+				window.hangarUI.uiSettings.secondaryTilesCount =
+					secondaryTilesCount || 4;
+				window.hangarUI.uiSettings.layout = layout || 4;
+				window.hangarUI.uiSettings.apply();
+			}
+		}
+
+		// Warte kurz auf UI-Update und wende dann die Daten an
+		setTimeout(() => {
+			data.tilesData.forEach((tileData) => {
+				const {
+					id,
+					position,
+					aircraftId,
+					status,
+					towStatus,
+					notes,
+					arrivalTime,
+					departureTime,
+					positionInfoGrid,
+				} = tileData;
+
+				console.log(
+					`Lade Legacy-Kachel ${id}: position=${position}, aircraft=${aircraftId}, status=${status}`
+				);
+
+				// Positionswert setzen
+				const posInput = document.getElementById(`hangar-position-${id}`);
+				if (posInput) {
+					posInput.value = position || "";
+				}
+
+				// Aircraft ID setzen
+				const aircraftInput = document.getElementById(`aircraft-${id}`);
+				if (aircraftInput) {
+					aircraftInput.value = aircraftId || "";
+				}
+
+				// Status setzen
+				const statusSelect = document.getElementById(`status-${id}`);
+				if (statusSelect) {
+					statusSelect.value = status || "neutral";
+					// Status-Event auslösen, um das Statuslicht zu aktualisieren
+					const event = new Event("change");
+					statusSelect.dispatchEvent(event);
+				}
+
+				// Tow-Status setzen
+				const towStatusSelect = document.getElementById(`tow-status-${id}`);
+				if (towStatusSelect) {
+					towStatusSelect.value = towStatus || "neutral";
+					// Event auslösen, um Styling zu aktualisieren
+					const event = new Event("change");
+					towStatusSelect.dispatchEvent(event);
+				}
+
+				// Notizen setzen
+				const notesTextarea = document.getElementById(`notes-${id}`);
+				if (notesTextarea) {
+					notesTextarea.value = notes || "";
+				}
+
+				// Arrival Time setzen
+				if (arrivalTime && arrivalTime !== "--:--") {
+					const arrivalInput = document.getElementById(`arrival-time-${id}`);
+					if (arrivalInput) {
+						arrivalInput.value = arrivalTime;
+					}
+				}
+
+				// Departure Time setzen
+				if (departureTime && departureTime !== "--:--") {
+					const departureInput = document.getElementById(
+						`departure-time-${id}`
+					);
+					if (departureInput) {
+						departureInput.value = departureTime;
+					}
+				}
+
+				// Position Info Grid setzen
+				if (positionInfoGrid) {
+					const positionInfoInput = document.getElementById(`position-${id}`);
+					if (positionInfoInput) {
+						positionInfoInput.value = positionInfoGrid;
+					}
+				}
+			});
+
+			console.log("✅ Legacy-Daten erfolgreich angewendet");
+		}, 300);
 	} else {
-		console.log("Keine sekundären Kacheln in den Daten gefunden");
+		console.log("❌ Keine gültigen Kacheldaten gefunden");
 	}
 }
 
@@ -1058,11 +1173,35 @@ function collectSettingsData() {
  * @param {Object} projectData - Die geladenen Projektdaten
  */
 function applyProjectData(projectData) {
-	if (!projectData) return;
+	if (!projectData) {
+		console.error("Keine Projektdaten zum Laden erhalten");
+		return;
+	}
+
+	console.log("Lade Projektdaten:", projectData);
+
+	// Projektname setzen (aus metadata oder projectName)
+	const projectName =
+		projectData.metadata?.projectName || projectData.projectName;
+	if (projectName) {
+		const projectNameInput = document.getElementById("projectName");
+		if (projectNameInput) {
+			projectNameInput.value = projectName;
+			console.log("Projektname gesetzt:", projectName);
+		}
+	}
 
 	// Einstellungen anwenden
 	if (projectData.settings) {
-		const { tilesCount, secondaryTilesCount, layout } = projectData.settings;
+		const {
+			tilesCount,
+			secondaryTilesCount,
+			layout,
+			includeNotes,
+			landscapeMode,
+		} = projectData.settings;
+
+		console.log("Lade Einstellungen:", projectData.settings);
 
 		// UI-Felder aktualisieren
 		if (document.getElementById("tilesCount")) {
@@ -1078,7 +1217,16 @@ function applyProjectData(projectData) {
 			document.getElementById("layoutType").value = layout || 4;
 		}
 
-		// UI-Einstellungen anwenden
+		if (document.getElementById("includeNotes")) {
+			document.getElementById("includeNotes").checked = includeNotes !== false;
+		}
+
+		if (document.getElementById("landscapeMode")) {
+			document.getElementById("landscapeMode").checked =
+				landscapeMode !== false;
+		}
+
+		// UI-Einstellungen anwenden und Grid neu aufbauen
 		if (window.hangarUI && window.hangarUI.uiSettings) {
 			window.hangarUI.uiSettings.tilesCount = tilesCount || 8;
 			window.hangarUI.uiSettings.secondaryTilesCount = secondaryTilesCount || 0;
@@ -1090,6 +1238,7 @@ function applyProjectData(projectData) {
 	// Kacheldaten anwenden (mit Verzögerung, um sicherzustellen, dass die Kacheln erstellt wurden)
 	setTimeout(() => {
 		if (projectData.tilesData && Array.isArray(projectData.tilesData)) {
+			console.log(`Lade ${projectData.tilesData.length} Kacheln`);
 			projectData.tilesData.forEach((tileData) => {
 				const {
 					id,
@@ -1103,13 +1252,27 @@ function applyProjectData(projectData) {
 					positionInfoGrid,
 				} = tileData;
 
+				console.log(
+					`Lade Kachel ${id}: position=${position}, aircraft=${aircraftId}, status=${status}`
+				);
+
 				// Positionswert setzen
 				const posInput = document.getElementById(`hangar-position-${id}`);
-				if (posInput) posInput.value = position || "";
+				if (posInput) {
+					posInput.value = position || "";
+					console.log(`Position für Tile ${id} gesetzt: ${position}`);
+				} else {
+					console.warn(`Position Input für Tile ${id} nicht gefunden`);
+				}
 
 				// Aircraft ID setzen
 				const aircraftInput = document.getElementById(`aircraft-${id}`);
-				if (aircraftInput) aircraftInput.value = aircraftId || "";
+				if (aircraftInput) {
+					aircraftInput.value = aircraftId || "";
+					console.log(`Aircraft ID für Tile ${id} gesetzt: ${aircraftId}`);
+				} else {
+					console.warn(`Aircraft Input für Tile ${id} nicht gefunden`);
+				}
 
 				// Status setzen
 				const statusSelect = document.getElementById(`status-${id}`);
@@ -1118,6 +1281,9 @@ function applyProjectData(projectData) {
 					// Status-Event auslösen, um das Statuslicht zu aktualisieren
 					const event = new Event("change");
 					statusSelect.dispatchEvent(event);
+					console.log(`Status für Tile ${id} gesetzt: ${status}`);
+				} else {
+					console.warn(`Status Select für Tile ${id} nicht gefunden`);
 				}
 
 				// Tow-Status setzen
@@ -1127,73 +1293,168 @@ function applyProjectData(projectData) {
 					// Event auslösen, um Styling zu aktualisieren
 					const event = new Event("change");
 					towStatusSelect.dispatchEvent(event);
+					console.log(`Tow-Status für Tile ${id} gesetzt: ${towStatus}`);
+				} else {
+					console.warn(`Tow-Status Select für Tile ${id} nicht gefunden`);
 				}
 
 				// Notizen setzen
 				const notesTextarea = document.getElementById(`notes-${id}`);
-				if (notesTextarea) notesTextarea.value = notes || "";
+				if (notesTextarea) {
+					notesTextarea.value = notes || "";
+					console.log(
+						`Notizen für Tile ${id} gesetzt: ${
+							notes ? notes.substring(0, 50) + "..." : "leer"
+						}`
+					);
+				} else {
+					console.warn(`Notizen Textarea für Tile ${id} nicht gefunden`);
+				}
 
-				// Arrival Time setzen (NEU HINZUGEFÜGT)
-				if (tileData.arrivalTime && tileData.arrivalTime !== "--:--") {
+				// Arrival Time setzen
+				if (arrivalTime && arrivalTime !== "--:--") {
 					const arrivalInput = document.getElementById(`arrival-time-${id}`);
 					if (arrivalInput) {
-						arrivalInput.value = tileData.arrivalTime;
-						console.log(
-							`Arrival Time für Tile ${id} aus LocalStorage: ${tileData.arrivalTime}`
-						);
+						arrivalInput.value = arrivalTime;
+						console.log(`Arrival Time für Tile ${id} gesetzt: ${arrivalTime}`);
 					}
 				}
 
-				// Departure Time setzen (NEU HINZUGEFÜGT)
-				if (tileData.departureTime && tileData.departureTime !== "--:--") {
+				// Departure Time setzen
+				if (departureTime && departureTime !== "--:--") {
 					const departureInput = document.getElementById(
 						`departure-time-${id}`
 					);
 					if (departureInput) {
-						departureInput.value = tileData.departureTime;
+						departureInput.value = departureTime;
 						console.log(
-							`Departure Time für Tile ${id} aus LocalStorage: ${tileData.departureTime}`
+							`Departure Time für Tile ${id} gesetzt: ${departureTime}`
 						);
 					}
 				}
 
-				// Position Info Grid setzen (NEU HINZUGEFÜGT)
-				if (tileData.positionInfoGrid) {
+				// Position Info Grid setzen
+				if (positionInfoGrid) {
 					const positionInfoInput = document.getElementById(`position-${id}`);
 					if (positionInfoInput) {
-						positionInfoInput.value = tileData.positionInfoGrid;
+						positionInfoInput.value = positionInfoGrid;
 						console.log(
-							`Position Info Grid für Tile ${id} aus LocalStorage: ${tileData.positionInfoGrid}`
+							`Position Info Grid für Tile ${id} gesetzt: ${positionInfoGrid}`
 						);
 					}
 				}
 			});
+		} else {
+			console.warn(
+				"Keine tilesData gefunden oder tilesData ist kein Array:",
+				projectData.tilesData
+			);
 		}
-	}, 300);
+
+		console.log("Projektdaten erfolgreich geladen und angewendet");
+	}, 500); // Verzögerung erhöht auf 500ms für bessere Sicherheit
 }
 
 /**
- * Generiert einen Standarddateinamen im Format yyyy_mm_dd Hangarplanner
- * @returns {string} Formatierter Dateiname
+ * Generiert einen Projektname für Settings im Format YYYY_MM_DD_Hangarplan
+ * @returns {string} Formatierter Projektname ohne Uhrzeit
+ */
+function generateProjectSettingsName() {
+	const now = new Date();
+	const year = now.getFullYear();
+	const month = String(now.getMonth() + 1).padStart(2, "0");
+	const day = String(now.getDate()).padStart(2, "0");
+	return `${year}_${month}_${day}_Hangarplan`;
+}
+
+/**
+ * Generiert einen Dateinamen für Save mit Uhrzeit im Format YYYY_MM_DD_HH:MM_Hangarplan
+ * @returns {string} Formatierter Dateiname mit Uhrzeit
  */
 function generateDefaultProjectName() {
 	const now = new Date();
 	const year = now.getFullYear();
 	const month = String(now.getMonth() + 1).padStart(2, "0");
 	const day = String(now.getDate()).padStart(2, "0");
-	return `${year}_${month}_${day} Hangarplanner`;
+	const hours = String(now.getHours()).padStart(2, "0");
+	const minutes = String(now.getMinutes()).padStart(2, "0");
+	return `${year}_${month}_${day}_${hours}:${minutes}_Hangarplan`;
+}
+
+/**
+ * Exportiert das aktuelle Projekt automatisch mit generiertem Dateinamen
+ * Verwendet automatisch Format: YYYY_MM_DD_HH:MM_Hangarplan.json
+ */
+function exportCurrentFile() {
+	try {
+		// Automatischen Dateinamen generieren
+		const fileName = generateDefaultProjectName();
+
+		console.log(`Automatischer Export mit Dateiname: ${fileName}`);
+
+		// Projektstatus sammeln - gleiches Format wie Save Button
+		const projectData = {
+			metadata: {
+				projectName: fileName,
+				lastModified: new Date().toISOString(),
+			},
+			tilesData: collectTilesData(),
+			settings: collectSettingsData(),
+		};
+
+		// Daten in JSON umwandeln
+		const jsonData = JSON.stringify(projectData, null, 2);
+
+		// Direkter Download ohne Dialog
+		const blob = new Blob([jsonData], { type: "application/json" });
+		const url = URL.createObjectURL(blob);
+
+		const a = document.createElement("a");
+		a.href = url;
+		a.download = `${fileName}.json`;
+		document.body.appendChild(a);
+		a.click();
+
+		// Cleanup
+		setTimeout(() => {
+			document.body.removeChild(a);
+			URL.revokeObjectURL(url);
+		}, 100);
+
+		console.log("Projekt automatisch exportiert");
+		showNotification(
+			`Projekt automatisch exportiert: ${fileName}.json`,
+			"success"
+		);
+
+		return true;
+	} catch (error) {
+		console.error("Fehler beim automatischen Export:", error);
+		showNotification(
+			"Fehler beim automatischen Export: " + error.message,
+			"error"
+		);
+		return false;
+	}
 }
 
 // Exportieren für die globale Verwendung
 window.hangarData = window.hangarData || {};
 window.hangarData.saveProjectToFile = saveProjectToFile;
 window.hangarData.loadProjectFromFile = loadProjectFromFile;
+window.hangarData.exportCurrentFile = exportCurrentFile;
 window.hangarData.applyLoadedHangarPlan = applyLoadedHangarPlan;
 window.hangarData.applySingleTileData = applySingleTileData;
 window.hangarData.applyLoadedTileData = applyLoadedTileData;
+window.hangarData.generateProjectSettingsName = generateProjectSettingsName;
+window.hangarData.generateDefaultProjectName = generateDefaultProjectName;
 // KORREKTUR: Sichere globale Verfügbarkeit
 window.hangarData.collectAllHangarData = hangarData.collectAllHangarData;
 window.collectAllHangarData = hangarData.collectAllHangarData; // Auch direkt global für Kompatibilität
+
+// Globale Verfügbarkeit der Funktionen
+window.generateProjectSettingsName = generateProjectSettingsName;
+window.generateDefaultProjectName = generateDefaultProjectName;
 
 /**
  * Aktualisiert Flugzeugdaten in den UI-Kacheln basierend auf API-Ergebnissen
@@ -1231,7 +1492,7 @@ window.hangarData.updateAircraftFromFlightData = async function (
 		if (currentValue.toLowerCase() === aircraftId.toLowerCase()) {
 			// Gefundene Kachel aktualisieren
 			const cellId = aircraftInput.id.split("-")[1];
-			
+
 			// DEBUG: Zeige verfügbare Flugdaten
 			console.log(`🔍 DEBUG für Kachel ${cellId}:`, {
 				arrivalTime: flightData.arrivalTime,
@@ -1239,12 +1500,16 @@ window.hangarData.updateAircraftFromFlightData = async function (
 				positionText: flightData.positionText,
 				originCode: flightData.originCode,
 				destCode: flightData.destCode,
-				allData: flightData
+				allData: flightData,
 			});
 
 			// Ankunftszeit aktualisieren
 			const arrivalInput = tile.querySelector(`#arrival-time-${cellId}`);
-			console.log(`🔍 Arrival Input gefunden für ${cellId}:`, !!arrivalInput, arrivalInput?.id);
+			console.log(
+				`🔍 Arrival Input gefunden für ${cellId}:`,
+				!!arrivalInput,
+				arrivalInput?.id
+			);
 			if (
 				arrivalInput &&
 				flightData.arrivalTime &&
@@ -1258,13 +1523,17 @@ window.hangarData.updateAircraftFromFlightData = async function (
 				console.warn(`❌ Ankunftszeit NICHT gesetzt für Kachel ${cellId}:`, {
 					inputExists: !!arrivalInput,
 					hasArrivalTime: !!flightData.arrivalTime,
-					arrivalTime: flightData.arrivalTime
+					arrivalTime: flightData.arrivalTime,
 				});
 			}
 
 			// Abflugzeit aktualisieren
 			const departureInput = tile.querySelector(`#departure-time-${cellId}`);
-			console.log(`🔍 Departure Input gefunden für ${cellId}:`, !!departureInput, departureInput?.id);
+			console.log(
+				`🔍 Departure Input gefunden für ${cellId}:`,
+				!!departureInput,
+				departureInput?.id
+			);
 			if (
 				departureInput &&
 				flightData.departureTime &&
@@ -1278,7 +1547,7 @@ window.hangarData.updateAircraftFromFlightData = async function (
 				console.warn(`❌ Abflugzeit NICHT gesetzt für Kachel ${cellId}:`, {
 					inputExists: !!departureInput,
 					hasDepartureTime: !!flightData.departureTime,
-					departureTime: flightData.departureTime
+					departureTime: flightData.departureTime,
 				});
 			}
 
@@ -1287,7 +1556,11 @@ window.hangarData.updateAircraftFromFlightData = async function (
 			if (!positionInput) {
 				positionInput = tile.querySelector(`#hangar-position-${cellId}`);
 			}
-			console.log(`🔍 Position Input gefunden für ${cellId}:`, !!positionInput, positionInput?.id);
+			console.log(
+				`🔍 Position Input gefunden für ${cellId}:`,
+				!!positionInput,
+				positionInput?.id
+			);
 			if (
 				positionInput &&
 				flightData.positionText &&
@@ -1301,7 +1574,7 @@ window.hangarData.updateAircraftFromFlightData = async function (
 				console.warn(`❌ Position NICHT gesetzt für Kachel ${cellId}:`, {
 					inputExists: !!positionInput,
 					hasPositionText: !!flightData.positionText,
-					positionText: flightData.positionText
+					positionText: flightData.positionText,
 				});
 			}
 
@@ -1330,37 +1603,41 @@ window.hangarData.updateAircraftFromFlightData = async function (
 
 		// WICHTIG: Daten in HangarDataCoordinator persistieren um Überschreibung zu verhindern
 		if (window.HangarDataCoordinator) {
-			console.log(`🔄 Persistiere Flugdaten für ${aircraftId} im DataCoordinator...`);
-			
+			console.log(
+				`🔄 Persistiere Flugdaten für ${aircraftId} im DataCoordinator...`
+			);
+
 			// Sammle die aktualisierten Daten aus den DOM-Elementen
 			const coordData = {};
 			for (const tile of allTiles) {
 				const aircraftInput = tile.querySelector('input[id^="aircraft-"]');
 				if (!aircraftInput) continue;
-				
+
 				const currentValue = aircraftInput.value.trim();
 				if (currentValue.toLowerCase() === aircraftId.toLowerCase()) {
-					const cellId = aircraftInput.id.split('-')[1];
-					
+					const cellId = aircraftInput.id.split("-")[1];
+
 					// Sammle die aktualisierten Werte mit korrekten Feld-IDs
 					const arrivalInput = tile.querySelector(`#arrival-time-${cellId}`);
-					const departureInput = tile.querySelector(`#departure-time-${cellId}`);
+					const departureInput = tile.querySelector(
+						`#departure-time-${cellId}`
+					);
 					let positionInput = tile.querySelector(`#position-${cellId}`);
 					if (!positionInput) {
 						positionInput = tile.querySelector(`#hangar-position-${cellId}`);
 					}
-					
+
 					coordData[`cell_${cellId}`] = {
 						aircraftId: currentValue,
 						arrivalTime: arrivalInput?.value || "",
 						departureTime: departureInput?.value || "",
 						position: positionInput?.value || "",
 						source: "api",
-						timestamp: new Date().toISOString()
+						timestamp: new Date().toISOString(),
 					};
 				}
 			}
-			
+
 			// Schreibe die Daten in den Coordinator
 			try {
 				window.HangarDataCoordinator.queueOperation({
@@ -1368,11 +1645,14 @@ window.hangarData.updateAircraftFromFlightData = async function (
 					source: "api",
 					data: coordData,
 					timestamp: new Date().toISOString(),
-					aircraftId: aircraftId
+					aircraftId: aircraftId,
 				});
 				console.log(`✅ Flugdaten für ${aircraftId} erfolgreich persistiert`);
 			} catch (error) {
-				console.error(`❌ Fehler beim Persistieren der Flugdaten für ${aircraftId}:`, error);
+				console.error(
+					`❌ Fehler beim Persistieren der Flugdaten für ${aircraftId}:`,
+					error
+				);
 			}
 		}
 
@@ -1469,15 +1749,25 @@ window.HangarDataCoordinator = {
 
 		// ERWEITERTE Prioritätsprüfung: API-Daten für 5 Minuten schützen
 		if (this.dataSource === "api" && operation.source === "server") {
-			const timeSinceApiUpdate = Date.now() - new Date(this.lastUpdate).getTime();
-			if (timeSinceApiUpdate < 300000) { // 5 Minuten Schutzzeit
-				console.log("🛡️ API-Daten geschützt: Server-Operation blockiert für", Math.round((300000 - timeSinceApiUpdate) / 1000), "Sekunden");
+			const timeSinceApiUpdate =
+				Date.now() - new Date(this.lastUpdate).getTime();
+			if (timeSinceApiUpdate < 300000) {
+				// 5 Minuten Schutzzeit
+				console.log(
+					"🛡️ API-Daten geschützt: Server-Operation blockiert für",
+					Math.round((300000 - timeSinceApiUpdate) / 1000),
+					"Sekunden"
+				);
 				return;
 			}
 		}
 
 		// Ursprüngliche Prioritätsprüfung: Server-Daten haben höchste Priorität (nach Schutzzeit)
-		if (this.dataSource === "server" && operation.source !== "server" && operation.source !== "api") {
+		if (
+			this.dataSource === "server" &&
+			operation.source !== "server" &&
+			operation.source !== "api"
+		) {
 			console.log("⚠️ Server-Daten haben Priorität, Operation übersprungen");
 			return;
 		}
@@ -1506,7 +1796,11 @@ window.HangarDataCoordinator = {
 				await this.applyFlightDataSafe(operation.data, operation.source);
 				break;
 			case "api_update":
-				await this.applyApiUpdateSafe(operation.data, operation.source, operation.aircraftId);
+				await this.applyApiUpdateSafe(
+					operation.data,
+					operation.source,
+					operation.aircraftId
+				);
 				break;
 		}
 
@@ -1652,21 +1946,23 @@ window.HangarDataCoordinator = {
 	 * Sichere API-Update-Anwendung - Persistiert API-Flugdaten dauerhaft
 	 */
 	async applyApiUpdateSafe(coordData, source, aircraftId) {
-		console.log(`🛫 Persistiere API-Update für ${aircraftId} (Quelle: ${source})`);
+		console.log(
+			`🛫 Persistiere API-Update für ${aircraftId} (Quelle: ${source})`
+		);
 
 		// Aktualisiere interne Datenhaltung
 		this.currentData = this.currentData || {};
-		
+
 		// Erstelle oder aktualisiere die Flugdaten-Struktur
 		if (!this.currentData.tiles) {
 			this.currentData.tiles = {};
 		}
 
 		// Persistiere jede Cell separat
-		Object.keys(coordData).forEach(cellKey => {
+		Object.keys(coordData).forEach((cellKey) => {
 			const cellData = coordData[cellKey];
-			const cellId = cellKey.split('_')[1];
-			
+			const cellId = cellKey.split("_")[1];
+
 			// Aktualisiere die persistente Datenhaltung
 			this.currentData.tiles[cellKey] = {
 				...this.currentData.tiles[cellKey],
@@ -1675,7 +1971,7 @@ window.HangarDataCoordinator = {
 				departureTime: cellData.departureTime,
 				position: cellData.position,
 				lastApiUpdate: cellData.timestamp,
-				source: source
+				source: source,
 			};
 
 			console.log(`✅ Persistiert: Cell ${cellId} für ${cellData.aircraftId}`);
@@ -1684,7 +1980,7 @@ window.HangarDataCoordinator = {
 		// Aktualisiere Metadaten
 		this.dataSource = source;
 		this.lastUpdate = new Date().toISOString();
-		
+
 		console.log(`✅ API-Update für ${aircraftId} erfolgreich persistiert`);
 	},
 

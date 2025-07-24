@@ -633,6 +633,53 @@ class FileManager {
 	}
 
 	/**
+	 * Exportiert das aktuelle Projekt automatisch mit generiertem Dateinamen
+	 * Format: YYYY_MM_DD_HH:MM_Hangarplan.json
+	 * @param {Object} projectData - Die zu exportierenden Projektdaten
+	 * @returns {Promise<boolean>} Erfolg des Export-Vorgangs
+	 */
+	async exportCurrentFile(projectData) {
+		try {
+			// Automatischen Dateinamen generieren
+			const now = new Date();
+			const year = now.getFullYear();
+			const month = String(now.getMonth() + 1).padStart(2, "0");
+			const day = String(now.getDate()).padStart(2, "0");
+			const hours = String(now.getHours()).padStart(2, "0");
+			const minutes = String(now.getMinutes()).padStart(2, "0");
+			const fileName = `${year}_${month}_${day}_${hours}:${minutes}_Hangarplan.json`;
+
+			// Aktuelle Zeit in Metadaten speichern
+			if (!projectData.metadata) {
+				projectData.metadata = {};
+			}
+			projectData.metadata.lastModified = new Date().toISOString();
+			projectData.metadata.projectName = fileName.replace(".json", "");
+
+			// JSON-String erstellen
+			const jsonString = JSON.stringify(projectData, null, 2);
+
+			// Direkter Download ohne Dialog
+			this.downloadFile(jsonString, fileName);
+
+			window.showNotification(
+				`Projekt automatisch exportiert: ${fileName}`,
+				"success"
+			);
+
+			console.log(`Projekt automatisch exportiert: ${fileName}`);
+			return true;
+		} catch (error) {
+			console.error("Fehler beim automatischen Export:", error);
+			window.showNotification(
+				`Automatischer Export fehlgeschlagen: ${error.message}`,
+				"error"
+			);
+			return false;
+		}
+	}
+
+	/**
 	 * Erstellt eine Datei im festen Speicherort oder ersetzt sie
 	 * @param {string} fileName - Name der Datei (mit Erweiterung)
 	 * @param {Object|string} content - Inhalt der Datei (Objekt wird in JSON konvertiert)

@@ -239,6 +239,169 @@ document.addEventListener("DOMContentLoaded", function () {
 	}, 2000);
 });
 
+/**
+ * Initialisiert das Project Name Feld mit automatischem Dateinamen
+ * Format: YYYY_MM_DD_Hangarplan (ohne Uhrzeit für Project Settings)
+ */
+function initializeProjectName() {
+	const projectNameInput = document.getElementById("projectName");
+	if (projectNameInput) {
+		// Nur setzen, wenn das Feld leer ist
+		if (!projectNameInput.value.trim()) {
+			if (typeof generateProjectSettingsName === "function") {
+				projectNameInput.value = generateProjectSettingsName();
+				console.log(
+					"📝 Project Name automatisch gesetzt:",
+					projectNameInput.value
+				);
+			} else if (
+				window.hangarData &&
+				typeof window.hangarData.generateProjectSettingsName === "function"
+			) {
+				projectNameInput.value =
+					window.hangarData.generateProjectSettingsName();
+				console.log(
+					"📝 Project Name automatisch gesetzt (fallback):",
+					projectNameInput.value
+				);
+			} else {
+				// Manueller Fallback
+				const now = new Date();
+				const year = now.getFullYear();
+				const month = String(now.getMonth() + 1).padStart(2, "0");
+				const day = String(now.getDate()).padStart(2, "0");
+				projectNameInput.value = `${year}_${month}_${day}_Hangarplan`;
+				console.log("📝 Project Name manuell gesetzt:", projectNameInput.value);
+			}
+		}
+	}
+}
+
+// Funktion zum Einrichten der Save/Load Event-Handler
+function setupSaveLoadEventHandlers() {
+	console.log("🔧 Richte Save/Load/Export Event-Handler ein...");
+
+	// Project Name automatisch setzen, falls leer
+	initializeProjectName();
+
+	// Save Button Event-Handler
+	const saveBtn = document.getElementById("saveBtn");
+	if (saveBtn) {
+		saveBtn.addEventListener("click", function (event) {
+			event.preventDefault();
+			console.log("💾 Save Button geklickt");
+
+			try {
+				// Verwende FileManager für Save mit Dialog
+				if (
+					window.fileManager &&
+					typeof window.fileManager.saveProject === "function"
+				) {
+					// Projektstatus sammeln - verwende Dateiname mit Uhrzeit für Save
+					const projectData = {
+						metadata: {
+							projectName: generateDefaultProjectName(), // Mit Uhrzeit für Save
+							lastModified: new Date().toISOString(),
+						},
+						tilesData: collectTilesData(),
+						settings: collectSettingsData(),
+					};
+
+					window.fileManager.saveProject(projectData);
+				} else if (
+					window.hangarData &&
+					typeof window.hangarData.saveProjectToFile === "function"
+				) {
+					// Fallback auf hangarData
+					window.hangarData.saveProjectToFile();
+				} else {
+					throw new Error("Keine Save-Funktion verfügbar");
+				}
+			} catch (error) {
+				console.error("Fehler beim Speichern:", error);
+				showNotification("Fehler beim Speichern: " + error.message, "error");
+			}
+		});
+		console.log("✅ Save Button Event-Handler eingerichtet");
+	} else {
+		console.warn("❌ Save Button nicht gefunden");
+	}
+
+	// Load Button Event-Handler
+	const loadBtn = document.getElementById("loadBtn");
+	if (loadBtn) {
+		loadBtn.addEventListener("click", function (event) {
+			event.preventDefault();
+			console.log("📂 Load Button geklickt");
+
+			try {
+				// Verwende FileManager für Load mit Dialog
+				if (
+					window.fileManager &&
+					typeof window.fileManager.loadProject === "function"
+				) {
+					window.fileManager
+						.loadProject()
+						.then((projectData) => {
+							if (projectData) {
+								// Daten in die Anwendung laden
+								if (
+									window.dataCoordinator &&
+									typeof window.dataCoordinator.loadProject === "function"
+								) {
+									window.dataCoordinator.loadProject(projectData, "file");
+								} else if (typeof applyProjectData === "function") {
+									// Verwende applyProjectData direkt
+									applyProjectData(projectData);
+
+									// Projektnamen im Eingabefeld setzen
+									const projectNameInput =
+										document.getElementById("projectName");
+									if (projectNameInput && projectData.projectName) {
+										projectNameInput.value = projectData.projectName;
+									}
+
+									showNotification("Projekt erfolgreich geladen", "success");
+								} else {
+									console.warn(
+										"Keine Funktion zum Laden der Projektdaten gefunden"
+									);
+									showNotification(
+										"Projekt geladen, aber Daten konnten nicht angewendet werden",
+										"warning"
+									);
+								}
+							}
+						})
+						.catch((error) => {
+							if (error.name !== "AbortError") {
+								console.error("Fehler beim Laden:", error);
+								showNotification(
+									"Fehler beim Laden: " + error.message,
+									"error"
+								);
+							}
+						});
+				} else if (
+					window.hangarData &&
+					typeof window.hangarData.loadProjectFromFile === "function"
+				) {
+					// Fallback auf hangarData
+					window.hangarData.loadProjectFromFile();
+				} else {
+					throw new Error("Keine Load-Funktion verfügbar");
+				}
+			} catch (error) {
+				console.error("Fehler beim Laden:", error);
+				showNotification("Fehler beim Laden: " + error.message, "error");
+			}
+		});
+		console.log("✅ Load Button Event-Handler eingerichtet");
+	} else {
+		console.warn("❌ Load Button nicht gefunden");
+	}
+}
+
 // Funktion, um sicherzustellen, dass die API-Fassade korrekt verbunden ist
 function setupFlightDataEventHandlers() {
 	console.log("🔧 setupFlightDataEventHandlers aufgerufen");
@@ -500,6 +663,14 @@ document.addEventListener("DOMContentLoaded", function () {
 	if (window.helpers || window.showNotification) {
 		window.moduleStatus.helpers = true;
 	}
+
+	// Event-Handler für Save/Load-Buttons einrichten
+	setupSaveLoadEventHandlers();
+
+	// Project Name beim Start automatisch setzen
+	setTimeout(() => {
+		initializeProjectName();
+	}, 500);
 
 	// Warten bis alle Skripte geladen sind mit mehreren Versuchen
 	function attemptInitialization(attempts = 0) {

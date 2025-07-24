@@ -1000,18 +1000,18 @@ const AeroDataBoxAPI = (() => {
 			// Visuelle Statusanzeige initialisieren
 			if (window.FlightDataStatusDisplay) {
 				window.FlightDataStatusDisplay.show(
-					"Sammle Aircraft IDs aus Kacheln...", 
+					"Sammle Aircraft IDs aus Kacheln...",
 					{
 						airport: airportCode,
 						aircraftCount: 0,
-						currentStatus: "Initialisiere..."
+						currentStatus: "Initialisiere...",
 					}
 				);
 			}
 
 			updateFetchStatus("🔍 Sammle Aircraft IDs aus Kacheln...", false, {
 				airport: airportCode,
-				currentStatus: "Sammle Aircraft IDs..."
+				currentStatus: "Sammle Aircraft IDs...",
 			});
 
 			// SCHRITT 1: Alle Aircraft IDs aus den Kacheln sammeln
@@ -1035,7 +1035,7 @@ const AeroDataBoxAPI = (() => {
 				updateFetchStatus(errorMessage, true, {
 					airport: airportCode,
 					aircraftCount: 0,
-					currentStatus: "Fehler - Keine Aircraft IDs"
+					currentStatus: "Fehler - Keine Aircraft IDs",
 				});
 				return;
 			}
@@ -1043,17 +1043,17 @@ const AeroDataBoxAPI = (() => {
 			console.log(
 				`🎯 Gefundene Aircraft IDs: ${aircraftIds.map((a) => a.id).join(", ")}`
 			);
-			
+
 			// Schritt 1 abgeschlossen - Update Fortschritt
 			if (window.FlightDataStatusDisplay) {
 				window.FlightDataStatusDisplay.showStep(
-					`${aircraftIds.length} Aircraft IDs gefunden`, 
-					1, 
-					3, 
+					`${aircraftIds.length} Aircraft IDs gefunden`,
+					1,
+					3,
 					{
 						airport: airportCode,
 						aircraftCount: aircraftIds.length,
-						currentStatus: "Aircraft IDs gesammelt"
+						currentStatus: "Aircraft IDs gesammelt",
 					}
 				);
 			}
@@ -1064,7 +1064,7 @@ const AeroDataBoxAPI = (() => {
 				{
 					airport: airportCode,
 					aircraftCount: aircraftIds.length,
-					currentStatus: "Starte Flughafen-Abfrage..."
+					currentStatus: "Starte Flughafen-Abfrage...",
 				}
 			);
 
@@ -1076,13 +1076,13 @@ const AeroDataBoxAPI = (() => {
 			// Schritt 2 - API-Abfrage
 			if (window.FlightDataStatusDisplay) {
 				window.FlightDataStatusDisplay.showStep(
-					`Lade Flugdaten von Flughafen ${airportCode}...`, 
-					2, 
-					3, 
+					`Lade Flugdaten von Flughafen ${airportCode}...`,
+					2,
+					3,
 					{
 						airport: airportCode,
 						aircraftCount: aircraftIds.length,
-						currentStatus: "API-Abfrage läuft..."
+						currentStatus: "API-Abfrage läuft...",
 					}
 				);
 			}
@@ -1103,7 +1103,7 @@ const AeroDataBoxAPI = (() => {
 				updateFetchStatus(errorMessage, true, {
 					airport: airportCode,
 					aircraftCount: aircraftIds.length,
-					currentStatus: "Fehler - Keine Flugdaten"
+					currentStatus: "Fehler - Keine Flugdaten",
 				});
 				return;
 			}
@@ -1159,36 +1159,42 @@ const AeroDataBoxAPI = (() => {
 
 			// SCHRITT 4: Für jede Aircraft ID die passenden Flüge suchen und eintragen
 			let successfulUpdates = 0;
-			
+
 			// Schritt 3 - Verarbeitung der Aircraft IDs
 			if (window.FlightDataStatusDisplay) {
 				window.FlightDataStatusDisplay.showStep(
-					`Verarbeite ${aircraftIds.length} Aircraft IDs...`, 
-					3, 
-					3, 
+					`Verarbeite ${aircraftIds.length} Aircraft IDs...`,
+					3,
+					3,
 					{
 						airport: airportCode,
 						aircraftCount: aircraftIds.length,
-						currentStatus: "Verarbeite Aircraft..."
+						currentStatus: "Verarbeite Aircraft...",
 					}
 				);
 			}
 
-			updateFetchStatus(`🔄 Verarbeite ${aircraftIds.length} Aircraft IDs...`, false, {
-				airport: airportCode,
-				aircraftCount: aircraftIds.length,
-				currentStatus: "Verarbeite Aircraft..."
-			});
+			updateFetchStatus(
+				`🔄 Verarbeite ${aircraftIds.length} Aircraft IDs...`,
+				false,
+				{
+					airport: airportCode,
+					aircraftCount: aircraftIds.length,
+					currentStatus: "Verarbeite Aircraft...",
+				}
+			);
 
 			for (let i = 0; i < aircraftIds.length; i++) {
 				const aircraft = aircraftIds[i];
-				
+
 				// Update Fortschritt während der Verarbeitung
-				const progressMessage = `Verarbeite ${aircraft.id} (${i + 1}/${aircraftIds.length})...`;
+				const progressMessage = `Verarbeite ${aircraft.id} (${i + 1}/${
+					aircraftIds.length
+				})...`;
 				updateFetchStatus(progressMessage, false, {
 					airport: airportCode,
 					aircraftCount: aircraftIds.length,
-					currentStatus: `Aircraft ${i + 1}/${aircraftIds.length}`
+					currentStatus: `Aircraft ${i + 1}/${aircraftIds.length}`,
 				});
 
 				const updated = await processAircraftFlights(
@@ -1203,63 +1209,57 @@ const AeroDataBoxAPI = (() => {
 			// Endresultat anzeigen
 			if (successfulUpdates > 0) {
 				const successMessage = `✅ Flugdaten für ${successfulUpdates}/${aircraftIds.length} Aircraft erfolgreich aktualisiert`;
-				
+
 				if (window.FlightDataStatusDisplay) {
-					window.FlightDataStatusDisplay.showSuccess(
-						successMessage,
-						{
-							airport: airportCode,
-							aircraftCount: aircraftIds.length,
-							currentStatus: `${successfulUpdates} Aircraft aktualisiert`
-						}
-					);
+					window.FlightDataStatusDisplay.showSuccess(successMessage, {
+						airport: airportCode,
+						aircraftCount: aircraftIds.length,
+						currentStatus: `${successfulUpdates} Aircraft aktualisiert`,
+					});
 				}
-				
+
 				updateFetchStatus(successMessage, false, {
 					airport: airportCode,
 					aircraftCount: aircraftIds.length,
-					currentStatus: "Erfolgreich abgeschlossen"
+					currentStatus: "Erfolgreich abgeschlossen",
 				});
 			} else {
 				const warningMessage = `⚠️ Keine passenden Flüge für die ${aircraftIds.length} Aircraft IDs gefunden`;
-				
+
 				if (window.FlightDataStatusDisplay) {
 					window.FlightDataStatusDisplay.showError(
 						warningMessage,
 						{
 							airport: airportCode,
 							aircraftCount: aircraftIds.length,
-							currentStatus: "Keine Matches gefunden"
+							currentStatus: "Keine Matches gefunden",
 						},
 						4000
 					);
 				}
-				
+
 				updateFetchStatus(warningMessage, false, {
 					airport: airportCode,
 					aircraftCount: aircraftIds.length,
-					currentStatus: "Keine Matches"
+					currentStatus: "Keine Matches",
 				});
 			}
 		} catch (error) {
 			console.error("❌ Fehler beim Update der Flugdaten:", error);
-			
+
 			const errorMessage = `❌ Fehler beim Update der Flugdaten: ${error.message}`;
-			
+
 			if (window.FlightDataStatusDisplay) {
-				window.FlightDataStatusDisplay.showError(
-					errorMessage,
-					{
-						airport: airportCode,
-						aircraftCount: 0,
-						currentStatus: "Fehler aufgetreten"
-					}
-				);
+				window.FlightDataStatusDisplay.showError(errorMessage, {
+					airport: airportCode,
+					aircraftCount: 0,
+					currentStatus: "Fehler aufgetreten",
+				});
 			}
-			
+
 			updateFetchStatus(errorMessage, true, {
 				airport: airportCode,
-				currentStatus: "Fehler"
+				currentStatus: "Fehler",
 			});
 		}
 	};

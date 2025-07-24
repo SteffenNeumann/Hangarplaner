@@ -23,8 +23,8 @@ const FlightDataStatusDisplay = (() => {
 	 * Erstellt das Status-Element im DOM
 	 */
 	const createStatusElement = () => {
-		statusElement = document.createElement('div');
-		statusElement.id = 'flight-data-status';
+		statusElement = document.createElement("div");
+		statusElement.id = "flight-data-status";
 		statusElement.innerHTML = `
 			<div class="status-header">
 				<div class="status-title">
@@ -54,7 +54,7 @@ const FlightDataStatusDisplay = (() => {
 				</div>
 			</div>
 		`;
-		
+
 		document.body.appendChild(statusElement);
 	};
 
@@ -65,13 +65,13 @@ const FlightDataStatusDisplay = (() => {
 	 */
 	const show = (message = "Starte Flugdaten-Update...", options = {}) => {
 		init();
-		
+
 		const {
 			airport = "---",
 			aircraftCount = 0,
 			currentStatus = "Initialisiere...",
 			autoHide = false,
-			duration = 5000
+			duration = 5000,
 		} = options;
 
 		// Update content
@@ -81,7 +81,7 @@ const FlightDataStatusDisplay = (() => {
 		updateIcon("✈️", "loading");
 
 		// Show element
-		statusElement.classList.add('show');
+		statusElement.classList.add("show");
 		isVisible = true;
 
 		// Start progress animation für loading state
@@ -102,16 +102,16 @@ const FlightDataStatusDisplay = (() => {
 	 */
 	const hide = () => {
 		if (statusElement && isVisible) {
-			statusElement.classList.remove('show');
+			statusElement.classList.remove("show");
 			isVisible = false;
-			
+
 			// Clear timeouts and intervals
 			if (currentTimeout) {
 				clearTimeout(currentTimeout);
 				currentTimeout = null;
 			}
 			stopProgressAnimation();
-			
+
 			console.log("[FlightDataStatus] Anzeige versteckt");
 		}
 	};
@@ -122,7 +122,9 @@ const FlightDataStatusDisplay = (() => {
 	 */
 	const updateMessage = (message) => {
 		if (statusElement) {
-			const messageElement = statusElement.querySelector('.status-main-message');
+			const messageElement = statusElement.querySelector(
+				".status-main-message"
+			);
 			if (messageElement) {
 				messageElement.textContent = message;
 			}
@@ -139,18 +141,22 @@ const FlightDataStatusDisplay = (() => {
 		const { airport, aircraftCount, currentStatus } = details;
 
 		if (airport !== undefined) {
-			const airportElement = statusElement.querySelector('#status-airport');
+			const airportElement = statusElement.querySelector("#status-airport");
 			if (airportElement) airportElement.textContent = airport;
 		}
 
 		if (aircraftCount !== undefined) {
-			const countElement = statusElement.querySelector('#status-aircraft-count');
+			const countElement = statusElement.querySelector(
+				"#status-aircraft-count"
+			);
 			if (countElement) countElement.textContent = aircraftCount;
 		}
 
 		if (currentStatus !== undefined) {
-			const statusCurrentElement = statusElement.querySelector('#status-current');
-			if (statusCurrentElement) statusCurrentElement.textContent = currentStatus;
+			const statusCurrentElement =
+				statusElement.querySelector("#status-current");
+			if (statusCurrentElement)
+				statusCurrentElement.textContent = currentStatus;
 		}
 	};
 
@@ -159,21 +165,21 @@ const FlightDataStatusDisplay = (() => {
 	 * @param {number} percentage - Fortschritt in Prozent (0-100)
 	 * @param {string} type - Typ (default, success, error)
 	 */
-	const updateProgress = (percentage, type = 'default') => {
+	const updateProgress = (percentage, type = "default") => {
 		if (!statusElement) return;
 
-		const progressBar = statusElement.querySelector('.status-progress-bar');
+		const progressBar = statusElement.querySelector(".status-progress-bar");
 		if (progressBar) {
 			progressBar.style.width = `${Math.min(100, Math.max(0, percentage))}%`;
-			
+
 			// Remove existing type classes
-			progressBar.classList.remove('success', 'error');
-			
+			progressBar.classList.remove("success", "error");
+
 			// Add new type class
-			if (type === 'success') {
-				progressBar.classList.add('success');
-			} else if (type === 'error') {
-				progressBar.classList.add('error');
+			if (type === "success") {
+				progressBar.classList.add("success");
+			} else if (type === "error") {
+				progressBar.classList.add("error");
 			}
 		}
 	};
@@ -183,21 +189,21 @@ const FlightDataStatusDisplay = (() => {
 	 * @param {string} icon - Emoji oder Text für das Icon
 	 * @param {string} status - Status-Typ (loading, success, error)
 	 */
-	const updateIcon = (icon, status = 'default') => {
+	const updateIcon = (icon, status = "default") => {
 		if (!statusElement) return;
 
-		const iconElement = statusElement.querySelector('.status-icon');
+		const iconElement = statusElement.querySelector(".status-icon");
 		if (iconElement) {
 			iconElement.textContent = icon;
-			
+
 			// Remove existing status classes
-			iconElement.classList.remove('success', 'error');
-			
+			iconElement.classList.remove("success", "error");
+
 			// Add new status class
-			if (status === 'success') {
-				iconElement.classList.add('success');
-			} else if (status === 'error') {
-				iconElement.classList.add('error');
+			if (status === "success") {
+				iconElement.classList.add("success");
+			} else if (status === "error") {
+				iconElement.classList.add("error");
 			}
 		}
 	};
@@ -211,8 +217,8 @@ const FlightDataStatusDisplay = (() => {
 	const showSuccess = (message, details = {}, autoHideDelay = 4000) => {
 		updateMessage(message);
 		updateDetails(details);
-		updateProgress(100, 'success');
-		updateIcon('✅', 'success');
+		updateProgress(100, "success");
+		updateIcon("✅", "success");
 		stopProgressAnimation();
 
 		// Auto-hide after delay
@@ -234,8 +240,8 @@ const FlightDataStatusDisplay = (() => {
 	const showError = (message, details = {}, autoHideDelay = 6000) => {
 		updateMessage(message);
 		updateDetails(details);
-		updateProgress(0, 'error');
-		updateIcon('❌', 'error');
+		updateProgress(0, "error");
+		updateIcon("❌", "error");
 		stopProgressAnimation();
 
 		// Auto-hide after delay
@@ -257,11 +263,11 @@ const FlightDataStatusDisplay = (() => {
 	 */
 	const showStep = (message, step, totalSteps, details = {}) => {
 		const percentage = totalSteps > 0 ? (step / totalSteps) * 100 : 0;
-		
+
 		updateMessage(message);
 		updateDetails(details);
 		updateProgress(percentage);
-		updateIcon('⚡', 'loading');
+		updateIcon("⚡", "loading");
 
 		console.log(`[FlightDataStatus] Schritt ${step}/${totalSteps}: ${message}`);
 	};
@@ -271,7 +277,7 @@ const FlightDataStatusDisplay = (() => {
 	 */
 	const startProgressAnimation = () => {
 		stopProgressAnimation(); // Cleanup existing
-		
+
 		currentProgress = 0;
 		progressInterval = setInterval(() => {
 			currentProgress += 2;
@@ -309,7 +315,7 @@ const FlightDataStatusDisplay = (() => {
 			statusElement.parentNode.removeChild(statusElement);
 		}
 		statusElement = null;
-		
+
 		// Clear all timers
 		if (currentTimeout) {
 			clearTimeout(currentTimeout);
@@ -331,7 +337,7 @@ const FlightDataStatusDisplay = (() => {
 		showError,
 		showStep,
 		isShowing,
-		destroy
+		destroy,
 	};
 })();
 
@@ -339,8 +345,8 @@ const FlightDataStatusDisplay = (() => {
 window.FlightDataStatusDisplay = FlightDataStatusDisplay;
 
 // Auto-Initialisierung beim Laden
-if (document.readyState === 'loading') {
-	document.addEventListener('DOMContentLoaded', FlightDataStatusDisplay.init);
+if (document.readyState === "loading") {
+	document.addEventListener("DOMContentLoaded", FlightDataStatusDisplay.init);
 } else {
 	FlightDataStatusDisplay.init();
 }

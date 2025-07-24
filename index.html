@@ -2166,6 +2166,21 @@
 							}
 						} else {
 							console.log("✅ Zentrale Hangar-Initialisierung abgeschlossen");
+
+							// FINAL: modeToggle Status korrigieren nach vollständiger Initialisierung
+							setTimeout(() => {
+								const modeToggle = document.getElementById("modeToggle");
+								const body = document.body;
+								if (modeToggle && body) {
+									const isEditMode = body.classList.contains("edit-mode");
+									modeToggle.checked = isEditMode;
+									console.log(
+										`🎛️ modeToggle Status korrigiert: ${
+											isEditMode ? "Edit" : "View"
+										}-Modus`
+									);
+								}
+							}, 100);
 						}
 					}
 

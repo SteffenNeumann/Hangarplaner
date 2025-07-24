@@ -276,11 +276,15 @@ function toggleEditMode() {
 	const modeToggle = document.getElementById("modeToggle");
 
 	if (modeToggle && modeToggle.checked) {
+		// Edit-Modus aktivieren
 		body.classList.add("edit-mode");
-		console.log("Edit-Modus aktiviert");
+		body.classList.remove("view-mode");
+		console.log("✏️ Edit-Modus aktiviert");
 	} else {
+		// View-Modus aktivieren
 		body.classList.remove("edit-mode");
-		console.log("View-Modus aktiviert");
+		body.classList.add("view-mode");
+		console.log("👁️ View-Modus aktiviert");
 	}
 }
 

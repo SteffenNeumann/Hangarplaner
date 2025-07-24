@@ -452,6 +452,14 @@ window.displayOptions = {
 		const viewModeToggle = document.getElementById("viewModeToggle");
 		if (viewModeToggle) viewModeToggle.checked = this.current.viewMode;
 
+		// View/Edit Mode Toggle synchronisieren - NEU HINZUGEFÜGT
+		const modeToggle = document.getElementById("modeToggle");
+		if (modeToggle) {
+			// Edit-Modus ist aktiv wenn Body edit-mode hat
+			const isEditMode = document.body.classList.contains("edit-mode");
+			modeToggle.checked = isEditMode;
+		}
+
 		const zoomSlider = document.getElementById("displayZoom");
 		if (zoomSlider) zoomSlider.value = this.current.zoomLevel;
 
@@ -620,6 +628,13 @@ window.displayOptions = {
 			);
 		}
 
+		// View/Edit Mode Toggle (modeToggle) - KORREKTUR
+		const modeToggle = document.getElementById("modeToggle");
+		if (modeToggle) {
+			modeToggle.removeEventListener("change", this.onModeToggleChange);
+			modeToggle.addEventListener("change", this.onModeToggleChange.bind(this));
+		}
+
 		// Zoom Slider
 		const zoomSlider = document.getElementById("displayZoom");
 		if (zoomSlider) {
@@ -658,6 +673,37 @@ window.displayOptions = {
 		this.applyLayout();
 		// Debounced Save - verhindert zu häufige Server-Anfragen
 		this.debouncedSave();
+	},
+
+	/**
+	 * Event-Handler für View/Edit Mode Toggle (modeToggle) - NEU HINZUGEFÜGT
+	 */
+	onModeToggleChange() {
+		// Rufe die Business Logic Funktion auf
+		if (typeof toggleEditMode === "function") {
+			toggleEditMode();
+		} else if (
+			window.hangarEvents &&
+			typeof window.hangarEvents.toggleEditMode === "function"
+		) {
+			window.hangarEvents.toggleEditMode();
+		} else {
+			// Fallback: Direkte Implementierung
+			const body = document.body;
+			const modeToggle = document.getElementById("modeToggle");
+
+			if (modeToggle && modeToggle.checked) {
+				// Edit-Modus aktivieren
+				body.classList.add("edit-mode");
+				body.classList.remove("view-mode");
+				console.log("✏️ Edit-Modus aktiviert (via display-options)");
+			} else {
+				// View-Modus aktivieren
+				body.classList.remove("edit-mode");
+				body.classList.add("view-mode");
+				console.log("👁️ View-Modus aktiviert (via display-options)");
+			}
+		}
 	},
 
 	/**

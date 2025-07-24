@@ -1612,12 +1612,12 @@
 								Show Airport Flights
 							</button>
 
-							<!-- Test Button für neue Statusanzeige -->
+							<!-- Test Button für showNotification -->
 							<button
-								id="testStatusDisplay"
+								id="testNotificationDisplay"
 								class="sidebar-btn sidebar-btn-secondary w-full mt-2"
-								onclick="if(window.FlightDataStatusDisplay) window.FlightDataStatusDisplay.show('Test der neuen Statusanzeige', {airport: 'MUC', aircraftCount: 5, currentStatus: 'Demo läuft...'});">
-								Test Status Display
+								onclick="if(window.showNotification) window.showNotification('Test: Verarbeite D-AIBN - API-Anfrage läuft...', 'info');">
+								Test Notification
 							</button>
 
 							<div id="fetchStatus" class="text-sm text-center"></div>

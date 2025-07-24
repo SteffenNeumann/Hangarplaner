@@ -75,19 +75,10 @@ const AeroDataBoxAPI = (() => {
 				: "text-sm text-center";
 		}
 
-		// Neue visuelle Statusanzeige aktualisieren (falls verfügbar)
-		if (window.FlightDataStatusDisplay) {
-			if (isError) {
-				window.FlightDataStatusDisplay.showError(message, statusDetails);
-			} else {
-				// Normale Status-Updates zur visuellen Anzeige weiterleiten
-				if (window.FlightDataStatusDisplay.isShowing()) {
-					window.FlightDataStatusDisplay.updateMessage(message);
-					if (Object.keys(statusDetails).length > 0) {
-						window.FlightDataStatusDisplay.updateDetails(statusDetails);
-					}
-				}
-			}
+		// Verwende window.showNotification für Status-Updates
+		if (window.showNotification) {
+			const notificationType = isError ? "error" : "info";
+			window.showNotification(message, notificationType);
 		}
 
 		// Auch in der Konsole loggen
@@ -256,9 +247,7 @@ const AeroDataBoxAPI = (() => {
 				return { data: [] };
 			}
 
-			updateFetchStatus(
-				`Suche Flüge für Aircraft ${registration} am ${date}...`
-			);
+			updateFetchStatus(`Verarbeite ${registration} - API-Anfrage läuft...`);
 
 			// Standard AeroDataBox API - direkte Abfrage mit Datum im Pfad
 			return await rateLimiter(async () => {
@@ -295,8 +284,7 @@ const AeroDataBoxAPI = (() => {
 						`Leere Antwort von der API für ${registration} im Zeitraum`
 					);
 					updateFetchStatus(
-						`Leere Antwort von der API für ${registration} im Zeitraum, versuche alternative Abfrage...`,
-						false
+						`Verarbeite ${registration} - Suche alternative Datenquelle...`
 					);
 
 					// NEUER CODE: Alternative Abfrage ohne Datumsbeschränkung starten
@@ -308,6 +296,10 @@ const AeroDataBoxAPI = (() => {
 					const fallbackUrl = `${config.baseUrl}/flights/reg/${registration}?withAircraftImage=false&withLocation=true`;
 
 					try {
+						updateFetchStatus(
+							`Verarbeite ${registration} - Alternative API-Abfrage läuft...`
+						);
+
 						const fallbackResponse = await fetch(fallbackUrl, options);
 
 						if (!fallbackResponse.ok) {
@@ -491,7 +483,7 @@ const AeroDataBoxAPI = (() => {
 				error
 			);
 			updateFetchStatus(
-				`Fehler bei der API-Anfrage für ${aircraftRegistration}: ${error.message}`,
+				`Fehler: ${aircraftRegistration} - ${error.message}`,
 				true
 			);
 
@@ -621,7 +613,7 @@ const AeroDataBoxAPI = (() => {
 		console.log(
 			`AeroDataBoxAPI: Suche Flugdaten für ${aircraftId} - EXPLIZIT an zwei Tagen: ${currentDate} und ${nextDate}`
 		);
-		updateFetchStatus(`Suche Flugdaten für ${aircraftId}...`);
+		updateFetchStatus(`Verarbeite ${aircraftId} - Starte Datenabfrage...`);
 
 		try {
 			// Hole den aktuell ausgewählten Flughafen für die Filterung
@@ -875,7 +867,8 @@ const AeroDataBoxAPI = (() => {
 				`Flugdaten verarbeitet für ${aircraftId}: ${currentDate} und ${nextDate}`
 			);
 			updateFetchStatus(
-				`Flugdaten für ${aircraftId} gefunden: ${result.positionText}`
+				`${aircraftId} erfolgreich verarbeitet: ${result.positionText}`,
+				false
 			);
 
 			return result;
@@ -1574,13 +1567,13 @@ const AeroDataBoxAPI = (() => {
 		getMultipleAircraftFlights: async (registrations, date) => {
 			try {
 				updateFetchStatus(
-					`Beginne Abruf für ${registrations.length} Flugzeuge...`
+					`Verarbeite ${registrations.length} Flugzeuge - Start...`
 				);
 
 				const results = [];
 				for (const reg of registrations) {
 					try {
-						updateFetchStatus(`Rufe Daten für ${reg} ab...`);
+						updateFetchStatus(`Verarbeite ${reg} - Daten werden abgerufen...`);
 						const data = await getAircraftFlights(reg, date);
 						results.push({ registration: reg, data });
 					} catch (error) {

@@ -400,6 +400,36 @@ function setupSaveLoadEventHandlers() {
 	} else {
 		console.warn("❌ Load Button nicht gefunden");
 	}
+
+	// PDF Export Button Event-Handler
+	const exportPdfBtn = document.getElementById("exportPdfBtn");
+	if (exportPdfBtn) {
+		exportPdfBtn.addEventListener("click", function (event) {
+			event.preventDefault();
+			console.log("📄 PDF Export Button geklickt");
+
+			try {
+				// Prüfe ob PDF Export-Funktion verfügbar ist
+				if (
+					window.hangarPDF &&
+					typeof window.hangarPDF.exportToPDF === "function"
+				) {
+					window.hangarPDF.exportToPDF();
+				} else if (typeof exportToPDF === "function") {
+					// Fallback auf globale Funktion
+					exportToPDF();
+				} else {
+					throw new Error("PDF Export-Funktion nicht verfügbar");
+				}
+			} catch (error) {
+				console.error("Fehler beim PDF Export:", error);
+				showNotification("Fehler beim PDF Export: " + error.message, "error");
+			}
+		});
+		console.log("✅ PDF Export Button Event-Handler eingerichtet");
+	} else {
+		console.warn("❌ PDF Export Button nicht gefunden");
+	}
 }
 
 // Funktion, um sicherzustellen, dass die API-Fassade korrekt verbunden ist

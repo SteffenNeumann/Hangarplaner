@@ -512,7 +512,7 @@ class ServerSync {
 
 			console.log("📥 Wende Server-Daten über Koordinator an:", serverData);
 
-			// DEBUG: Prüfe verfügbare Datenhandler
+			// ERWEITERTE DEBUG: Prüfe verfügbare Datenhandler und DOM-Elemente
 			console.log("🔍 DEBUG: Verfügbare Datenhandler:");
 			console.log("- window.dataCoordinator:", !!window.dataCoordinator);
 			console.log("- window.hangarData:", !!window.hangarData);
@@ -520,16 +520,40 @@ class ServerSync {
 				"- window.hangarData.applyLoadedHangarPlan:",
 				typeof window.hangarData?.applyLoadedHangarPlan
 			);
+
+			// NEUE DEBUG: DOM-Elemente prüfen
+			console.log("🔍 DEBUG: DOM-Elemente verfügbar:");
+			const aircraft1 = document.getElementById("aircraft-1");
+			const position1 = document.getElementById("hangar-position-1");
+			const notes1 = document.getElementById("notes-1");
+			console.log("- aircraft-1 Element:", !!aircraft1, aircraft1?.tagName);
+			console.log(
+				"- hangar-position-1 Element:",
+				!!position1,
+				position1?.tagName
+			);
+			console.log("- notes-1 Element:", !!notes1, notes1?.tagName);
+
 			console.log("- serverData Struktur:", {
 				hasPrimaryTiles: !!(
 					serverData.primaryTiles && serverData.primaryTiles.length > 0
 				),
+				primaryTilesCount: serverData.primaryTiles?.length || 0,
 				hasSecondaryTiles: !!(
 					serverData.secondaryTiles && serverData.secondaryTiles.length > 0
 				),
+				secondaryTilesCount: serverData.secondaryTiles?.length || 0,
 				hasSettings: !!serverData.settings,
 				hasMetadata: !!serverData.metadata,
 			});
+
+			// NEUE DEBUG: Zeige erste Kachel-Daten
+			if (serverData.primaryTiles && serverData.primaryTiles.length > 0) {
+				console.log(
+					"🔍 DEBUG: Erste Kachel-Daten:",
+					serverData.primaryTiles[0]
+				);
+			}
 
 			// *** PRIORITÄT 1: Display Options aus Serverdaten anwenden ***
 			if (
@@ -682,17 +706,26 @@ class ServerSync {
 			"Kacheln"
 		);
 
+		let successfullyApplied = 0;
+		let failedToApply = 0;
+
 		tiles.forEach((tileData, index) => {
 			const tileId = tileData.tileId || (isSecondary ? 101 + index : 1 + index);
+			console.log(`🔄 Verarbeite Kachel ${tileId}:`, tileData);
 
 			// Aircraft ID
 			if (tileData.aircraftId) {
 				const aircraftInput = document.getElementById(`aircraft-${tileId}`);
 				if (aircraftInput) {
+					const oldValue = aircraftInput.value;
 					aircraftInput.value = tileData.aircraftId;
 					console.log(
-						`✈️ Aircraft ID gesetzt: ${tileId} = ${tileData.aircraftId}`
+						`✈️ Aircraft ID gesetzt: ${tileId} = ${oldValue} → ${tileData.aircraftId}`
 					);
+					successfullyApplied++;
+				} else {
+					console.warn(`❌ Aircraft Input nicht gefunden: aircraft-${tileId}`);
+					failedToApply++;
 				}
 			}
 
@@ -702,8 +735,17 @@ class ServerSync {
 					document.getElementById(`hangar-position-${tileId}`) ||
 					document.getElementById(`position-${tileId}`);
 				if (positionInput) {
+					const oldValue = positionInput.value;
 					positionInput.value = tileData.position;
-					console.log(`📍 Position gesetzt: ${tileId} = ${tileData.position}`);
+					console.log(
+						`📍 Position gesetzt: ${tileId} = ${oldValue} → ${tileData.position}`
+					);
+					successfullyApplied++;
+				} else {
+					console.warn(
+						`❌ Position Input nicht gefunden: hangar-position-${tileId} oder position-${tileId}`
+					);
+					failedToApply++;
 				}
 			}
 
@@ -753,13 +795,33 @@ class ServerSync {
 			if (tileData.towStatus) {
 				const towStatusSelect = document.getElementById(`tow-status-${tileId}`);
 				if (towStatusSelect) {
+					const oldValue = towStatusSelect.value;
 					towStatusSelect.value = tileData.towStatus;
 					console.log(
-						`🚚 Tow Status gesetzt: ${tileId} = ${tileData.towStatus}`
+						`🚚 Tow Status gesetzt: ${tileId} = ${oldValue} → ${tileData.towStatus}`
 					);
+					successfullyApplied++;
+				} else {
+					console.warn(
+						`❌ Tow Status Select nicht gefunden: tow-status-${tileId}`
+					);
+					failedToApply++;
 				}
 			}
 		});
+
+		// NEUE ZUSAMMENFASSUNG
+		console.log(`📊 Kachel-Daten Anwendung Ergebnis:`, {
+			type: isSecondary ? "sekundär" : "primär",
+			totalTiles: tiles.length,
+			successfullyApplied,
+			failedToApply,
+			successRate: `${Math.round(
+				(successfullyApplied / (successfullyApplied + failedToApply)) * 100
+			)}%`,
+		});
+
+		return successfullyApplied > 0;
 	}
 
 	/**
@@ -1199,6 +1261,38 @@ window.testReadMode = function () {
 				console.log("✅ Server-Daten-Anwendung Ergebnis:", applied);
 			} else {
 				console.log("❌ Keine Server-Daten verfügbar für Test");
+			}
+
+			// NEUE DOM-MANIPULATION TESTS
+			console.log("🧪 TESTE DIREKTE DOM-MANIPULATION:");
+			const testData = {
+				aircraftId: "TEST-123",
+				position: "A1-TEST",
+				notes: "Test-Notiz vom Debug",
+			};
+
+			// Teste direkte DOM-Manipulation auf Kachel 1
+			const aircraft1 = document.getElementById("aircraft-1");
+			const position1 = document.getElementById("hangar-position-1");
+			const notes1 = document.getElementById("notes-1");
+
+			console.log("DOM-Elemente gefunden:", {
+				aircraft1: !!aircraft1,
+				position1: !!position1,
+				notes1: !!notes1,
+			});
+
+			if (aircraft1) {
+				aircraft1.value = testData.aircraftId;
+				console.log("✅ Aircraft ID direkt gesetzt:", testData.aircraftId);
+			}
+			if (position1) {
+				position1.value = testData.position;
+				console.log("✅ Position direkt gesetzt:", testData.position);
+			}
+			if (notes1) {
+				notes1.value = testData.notes;
+				console.log("✅ Notizen direkt gesetzt:", testData.notes);
 			}
 		}, 5000);
 	}, 2000);

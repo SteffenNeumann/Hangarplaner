@@ -50,6 +50,12 @@ applyTo: '**'
 -  **Implement CI/CD pipelines**  
 -  **Follow version control workflows**  
   - Adhere to branching/merging strategies [^3]
-
+### 7 Main RULE 
+- Read all relevant data and get an overview.
+- Conduct a detailed error analysis.
+- Create a work structure step by step.
+- Work through it then step by step.
+- Check your actions after each step and look for possible errors.
+- Do not create any new files.
 ---
 

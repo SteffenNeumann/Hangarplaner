@@ -206,25 +206,88 @@ class ServerSync {
 		// Stoppe normale Sync falls aktiv
 		this.stopPeriodicSync();
 
-		// Starte Slave-Polling (nur Laden bei Änderungen)
+		// ERWEITERT: Cleanup bestehende Slave-Intervalle
+		if (this.slaveCheckInterval) {
+			clearInterval(this.slaveCheckInterval);
+			this.slaveCheckInterval = null;
+			console.log("🧹 Bestehende Slave-Intervalle bereinigt");
+		}
+
+		// ERWEITERT: Robustere Slave-Polling-Implementierung
+		console.log("🔄 Initialisiere Slave-Polling...");
+
+		// Starte Slave-Polling mit expliziter Fehlerbehandlung
 		this.slaveCheckInterval = setInterval(async () => {
-			await this.slaveCheckForUpdates();
-		}, 30000); // 30 Sekunden Polling-Intervall
+			try {
+				await this.slaveCheckForUpdates();
+			} catch (error) {
+				console.error("❌ Slave-Polling Fehler:", error);
+				// Bei wiederholten Fehlern Intervall nicht stoppen
+			}
+		}, 15000); // 15 Sekunden Polling-Intervall für bessere Responsivität
 
-		console.log("👤 Slave-Modus gestartet - Polling für Updates aktiv");
+		console.log(
+			"👤 Slave-Modus gestartet - Kontinuierliches Polling alle 15 Sekunden aktiv (ID:",
+			this.slaveCheckInterval,
+			")"
+		);
 
-		// Initialer Load der Server-Daten
-		setTimeout(() => this.slaveCheckForUpdates(), 1000);
+		// ERWEITERT: Initialer Load mit Retry-Logik
+		this.performInitialSlaveLoad();
 	}
 
 	/**
-	 * NEUE METHODE: Slave prüft auf Server-Updates
+	 * NEUE METHODE: Führt initialen Slave-Load durch mit Retry
+	 */
+	async performInitialSlaveLoad() {
+		console.log("📥 Starte initialen Slave-Load...");
+
+		let retryCount = 0;
+		const maxRetries = 3;
+
+		const attemptLoad = async () => {
+			try {
+				await this.slaveCheckForUpdates();
+				console.log("✅ Initialer Slave-Load erfolgreich");
+			} catch (error) {
+				retryCount++;
+				console.warn(
+					`⚠️ Initialer Slave-Load Fehler (Versuch ${retryCount}/${maxRetries}):`,
+					error
+				);
+
+				if (retryCount < maxRetries) {
+					setTimeout(attemptLoad, 2000 * retryCount); // Exponential backoff
+				} else {
+					console.error(
+						"❌ Initialer Slave-Load nach",
+						maxRetries,
+						"Versuchen fehlgeschlagen"
+					);
+				}
+			}
+		};
+
+		// Starte ersten Versuch nach kurzer Verzögerung
+		setTimeout(attemptLoad, 1000);
+	}
+
+	/**
+	 * ERWEITERTE METHODE: Slave prüft auf Server-Updates
 	 */
 	async slaveCheckForUpdates() {
-		if (!this.isSlaveActive) return;
+		if (!this.isSlaveActive) {
+			console.log("⏸️ Slave-Check übersprungen - Slave-Modus nicht aktiv");
+			return;
+		}
 
 		try {
+			console.log("🔍 Slave: Prüfe auf Server-Updates...");
+
 			const currentServerTimestamp = await this.getServerTimestamp();
+			console.log(
+				`📊 Server-Timestamp: ${currentServerTimestamp}, Letzter: ${this.lastServerTimestamp}`
+			);
 
 			if (currentServerTimestamp > this.lastServerTimestamp) {
 				console.log("🔄 Slave: Neue Daten auf Server erkannt, lade Updates...");
@@ -233,13 +296,27 @@ class ServerSync {
 				if (serverData && !serverData.error) {
 					await this.applyServerData(serverData);
 					this.lastServerTimestamp = currentServerTimestamp;
-					console.log("✅ Slave: Server-Daten erfolgreich geladen");
+					console.log(
+						"✅ Slave: Server-Daten erfolgreich geladen und angewendet"
+					);
+
+					// Benachrichtigung für erfolgreiche Updates
+					if (window.showNotification) {
+						window.showNotification("Server-Updates empfangen", "info");
+					}
+				} else {
+					console.warn("⚠️ Slave: Server-Daten konnten nicht geladen werden");
 				}
 			} else {
-				// console.log("⏸️ Slave: Keine Änderungen auf Server");
+				console.log("⏸️ Slave: Keine neuen Änderungen auf Server");
 			}
 		} catch (error) {
 			console.error("❌ Slave: Fehler beim Prüfen auf Updates:", error);
+
+			// Bei Netzwerkfehlern nicht den Slave-Modus beenden
+			if (error.name === "NetworkError" || error.name === "TypeError") {
+				console.log("🔄 Slave: Netzwerkfehler, versuche weiter...");
+			}
 		}
 	}
 
@@ -853,11 +930,34 @@ class ServerSync {
 		console.log("Periodische Sync aktiv:", !!this.serverSyncInterval);
 		console.log("Master-Modus:", this.isMaster);
 		console.log("Slave-Modus:", this.isSlaveActive);
+		console.log("Slave-Check-Intervall ID:", this.slaveCheckInterval);
+		console.log("Letzter Server-Timestamp:", this.lastServerTimestamp);
 		console.log(
 			"Master-Slave Sync aktiv:",
 			window.sharingManager?.isLiveSyncEnabled || false
 		);
 		console.log("=== END SYNC STATUS ===");
+	}
+
+	/**
+	 * NEUE METHODE: Bereinigt alle Intervalle und Ressourcen
+	 */
+	destroy() {
+		this.stopPeriodicSync();
+
+		if (this.slaveCheckInterval) {
+			clearInterval(this.slaveCheckInterval);
+			this.slaveCheckInterval = null;
+			console.log("🧹 Slave-Check-Intervall bereinigt");
+		}
+
+		this.serverSyncUrl = null;
+		this.lastDataChecksum = null;
+		this.lastServerTimestamp = 0;
+		this.isMaster = false;
+		this.isSlaveActive = false;
+
+		console.log("🧹 ServerSync vollständig bereinigt");
 	}
 }
 
@@ -998,7 +1098,7 @@ setTimeout(async () => {
 }, 5000); // Erhöht auf 5 Sekunden für bessere Performance
 
 console.log(
-	"📦 Server-Sync-Modul geladen (Performance-optimiert: 120s Intervall, Change-Detection, Debouncing)"
+	"📦 Server-Sync-Modul geladen (Performance-optimiert: Master 120s, Slave 15s Intervalle, Change-Detection, Debouncing)"
 );
 
 // Globale Debug-Funktion für Synchronisations-Probleme
@@ -1010,6 +1110,32 @@ window.debugSync = function () {
 	}
 };
 
+// NEUER DEBUG-BEFEHL: Testet explizit Read-Modus
+window.testReadMode = function () {
+	console.log("🧪 TESTE READ-MODUS FUNKTIONALITÄT");
+
+	if (!window.serverSync) {
+		console.log("❌ ServerSync nicht verfügbar");
+		return;
+	}
+
+	console.log("1. Aktueller Status:");
+	window.serverSync.debugSyncStatus();
+
+	console.log("2. Aktiviere Read-Modus manuell:");
+	window.serverSync.isMaster = false;
+	window.serverSync.isSlaveActive = true;
+	window.serverSync.startSlaveMode();
+
+	console.log("3. Status nach Read-Modus-Aktivierung:");
+	setTimeout(() => {
+		window.serverSync.debugSyncStatus();
+
+		console.log("4. Führe manuellen Slave-Check durch:");
+		window.serverSync.slaveCheckForUpdates();
+	}, 2000);
+};
+
 // Hilfe-Funktion
 window.syncHelp = function () {
 	console.log(`
@@ -1017,6 +1143,7 @@ window.syncHelp = function () {
 
 Verfügbare Befehle:
 - window.debugSync()                    → Zeigt aktuellen Sync-Status
+- window.testReadMode()                 → Testet Read-Modus explizit
 - window.serverSync.manualSync()       → Startet manuellen Server-Sync
 - window.displayOptions.load()         → Lädt Display Options vom Server
 - window.displayOptions.saveToServer() → Speichert Display Options
@@ -1028,7 +1155,8 @@ Performance-Flags:
 - window.isSavingToServer               → Daten werden gerade gespeichert
 
 Performance-Optimierungen:
-✅ Periodische Sync: 120s Intervall (statt 60s)
+✅ Slave-Polling: 15s Intervall (hochfrequent für Read-Modus)
+✅ Master-Sync: 120s Intervall (nur bei Änderungen)
 ✅ Change-Detection: Nur bei Änderungen synchronisieren
 ✅ Debounced Saves: Sammelt mehrere Änderungen (1s Verzögerung)
 ✅ Request Timeouts: 8-10s Timeouts für Server-Anfragen

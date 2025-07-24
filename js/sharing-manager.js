@@ -187,8 +187,21 @@ class SharingManager {
 				window.serverSync.isMaster = false;
 				window.serverSync.isSlaveActive = true;
 
-				// Starte Slave-Polling
+				// ERWEITERT: Explicit Slave-Modus starten mit Error-Handling
+				console.log("🔄 Starte Slave-Polling für Read-Modus...");
 				await window.serverSync.startSlaveMode();
+
+				// ZUSÄTZLICH: Verify dass Polling läuft
+				if (window.serverSync.slaveCheckInterval) {
+					console.log("✅ Slave-Polling-Intervall erfolgreich gestartet");
+				} else {
+					console.warn("⚠️ Slave-Polling-Intervall nicht gestartet - Retry...");
+					// Retry nach kurzer Verzögerung
+					setTimeout(async () => {
+						await window.serverSync.startSlaveMode();
+						console.log("🔄 Slave-Polling Retry ausgeführt");
+					}, 2000);
+				}
 
 				// Lokale Flags setzen
 				this.syncMode = "sync";

@@ -26,26 +26,20 @@ class ServerSync {
 	}
 
 	/**
-	 * Initialisiert die Server-Synchronisation mit Master-Slave Erkennung
+	 * AKTUALISIERT: Initialisiert Server-Synchronisation OHNE automatische Rollenerkennung
 	 */
 	async initSync(serverUrl) {
 		this.serverSyncUrl = serverUrl;
 		console.log("🔄 Server-Sync initialisiert:", serverUrl);
 
-		// Automatische Master-Slave Erkennung
-		await this.determineMasterSlaveRole();
-
-		// WICHTIG: Erststart-Load für BEIDE Modi
+		// ENTFERNT: Automatische Master-Slave-Erkennung (wird jetzt über Toggles gesteuert)
+		// WICHTIG: Erststart-Load für alle Modi
 		console.log("📥 Lade Server-Daten beim Erststart...");
 		await this.loadInitialServerData();
 
-		if (this.isMaster) {
-			console.log("👑 Master-Modus aktiviert");
-			this.startMasterMode();
-		} else {
-			console.log("👤 Slave-Modus aktiviert");
-			this.startSlaveMode();
-		}
+		// ENTFERNT: Automatische Modi-Aktivierung
+		// Modi werden jetzt ausschließlich über SharingManager-Toggles gesteuert
+		console.log("✅ Server-Sync bereit - warte auf Toggle-basierte Modus-Aktivierung");
 	}
 
 	/**
@@ -183,21 +177,28 @@ class ServerSync {
 	}
 
 	/**
-	 * NEUE METHODE: Startet Master-Modus
+	 * AKTUALISIERT: Startet Master-Modus mit bidirektionaler Synchronisation
 	 */
 	startMasterMode() {
 		this.isMaster = true;
-		this.isSlaveActive = false;
+		this.isSlaveActive = true; // GEÄNDERT: Master empfängt auch Updates
 
-		// Stoppe Slave-Intervall falls aktiv
+		// Stoppe bestehende Intervalle
 		if (this.slaveCheckInterval) {
 			clearInterval(this.slaveCheckInterval);
 			this.slaveCheckInterval = null;
 		}
+		this.stopPeriodicSync();
 
-		// Starte normale periodische Synchronisation (Speichern)
-		this.startPeriodicSync();
-		console.log("👑 Master-Modus gestartet - periodisches Speichern aktiv");
+		// Starte bidirektionale Master-Synchronisation
+		this.startPeriodicSync(); // Für das Senden von Daten
+
+		// HINZUGEFÜGT: Auch Updates empfangen (längeres Intervall für Master)
+		this.slaveCheckInterval = setInterval(async () => {
+			await this.slaveCheckForUpdates();
+		}, 30000); // 30 Sekunden für Master-Update-Check
+
+		console.log("👑 Master-Modus gestartet - bidirektionale Synchronisation aktiv (Senden + Empfangen)");
 	}
 
 	/**

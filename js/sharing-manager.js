@@ -108,11 +108,13 @@ class SharingManager {
 	}
 
 	/**
-	 * NEUE Zentrale Sync-Modus-Koordination basierend auf beiden Toggles
+	 * AKTUALISIERT: Zentrale Sync-Modus-Koordination mit sofortigem Server-Load
 	 * @param {boolean} readEnabled - Lesen von Server aktiviert
 	 * @param {boolean} writeEnabled - Schreiben zum Server aktiviert
 	 */
 	async updateSyncMode(readEnabled, writeEnabled) {
+		console.log(`🔄 Sync-Modus wird geändert: Read=${readEnabled}, Write=${writeEnabled}`);
+
 		// 4 mögliche Kombinationen:
 		if (!readEnabled && !writeEnabled) {
 			// Beide AUS -> Standalone Mode
@@ -120,19 +122,25 @@ class SharingManager {
 		} else if (readEnabled && !writeEnabled) {
 			// Nur Read -> Sync Mode (Read-Only)
 			await this.enableSyncMode();
+			
+			// HINZUGEFÜGT: Sofortige Server-Datenladung wenn Read aktiviert wird
+			await this.loadServerDataImmediately();
 		} else if (!readEnabled && writeEnabled) {
 			// Nur Write -> Master Mode (Write-Only) - ungewöhnlich, aber möglich
 			await this.enableMasterMode();
 		} else {
 			// Beide AN -> Master Mode mit Read-Write
 			await this.enableMasterMode();
+			
+			// HINZUGEFÜGT: Sofortige Server-Datenladung wenn Read+Write aktiviert wird
+			await this.loadServerDataImmediately();
 		}
 
 		// Einstellungen speichern
 		this.saveSharingSettings();
 
 		console.log(
-			`🔄 Sync-Modus aktualisiert: Read=${readEnabled}, Write=${writeEnabled}, Mode=${this.currentSyncMode}`
+			`✅ Sync-Modus aktualisiert: Read=${readEnabled}, Write=${writeEnabled}, Mode=${this.syncMode}`
 		);
 	}
 
@@ -343,11 +351,19 @@ class SharingManager {
 	}
 
 	/**
-	 * ÜBERARBEITET: Aktualisiert alle Sync-Status-Anzeigen für Dual-Toggle-UI
+	 * AKTUALISIERT: Aktualisiert alle Sync-Status-Anzeigen (Backward-kompatibel)
 	 */
-	updateAllSyncDisplays() {
-		this.updateSyncStatusDisplayNew(); // Neue Dual-Toggle-Version
-		console.log(`🔄 Alle Sync-Anzeigen für Dual-Toggle aktualisiert`);
+	updateAllSyncDisplays(status = null, isActive = null) {
+		// Wenn Parameter übergeben werden, aktualisiere auch die traditionellen Displays
+		if (status !== null && isActive !== null) {
+			this.updateSyncStatusDisplay(status, isActive);
+			this.updateWidgetSyncDisplay(status, isActive);
+		}
+		
+		// Aktualisiere immer die neue Dual-Toggle-UI
+		this.updateSyncStatusDisplayNew();
+		
+		console.log(`🔄 Alle Sync-Anzeigen aktualisiert${status ? ` (${status}, ${isActive})` : ''}`);
 	}
 
 	/**
@@ -396,7 +412,7 @@ class SharingManager {
 				"status-error"
 			);
 
-			if (this.currentSyncMode !== "standalone") {
+			if (this.syncMode !== "standalone") {
 				syncStatusBtn.textContent = `${modeEmoji} ${modeText}`;
 				syncStatusBtn.classList.add("status-success");
 				syncStatusBtn.title = `${modeText}-Modus aktiv - Klick für Details`;
@@ -409,11 +425,11 @@ class SharingManager {
 		// Widget-Display auch aktualisieren
 		this.updateWidgetSyncDisplay(
 			modeText,
-			this.currentSyncMode !== "standalone"
+			this.syncMode !== "standalone"
 		);
 
 		console.log(
-			`🎯 UI aktualisiert: Read=${readEnabled}, Write=${writeEnabled}, Mode=${this.currentSyncMode}`
+			`🎯 UI aktualisiert: Read=${readEnabled}, Write=${writeEnabled}, Mode=${this.syncMode}`
 		);
 	}
 

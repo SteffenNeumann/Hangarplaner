@@ -698,13 +698,32 @@ const AeroDataBoxAPI = (() => {
 				}
 			});
 
-			// Debug-Info über gefundene Flüge
+			// Debug-Info über gefundene Flüge mit Details
 			console.log(
 				`Gefilterte Ankünfte am ${selectedAirport} (${currentDate}): ${arrivalFlights.length}`
 			);
+			if (config.debugMode && arrivalFlights.length > 0) {
+				console.log(`📥 === ANKUNFTSFLÜGE AM ${currentDate} ===`);
+				arrivalFlights.forEach((flight, index) => {
+					const arrivalPoint = flight.flightPoints.find((p) => p.arrivalPoint);
+					const departurePoint = flight.flightPoints.find((p) => p.departurePoint);
+					const arrTime = getTimeStringFromFlightPoint(arrivalPoint);
+					console.log(`${index + 1}. ${departurePoint?.iataCode || "???"} → ${arrivalPoint?.iataCode || "???"} um ${arrTime}`);
+				});
+			}
+			
 			console.log(
 				`Gefilterte Abflüge von ${selectedAirport} (${nextDate}): ${departureFlights.length}`
 			);
+			if (config.debugMode && departureFlights.length > 0) {
+				console.log(`📤 === ABFLUGFLÜGE AM ${nextDate} ===`);
+				departureFlights.forEach((flight, index) => {
+					const arrivalPoint = flight.flightPoints.find((p) => p.arrivalPoint);
+					const departurePoint = flight.flightPoints.find((p) => p.departurePoint);
+					const depTime = getTimeStringFromFlightPoint(departurePoint);
+					console.log(`${index + 1}. ${departurePoint?.iataCode || "???"} → ${arrivalPoint?.iataCode || "???"} um ${depTime}`);
+				});
+			}
 
 			// Sortieren der Ankunftsflüge nach Zeit (späteste zuerst)
 			arrivalFlights.sort((a, b) => {
@@ -736,36 +755,46 @@ const AeroDataBoxAPI = (() => {
 				departureFlights.length > 0 ? departureFlights[0] : null;
 
 			// Debug-Information zu den ausgewählten Flügen
+			if (config.debugMode) {
+				console.log(`🎯 === FINALE AUSWAHL FÜR ${aircraftId} ===`);
+			}
+			
 			if (lastArrival) {
 				const arrivalPoint = lastArrival.flightPoints.find(
 					(p) => p.arrivalPoint
 				);
+				const departurePoint = lastArrival.flightPoints.find((p) => p.departurePoint);
+				const arrTimeStr = getTimeStringFromFlightPoint(arrivalPoint);
 				console.log(
-					`Letzter Ankunftsflug am ${currentDate}: Von ${
-						lastArrival.flightPoints.find((p) => p.departurePoint)?.iataCode ||
-						"---"
+					`🛬 LETZTER Ankunftsflug am ${currentDate}: Von ${
+						departurePoint?.iataCode || "---"
 					} nach ${
 						arrivalPoint?.iataCode || "---"
-					} um ${getTimeStringFromFlightPoint(arrivalPoint)} UTC` // UTC-Kennzeichnung hinzugefügt
+					} um ${arrTimeStr}` // UTC-Kennzeichnung bereits in getTimeStringFromFlightPoint
 				);
 			} else {
-				console.log(`Kein passender Ankunftsflug am ${currentDate} gefunden`);
+				console.log(`🛬 Kein passender Ankunftsflug am ${currentDate} gefunden`);
 			}
 
 			if (firstDeparture) {
 				const departurePoint = firstDeparture.flightPoints.find(
 					(p) => p.departurePoint
 				);
+				const arrivalPoint = firstDeparture.flightPoints.find((p) => p.arrivalPoint);
+				const depTimeStr = getTimeStringFromFlightPoint(departurePoint);
 				console.log(
-					`Erster Abflugsflug am ${nextDate}: Von ${
+					`🛫 ERSTER Abflugsflug am ${nextDate}: Von ${
 						departurePoint?.iataCode || "---"
 					} nach ${
-						firstDeparture.flightPoints.find((p) => p.arrivalPoint)?.iataCode ||
-						"---"
-					} um ${getTimeStringFromFlightPoint(departurePoint)} UTC` // UTC-Kennzeichnung hinzugefügt
+						arrivalPoint?.iataCode || "---"
+					} um ${depTimeStr}` // UTC-Kennzeichnung bereits in getTimeStringFromFlightPoint
 				);
 			} else {
-				console.log(`Kein passender Abflugsflug am ${nextDate} gefunden`);
+				console.log(`🛫 Kein passender Abflugsflug am ${nextDate} gefunden`);
+			}
+			
+			if (config.debugMode) {
+				console.log(`🎯 === ENDE FINALE AUSWAHL ===`);
 			}
 
 			// Wenn keine passenden Flüge gefunden wurden
@@ -1351,6 +1380,20 @@ const AeroDataBoxAPI = (() => {
 				console.log(
 					`🕒 ${relevantFlights.length} Flüge von Aircraft ${aircraft.id} liegen im Zeitfenster ${startDateTime} bis ${endDateTime}`
 				);
+				
+				// DEBUG: Alle gefundenen Flüge mit Zeiten anzeigen
+				console.log(`📋 === ALLE FLÜGE FÜR ${aircraft.id} ===`);
+				relevantFlights.forEach((flight, index) => {
+					const depTime = flight.departure?.scheduledTime?.utc;
+					const arrTime = flight.arrival?.scheduledTime?.utc;
+					const depAirport = flight.departure?.airport?.iata || "???";
+					const arrAirport = flight.arrival?.airport?.iata || "???";
+					
+					console.log(`${index + 1}. ${depAirport} → ${arrAirport}`);
+					if (depTime) console.log(`   📤 Abflug: ${depTime.substring(11, 16)} UTC am ${depTime.substring(0, 10)}`);
+					if (arrTime) console.log(`   📥 Ankunft: ${arrTime.substring(11, 16)} UTC am ${arrTime.substring(0, 10)}`);
+				});
+				console.log(`📋 === ENDE FLUGLISTE ===`);
 			}
 
 			if (relevantFlights.length === 0) {
@@ -1366,6 +1409,10 @@ const AeroDataBoxAPI = (() => {
 			let lastArrival = null;
 			let firstDeparture = null;
 
+			// KORRIGIERTE LOGIK: Separate Sammlungen für Ankünfte und Abflüge
+			const arrivalFlightsInWindow = [];
+			const departureFlightsInWindow = [];
+
 			for (const flight of relevantFlights) {
 				const depTime = flight.departure?.scheduledTime?.utc
 					? new Date(flight.departure.scheduledTime.utc)
@@ -1374,41 +1421,65 @@ const AeroDataBoxAPI = (() => {
 					? new Date(flight.arrival.scheduledTime.utc)
 					: null;
 
-				// Ankunftsflüge (im Zeitfenster) - letzter ist der späteste
+				// Sammle Ankunftsflüge (im Zeitfenster)
 				if (arrTime && arrTime >= startTime && arrTime <= endTime) {
-					lastArrival = flight;
+					arrivalFlightsInWindow.push({ flight, arrTime });
 				}
 
-				// Abflugflüge (im Zeitfenster) - erster ist der früheste
+				// Sammle Abflugflüge (im Zeitfenster)
 				if (depTime && depTime >= startTime && depTime <= endTime) {
-					if (!firstDeparture) {
-						firstDeparture = flight;
-					}
+					departureFlightsInWindow.push({ flight, depTime });
 				}
+			}
+
+			// LETZTER Ankunftsflug = der mit der spätesten Ankunftszeit
+			if (arrivalFlightsInWindow.length > 0) {
+				arrivalFlightsInWindow.sort((a, b) => b.arrTime - a.arrTime); // Absteigende Sortierung
+				lastArrival = arrivalFlightsInWindow[0].flight;
+			}
+
+			// ERSTER Abflugflug = der mit der frühesten Abflugzeit
+			if (departureFlightsInWindow.length > 0) {
+				departureFlightsInWindow.sort((a, b) => a.depTime - b.depTime); // Aufsteigende Sortierung
+				firstDeparture = departureFlightsInWindow[0].flight;
 			}
 
 			// Debug-Information zu den ausgewählten Flügen
 			if (config.debugMode) {
+				console.log(`🎯 === AUSGEWÄHLTE FLÜGE FÜR ${aircraft.id} ===`);
+				console.log(`📥 Ankunftsflüge im Zeitfenster: ${arrivalFlightsInWindow.length}`);
+				console.log(`📤 Abflugflüge im Zeitfenster: ${departureFlightsInWindow.length}`);
+				
 				if (lastArrival) {
 					const arrTime = new Date(lastArrival.arrival.scheduledTime.utc);
 					console.log(
-						`🛬 Letzter Ankunftsflug: ${arrTime
+						`🛬 LETZTER Ankunftsflug: ${arrTime
 							.toISOString()
-							.substring(11, 16)} UTC (${
+							.substring(11, 16)} UTC am ${arrTime
+							.toISOString()
+							.substring(0, 10)} (${
 							lastArrival.departure?.airport?.iata || "???"
 						} → ${lastArrival.arrival?.airport?.iata || "???"})`
 					);
+				} else {
+					console.log(`🛬 KEIN Ankunftsflug im Zeitfenster gefunden`);
 				}
+				
 				if (firstDeparture) {
 					const depTime = new Date(firstDeparture.departure.scheduledTime.utc);
 					console.log(
-						`🛫 Erster Abflugflug: ${depTime
+						`🛫 ERSTER Abflugflug: ${depTime
 							.toISOString()
-							.substring(11, 16)} UTC (${
+							.substring(11, 16)} UTC am ${depTime
+							.toISOString()
+							.substring(0, 10)} (${
 							firstDeparture.departure?.airport?.iata || "???"
 						} → ${firstDeparture.arrival?.airport?.iata || "???"})`
 					);
+				} else {
+					console.log(`🛫 KEIN Abflugflug im Zeitfenster gefunden`);
 				}
+				console.log(`🎯 === ENDE AUSWAHL ===`);
 			}
 
 			// DATEN IN KACHEL EINTRAGEN
@@ -1707,6 +1778,71 @@ const AeroDataBoxAPI = (() => {
 					true
 				);
 				throw error;
+			}
+		},
+
+		/**
+		 * TEST-FUNKTION: Debugge eine spezifische Aircraft ID
+		 * @param {string} aircraftId - Aircraft ID zum Testen
+		 * @param {string} startDateTime - Startzeit (optional)
+		 * @param {string} endDateTime - Endzeit (optional)
+		 * @returns {Promise<Object>} Debug-Ergebnisse
+		 */
+		debugAircraftFlights: async (aircraftId, startDateTime, endDateTime) => {
+			try {
+				console.log(`🧪 === DEBUG-TEST FÜR ${aircraftId} ===`);
+				
+				// Standardzeitfenster wenn nicht angegeben
+				if (!startDateTime || !endDateTime) {
+					const today = formatDate(new Date());
+					const tomorrow = formatDate(new Date(new Date().setDate(new Date().getDate() + 1)));
+					startDateTime = startDateTime || `${today}T20:00`;
+					endDateTime = endDateTime || `${tomorrow}T08:00`;
+				}
+				
+				console.log(`🕒 Zeitfenster: ${startDateTime} bis ${endDateTime}`);
+				
+				// Hole Flughafen-Code
+				const airportCode = document.getElementById("airportCodeInput")?.value?.trim().toUpperCase() || "MUC";
+				console.log(`🏢 Flughafen: ${airportCode}`);
+				
+				// Führe Flughafen-Abfrage durch
+				const flightData = await getAirportFlights(airportCode, startDateTime, endDateTime);
+				
+				if (!flightData) {
+					console.error("❌ Keine Flugdaten vom Flughafen erhalten");
+					return { success: false, message: "Keine Flugdaten" };
+				}
+				
+				// Alle Flüge sammeln
+				let allFlights = [];
+				if (Array.isArray(flightData)) {
+					allFlights = flightData;
+				} else {
+					if (flightData.departures) allFlights = allFlights.concat(flightData.departures);
+					if (flightData.arrivals) allFlights = allFlights.concat(flightData.arrivals);
+				}
+				
+				console.log(`📊 Gesamt ${allFlights.length} Flüge vom Flughafen`);
+				
+				// Simuliere Aircraft-Objekt
+				const aircraft = { id: aircraftId.toUpperCase(), cellNumber: "test" };
+				
+				// Führe die Verarbeitung durch
+				const result = await processAircraftFlights(aircraft, allFlights, startDateTime, endDateTime);
+				
+				console.log(`🧪 === DEBUG-ERGEBNIS: ${result ? "✅ ERFOLGREICH" : "❌ FEHLGESCHLAGEN"} ===`);
+				
+				return { 
+					success: result, 
+					aircraftId, 
+					timeframe: `${startDateTime} bis ${endDateTime}`,
+					totalFlights: allFlights.length
+				};
+				
+			} catch (error) {
+				console.error(`❌ Fehler beim Debug-Test:`, error);
+				return { success: false, error: error.message };
 			}
 		},
 

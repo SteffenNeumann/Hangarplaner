@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test: loadServerDataImmediately Fix</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .warning { background-color: #fff3cd; color: #856404; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button { margin: 5px; padding: 10px 15px; }
+    </style>
+</head>
+<body>
+    <h1>Test: loadServerDataImmediately Fix</h1>
+    <div id="results"></div>
+    
+    <button onclick="testFunction()">🧪 Teste loadServerDataImmediately</button>
+    <button onclick="testReadToggle()">📥 Teste Read Toggle</button>
+    <button onclick="showManagerStatus()">📊 Manager Status</button>
+    
+    <script src="js/storage-browser.js"></script>
+    <script src="js/sharing-manager.js"></script>
+    
+    <script>
+        function addResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+            document.getElementById('results').appendChild(div);
+        }
+
+        function testFunction() {
+            addResult('🔍 Starte loadServerDataImmediately Test...', 'info');
+            
+            // Test 1: Manager verfügbar?
+            if (!window.sharingManager) {
+                addResult('❌ SharingManager nicht verfügbar', 'error');
+                return;
+            }
+            addResult('✅ SharingManager verfügbar', 'success');
+            
+            // Test 2: Methode verfügbar?
+            if (typeof window.sharingManager.loadServerDataImmediately !== 'function') {
+                addResult('❌ loadServerDataImmediately Methode nicht verfügbar', 'error');
+                return;
+            }
+            addResult('✅ loadServerDataImmediately Methode verfügbar', 'success');
+            
+            // Test 3: Methode ausführen
+            window.sharingManager.loadServerDataImmediately()
+                .then(result => {
+                    addResult(`✅ loadServerDataImmediately erfolgreich ausgeführt: ${result}`, 'success');
+                })
+                .catch(error => {
+                    addResult(`⚠️ loadServerDataImmediately Fehler: ${error.message}`, 'warning');
+                });
+        }
+
+        function testReadToggle() {
+            addResult('🔍 Teste Read Toggle Funktionalität...', 'info');
+            
+            if (!window.sharingManager || typeof window.sharingManager.handleReadDataToggle !== 'function') {
+                addResult('❌ handleReadDataToggle nicht verfügbar', 'error');
+                return;
+            }
+            
+            // Simuliere Read Toggle Aktivierung
+            window.sharingManager.handleReadDataToggle(true)
+                .then(() => {
+                    addResult('✅ Read Toggle Test erfolgreich', 'success');
+                })
+                .catch(error => {
+                    addResult(`❌ Read Toggle Fehler: ${error.message}`, 'error');
+                });
+        }
+
+        function showManagerStatus() {
+            if (!window.sharingManager) {
+                addResult('❌ SharingManager nicht verfügbar', 'error');
+                return;
+            }
+            
+            const status = {
+                initialized: window.sharingManager.initialized,
+                syncMode: window.sharingManager.syncMode,
+                isLiveSyncEnabled: window.sharingManager.isLiveSyncEnabled,
+                isMasterMode: window.sharingManager.isMasterMode,
+                hasLoadMethod: typeof window.sharingManager.loadServerDataImmediately === 'function'
+            };
+            
+            addResult(`📊 Manager Status: ${JSON.stringify(status, null, 2)}`, 'info');
+        }
+
+        // Auto-Test beim Laden
+        setTimeout(() => {
+            addResult('🚀 Automatischer Test gestartet...', 'info');
+            testFunction();
+        }, 2000);
+    </script>
+</body>
+</html>

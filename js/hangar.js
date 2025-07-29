@@ -126,29 +126,26 @@ function initializeApiProviderSelector() {
 function initialize() {
 	// console.log("Initialisiere HangarPlanner-Anwendung...");
 
-	// Initialisiere UI
-	if (window.hangarUI) {
-		window.hangarUI.initializeUI();
+	// Initialisiere UI - KORRIGIERT: Verwende hangarEvents.initializeUI
+	if (window.hangarEvents && window.hangarEvents.initializeUI) {
+		window.hangarEvents.initializeUI();
 		// console.log("UI-Modul initialisiert");
 	}
 
-	// Ereignisbehandler einrichten
-	if (window.hangarEvents) {
-		window.hangarEvents.setupEventListeners();
-		// console.log("Event-Listener eingerichtet");
+	// Ereignisbehandler einrichten - ENTFERNT: setupEventListeners existiert nicht mehr
+	// Event-Handler werden jetzt von improved-event-manager.js verwaltet
+	
+	// Lade die UI-Einstellungen - KORRIGIERT: Verwende display-options System
+	if (window.displayOptions) {
+		window.displayOptions.load();
+		// console.log("UI-Einstellungen über Display Options geladen");
+	} else if (window.hangarUI && window.hangarUI.uiSettings && window.hangarUI.uiSettings.load) {
+		window.hangarUI.uiSettings.load();
+		// console.log("UI-Einstellungen über Legacy-System geladen");
 	}
 
-	// Lade die UI-Einstellungen aus dem localStorage
-	if (window.hangarUI) {
-		window.hangarUI.loadUISettings();
-		// console.log("UI-Einstellungen geladen");
-	}
-
-	// Initialisiere Datenmodul
-	if (window.hangarData) {
-		window.hangarData.loadStateFromLocalStorage();
-		// console.log("Daten-Modul initialisiert");
-	}
+	// Initialisiere Datenmodul - ENTFERNT: loadStateFromLocalStorage existiert nicht mehr
+	// Daten werden jetzt über dataCoordinator und server-sync verwaltet
 
 	// Initialisiere API-Fassade - WICHTIG: Nach allen anderen APIs initialisieren
 	console.log("Prüfe FlightDataAPI für Event-Handler-Setup...");

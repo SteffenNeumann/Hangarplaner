@@ -996,6 +996,81 @@ class SharingManager {
 	}
 
 	/**
+	 * NEU: Lädt Server-Daten sofort (für Read-Modus und Master-Modus)
+	 */
+	async loadServerDataImmediately() {
+		console.log("⚡ Lade Server-Daten sofort...");
+
+		// Prüfe ob ServerSync verfügbar ist
+		if (!window.serverSync) {
+			console.warn("⚠️ ServerSync nicht verfügbar - keine Server-Datenladung möglich");
+			return false;
+		}
+
+		// Prüfe ob Server-URL konfiguriert ist
+		if (!window.serverSync.serverSyncUrl) {
+			console.warn("⚠️ Server-URL nicht konfiguriert - keine Server-Datenladung möglich");
+			return false;
+		}
+
+		try {
+			// Verhindere gleichzeitige Server-Operationen
+			if (window.isApplyingServerData || window.isLoadingServerData) {
+				console.log("⏸️ Server-Operation läuft bereits, überspringe sofortige Ladung");
+				return false;
+			}
+
+			window.isLoadingServerData = true;
+
+			// Lade Server-Daten
+			const serverData = await window.serverSync.loadFromServer();
+
+			if (serverData && !serverData.error) {
+				// Prüfe ob gültige Daten vorhanden sind
+				const hasValidData =
+					(serverData.primaryTiles && serverData.primaryTiles.length > 0) ||
+					(serverData.secondaryTiles && serverData.secondaryTiles.length > 0) ||
+					(serverData.settings && Object.keys(serverData.settings).length > 0) ||
+					(serverData.metadata && serverData.metadata.projectName);
+
+				if (hasValidData) {
+					// Wende Server-Daten an
+					const applied = await window.serverSync.applyServerData(serverData);
+					
+					if (applied) {
+						console.log("✅ Server-Daten sofort geladen und angewendet");
+						
+						// Benachrichtigung anzeigen falls verfügbar
+						if (window.showNotification) {
+							window.showNotification(
+								`Server-Daten geladen (${this.syncMode} Modus)`,
+								"success"
+							);
+						}
+						
+						return true;
+					} else {
+						console.warn("⚠️ Server-Daten konnten nicht angewendet werden");
+						return false;
+					}
+				} else {
+					console.log("ℹ️ Keine gültigen Server-Daten gefunden");
+					return false;
+				}
+			} else {
+				console.log("ℹ️ Keine Server-Daten verfügbar für sofortige Ladung");
+				return false;
+			}
+
+		} catch (error) {
+			console.error("❌ Fehler beim sofortigen Laden der Server-Daten:", error);
+			return false;
+		} finally {
+			window.isLoadingServerData = false;
+		}
+	}
+
+	/**
 	 * Cleanup beim Zerstören
 	 */
 	destroy() {

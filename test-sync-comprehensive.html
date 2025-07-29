@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test: Synchronisationspriorität Fix</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+        button { margin: 5px; padding: 10px 15px; }
+    </style>
+</head>
+<body>
+    <h1>Test: Synchronisationspriorität Fix</h1>
+    <p>Dieser Test überprüft die korrekte Implementierung der Synchronisationsprioritäten.</p>
+    
+    <div class="test-section">
+        <h3>Automatische Tests</h3>
+        <div id="auto-tests"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Manuelle Tests</h3>
+        <button onclick="testScenario1()">Szenario 1: Browser 1 Write, Browser 2 Read</button>
+        <button onclick="testScenario2()">Szenario 2: Browser 1 Read, Browser 2 Write</button>
+        <button onclick="testLoadImmediately()">Test: loadServerDataImmediately</button>
+        <button onclick="resetModes()">Reset alle Modi</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test-Output</h3>
+        <div id="output" style="background: #f5f5f5; padding: 10px; height: 300px; overflow-y: auto;"></div>
+    </div>
+    
+    <script>
+        // Global Setup
+        window.isApplyingServerData = false;
+        window.isLoadingServerData = false;
+        window.isSavingToServer = false;
+        
+        window.showNotification = function(message, type) {
+            log(`🔔 Notification (${type}): ${message}`, type);
+        };
+        
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const time = new Date().toLocaleTimeString();
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : type === 'warning' ? 'warning' : '';
+            output.innerHTML += `<div class="${className}">[${time}] ${message}</div>`;
+            output.scrollTop = output.scrollHeight;
+            console.log(message);
+        }
+        
+        // Lade Scripts
+        const scripts = [
+            'js/storage-browser.js',
+            'js/sharing-manager.js'
+        ];
+        
+        let scriptsLoaded = 0;
+        
+        scripts.forEach(script => {
+            const s = document.createElement('script');
+            s.src = script;
+            s.onload = function() {
+                scriptsLoaded++;
+                log(`✅ ${script} geladen (${scriptsLoaded}/${scripts.length})`, 'success');
+                
+                if (scriptsLoaded === scripts.length) {
+                    setTimeout(runAutoTests, 1000);
+                }
+            };
+            s.onerror = function() {
+                log(`❌ Fehler beim Laden von ${script}`, 'error');
+            };
+            document.head.appendChild(s);
+        });
+        
+        async function runAutoTests() {
+            log('🧪 === AUTOMATISCHE TESTS STARTEN ===');
+            
+            // Test 1: Module verfügbar
+            log('Test 1: Module-Verfügbarkeit');
+            if (window.sharingManager) {
+                log('✅ SharingManager verfügbar', 'success');
+            } else {
+                log('❌ SharingManager nicht verfügbar', 'error');
+                return;
+            }
+            
+            if (window.serverSync) {
+                log('✅ ServerSync verfügbar', 'success');
+            } else {
+                log('❌ ServerSync nicht verfügbar', 'error');
+            }
+            
+            // Test 2: loadServerDataImmediately Methode
+            log('Test 2: loadServerDataImmediately Methode');
+            if (typeof window.sharingManager.loadServerDataImmediately === 'function') {
+                log('✅ loadServerDataImmediately Methode verfügbar', 'success');
+            } else {
+                log('❌ loadServerDataImmediately Methode NICHT verfügbar', 'error');
+                return;
+            }
+            
+            // Test 3: Sync-Modi testen
+            log('Test 3: Sync-Modi Funktionalität');
+            try {
+                // Initialisiere SharingManager
+                if (!window.sharingManager.initialized) {
+                    window.sharingManager.init();
+                    log('✅ SharingManager initialisiert', 'success');
+                }
+                
+                // Teste verschiedene Modi
+                await testSyncModeUpdate(false, false); // Standalone
+                await testSyncModeUpdate(true, false);  // Read-Only
+                await testSyncModeUpdate(false, true);  // Write-Only
+                await testSyncModeUpdate(true, true);   // Read-Write
+                
+                log('✅ Alle Sync-Modi erfolgreich getestet', 'success');
+                
+            } catch (error) {
+                log(`❌ Fehler beim Testen der Sync-Modi: ${error.message}`, 'error');
+            }
+            
+            log('🧪 === AUTOMATISCHE TESTS ABGESCHLOSSEN ===');
+        }
+        
+        async function testSyncModeUpdate(read, write) {
+            const modeName = getModeName(read, write);
+            log(`🔄 Teste Modus: ${modeName} (Read=${read}, Write=${write})`);
+            
+            try {
+                await window.sharingManager.updateSyncMode(read, write);
+                log(`✅ Modus ${modeName} erfolgreich aktiviert`, 'success');
+                log(`   Aktueller Modus: ${window.sharingManager.syncMode}`);
+                
+                // Kleine Pause zwischen Modi-Wechseln
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+            } catch (error) {
+                log(`❌ Fehler beim Aktivieren von ${modeName}: ${error.message}`, 'error');
+            }
+        }
+        
+        function getModeName(read, write) {
+            if (!read && !write) return 'Standalone';
+            if (read && !write) return 'Read-Only';
+            if (!read && write) return 'Write-Only';
+            if (read && write) return 'Read-Write (Master)';
+        }
+        
+        // Manuelle Test-Funktionen
+        async function testScenario1() {
+            log('🧪 === SZENARIO 1: Browser 1 Write, Browser 2 Read ===');
+            log('Simuliere: Browser 1 aktiviert Write-Modus, dann Browser 2 aktiviert Read-Modus');
+            
+            try {
+                // Browser 1: Write-Modus
+                log('Browser 1: Aktiviere Write-Modus (Master)');
+                await window.sharingManager.updateSyncMode(false, true);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Browser 2: Read-Modus (sollte Server-Daten sofort laden)
+                log('Browser 2: Aktiviere Read-Modus (sollte Server-Daten laden)');
+                await window.sharingManager.updateSyncMode(true, false);
+                
+                log('✅ Szenario 1 erfolgreich getestet', 'success');
+                
+            } catch (error) {
+                log(`❌ Fehler in Szenario 1: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testScenario2() {
+            log('🧪 === SZENARIO 2: Browser 1 Read, Browser 2 Write ===');
+            log('Simuliere: Browser 1 aktiviert Read-Modus, dann Browser 2 aktiviert Write-Modus');
+            
+            try {
+                // Browser 1: Read-Modus
+                log('Browser 1: Aktiviere Read-Modus');
+                await window.sharingManager.updateSyncMode(true, false);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Browser 2: Write-Modus
+                log('Browser 2: Aktiviere Write-Modus (Master)');
+                await window.sharingManager.updateSyncMode(false, true);
+                
+                log('✅ Szenario 2 erfolgreich getestet', 'success');
+                
+            } catch (error) {
+                log(`❌ Fehler in Szenario 2: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testLoadImmediately() {
+            log('🧪 === TEST loadServerDataImmediately ===');
+            
+            try {
+                const result = await window.sharingManager.loadServerDataImmediately();
+                log(`✅ loadServerDataImmediately erfolgreich: ${result}`, 'success');
+                
+            } catch (error) {
+                log(`❌ loadServerDataImmediately Fehler: ${error.message}`, 'error');
+            }
+        }
+        
+        async function resetModes() {
+            log('🔄 Setze alle Modi zurück (Standalone)');
+            try {
+                await window.sharingManager.updateSyncMode(false, false);
+                log('✅ Modi erfolgreich zurückgesetzt', 'success');
+            } catch (error) {
+                log(`❌ Fehler beim Zurücksetzen: ${error.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

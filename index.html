@@ -1277,36 +1277,67 @@
 					<div class="section-container">
 						<div class="timetable-header mb-4">
 							<h2 class="text-2xl font-bold text-white mb-2">
-								<svg class="inline-block w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+								<svg
+									class="inline-block w-6 h-6 mr-2"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
 										d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
 								</svg>
 								Timetable
 							</h2>
-							<p class="text-gray-300 text-sm">Chronologische Übersicht aller Flugzeuge mit Übernachtungen</p>
+							<p class="text-gray-300 text-sm">
+								Chronologische Übersicht aller Flugzeuge mit Übernachtungen
+							</p>
 						</div>
-						
-						<div class="timetable-container bg-white rounded-lg shadow-lg overflow-hidden">
+
+						<div
+							class="timetable-container bg-white rounded-lg shadow-lg overflow-hidden">
 							<!-- Timetable Toolbar -->
-							<div class="timetable-toolbar bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+							<div
+								class="timetable-toolbar bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
 								<div class="flex items-center space-x-4">
 									<div class="flex items-center space-x-2">
-										<svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z"></path>
+										<svg
+											class="w-4 h-4 text-gray-500"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z"></path>
 										</svg>
 										<span class="text-sm text-gray-600">Filter:</span>
-										<select id="timetableFilter" class="text-sm border border-gray-300 rounded px-2 py-1">
+										<select
+											id="timetableFilter"
+											class="text-sm border border-gray-300 rounded px-2 py-1">
 											<option value="all">Alle Flugzeuge</option>
 											<option value="overnight">Nur Übernachtungen</option>
 											<option value="active">Nur aktive</option>
 										</select>
 									</div>
 									<div class="flex items-center space-x-2">
-										<svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+										<svg
+											class="w-4 h-4 text-gray-500"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M4 6h16M4 12h16M4 18h16"></path>
 										</svg>
 										<span class="text-sm text-gray-600">Sortierung:</span>
-										<select id="timetableSort" class="text-sm border border-gray-300 rounded px-2 py-1">
+										<select
+											id="timetableSort"
+											class="text-sm border border-gray-300 rounded px-2 py-1">
 											<option value="arrival">Ankunftszeit</option>
 											<option value="departure">Abflugzeit</option>
 											<option value="aircraft">Aircraft ID</option>
@@ -1315,10 +1346,22 @@
 									</div>
 								</div>
 								<div class="flex items-center space-x-2">
-									<span id="timetableCount" class="text-sm text-gray-600">0 Einträge</span>
-									<button id="refreshTimetable" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm flex items-center">
-										<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+									<span id="timetableCount" class="text-sm text-gray-600"
+										>0 Einträge</span
+									>
+									<button
+										id="refreshTimetable"
+										class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm flex items-center">
+										<svg
+											class="w-4 h-4 mr-1"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
 										</svg>
 										Aktualisieren
 									</button>
@@ -1326,52 +1369,79 @@
 							</div>
 
 							<!-- Timetable Tabelle -->
-							<div class="timetable-scroll-container" style="max-height: 400px; overflow-y: auto;">
+							<div
+								class="timetable-scroll-container"
+								style="max-height: 400px; overflow-y: auto">
 								<table id="timetableTable" class="w-full">
 									<thead class="bg-gray-100 sticky top-0">
 										<tr>
-											<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+											<th
+												class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
 												Position
 											</th>
-											<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+											<th
+												class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
 												Aircraft ID
 											</th>
-											<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+											<th
+												class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
 												Status
 											</th>
-											<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+											<th
+												class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
 												Von
 											</th>
-											<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+											<th
+												class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
 												Nach
 											</th>
-											<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+											<th
+												class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
 												Ankunft
 											</th>
-											<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+											<th
+												class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
 												Abflug
 											</th>
-											<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
+											<th
+												class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
 												Route
 											</th>
-											<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+											<th
+												class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
 												Notizen
 											</th>
 										</tr>
 									</thead>
-									<tbody id="timetableBody" class="bg-white divide-y divide-gray-200">
+									<tbody
+										id="timetableBody"
+										class="bg-white divide-y divide-gray-200">
 										<!-- Timetable Einträge werden hier dynamisch eingefügt -->
 									</tbody>
 								</table>
 							</div>
 
 							<!-- Timetable Leer-Status -->
-							<div id="timetableEmpty" class="hidden p-8 text-center text-gray-500">
-								<svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+							<div
+								id="timetableEmpty"
+								class="hidden p-8 text-center text-gray-500">
+								<svg
+									class="mx-auto h-12 w-12 text-gray-400 mb-4"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
 								</svg>
-								<p class="text-lg font-medium mb-2">Keine Flugdaten verfügbar</p>
-								<p class="text-sm">Laden Sie Flugdaten in die Kacheln, um die Timetable zu füllen</p>
+								<p class="text-lg font-medium mb-2">
+									Keine Flugdaten verfügbar
+								</p>
+								<p class="text-sm">
+									Laden Sie Flugdaten in die Kacheln, um die Timetable zu füllen
+								</p>
 							</div>
 						</div>
 					</div>
@@ -1906,6 +1976,7 @@
 			<script src="js/hangar-ui.js"></script>
 			<script src="js/hangar-data.js"></script>
 			<script src="js/dynamic-api-loader.js"></script>
+			<script src="js/aerodatabox-api.js"></script>
 			<script src="js/airport-flights.js"></script>
 			<script src="js/api-facade.js"></script>
 			<script src="js/hangar-events.js"></script>
@@ -1913,8 +1984,8 @@
 			<script src="js/hangar.js"></script>
 			<script src="js/storage-browser.js"></script>
 			<script src="js/sharing-manager.js"></script>
-			
-			<!-- Timetable API Integration - Direkte Anbindung an AeroDataBox API -->
+
+			<!-- Timetable API Integration - NACH AeroDataBox API laden -->
 			<script src="js/timetable-api-integration.js"></script>
 
 			<!-- Einfache Accordion-Funktion ohne Event-Listener -->

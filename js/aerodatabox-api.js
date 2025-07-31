@@ -2347,137 +2347,218 @@ const AeroDataBoxAPI = (() => {
 		 * @param {string} nextDate - Folgedatum (optional, Standard morgen)
 		 * @returns {Promise<Array>} Array mit übernachtenden Flugzeugen
 		 */
-		generateOvernightTimetable: async (airportCode = null, currentDate = null, nextDate = null) => {
+		generateOvernightTimetable: async (
+			airportCode = null,
+			currentDate = null,
+			nextDate = null
+		) => {
 			try {
-				console.log('🕐 === GENERIERE ÜBERNACHTUNGS-TIMETABLE ===');
-				
+				console.log("🕐 === GENERIERE ÜBERNACHTUNGS-TIMETABLE ===");
+
 				// Parameter aus UI holen falls nicht angegeben
-				const selectedAirport = airportCode || 
-					document.getElementById("airportCodeInput")?.value?.trim()?.toUpperCase() || "MUC";
-				
+				const selectedAirport =
+					airportCode ||
+					document
+						.getElementById("airportCodeInput")
+						?.value?.trim()
+						?.toUpperCase() ||
+					"MUC";
+
 				const today = formatDate(new Date());
-				const tomorrow = formatDate(new Date(new Date().setDate(new Date().getDate() + 1)));
-				
+				const tomorrow = formatDate(
+					new Date(new Date().setDate(new Date().getDate() + 1))
+				);
+
 				const startDate = currentDate || today;
 				const endDate = nextDate || tomorrow;
-				
+
 				console.log(`🏢 Flughafen: ${selectedAirport}`);
 				console.log(`📅 Zeitraum: ${startDate} → ${endDate}`);
-				
-				updateFetchStatus(`🕐 Erstelle Timetable für ${selectedAirport}...`, false);
-				
-				// Zeitfenster für Flughafen-Abfrage erstellen
-				const startDateTime = `${startDate}T00:00`;
-				const endDateTime = `${endDate}T23:59`;
-				
-				// Alle Flüge vom Flughafen für beide Tage abrufen
-				const flightData = await getAirportFlights(selectedAirport, startDateTime, endDateTime);
-				
-				if (!flightData) {
-					console.log('❌ Keine Flugdaten erhalten');
+
+				updateFetchStatus(
+					`🕐 Erstelle Timetable für ${selectedAirport}...`,
+					false
+				);
+
+				// API erlaubt max. 12 Stunden - verwenden optimierte Zeitfenster
+				console.log("📡 Verwende 12h-Zeitfenster für API-Anfragen...");
+
+				// Tag 1: 11:00 bis 23:00 (12 Stunden - relevante Ankunftszeit für Übernachtungen)
+				const day1Start = `${startDate}T11:00`;
+				const day1End = `${startDate}T23:00`;
+
+				// Tag 2: 05:00 bis 17:00 (12 Stunden - relevante Abflugzeit nach Übernachtung)
+				const day2Start = `${endDate}T05:00`;
+				const day2End = `${endDate}T17:00`;
+
+				console.log(`📅 Tag 1 (Ankünfte): ${day1Start} bis ${day1End}`);
+				console.log(`📅 Tag 2 (Abflüge): ${day2Start} bis ${day2End}`);
+
+				// Separate Anfragen für beide Zeitfenster
+				const [day1Data, day2Data] = await Promise.all([
+					getAirportFlights(selectedAirport, day1Start, day1End),
+					getAirportFlights(selectedAirport, day2Start, day2End),
+				]);
+
+				console.log("✅ Beide API-Anfragen abgeschlossen");
+
+				if (!day1Data && !day2Data) {
+					console.log("❌ Keine Flugdaten für beide Tage erhalten");
 					return [];
 				}
-				
-				// Alle Flüge sammeln
-				let allFlights = [];
-				if (Array.isArray(flightData)) {
-					allFlights = flightData;
-				} else {
-					if (flightData.departures) allFlights = allFlights.concat(flightData.departures);
-					if (flightData.arrivals) allFlights = allFlights.concat(flightData.arrivals);
+
+				if (!day1Data && !day2Data) {
+					console.log("❌ Keine Flugdaten für beide Tage erhalten");
+					return [];
 				}
-				
+
+				// Alle Flüge aus beiden Tagen sammeln
+				let allFlights = [];
+
+				// Tag 1 Daten hinzufügen
+				if (day1Data) {
+					if (Array.isArray(day1Data)) {
+						allFlights = allFlights.concat(day1Data);
+					} else {
+						if (day1Data.departures)
+							allFlights = allFlights.concat(day1Data.departures);
+						if (day1Data.arrivals)
+							allFlights = allFlights.concat(day1Data.arrivals);
+					}
+				}
+
+				// Tag 2 Daten hinzufügen
+				if (day2Data) {
+					if (Array.isArray(day2Data)) {
+						allFlights = allFlights.concat(day2Data);
+					} else {
+						if (day2Data.departures)
+							allFlights = allFlights.concat(day2Data.departures);
+						if (day2Data.arrivals)
+							allFlights = allFlights.concat(day2Data.arrivals);
+					}
+				}
+
 				console.log(`📊 ${allFlights.length} Flüge insgesamt erhalten`);
-				
+
 				// Extrahiere Aircraft Registrations und gruppiere nach Flugzeug
 				const aircraftFlights = {};
-				
-				allFlights.forEach(flight => {
-					const aircraftReg = flight.aircraft?.reg || 
-						flight.aircraft?.registration || 
-						flight.aircraft?.tail || 
-						flight.aircraftRegistration || 
+
+				allFlights.forEach((flight) => {
+					const aircraftReg =
+						flight.aircraft?.reg ||
+						flight.aircraft?.registration ||
+						flight.aircraft?.tail ||
+						flight.aircraftRegistration ||
 						flight.registration;
-					
+
 					if (aircraftReg) {
 						const registration = aircraftReg.toUpperCase();
-						
+
 						if (!aircraftFlights[registration]) {
 							aircraftFlights[registration] = {
 								registration: registration,
-								aircraftType: flight.aircraft?.model || 'Unknown',
-								flights: []
+								aircraftType: flight.aircraft?.model || "Unknown",
+								flights: [],
 							};
 						}
-						
+
 						// Flugdetails hinzufügen
 						const flightInfo = {
-							date: flight.departure?.scheduledTime?.utc?.substring(0, 10) || startDate,
-							flightNumber: flight.number || '',
+							date:
+								flight.departure?.scheduledTime?.utc?.substring(0, 10) ||
+								startDate,
+							flightNumber: flight.number || "",
 							departure: {
-								airport: flight.departure?.airport?.iata || flight.departure?.airport?.icao || '',
-								time: flight.departure?.scheduledTime?.utc || '',
-								timeFormatted: flight.departure?.scheduledTime?.utc ? 
-									flight.departure.scheduledTime.utc.substring(11, 16) : '--:--'
+								airport:
+									flight.departure?.airport?.iata ||
+									flight.departure?.airport?.icao ||
+									"",
+								time: flight.departure?.scheduledTime?.utc || "",
+								timeFormatted: flight.departure?.scheduledTime?.utc
+									? flight.departure.scheduledTime.utc.substring(11, 16)
+									: "--:--",
 							},
 							arrival: {
-								airport: flight.arrival?.airport?.iata || flight.arrival?.airport?.icao || '',
-								time: flight.arrival?.scheduledTime?.utc || '',
-								timeFormatted: flight.arrival?.scheduledTime?.utc ? 
-									flight.arrival.scheduledTime.utc.substring(11, 16) : '--:--'
+								airport:
+									flight.arrival?.airport?.iata ||
+									flight.arrival?.airport?.icao ||
+									"",
+								time: flight.arrival?.scheduledTime?.utc || "",
+								timeFormatted: flight.arrival?.scheduledTime?.utc
+									? flight.arrival.scheduledTime.utc.substring(11, 16)
+									: "--:--",
 							},
-							isArrival: flight.arrival?.airport?.iata === selectedAirport || 
+							isArrival:
+								flight.arrival?.airport?.iata === selectedAirport ||
 								flight.arrival?.airport?.icao === selectedAirport,
-							isDeparture: flight.departure?.airport?.iata === selectedAirport || 
-								flight.departure?.airport?.icao === selectedAirport
+							isDeparture:
+								flight.departure?.airport?.iata === selectedAirport ||
+								flight.departure?.airport?.icao === selectedAirport,
 						};
-						
+
 						aircraftFlights[registration].flights.push(flightInfo);
 					}
 				});
-				
-				console.log(`✈️ ${Object.keys(aircraftFlights).length} verschiedene Flugzeuge gefunden`);
-				
+
+				console.log(
+					`✈️ ${
+						Object.keys(aircraftFlights).length
+					} verschiedene Flugzeuge gefunden`
+				);
+
 				// Übernachtungen identifizieren
 				const overnightFlights = [];
-				
-				Object.values(aircraftFlights).forEach(aircraft => {
+
+				Object.values(aircraftFlights).forEach((aircraft) => {
 					// Sortiere Flüge nach Zeit
 					aircraft.flights.sort((a, b) => {
 						const timeA = new Date(a.departure.time || a.arrival.time);
 						const timeB = new Date(b.departure.time || b.arrival.time);
 						return timeA - timeB;
 					});
-					
+
 					// Prüfe Übernachtungs-Kriterien
-					const day1Arrivals = aircraft.flights.filter(f => 
-						f.date === startDate && f.isArrival
+					const day1Arrivals = aircraft.flights.filter(
+						(f) => f.date === startDate && f.isArrival
 					);
-					const day1Departures = aircraft.flights.filter(f => 
-						f.date === startDate && f.isDeparture
+					const day1Departures = aircraft.flights.filter(
+						(f) => f.date === startDate && f.isDeparture
 					);
-					const day2Departures = aircraft.flights.filter(f => 
-						f.date === endDate && f.isDeparture
+					const day2Departures = aircraft.flights.filter(
+						(f) => f.date === endDate && f.isDeparture
 					);
-					
+
 					// Finde letzten Ankunftsflug am Tag 1
-					const lastArrival = day1Arrivals.length > 0 ? 
-						day1Arrivals.sort((a, b) => new Date(a.arrival.time) - new Date(b.arrival.time)).pop() : null;
-					
+					const lastArrival =
+						day1Arrivals.length > 0
+							? day1Arrivals
+									.sort(
+										(a, b) =>
+											new Date(a.arrival.time) - new Date(b.arrival.time)
+									)
+									.pop()
+							: null;
+
 					if (lastArrival) {
 						// Prüfe ob es nach dieser Ankunft noch Abflüge am gleichen Tag gibt
 						const arrivalTime = new Date(lastArrival.arrival.time);
-						const subsequentDepartures = day1Departures.filter(f => {
+						const subsequentDepartures = day1Departures.filter((f) => {
 							const depTime = new Date(f.departure.time);
 							return depTime > arrivalTime;
 						});
-						
+
 						// Übernachtung nur wenn KEINE weiteren Abflüge am Tag 1
 						if (subsequentDepartures.length === 0) {
 							// Ersten Abflug am Tag 2 finden
-							const firstDeparture = day2Departures.length > 0 ?
-								day2Departures.sort((a, b) => new Date(a.departure.time) - new Date(b.departure.time))[0] : null;
-							
+							const firstDeparture =
+								day2Departures.length > 0
+									? day2Departures.sort(
+											(a, b) =>
+												new Date(a.departure.time) - new Date(b.departure.time)
+									  )[0]
+									: null;
+
 							if (firstDeparture) {
 								// Übernachtung bestätigt!
 								overnightFlights.push({
@@ -2488,39 +2569,48 @@ const AeroDataBoxAPI = (() => {
 										to: lastArrival.arrival.airport,
 										time: lastArrival.arrival.timeFormatted,
 										date: startDate,
-										flightNumber: lastArrival.flightNumber
+										flightNumber: lastArrival.flightNumber,
 									},
 									departure: {
 										from: firstDeparture.departure.airport,
 										to: firstDeparture.arrival.airport,
 										time: firstDeparture.departure.timeFormatted,
 										date: endDate,
-										flightNumber: firstDeparture.flightNumber
+										flightNumber: firstDeparture.flightNumber,
 									},
 									route: `${lastArrival.departure.airport} → ${firstDeparture.arrival.airport}`,
-									overnightDuration: this.calculateOvernightDuration(lastArrival.arrival.time, firstDeparture.departure.time)
+									overnightDuration: this.calculateOvernightDuration(
+										lastArrival.arrival.time,
+										firstDeparture.departure.time
+									),
 								});
-								
-								console.log(`🏨 Übernachtung: ${aircraft.registration} - ${lastArrival.departure.airport}→${selectedAirport}→${firstDeparture.arrival.airport}`);
+
+								console.log(
+									`🏨 Übernachtung: ${aircraft.registration} - ${lastArrival.departure.airport}→${selectedAirport}→${firstDeparture.arrival.airport}`
+								);
 							}
 						}
 					}
 				});
-				
+
 				// Sortiere nach Ankunftszeit
 				overnightFlights.sort((a, b) => {
 					const timeA = this.convertTimeToMinutes(a.arrival.time);
 					const timeB = this.convertTimeToMinutes(b.arrival.time);
 					return timeA - timeB;
 				});
-				
-				console.log(`🏨 ${overnightFlights.length} Übernachtungen identifiziert`);
-				updateFetchStatus(`🏨 ${overnightFlights.length} übernachtende Flugzeuge gefunden`, false);
-				
+
+				console.log(
+					`🏨 ${overnightFlights.length} Übernachtungen identifiziert`
+				);
+				updateFetchStatus(
+					`🏨 ${overnightFlights.length} übernachtende Flugzeuge gefunden`,
+					false
+				);
+
 				return overnightFlights;
-				
 			} catch (error) {
-				console.error('❌ Fehler bei Timetable-Generierung:', error);
+				console.error("❌ Fehler bei Timetable-Generierung:", error);
 				updateFetchStatus(`❌ Fehler bei Timetable: ${error.message}`, true);
 				return [];
 			}
@@ -2532,16 +2622,18 @@ const AeroDataBoxAPI = (() => {
 		 * @param {string} departureTime - Abflugzeit (ISO)
 		 * @returns {string} Formatierte Dauer
 		 */
-		calculateOvernightDuration: function(arrivalTime, departureTime) {
+		calculateOvernightDuration: function (arrivalTime, departureTime) {
 			try {
 				const arrival = new Date(arrivalTime);
 				const departure = new Date(departureTime);
 				const diffMs = departure - arrival;
 				const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-				const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+				const diffMinutes = Math.floor(
+					(diffMs % (1000 * 60 * 60)) / (1000 * 60)
+				);
 				return `${diffHours}h ${diffMinutes}m`;
 			} catch (error) {
-				return 'n/a';
+				return "n/a";
 			}
 		},
 
@@ -2550,8 +2642,8 @@ const AeroDataBoxAPI = (() => {
 		 * @param {string} timeStr - Zeit als String (HH:MM)
 		 * @returns {number} Minuten seit Mitternacht
 		 */
-		convertTimeToMinutes: function(timeStr) {
-			if (!timeStr || timeStr === '--:--') return 9999;
+		convertTimeToMinutes: function (timeStr) {
+			if (!timeStr || timeStr === "--:--") return 9999;
 			const match = timeStr.match(/(\d{1,2}):(\d{2})/);
 			if (!match) return 9999;
 			return parseInt(match[1]) * 60 + parseInt(match[2]);

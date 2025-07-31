@@ -53,7 +53,8 @@ body {
 .timetable-container {
 	background: white;
 	border-radius: 12px;
-	box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+	box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+		0 2px 4px -1px rgba(0, 0, 0, 0.06);
 	overflow: hidden;
 }
 
@@ -199,21 +200,21 @@ body {
 
 /* Timetable Aircraft ID */
 .timetable-aircraft {
-	font-family: 'Courier New', monospace;
+	font-family: "Courier New", monospace;
 	font-weight: 600;
 	color: #1f2937;
 }
 
 /* Timetable Time */
 .timetable-time {
-	font-family: 'Courier New', monospace;
+	font-family: "Courier New", monospace;
 	color: #4b5563;
 	white-space: nowrap;
 }
 
 /* Timetable Airport Codes */
 .timetable-airport {
-	font-family: 'Courier New', monospace;
+	font-family: "Courier New", monospace;
 	font-weight: 500;
 	color: #1f2937;
 	background-color: #f3f4f6;
@@ -271,19 +272,19 @@ body {
 	.timetable-scroll-container {
 		max-height: 300px;
 	}
-	
+
 	#timetableTable th,
 	#timetableTable td {
 		padding: 0.5rem;
 		font-size: 0.75rem;
 	}
-	
+
 	.timetable-toolbar {
 		flex-direction: column;
 		gap: 0.5rem;
 		align-items: stretch;
 	}
-	
+
 	.timetable-route {
 		flex-direction: column;
 		gap: 0.25rem;

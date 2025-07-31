@@ -408,6 +408,23 @@ function fetchAndUpdateFlightData() {
 				if (data && data.length > 0) {
 					applyFlightDataToUI(data);
 				}
+
+				// NEUE FUNKTION: Aktualisiere auch die Timetable mit aktuellen API-Daten
+				if (
+					window.TimetableAPIManager &&
+					typeof window.TimetableAPIManager.forceRefreshTimetable === "function"
+				) {
+					console.log("🕐 Starte Timetable-Aktualisierung nach Update Data...");
+					window.TimetableAPIManager.forceRefreshTimetable()
+						.then(() => {
+							console.log("✅ Timetable erfolgreich aktualisiert");
+						})
+						.catch((error) => {
+							console.error("❌ Fehler bei Timetable-Aktualisierung:", error);
+						});
+				} else {
+					console.log("⚠️ TimetableAPIManager nicht verfügbar");
+				}
 			})
 			.catch((error) => {
 				console.error("Flugdaten-Abruf fehlgeschlagen:", error);

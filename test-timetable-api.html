@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timetable API Integration Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6">🕐 Timetable API Integration Test</h1>
+        
+        <!-- Test Controls -->
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Test Steuerung</h2>
+            <div class="flex space-x-4">
+                <input type="text" id="airportInput" placeholder="Airport Code (z.B. MUC)" 
+                       class="border rounded px-3 py-2" value="MUC">
+                <button id="testTimetable" class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600">
+                    🔄 Test Timetable generieren
+                </button>
+                <button id="clearResults" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                    🗑️ Ergebnisse löschen
+                </button>
+            </div>
+        </div>
+
+        <!-- Results Display -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-semibold mb-4">📊 Testergebnisse</h2>
+            <div id="results" class="space-y-4">
+                <p class="text-gray-500">Klicken Sie auf "Test Timetable generieren" um zu beginnen...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Scripts -->
+    <script src="js/helpers.js"></script>
+    <script src="js/aerodatabox-api.js"></script>
+    
+    <script>
+        console.log('🔍 Timetable API Test gestartet');
+
+        // Test-Funktion
+        async function testTimetableGeneration() {
+            const airportCode = document.getElementById('airportInput').value.trim().toUpperCase() || 'MUC';
+            const resultsDiv = document.getElementById('results');
+            
+            resultsDiv.innerHTML = `
+                <div class="bg-blue-50 p-4 rounded">
+                    <p class="text-blue-700">🔄 Teste Timetable-Generierung für ${airportCode}...</p>
+                </div>
+            `;
+
+            try {
+                // Prüfe ob API verfügbar ist
+                if (typeof window.AeroDataBoxAPI === 'undefined') {
+                    throw new Error('AeroDataBox API nicht gefunden');
+                }
+
+                console.log('🎯 Starte generateOvernightTimetable Test...');
+                
+                // Rufe neue Timetable-Funktion auf
+                const timetableData = await window.AeroDataBoxAPI.generateOvernightTimetable(airportCode);
+                
+                console.log('✅ Timetable-Daten erhalten:', timetableData);
+
+                // Zeige Ergebnisse an
+                let resultHTML = `
+                    <div class="bg-green-50 p-4 rounded mb-4">
+                        <h3 class="text-green-800 font-semibold">✅ Test erfolgreich!</h3>
+                        <p class="text-green-700">Flughafen: ${airportCode}</p>
+                        <p class="text-green-700">Übernachtungen gefunden: ${timetableData.length}</p>
+                    </div>
+                `;
+
+                if (timetableData.length > 0) {
+                    resultHTML += `
+                        <div class="overflow-x-auto">
+                            <table class="w-full border border-gray-200 rounded">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Aircraft</th>
+                                        <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Von</th>
+                                        <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Nach</th>
+                                        <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Ankunft</th>
+                                        <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Abflug</th>
+                                        <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Dauer</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                    `;
+
+                    timetableData.forEach(flight => {
+                        resultHTML += `
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-2 text-sm font-medium">${flight.registration}</td>
+                                <td class="px-4 py-2 text-sm">${flight.arrival.from}</td>
+                                <td class="px-4 py-2 text-sm">${flight.departure.to}</td>
+                                <td class="px-4 py-2 text-sm">
+                                    <div>${flight.arrival.time}</div>
+                                    <div class="text-xs text-gray-500">${flight.arrival.flightNumber}</div>
+                                </td>
+                                <td class="px-4 py-2 text-sm">
+                                    <div>${flight.departure.time}</div>
+                                    <div class="text-xs text-gray-500">${flight.departure.flightNumber}</div>
+                                </td>
+                                <td class="px-4 py-2 text-sm">${flight.overnightDuration}</td>
+                            </tr>
+                        `;
+                    });
+
+                    resultHTML += `
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                } else {
+                    resultHTML += `
+                        <div class="bg-yellow-50 p-4 rounded">
+                            <p class="text-yellow-700">⚠️ Keine Übernachtungen gefunden</p>
+                            <p class="text-yellow-600 text-sm">Dies kann normal sein, abhängig von der aktuellen Tageszeit und verfügbaren Flugdaten.</p>
+                        </div>
+                    `;
+                }
+
+                resultsDiv.innerHTML = resultHTML;
+
+            } catch (error) {
+                console.error('❌ Test-Fehler:', error);
+                
+                resultsDiv.innerHTML = `
+                    <div class="bg-red-50 p-4 rounded">
+                        <h3 class="text-red-800 font-semibold">❌ Test fehlgeschlagen</h3>
+                        <p class="text-red-700">Fehler: ${error.message}</p>
+                        <details class="mt-2">
+                            <summary class="text-red-600 cursor-pointer">Details anzeigen</summary>
+                            <pre class="mt-2 text-xs text-red-600 bg-red-100 p-2 rounded overflow-auto">${error.stack || error}</pre>
+                        </details>
+                    </div>
+                `;
+            }
+        }
+
+        // Event Listeners
+        document.getElementById('testTimetable').addEventListener('click', testTimetableGeneration);
+        
+        document.getElementById('clearResults').addEventListener('click', () => {
+            document.getElementById('results').innerHTML = '<p class="text-gray-500">Ergebnisse gelöscht...</p>';
+        });
+
+        // Automatischer Test nach 2 Sekunden
+        setTimeout(() => {
+            console.log('🚀 Starte automatischen Test...');
+            testTimetableGeneration();
+        }, 2000);
+    </script>
+</body>
+</html>

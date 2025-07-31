@@ -48,6 +48,249 @@ body {
 }
 
 /* MAXIMALE PRIORITÄT: Überschreibe alle möglichen Status-basierten Hintergründe */
+
+/* === TIMETABLE STYLES === */
+.timetable-container {
+	background: white;
+	border-radius: 12px;
+	box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+	overflow: hidden;
+}
+
+.timetable-header {
+	margin-bottom: 1rem;
+}
+
+.timetable-header h2 {
+	color: white;
+	font-size: 1.5rem;
+	font-weight: bold;
+	margin-bottom: 0.5rem;
+	display: flex;
+	align-items: center;
+}
+
+.timetable-header p {
+	color: #d1d5db;
+	font-size: 0.875rem;
+}
+
+.timetable-toolbar {
+	background-color: #f9fafb;
+	padding: 0.75rem 1rem;
+	border-bottom: 1px solid #e5e7eb;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.timetable-toolbar select {
+	font-size: 0.875rem;
+	border: 1px solid #d1d5db;
+	border-radius: 0.375rem;
+	padding: 0.25rem 0.5rem;
+	background: white;
+}
+
+.timetable-toolbar button {
+	background-color: #3b82f6;
+	color: white;
+	padding: 0.25rem 0.75rem;
+	border-radius: 0.375rem;
+	font-size: 0.875rem;
+	border: none;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	transition: background-color 0.2s;
+}
+
+.timetable-toolbar button:hover {
+	background-color: #2563eb;
+}
+
+.timetable-scroll-container {
+	max-height: 400px;
+	overflow-y: auto;
+}
+
+#timetableTable {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+#timetableTable thead {
+	background-color: #f3f4f6;
+	position: sticky;
+	top: 0;
+	z-index: 10;
+}
+
+#timetableTable th {
+	padding: 0.75rem 1rem;
+	text-align: left;
+	font-size: 0.75rem;
+	font-weight: 500;
+	color: #6b7280;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	border-bottom: 1px solid #e5e7eb;
+}
+
+#timetableTable tbody {
+	background-color: white;
+}
+
+#timetableTable tbody tr {
+	border-bottom: 1px solid #f3f4f6;
+	transition: background-color 0.2s;
+}
+
+#timetableTable tbody tr:hover {
+	background-color: #f8fafc;
+}
+
+#timetableTable td {
+	padding: 0.75rem 1rem;
+	font-size: 0.875rem;
+	color: #374151;
+	vertical-align: middle;
+}
+
+/* Timetable Status Badges */
+.timetable-status {
+	display: inline-flex;
+	align-items: center;
+	padding: 0.25rem 0.5rem;
+	border-radius: 0.375rem;
+	font-size: 0.75rem;
+	font-weight: 500;
+	white-space: nowrap;
+}
+
+.timetable-status.overnight {
+	background-color: #fef3c7;
+	color: #d97706;
+	border: 1px solid #f59e0b;
+}
+
+.timetable-status.overnight::before {
+	content: "🏨";
+	margin-right: 0.25rem;
+}
+
+.timetable-status.active {
+	background-color: #d1fae5;
+	color: #059669;
+	border: 1px solid #10b981;
+}
+
+.timetable-status.inactive {
+	background-color: #f3f4f6;
+	color: #6b7280;
+	border: 1px solid #d1d5db;
+}
+
+.timetable-status.error {
+	background-color: #fee2e2;
+	color: #dc2626;
+	border: 1px solid #ef4444;
+}
+
+/* Timetable Aircraft ID */
+.timetable-aircraft {
+	font-family: 'Courier New', monospace;
+	font-weight: 600;
+	color: #1f2937;
+}
+
+/* Timetable Time */
+.timetable-time {
+	font-family: 'Courier New', monospace;
+	color: #4b5563;
+	white-space: nowrap;
+}
+
+/* Timetable Airport Codes */
+.timetable-airport {
+	font-family: 'Courier New', monospace;
+	font-weight: 500;
+	color: #1f2937;
+	background-color: #f3f4f6;
+	padding: 0.125rem 0.375rem;
+	border-radius: 0.25rem;
+	white-space: nowrap;
+}
+
+/* Timetable Route */
+.timetable-route {
+	display: flex;
+	align-items: center;
+	color: #4b5563;
+}
+
+.timetable-route svg {
+	margin: 0 0.5rem;
+	color: #9ca3af;
+}
+
+/* Timetable Position */
+.timetable-position {
+	font-weight: 600;
+	color: #1f2937;
+	text-align: center;
+	min-width: 3rem;
+}
+
+/* Timetable Notes */
+.timetable-notes {
+	max-width: 200px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: #6b7280;
+	font-style: italic;
+}
+
+/* Timetable Empty State */
+#timetableEmpty {
+	padding: 2rem;
+	text-align: center;
+	color: #6b7280;
+}
+
+#timetableEmpty svg {
+	margin: 0 auto 1rem;
+	height: 3rem;
+	width: 3rem;
+	color: #d1d5db;
+}
+
+/* Responsive Timetable */
+@media (max-width: 1024px) {
+	.timetable-scroll-container {
+		max-height: 300px;
+	}
+	
+	#timetableTable th,
+	#timetableTable td {
+		padding: 0.5rem;
+		font-size: 0.75rem;
+	}
+	
+	.timetable-toolbar {
+		flex-direction: column;
+		gap: 0.5rem;
+		align-items: stretch;
+	}
+	
+	.timetable-route {
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+}
+
+/* === END TIMETABLE STYLES === */
 .hangar-cell[style*="background"],
 .hangar-cell[class*="orange"],
 .hangar-cell[class*="status"],

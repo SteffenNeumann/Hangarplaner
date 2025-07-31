@@ -513,6 +513,53 @@ function initializeSidebarToggle() {
 }
 
 /**
+ * NEUE FUNKTION: Prüft und löscht Flugdaten wenn Aircraft ID geleert wird
+ * @param {string} aircraftInputId - ID des Aircraft Input Feldes
+ * @param {string} newValue - Neuer Wert des Aircraft Input Feldes
+ */
+function handleAircraftIdChange(aircraftInputId, newValue) {
+	console.log(`🔄 Aircraft ID geändert: ${aircraftInputId} = "${newValue}"`);
+	
+	// Extrahiere Cell ID aus der Input ID
+	const cellId = aircraftInputId.replace("aircraft-", "");
+	
+	// Wenn Aircraft ID leer oder nur Whitespace ist, lösche alle zugehörigen Flugdaten
+	if (!newValue || newValue.trim() === "") {
+		console.log(`🧹 Aircraft ID für Kachel ${cellId} ist leer - lösche Flugdaten`);
+		
+		// Lösche Arrival Time
+		const arrivalInput = document.getElementById(`arrival-time-${cellId}`);
+		if (arrivalInput && arrivalInput.value) {
+			arrivalInput.value = "";
+			console.log(`🧹 Ankunftszeit für Kachel ${cellId} gelöscht`);
+		}
+		
+		// Lösche Departure Time  
+		const departureInput = document.getElementById(`departure-time-${cellId}`);
+		if (departureInput && departureInput.value) {
+			departureInput.value = "";
+			console.log(`🧹 Abflugzeit für Kachel ${cellId} gelöscht`);
+		}
+		
+		// Lösche Position (beide möglichen Felder prüfen)
+		const positionInput = document.getElementById(`position-${cellId}`) || 
+		                     document.getElementById(`hangar-position-${cellId}`);
+		if (positionInput && positionInput.value) {
+			positionInput.value = "";
+			console.log(`🧹 Position für Kachel ${cellId} gelöscht`);
+		}
+		
+		// Optional: Speichere die gelöschten Werte in localStorage
+		if (typeof saveFlightTimeValueToLocalStorage === "function") {
+			saveFlightTimeValueToLocalStorage(cellId, "arrivalTime", "");
+			saveFlightTimeValueToLocalStorage(cellId, "departureTime", "");
+			saveFlightTimeValueToLocalStorage(cellId, "position", "");
+			saveFlightTimeValueToLocalStorage(cellId, "aircraftId", "");
+		}
+	}
+}
+
+/**
  * Export für globale Verfügbarkeit
  */
 window.hangarEvents = {
@@ -528,6 +575,7 @@ window.hangarEvents = {
 	applyPositionValuesFromLocalStorage,
 	applyFlightTimeValuesFromLocalStorage,
 	updateStatusLights,
+	handleAircraftIdChange, // NEUE FUNKTION HINZUGEFÜGT
 };
 
 console.log("📦 hangar-events.js optimiert geladen (Business Logic only)");

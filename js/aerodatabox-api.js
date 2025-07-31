@@ -587,8 +587,9 @@ const AeroDataBoxAPI = (() => {
 	 * @returns {Promise<Object>} Flugdaten mit letztem Ankunftsflug und erstem Abflugsflug
 	 */
 	const updateAircraftData = async (aircraftId, currentDate, nextDate) => {
-		if (!aircraftId) {
-			updateFetchStatus("Bitte Flugzeugkennung eingeben", true);
+		// KORREKTUR: Erweiterte Prüfung auf leere/ungültige Aircraft ID
+		if (!aircraftId || aircraftId.trim() === "" || aircraftId.trim().length === 0) {
+			updateFetchStatus("Keine Flugzeugkennung - Daten werden gelöscht", false);
 			// KORREKTUR: Leere Werte mit Clear-Flag zurückgeben, damit die Anwendung die Felder zurücksetzen kann
 			return {
 				originCode: "",
@@ -600,6 +601,7 @@ const AeroDataBoxAPI = (() => {
 				_isUtc: true,
 				_noDataFound: true, // Flag für "keine Daten gefunden"
 				_clearFields: true, // Flag für UI-Clearing
+				_emptyAircraftId: true, // Spezifisches Flag für leere Aircraft ID
 			};
 		}
 

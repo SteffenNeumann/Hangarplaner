@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="de">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Übernachtungs-Logik Test - HangarPlanner</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				max-width: 1000px;
+				margin: 0 auto;
+				padding: 20px;
+				background-color: #f5f5f5;
+			}
+			.container {
+				background: white;
+				border-radius: 8px;
+				padding: 20px;
+				margin-bottom: 20px;
+				box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+			}
+			.test-section {
+				border: 1px solid #ddd;
+				border-radius: 6px;
+				padding: 15px;
+				margin: 15px 0;
+				background: #f9f9f9;
+			}
+			.button {
+				background: #007cba;
+				color: white;
+				border: none;
+				padding: 10px 20px;
+				border-radius: 4px;
+				cursor: pointer;
+				margin: 5px;
+			}
+			.button:hover {
+				background: #005a8b;
+			}
+			.input-group {
+				margin: 10px 0;
+				display: flex;
+				align-items: center;
+			}
+			.input-group label {
+				display: inline-block;
+				width: 150px;
+				font-weight: bold;
+			}
+			.input-group input,
+			.input-group select {
+				padding: 8px;
+				border: 1px solid #ddd;
+				border-radius: 4px;
+				width: 200px;
+			}
+			.result-box {
+				background: #f0f8ff;
+				border: 1px solid #007cba;
+				border-radius: 4px;
+				padding: 15px;
+				margin: 10px 0;
+				max-height: 500px;
+				overflow-y: auto;
+				font-family: monospace;
+				white-space: pre-wrap;
+			}
+			.error {
+				background: #ffe6e6;
+				border-color: #ff4444;
+				color: #cc0000;
+			}
+			.success {
+				background: #e6ffe6;
+				border-color: #44aa44;
+				color: #006600;
+			}
+			.overnight {
+				background: #fff3e0;
+				border-color: #ff9800;
+				color: #e65100;
+			}
+			.no-overnight {
+				background: #f3e5f5;
+				border-color: #9c27b0;
+				color: #4a148c;
+			}
+			.legend {
+				background: #f8f9fa;
+				border: 1px solid #dee2e6;
+				border-radius: 4px;
+				padding: 10px;
+				margin: 10px 0;
+				font-size: 14px;
+			}
+			.legend h4 {
+				margin: 0 0 10px 0;
+				color: #495057;
+			}
+			.legend-item {
+				margin: 5px 0;
+				display: flex;
+				align-items: center;
+			}
+			.legend-icon {
+				width: 20px;
+				margin-right: 10px;
+				font-size: 16px;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<h1>🏨 Übernachtungs-Logik Test</h1>
+			<p>
+				Diese Seite testet die neue Logik, die nur Flugzeuge erfasst, die
+				tatsächlich über Nacht am gewählten Flughafen verbleiben.
+			</p>
+
+			<div class="legend">
+				<h4>🎯 Neue Logik: Übernachtungs-Kriterien</h4>
+				<div class="legend-item">
+					<span class="legend-icon">✅</span>
+					<span
+						><strong>Übernachtung:</strong> Flugzeug landet am Tag 1 in MUC UND
+						fliegt erst am Tag 2 wieder ab</span
+					>
+				</div>
+				<div class="legend-item">
+					<span class="legend-icon">❌</span>
+					<span
+						><strong>Keine Übernachtung:</strong> Flugzeug fliegt noch am
+						gleichen Tag weiter</span
+					>
+				</div>
+				<div class="legend-item">
+					<span class="legend-icon">🏨</span>
+					<span
+						><strong>Symbol:</strong> Kennzeichnet bestätigte Übernachtungen im
+						Positionstext</span
+					>
+				</div>
+			</div>
+		</div>
+
+		<div class="container">
+			<h2>Übernachtungs-Test</h2>
+			<div class="test-section">
+				<p>
+					Testet ob ein Flugzeug über Nacht am gewählten Flughafen verbleibt.
+				</p>
+
+				<div class="input-group">
+					<label>Aircraft Registration:</label>
+					<input
+						type="text"
+						id="aircraftId"
+						value="D-AIBN"
+						placeholder="z.B. D-AIBN" />
+				</div>
+
+				<div class="input-group">
+					<label>Flughafen:</label>
+					<select id="airportCode">
+						<option value="MUC">MUC - München</option>
+						<option value="FRA">FRA - Frankfurt</option>
+						<option value="DUS">DUS - Düsseldorf</option>
+						<option value="HAM">HAM - Hamburg</option>
+						<option value="BER">BER - Berlin</option>
+					</select>
+				</div>
+
+				<div class="input-group">
+					<label>Tag 1 (Ankunft):</label>
+					<input type="date" id="currentDate" value="2025-07-31" />
+				</div>
+
+				<div class="input-group">
+					<label>Tag 2 (Abflug):</label>
+					<input type="date" id="nextDate" value="2025-08-01" />
+				</div>
+
+				<button class="button" onclick="testOvernightLogic()">
+					🏨 Übernachtung prüfen
+				</button>
+
+				<div id="result" class="result-box" style="display: none"></div>
+			</div>
+		</div>
+
+		<div class="container">
+			<h2>Beispiel-Aircraft für Tests</h2>
+			<div class="test-section">
+				<p>Häufig verwendete Aircraft Registrations für Tests:</p>
+				<button class="button" onclick="setAircraft('D-AIBN')">
+					D-AIBN (Lufthansa A321)
+				</button>
+				<button class="button" onclick="setAircraft('D-ABYX')">
+					D-ABYX (Lufthansa B747)
+				</button>
+				<button class="button" onclick="setAircraft('D-AIHF')">
+					D-AIHF (Lufthansa A340)
+				</button>
+				<button class="button" onclick="setAircraft('D-AIXF')">
+					D-AIXF (Lufthansa A350)
+				</button>
+			</div>
+		</div>
+
+		<!-- Laden der erforderlichen Skripte -->
+		<script src="js/aerodatabox-api.js"></script>
+
+		<script>
+			// Console-Logging erweitern für bessere Anzeige
+			const originalLog = console.log;
+			const originalError = console.error;
+			let consoleOutput = [];
+
+			console.log = function (...args) {
+				consoleOutput.push({ type: "log", message: args.join(" ") });
+				originalLog.apply(console, args);
+			};
+
+			console.error = function (...args) {
+				consoleOutput.push({ type: "error", message: args.join(" ") });
+				originalError.apply(console, args);
+			};
+
+			function setAircraft(registration) {
+				document.getElementById("aircraftId").value = registration;
+			}
+
+			function showResult(content, type = "success") {
+				const resultEl = document.getElementById("result");
+				resultEl.innerHTML = content;
+				resultEl.style.display = "block";
+				resultEl.className = `result-box ${type}`;
+			}
+
+			async function testOvernightLogic() {
+				const aircraftId = document.getElementById("aircraftId").value.trim();
+				const airportCode = document.getElementById("airportCode").value;
+				const currentDate = document.getElementById("currentDate").value;
+				const nextDate = document.getElementById("nextDate").value;
+
+				if (!aircraftId || !currentDate || !nextDate) {
+					showResult("❌ Bitte alle Felder ausfüllen!", "error");
+					return;
+				}
+
+				// Console Output zurücksetzen
+				consoleOutput = [];
+
+				// Flughafen-Input temporär setzen für den Test
+				const airportInput = document.getElementById("airportCodeInput");
+				let originalAirport = "";
+				if (airportInput) {
+					originalAirport = airportInput.value;
+					airportInput.value = airportCode;
+				} else {
+					// Erstelle temporäres Input-Element falls nicht vorhanden
+					const tempInput = document.createElement("input");
+					tempInput.id = "airportCodeInput";
+					tempInput.value = airportCode;
+					tempInput.style.display = "none";
+					document.body.appendChild(tempInput);
+				}
+
+				try {
+					showResult(
+						"🔍 Übernachtungs-Logik wird getestet...\n⏳ Bitte warten...",
+						"overnight"
+					);
+
+					console.log(`🏨 === ÜBERNACHTUNGS-TEST GESTARTET ===`);
+					console.log(`Aircraft: ${aircraftId}`);
+					console.log(`Flughafen: ${airportCode}`);
+					console.log(`Tag 1: ${currentDate}`);
+					console.log(`Tag 2: ${nextDate}`);
+					console.log(`========================================`);
+
+					const result = await window.AeroDataBoxAPI.updateAircraftData(
+						aircraftId,
+						currentDate,
+						nextDate
+					);
+
+					console.log(`🏨 === ÜBERNACHTUNGS-TEST BEENDET ===`);
+
+					// Ergebnis formatieren
+					let output = `🎯 TESTERGEBNIS FÜR ${aircraftId}\n`;
+					output += `════════════════════════════════════════\n\n`;
+
+					if (result.positionText && result.positionText.includes("🏨")) {
+						output += `✅ ÜBERNACHTUNG BESTÄTIGT!\n`;
+						output += `Flugzeug: ${aircraftId}\n`;
+						output += `Flughafen: ${airportCode}\n`;
+						output += `Route: ${result.positionText}\n`;
+						output += `Ankunft (${currentDate}): ${result.originCode} → ${result.destCode} um ${result.arrivalTime}\n`;
+						output += `Abflug (${nextDate}): ${result.originCode} → ${result.destCode} um ${result.departureTime}\n\n`;
+						showResult(output + getConsoleOutput(), "overnight");
+					} else if (result._noDataFound || result._clearFields) {
+						output += `❌ KEINE ÜBERNACHTUNG\n`;
+						output += `Grund: Flugzeug erfüllt nicht die Übernachtungs-Kriterien\n`;
+						output += `- Landet nicht am ${currentDate} in ${airportCode}, ODER\n`;
+						output += `- Fliegt noch am gleichen Tag weiter, ODER\n`;
+						output += `- Startet nicht am ${nextDate} von ${airportCode}\n\n`;
+						showResult(output + getConsoleOutput(), "no-overnight");
+					} else {
+						output += `⚠️ UNERWARTETES ERGEBNIS\n`;
+						output += `Position: ${result.positionText || "Keine Angabe"}\n`;
+						output += `Daten: ${JSON.stringify(result, null, 2)}\n\n`;
+						showResult(output + getConsoleOutput(), "error");
+					}
+				} catch (error) {
+					console.error("Fehler beim Übernachtungs-Test:", error);
+					let output = `❌ FEHLER BEIM TEST\n`;
+					output += `Error: ${error.message}\n\n`;
+					showResult(output + getConsoleOutput(), "error");
+				} finally {
+					// Flughafen-Input zurücksetzen
+					if (airportInput && originalAirport) {
+						airportInput.value = originalAirport;
+					}
+				}
+			}
+
+			function getConsoleOutput() {
+				let output = `📋 DETAILLIERTE LOGS:\n`;
+				output += `════════════════════════════════════════\n`;
+
+				consoleOutput.forEach((entry) => {
+					const prefix =
+						entry.type === "error" ? "❌ " : entry.type === "warn" ? "⚠️ " : "";
+					output += `${prefix}${entry.message}\n`;
+				});
+
+				return output;
+			}
+
+			// Status-Update beim Laden
+			document.addEventListener("DOMContentLoaded", function () {
+				if (window.AeroDataBoxAPI) {
+					console.log("✅ AeroDataBox API erfolgreich geladen");
+				} else {
+					console.error("❌ AeroDataBox API konnte nicht geladen werden");
+				}
+			});
+		</script>
+	</body>
+</html>

@@ -1500,58 +1500,74 @@ window.hangarData.updateAircraftFromFlightData = async function (
 				positionText: flightData.positionText,
 				originCode: flightData.originCode,
 				destCode: flightData.destCode,
+				_clearFields: flightData._clearFields,
+				_noDataFound: flightData._noDataFound,
 				allData: flightData,
 			});
 
-			// Ankunftszeit aktualisieren
+			// KORREKTUR: Prüfe ob Felder gelöscht werden sollen
+			const shouldClearFields =
+				flightData._clearFields || flightData._noDataFound;
+
+			// Ankunftszeit aktualisieren oder löschen
 			const arrivalInput = tile.querySelector(`#arrival-time-${cellId}`);
 			console.log(
 				`🔍 Arrival Input gefunden für ${cellId}:`,
 				!!arrivalInput,
 				arrivalInput?.id
 			);
-			if (
-				arrivalInput &&
-				flightData.arrivalTime &&
-				flightData.arrivalTime !== "--:--"
-			) {
-				arrivalInput.value = flightData.arrivalTime;
-				console.log(
-					`✅ Ankunftszeit für Kachel ${cellId}: ${flightData.arrivalTime}`
-				);
+			if (arrivalInput) {
+				if (shouldClearFields) {
+					// Felder löschen wenn keine Daten gefunden wurden
+					arrivalInput.value = "";
+					console.log(
+						`🧹 Ankunftszeit für Kachel ${cellId} gelöscht (keine Daten)`
+					);
+				} else if (
+					flightData.arrivalTime &&
+					flightData.arrivalTime !== "--:--" &&
+					flightData.arrivalTime !== ""
+				) {
+					arrivalInput.value = flightData.arrivalTime;
+					console.log(
+						`✅ Ankunftszeit für Kachel ${cellId}: ${flightData.arrivalTime}`
+					);
+				}
 			} else {
-				console.warn(`❌ Ankunftszeit NICHT gesetzt für Kachel ${cellId}:`, {
-					inputExists: !!arrivalInput,
-					hasArrivalTime: !!flightData.arrivalTime,
-					arrivalTime: flightData.arrivalTime,
-				});
+				console.warn(
+					`❌ Ankunftszeit Input nicht gefunden für Kachel ${cellId}`
+				);
 			}
 
-			// Abflugzeit aktualisieren
+			// Abflugzeit aktualisieren oder löschen
 			const departureInput = tile.querySelector(`#departure-time-${cellId}`);
 			console.log(
 				`🔍 Departure Input gefunden für ${cellId}:`,
 				!!departureInput,
 				departureInput?.id
 			);
-			if (
-				departureInput &&
-				flightData.departureTime &&
-				flightData.departureTime !== "--:--"
-			) {
-				departureInput.value = flightData.departureTime;
-				console.log(
-					`✅ Abflugzeit für Kachel ${cellId}: ${flightData.departureTime}`
-				);
+			if (departureInput) {
+				if (shouldClearFields) {
+					// Felder löschen wenn keine Daten gefunden wurden
+					departureInput.value = "";
+					console.log(
+						`🧹 Abflugzeit für Kachel ${cellId} gelöscht (keine Daten)`
+					);
+				} else if (
+					flightData.departureTime &&
+					flightData.departureTime !== "--:--" &&
+					flightData.departureTime !== ""
+				) {
+					departureInput.value = flightData.departureTime;
+					console.log(
+						`✅ Abflugzeit für Kachel ${cellId}: ${flightData.departureTime}`
+					);
+				}
 			} else {
-				console.warn(`❌ Abflugzeit NICHT gesetzt für Kachel ${cellId}:`, {
-					inputExists: !!departureInput,
-					hasDepartureTime: !!flightData.departureTime,
-					departureTime: flightData.departureTime,
-				});
+				console.warn(`❌ Abflugzeit Input nicht gefunden für Kachel ${cellId}`);
 			}
 
-			// Position aktualisieren (versuche beide möglichen Felder)
+			// Position aktualisieren oder löschen (versuche beide möglichen Felder)
 			let positionInput = tile.querySelector(`#position-${cellId}`);
 			if (!positionInput) {
 				positionInput = tile.querySelector(`#hangar-position-${cellId}`);
@@ -1561,21 +1577,25 @@ window.hangarData.updateAircraftFromFlightData = async function (
 				!!positionInput,
 				positionInput?.id
 			);
-			if (
-				positionInput &&
-				flightData.positionText &&
-				flightData.positionText !== "---"
-			) {
-				positionInput.value = flightData.positionText;
-				console.log(
-					`✅ Position für Kachel ${cellId}: ${flightData.positionText}`
-				);
+			if (positionInput) {
+				if (shouldClearFields) {
+					// Position löschen wenn keine Daten gefunden wurden
+					positionInput.value = "";
+					console.log(
+						`🧹 Position für Kachel ${cellId} gelöscht (keine Daten)`
+					);
+				} else if (
+					flightData.positionText &&
+					flightData.positionText !== "---" &&
+					flightData.positionText !== ""
+				) {
+					positionInput.value = flightData.positionText;
+					console.log(
+						`✅ Position für Kachel ${cellId}: ${flightData.positionText}`
+					);
+				}
 			} else {
-				console.warn(`❌ Position NICHT gesetzt für Kachel ${cellId}:`, {
-					inputExists: !!positionInput,
-					hasPositionText: !!flightData.positionText,
-					positionText: flightData.positionText,
-				});
+				console.warn(`❌ Position Input nicht gefunden für Kachel ${cellId}`);
 			}
 
 			// Optional: Notizen mit zusätzlichen Informationen aktualisieren

@@ -46,16 +46,18 @@ const FlightDataAPI = (function () {
 				console.log(
 					"[API-FASSADE] Keine Aircraft ID angegeben oder leere ID, FORCE RESET wird ausgeführt"
 				);
-				// Füge ein spezielles Flag hinzu, das explizit ein Zurücksetzen erzwingt
+				// KORREKTUR: Konsistente leere Werte mit Clear-Flags für UI-Clearing
 				return {
-					originCode: "---",
-					destCode: "---",
-					departureTime: "--:--",
-					arrivalTime: "--:--",
-					positionText: "---",
+					originCode: "",
+					destCode: "",
+					departureTime: "",
+					arrivalTime: "",
+					positionText: "",
 					data: [],
 					_isUtc: true,
 					_forceReset: true, // Spezielles Flag für das UI-Update
+					_clearFields: true, // Flag für UI-Clearing
+					_noDataFound: true, // Flag für "keine Daten gefunden"
 				};
 			}
 
@@ -85,16 +87,18 @@ const FlightDataAPI = (function () {
 			// Sicherstellen, dass wir immer ein gültiges Ergebnisobjekt zurückgeben
 			if (!originalResult) {
 				console.log(
-					"[API-FASSADE] Keine Ergebnisse von der API erhalten, gebe leere Standardwerte zurück"
+					"[API-FASSADE] Keine Ergebnisse von der API erhalten, gebe leere Werte zurück"
 				);
 				return {
-					originCode: "---",
-					destCode: "---",
-					departureTime: "--:--",
-					arrivalTime: "--:--",
-					positionText: "---",
+					originCode: "",
+					destCode: "",
+					departureTime: "",
+					arrivalTime: "",
+					positionText: "",
 					data: [],
 					_isUtc: true,
+					_clearFields: true, // Flag für UI-Clearing
+					_noDataFound: true, // Flag für "keine Daten gefunden"
 				};
 			}
 

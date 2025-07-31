@@ -519,36 +519,39 @@ function initializeSidebarToggle() {
  */
 function handleAircraftIdChange(aircraftInputId, newValue) {
 	console.log(`🔄 Aircraft ID geändert: ${aircraftInputId} = "${newValue}"`);
-	
+
 	// Extrahiere Cell ID aus der Input ID
 	const cellId = aircraftInputId.replace("aircraft-", "");
-	
+
 	// Wenn Aircraft ID leer oder nur Whitespace ist, lösche alle zugehörigen Flugdaten
 	if (!newValue || newValue.trim() === "") {
-		console.log(`🧹 Aircraft ID für Kachel ${cellId} ist leer - lösche Flugdaten`);
-		
+		console.log(
+			`🧹 Aircraft ID für Kachel ${cellId} ist leer - lösche Flugdaten`
+		);
+
 		// Lösche Arrival Time
 		const arrivalInput = document.getElementById(`arrival-time-${cellId}`);
 		if (arrivalInput && arrivalInput.value) {
 			arrivalInput.value = "";
 			console.log(`🧹 Ankunftszeit für Kachel ${cellId} gelöscht`);
 		}
-		
-		// Lösche Departure Time  
+
+		// Lösche Departure Time
 		const departureInput = document.getElementById(`departure-time-${cellId}`);
 		if (departureInput && departureInput.value) {
 			departureInput.value = "";
 			console.log(`🧹 Abflugzeit für Kachel ${cellId} gelöscht`);
 		}
-		
+
 		// Lösche Position (beide möglichen Felder prüfen)
-		const positionInput = document.getElementById(`position-${cellId}`) || 
-		                     document.getElementById(`hangar-position-${cellId}`);
+		const positionInput =
+			document.getElementById(`position-${cellId}`) ||
+			document.getElementById(`hangar-position-${cellId}`);
 		if (positionInput && positionInput.value) {
 			positionInput.value = "";
 			console.log(`🧹 Position für Kachel ${cellId} gelöscht`);
 		}
-		
+
 		// Optional: Speichere die gelöschten Werte in localStorage
 		if (typeof saveFlightTimeValueToLocalStorage === "function") {
 			saveFlightTimeValueToLocalStorage(cellId, "arrivalTime", "");

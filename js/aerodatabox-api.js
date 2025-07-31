@@ -588,7 +588,11 @@ const AeroDataBoxAPI = (() => {
 	 */
 	const updateAircraftData = async (aircraftId, currentDate, nextDate) => {
 		// KORREKTUR: Erweiterte Prüfung auf leere/ungültige Aircraft ID
-		if (!aircraftId || aircraftId.trim() === "" || aircraftId.trim().length === 0) {
+		if (
+			!aircraftId ||
+			aircraftId.trim() === "" ||
+			aircraftId.trim().length === 0
+		) {
 			updateFetchStatus("Keine Flugzeugkennung - Daten werden gelöscht", false);
 			// KORREKTUR: Leere Werte mit Clear-Flag zurückgeben, damit die Anwendung die Felder zurücksetzen kann
 			return {

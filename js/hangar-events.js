@@ -562,22 +562,22 @@ function handleAircraftIdChange(aircraftInputId, newValue) {
 	// Extrahiere Cell ID aus der Input ID
 	const cellId = aircraftInputId.replace("aircraft-", "");
 
-	// Wenn Aircraft ID leer oder nur Whitespace ist, lösche alle zugehörigen Flugdaten
-	if (!newValue || newValue.trim() === "") {
+	// KORREKTUR: Erweiterte Prüfung auf leere/ungültige Aircraft ID
+	if (!newValue || newValue.trim() === "" || newValue.trim().length === 0) {
 		console.log(
 			`🧹 Aircraft ID für Kachel ${cellId} ist leer - lösche Flugdaten`
 		);
 
 		// Lösche Arrival Time
 		const arrivalInput = document.getElementById(`arrival-time-${cellId}`);
-		if (arrivalInput && arrivalInput.value) {
+		if (arrivalInput) {
 			arrivalInput.value = "";
 			console.log(`🧹 Ankunftszeit für Kachel ${cellId} gelöscht`);
 		}
 
 		// Lösche Departure Time
 		const departureInput = document.getElementById(`departure-time-${cellId}`);
-		if (departureInput && departureInput.value) {
+		if (departureInput) {
 			departureInput.value = "";
 			console.log(`🧹 Abflugzeit für Kachel ${cellId} gelöscht`);
 		}
@@ -586,17 +586,53 @@ function handleAircraftIdChange(aircraftInputId, newValue) {
 		const positionInput =
 			document.getElementById(`position-${cellId}`) ||
 			document.getElementById(`hangar-position-${cellId}`);
-		if (positionInput && positionInput.value) {
+		if (positionInput) {
 			positionInput.value = "";
 			console.log(`🧹 Position für Kachel ${cellId} gelöscht`);
 		}
 
-		// Optional: Speichere die gelöschten Werte in localStorage
+		// KORREKTUR: Auch localStorage aktualisieren
 		if (typeof saveFlightTimeValueToLocalStorage === "function") {
 			saveFlightTimeValueToLocalStorage(cellId, "arrivalTime", "");
 			saveFlightTimeValueToLocalStorage(cellId, "departureTime", "");
 			saveFlightTimeValueToLocalStorage(cellId, "position", "");
 			saveFlightTimeValueToLocalStorage(cellId, "aircraftId", "");
+			console.log(`💾 localStorage für Kachel ${cellId} gelöscht`);
+		}
+	} else {
+		// KORREKTUR: Bei gültiger Aircraft ID automatisch Flugdaten abrufen
+		console.log(
+			`✈️ Gültige Aircraft ID für Kachel ${cellId}: "${newValue.trim()}" - starte Datenabfrage`
+		);
+		
+		// Automatisch Flugdaten abrufen wenn Aircraft ID eingegeben wird
+		if (window.FlightDataAPI && typeof window.FlightDataAPI.updateAircraftData === "function") {
+			// Debounced call für Datenabfrage
+			setTimeout(() => {
+				const currentDate = document.getElementById("currentDateInput")?.value;
+				const nextDate = document.getElementById("nextDateInput")?.value;
+				
+				if (currentDate && nextDate) {
+					console.log(`📡 Starte API-Abfrage für Aircraft ID: ${newValue.trim()}`);
+					window.FlightDataAPI.updateAircraftData(newValue.trim(), currentDate, nextDate)
+						.then(flightData => {
+							console.log(`✅ Flugdaten erhalten für ${newValue.trim()}:`, flightData);
+							// Daten werden automatisch über updateTileWithFlightData verarbeitet
+						})
+						.catch(error => {
+							console.error(`❌ Fehler beim Abrufen der Flugdaten für ${newValue.trim()}:`, error);
+						});
+				} else {
+					console.warn("⚠️ Datum-Parameter fehlen für Flugdaten-Abfrage");
+				}
+			}, 500); // 500ms Verzögerung um Tippgeschwindigkeit abzuwarten
+		} else {
+			console.warn("⚠️ FlightDataAPI nicht verfügbar für automatische Datenabfrage");
+		}
+		
+		// Speichere Aircraft ID in localStorage
+		if (typeof saveFlightTimeValueToLocalStorage === "function") {
+			saveFlightTimeValueToLocalStorage(cellId, "aircraftId", newValue.trim());
 		}
 	}
 }

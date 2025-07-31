@@ -689,7 +689,7 @@ function setupEventListenersForTile(tileElement, cellId) {
 		}, 50);
 	}
 
-	// Aircraft ID Formatierung
+	// Aircraft ID Formatierung und Change-Handler
 	const aircraftInput = tileElement.querySelector(`#aircraft-${cellId}`);
 	if (aircraftInput && !aircraftInput.hasAttribute("data-listener-added")) {
 		aircraftInput.addEventListener("input", function (e) {
@@ -699,6 +699,10 @@ function setupEventListenersForTile(tileElement, cellId) {
 					e.target.value = formatted;
 				}
 			}
+			// KORREKTUR: Aircraft ID Change Handler hinzufügen
+			if (window.hangarEvents && window.hangarEvents.handleAircraftIdChange) {
+				window.hangarEvents.handleAircraftIdChange(e.target.id, e.target.value);
+			}
 		});
 		aircraftInput.addEventListener("blur", function (e) {
 			if (typeof formatAircraftId === "function") {
@@ -706,6 +710,10 @@ function setupEventListenersForTile(tileElement, cellId) {
 				if (formatted !== e.target.value) {
 					e.target.value = formatted;
 				}
+			}
+			// KORREKTUR: Aircraft ID Change Handler auch bei blur hinzufügen
+			if (window.hangarEvents && window.hangarEvents.handleAircraftIdChange) {
+				window.hangarEvents.handleAircraftIdChange(e.target.id, e.target.value);
 			}
 		});
 		aircraftInput.setAttribute("data-listener-added", "true");

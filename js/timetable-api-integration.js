@@ -52,9 +52,13 @@ class TimetableAPIManager {
 		this.sortSelect = document.getElementById("timetableSort");
 
 		if (!this.timetableBody) {
-			console.log("⚠️ Timetable DOM-Elemente nicht gefunden");
+			console.log("⚠️ Timetable DOM-Elemente nicht gefunden - retry in 2 Sekunden");
+			// Retry nach 2 Sekunden falls DOM noch nicht bereit
+			setTimeout(() => this.setupEventListeners(), 2000);
 			return;
 		}
+
+		console.log("✅ Timetable DOM-Elemente gefunden");
 
 		// Event Listeners hinzufügen
 		if (this.refreshButton) {
@@ -103,6 +107,7 @@ class TimetableAPIManager {
 				typeof window.AeroDataBoxAPI.generateOvernightTimetable === "function"
 			) {
 				console.log(`✅ AeroDataBox API verfügbar nach ${attempts} Versuchen`);
+				console.log(`🔍 API-Funktionen: ${Object.keys(window.AeroDataBoxAPI).join(', ')}`);
 				// Erste Aktualisierung starten - mit mehr Verzögerung
 				setTimeout(() => this.refreshTimetable(), 2000);
 				return;
@@ -112,10 +117,19 @@ class TimetableAPIManager {
 				console.log(
 					"⚠️ AeroDataBox API nach 20 Sekunden nicht verfügbar - Timetable bleibt leer"
 				);
+				console.log(`🔍 Aktueller Zustand: window.AeroDataBoxAPI = ${typeof window.AeroDataBoxAPI}`);
+				if (window.AeroDataBoxAPI) {
+					console.log(`🔍 Verfügbare Funktionen: ${Object.keys(window.AeroDataBoxAPI).join(', ')}`);
+				}
 				this.showError(
 					"AeroDataBox API nicht verfügbar. Versuchen Sie später erneut."
 				);
 				return;
+			}
+
+			// Debug-Ausgabe alle 5 Versuche
+			if (attempts % 5 === 0) {
+				console.log(`⏳ Versuch ${attempts}/${maxAttempts} - API noch nicht verfügbar`);
 			}
 
 			// Versuche alle 500ms

@@ -604,32 +604,49 @@ function handleAircraftIdChange(aircraftInputId, newValue) {
 		console.log(
 			`✈️ Gültige Aircraft ID für Kachel ${cellId}: "${newValue.trim()}" - starte Datenabfrage`
 		);
-		
+
 		// Automatisch Flugdaten abrufen wenn Aircraft ID eingegeben wird
-		if (window.FlightDataAPI && typeof window.FlightDataAPI.updateAircraftData === "function") {
+		if (
+			window.FlightDataAPI &&
+			typeof window.FlightDataAPI.updateAircraftData === "function"
+		) {
 			// Debounced call für Datenabfrage
 			setTimeout(() => {
 				const currentDate = document.getElementById("currentDateInput")?.value;
 				const nextDate = document.getElementById("nextDateInput")?.value;
-				
+
 				if (currentDate && nextDate) {
-					console.log(`📡 Starte API-Abfrage für Aircraft ID: ${newValue.trim()}`);
-					window.FlightDataAPI.updateAircraftData(newValue.trim(), currentDate, nextDate)
-						.then(flightData => {
-							console.log(`✅ Flugdaten erhalten für ${newValue.trim()}:`, flightData);
+					console.log(
+						`📡 Starte API-Abfrage für Aircraft ID: ${newValue.trim()}`
+					);
+					window.FlightDataAPI.updateAircraftData(
+						newValue.trim(),
+						currentDate,
+						nextDate
+					)
+						.then((flightData) => {
+							console.log(
+								`✅ Flugdaten erhalten für ${newValue.trim()}:`,
+								flightData
+							);
 							// Daten werden automatisch über updateTileWithFlightData verarbeitet
 						})
-						.catch(error => {
-							console.error(`❌ Fehler beim Abrufen der Flugdaten für ${newValue.trim()}:`, error);
+						.catch((error) => {
+							console.error(
+								`❌ Fehler beim Abrufen der Flugdaten für ${newValue.trim()}:`,
+								error
+							);
 						});
 				} else {
 					console.warn("⚠️ Datum-Parameter fehlen für Flugdaten-Abfrage");
 				}
 			}, 500); // 500ms Verzögerung um Tippgeschwindigkeit abzuwarten
 		} else {
-			console.warn("⚠️ FlightDataAPI nicht verfügbar für automatische Datenabfrage");
+			console.warn(
+				"⚠️ FlightDataAPI nicht verfügbar für automatische Datenabfrage"
+			);
 		}
-		
+
 		// Speichere Aircraft ID in localStorage
 		if (typeof saveFlightTimeValueToLocalStorage === "function") {
 			saveFlightTimeValueToLocalStorage(cellId, "aircraftId", newValue.trim());

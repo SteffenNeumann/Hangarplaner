@@ -517,8 +517,30 @@ function initializeSidebarToggle() {
  * @param {string} aircraftInputId - ID des Aircraft Input Feldes
  * @param {string} newValue - Neuer Wert des Aircraft Input Feldes
  */
+// KORREKTUR: Debounce-Map für Aircraft ID Changes, um Aufhängen zu verhindern
+const aircraftIdChangeDebounce = new Map();
+
 function handleAircraftIdChange(aircraftInputId, newValue) {
 	console.log(`🔄 Aircraft ID geändert: ${aircraftInputId} = "${newValue}"`);
+
+	// KORREKTUR: Debounce-Logik, um mehrfache gleichzeitige Aufrufe zu verhindern
+	const debounceKey = aircraftInputId;
+	const now = Date.now();
+
+	// Prüfe ob ein kürzlicher Aufruf für dasselbe Feld stattgefunden hat
+	if (aircraftIdChangeDebounce.has(debounceKey)) {
+		const lastCall = aircraftIdChangeDebounce.get(debounceKey);
+		if (now - lastCall < 300) {
+			// 300ms Debounce-Zeit
+			console.log(
+				`⏭️ Debounce: Überspringe wiederholten Aufruf für ${aircraftInputId}`
+			);
+			return;
+		}
+	}
+
+	// Markiere diesen Aufruf
+	aircraftIdChangeDebounce.set(debounceKey, now);
 
 	// Extrahiere Cell ID aus der Input ID
 	const cellId = aircraftInputId.replace("aircraft-", "");

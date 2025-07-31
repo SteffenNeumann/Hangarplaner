@@ -510,19 +510,8 @@ class HangarEventManager {
 					return;
 				}
 
-				// KORREKTUR: Spezielle Behandlung für Aircraft ID Felder
-				if (event.target.id.startsWith("aircraft-")) {
-					// Prüfe ob Aircraft ID geleert wurde und lösche zugehörige Flugdaten
-					if (
-						window.hangarEvents &&
-						typeof window.hangarEvents.handleAircraftIdChange === "function"
-					) {
-						window.hangarEvents.handleAircraftIdChange(
-							event.target.id,
-							event.target.value
-						);
-					}
-				}
+				// KORREKTUR: Aircraft ID Handling entfernt vom change Event
+				// um Doppelaufrufe zu verhindern - wird nur bei blur behandelt
 
 				this.debouncedFieldUpdate(event.target.id, event.target.value, 50);
 			},
@@ -711,19 +700,8 @@ class HangarEventManager {
 					return;
 				}
 
-				// KORREKTUR: Spezielle Behandlung für Aircraft ID Felder
-				if (event.target.id.startsWith("aircraft-")) {
-					// Prüfe ob Aircraft ID geleert wurde und lösche zugehörige Flugdaten
-					if (
-						window.hangarEvents &&
-						typeof window.hangarEvents.handleAircraftIdChange === "function"
-					) {
-						window.hangarEvents.handleAircraftIdChange(
-							event.target.id,
-							event.target.value
-						);
-					}
-				}
+				// KORREKTUR: Aircraft ID Handling entfernt vom change Event
+				// um Doppelaufrufe zu verhindern - wird nur bei blur behandelt
 
 				// Spezielle Behandlung für Status-Felder
 				if (

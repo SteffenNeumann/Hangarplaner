@@ -1785,9 +1785,7 @@ const AeroDataBoxAPI = (() => {
 			const departure = new Date(departureTime);
 			const diffMs = departure - arrival;
 			const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-			const diffMinutes = Math.floor(
-				(diffMs % (1000 * 60 * 60)) / (1000 * 60)
-			);
+			const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
 			return `${diffHours}h ${diffMinutes}m`;
 		} catch (error) {
 			return "n/a";
@@ -2549,11 +2547,13 @@ const AeroDataBoxAPI = (() => {
 							isArrival:
 								flight.arrival?.airport?.iata === selectedAirport ||
 								flight.arrival?.airport?.icao === selectedAirport ||
-								(!flight.arrival?.airport?.iata && !flight.arrival?.airport?.icao), // FALLBACK: Wenn Arrival fehlt, ist es ein Arrival zu selectedAirport
+								(!flight.arrival?.airport?.iata &&
+									!flight.arrival?.airport?.icao), // FALLBACK: Wenn Arrival fehlt, ist es ein Arrival zu selectedAirport
 							isDeparture:
 								flight.departure?.airport?.iata === selectedAirport ||
 								flight.departure?.airport?.icao === selectedAirport ||
-								(!flight.departure?.airport?.iata && !flight.departure?.airport?.icao), // FALLBACK: Wenn Departure fehlt, ist es ein Departure von selectedAirport
+								(!flight.departure?.airport?.iata &&
+									!flight.departure?.airport?.icao), // FALLBACK: Wenn Departure fehlt, ist es ein Departure von selectedAirport
 						};
 
 						aircraftFlights[registration].flights.push(flightInfo);
@@ -2579,18 +2579,18 @@ const AeroDataBoxAPI = (() => {
 
 					// Prüfe Übernachtungs-Kriterien - VERBESSERTE LOGIK
 					// Finde alle Ankünfte AM ZIELFLUGHAFEN (unabhängig vom Datum)
-					const arrivals = aircraft.flights.filter(f => f.isArrival);
-					// Finde alle Abflüge VOM ZIELFLUGHAFEN (unabhängig vom Datum)  
-					const departures = aircraft.flights.filter(f => f.isDeparture);
+					const arrivals = aircraft.flights.filter((f) => f.isArrival);
+					// Finde alle Abflüge VOM ZIELFLUGHAFEN (unabhängig vom Datum)
+					const departures = aircraft.flights.filter((f) => f.isDeparture);
 
 					// Finde Ankunft am ersten Tag (heute)
-					const day1Arrivals = arrivals.filter(f => {
+					const day1Arrivals = arrivals.filter((f) => {
 						const flightDate = f.date;
 						return flightDate === startDate;
 					});
 
 					// Finde Abflüge am zweiten Tag (morgen)
-					const day2Departures = departures.filter(f => {
+					const day2Departures = departures.filter((f) => {
 						const flightDate = f.date;
 						return flightDate === endDate;
 					});
@@ -2609,7 +2609,7 @@ const AeroDataBoxAPI = (() => {
 					if (lastArrival && day2Departures.length > 0) {
 						// Finde alle Abflüge am gleichen Tag nach der Ankunft
 						const arrivalTime = new Date(lastArrival.arrival.time);
-						const sameDayDepartures = departures.filter(f => {
+						const sameDayDepartures = departures.filter((f) => {
 							const flightDate = f.date;
 							const depTime = new Date(f.departure.time);
 							return flightDate === startDate && depTime > arrivalTime;
@@ -2618,8 +2618,10 @@ const AeroDataBoxAPI = (() => {
 						// Übernachtung nur wenn KEINE weiteren Abflüge am Tag 1 nach der Ankunft
 						if (sameDayDepartures.length === 0) {
 							// Ersten Abflug am Tag 2 finden
-							const firstDeparture = day2Departures
-								.sort((a, b) => new Date(a.departure.time) - new Date(b.departure.time))[0];
+							const firstDeparture = day2Departures.sort(
+								(a, b) =>
+									new Date(a.departure.time) - new Date(b.departure.time)
+							)[0];
 
 							if (firstDeparture) {
 								// Übernachtung bestätigt!

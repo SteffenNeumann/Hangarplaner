@@ -137,12 +137,16 @@ function initialize() {
 
 	// Ereignisbehandler einrichten - ENTFERNT: setupEventListeners existiert nicht mehr
 	// Event-Handler werden jetzt von improved-event-manager.js verwaltet
-	
+
 	// Lade die UI-Einstellungen - KORRIGIERT: Verwende display-options System
 	if (window.displayOptions) {
 		window.displayOptions.load();
 		// console.log("UI-Einstellungen über Display Options geladen");
-	} else if (window.hangarUI && window.hangarUI.uiSettings && window.hangarUI.uiSettings.load) {
+	} else if (
+		window.hangarUI &&
+		window.hangarUI.uiSettings &&
+		window.hangarUI.uiSettings.load
+	) {
 		window.hangarUI.uiSettings.load();
 		// console.log("UI-Einstellungen über Legacy-System geladen");
 	}
@@ -933,48 +937,55 @@ document.addEventListener("projectSaved", function () {
  * und fügt es automatisch zur ersten freien Kachel hinzu
  */
 function checkForSelectedAircraft() {
-	const selectedAircraft = localStorage.getItem('selectedAircraft');
-	
+	const selectedAircraft = localStorage.getItem("selectedAircraft");
+
 	if (selectedAircraft) {
 		console.log(`🛩️ Flugzeug aus Fleet Database erkannt: ${selectedAircraft}`);
-		
+
 		// Erste freie Kachel finden
 		const firstEmptyTile = findFirstEmptyTile();
-		
+
 		if (firstEmptyTile) {
 			// Aircraft ID in die erste freie Kachel eintragen
-			const aircraftInput = document.getElementById(`aircraft-${firstEmptyTile}`);
+			const aircraftInput = document.getElementById(
+				`aircraft-${firstEmptyTile}`
+			);
 			if (aircraftInput) {
 				aircraftInput.value = selectedAircraft;
-				
+
 				// Benachrichtigung anzeigen
 				if (window.showNotification) {
 					window.showNotification(
 						`${selectedAircraft} wurde zu Kachel ${firstEmptyTile} hinzugefügt`,
-						'success'
+						"success"
 					);
 				}
-				
+
 				// Event auslösen für weitere Verarbeitung (z.B. Flugdaten abrufen)
 				if (window.hangarEvents && window.hangarEvents.handleAircraftIdChange) {
-					window.hangarEvents.handleAircraftIdChange(`aircraft-${firstEmptyTile}`, selectedAircraft);
+					window.hangarEvents.handleAircraftIdChange(
+						`aircraft-${firstEmptyTile}`,
+						selectedAircraft
+					);
 				}
-				
-				console.log(`✅ ${selectedAircraft} zu Kachel ${firstEmptyTile} hinzugefügt`);
+
+				console.log(
+					`✅ ${selectedAircraft} zu Kachel ${firstEmptyTile} hinzugefügt`
+				);
 			}
 		} else {
 			// Keine freie Kachel gefunden
 			if (window.showNotification) {
 				window.showNotification(
 					`${selectedAircraft} aus Fleet Database: Keine freie Kachel verfügbar`,
-					'warning'
+					"warning"
 				);
 			}
 			console.warn(`⚠️ Keine freie Kachel für ${selectedAircraft} gefunden`);
 		}
-		
+
 		// selectedAircraft aus localStorage entfernen
-		localStorage.removeItem('selectedAircraft');
+		localStorage.removeItem("selectedAircraft");
 	}
 }
 
@@ -986,18 +997,24 @@ function findFirstEmptyTile() {
 	// Primäre Kacheln überprüfen (1-12)
 	for (let i = 1; i <= 12; i++) {
 		const aircraftInput = document.getElementById(`aircraft-${i}`);
-		if (aircraftInput && (!aircraftInput.value || aircraftInput.value.trim() === '')) {
+		if (
+			aircraftInput &&
+			(!aircraftInput.value || aircraftInput.value.trim() === "")
+		) {
 			return i;
 		}
 	}
-	
+
 	// Sekundäre Kacheln überprüfen (falls vorhanden)
 	for (let i = 13; i <= 24; i++) {
 		const aircraftInput = document.getElementById(`aircraft-${i}`);
-		if (aircraftInput && (!aircraftInput.value || aircraftInput.value.trim() === '')) {
+		if (
+			aircraftInput &&
+			(!aircraftInput.value || aircraftInput.value.trim() === "")
+		) {
 			return i;
 		}
 	}
-	
+
 	return null; // Keine freie Kachel gefunden
 }

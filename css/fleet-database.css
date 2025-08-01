@@ -2,280 +2,280 @@
 
 /* Fleet Database Container */
 .fleet-database-container {
-    background-color: var(--bg-color-light);
-    min-height: 100vh;
+	background-color: var(--bg-color-light);
+	min-height: 100vh;
 }
 
 /* Fleet Database Header */
 .fleet-database-header {
-    background: white;
-    border-bottom: 1px solid var(--border-light);
+	background: white;
+	border-bottom: 1px solid var(--border-light);
 }
 
 /* Fleet Table Styles */
 .fleet-table-container {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
+	background: white;
+	border-radius: 12px;
+	box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+	overflow: hidden;
 }
 
 .fleet-table {
-    width: 100%;
-    border-collapse: collapse;
+	width: 100%;
+	border-collapse: collapse;
 }
 
 .fleet-table thead {
-    background-color: #f8fafc;
-    border-bottom: 2px solid var(--border-light);
+	background-color: #f8fafc;
+	border-bottom: 2px solid var(--border-light);
 }
 
 .fleet-table th {
-    padding: 12px 16px;
-    text-align: left;
-    font-weight: 600;
-    font-size: 0.75rem;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    user-select: none;
-    transition: background-color 0.2s ease;
+	padding: 12px 16px;
+	text-align: left;
+	font-weight: 600;
+	font-size: 0.75rem;
+	color: #64748b;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	user-select: none;
+	transition: background-color 0.2s ease;
 }
 
 .fleet-table th:hover {
-    background-color: #e2e8f0;
+	background-color: #e2e8f0;
 }
 
 .fleet-table th.sortable {
-    cursor: pointer;
+	cursor: pointer;
 }
 
 .fleet-table th.sorted-asc::after {
-    content: ' ↑';
-    color: #3b82f6;
+	content: " ↑";
+	color: #3b82f6;
 }
 
 .fleet-table th.sorted-desc::after {
-    content: ' ↓';
-    color: #3b82f6;
+	content: " ↓";
+	color: #3b82f6;
 }
 
 .fleet-table tbody tr {
-    border-bottom: 1px solid var(--border-light);
-    transition: background-color 0.2s ease;
+	border-bottom: 1px solid var(--border-light);
+	transition: background-color 0.2s ease;
 }
 
 .fleet-table tbody tr:hover {
-    background-color: #f8fafc;
+	background-color: #f8fafc;
 }
 
 .fleet-table td {
-    padding: 12px 16px;
-    font-size: 0.875rem;
-    color: var(--text-dark);
+	padding: 12px 16px;
+	font-size: 0.875rem;
+	color: var(--text-dark);
 }
 
 /* Airline Badge */
 .airline-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 500;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 8px;
+	border-radius: 6px;
+	font-size: 0.75rem;
+	font-weight: 500;
 }
 
 .airline-badge.clh {
-    background-color: #dbeafe;
-    color: #1e40af;
+	background-color: #dbeafe;
+	color: #1e40af;
 }
 
 .airline-badge.lhx {
-    background-color: #fef3c7;
-    color: #92400e;
+	background-color: #fef3c7;
+	color: #92400e;
 }
 
 /* Registration Code Style */
 .registration-code {
-    font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
-    font-weight: 600;
-    letter-spacing: 0.05em;
+	font-family: "Monaco", "Menlo", "Consolas", monospace;
+	font-weight: 600;
+	letter-spacing: 0.05em;
 }
 
 /* Filter Controls */
 .fleet-filters {
-    background: #f8fafc;
-    border: 1px solid var(--border-light);
-    border-radius: 8px;
-    padding: 16px;
-    margin-bottom: 24px;
+	background: #f8fafc;
+	border: 1px solid var(--border-light);
+	border-radius: 8px;
+	padding: 16px;
+	margin-bottom: 24px;
 }
 
 .fleet-filter-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    align-items: end;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	gap: 16px;
+	align-items: end;
 }
 
 /* Action Buttons */
 .fleet-action-btn {
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-size: 0.875rem;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    border: none;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
+	padding: 6px 12px;
+	border-radius: 6px;
+	font-size: 0.875rem;
+	font-weight: 500;
+	transition: all 0.2s ease;
+	border: none;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
 }
 
 .fleet-action-btn.primary {
-    background-color: #3b82f6;
-    color: white;
+	background-color: #3b82f6;
+	color: white;
 }
 
 .fleet-action-btn.primary:hover {
-    background-color: #2563eb;
+	background-color: #2563eb;
 }
 
 .fleet-action-btn.secondary {
-    background-color: #10b981;
-    color: white;
+	background-color: #10b981;
+	color: white;
 }
 
 .fleet-action-btn.secondary:hover {
-    background-color: #059669;
+	background-color: #059669;
 }
 
 /* Loading and Empty States */
 .fleet-loading {
-    text-align: center;
-    padding: 48px 24px;
-    color: #64748b;
+	text-align: center;
+	padding: 48px 24px;
+	color: #64748b;
 }
 
 .fleet-empty {
-    text-align: center;
-    padding: 48px 24px;
-    color: #64748b;
+	text-align: center;
+	padding: 48px 24px;
+	color: #64748b;
 }
 
 .fleet-empty svg {
-    margin: 0 auto 16px;
-    color: #cbd5e1;
+	margin: 0 auto 16px;
+	color: #cbd5e1;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    .fleet-filter-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .fleet-table-container {
-        overflow-x: auto;
-    }
-    
-    .fleet-table {
-        min-width: 800px;
-    }
+	.fleet-filter-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.fleet-table-container {
+		overflow-x: auto;
+	}
+
+	.fleet-table {
+		min-width: 800px;
+	}
 }
 
 /* Status Indicators */
 .fleet-status-indicator {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    margin-right: 8px;
+	display: inline-block;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	margin-right: 8px;
 }
 
 .fleet-status-active {
-    background-color: #10b981;
+	background-color: #10b981;
 }
 
 .fleet-status-inactive {
-    background-color: #ef4444;
+	background-color: #ef4444;
 }
 
 .fleet-status-maintenance {
-    background-color: #f59e0b;
+	background-color: #f59e0b;
 }
 
 /* Search Highlight */
 .fleet-search-highlight {
-    background-color: #fef3c7;
-    padding: 2px 4px;
-    border-radius: 3px;
-    font-weight: 600;
+	background-color: #fef3c7;
+	padding: 2px 4px;
+	border-radius: 3px;
+	font-weight: 600;
 }
 
 /* Sort Indicators */
 .sort-indicator {
-    margin-left: 4px;
-    font-size: 0.75rem;
-    color: #9ca3af;
-    transition: color 0.2s ease;
+	margin-left: 4px;
+	font-size: 0.75rem;
+	color: #9ca3af;
+	transition: color 0.2s ease;
 }
 
 .fleet-table th:hover .sort-indicator {
-    color: #6b7280;
+	color: #6b7280;
 }
 
 /* Back Button */
 .fleet-back-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
-    background-color: #ff7043;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-weight: 500;
-    text-decoration: none;
-    transition: background-color 0.2s ease;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 16px;
+	background-color: #ff7043;
+	color: white;
+	border: none;
+	border-radius: 6px;
+	font-weight: 500;
+	text-decoration: none;
+	transition: background-color 0.2s ease;
 }
 
 .fleet-back-btn:hover {
-    background-color: #f4511e;
-    color: white;
-    text-decoration: none;
+	background-color: #f4511e;
+	color: white;
+	text-decoration: none;
 }
 
 /* Fleet Count Badge */
 .fleet-count {
-    background: #e0f2fe;
-    color: #0277bd;
-    padding: 4px 12px;
-    border-radius: 16px;
-    font-size: 0.875rem;
-    font-weight: 500;
+	background: #e0f2fe;
+	color: #0277bd;
+	padding: 4px 12px;
+	border-radius: 16px;
+	font-size: 0.875rem;
+	font-weight: 500;
 }
 
 /* Fleet Database specific responsive adjustments */
 @media (max-width: 1024px) {
-    .fleet-filters {
-        padding: 12px;
-    }
-    
-    .fleet-filter-grid {
-        gap: 12px;
-    }
+	.fleet-filters {
+		padding: 12px;
+	}
+
+	.fleet-filter-grid {
+		gap: 12px;
+	}
 }
 
 @media (max-width: 640px) {
-    .fleet-table th,
-    .fleet-table td {
-        padding: 8px 12px;
-        font-size: 0.8rem;
-    }
-    
-    .fleet-action-btn {
-        padding: 4px 8px;
-        font-size: 0.8rem;
-    }
+	.fleet-table th,
+	.fleet-table td {
+		padding: 8px 12px;
+		font-size: 0.8rem;
+	}
+
+	.fleet-action-btn {
+		padding: 4px 8px;
+		font-size: 0.8rem;
+	}
 }

@@ -3,633 +3,719 @@
  * Lädt und verwaltet Flugzeugdaten über die AeroDataBox API
  */
 
-const FleetDatabase = (function() {
-    // Konfiguration
-    const config = {
-        rapidApiKey: 'b76afbf516mshf864818d919de86p10475ejsna65b718a8602',
-        rapidApiHost: 'aerodatabox.p.rapidapi.com',
-        baseUrl: 'https://aerodatabox.p.rapidapi.com',
-        airlines: {
-            // Verschiedene Lufthansa-Codes testen
-            CLH: {
-                code: 'CLH',
-                name: 'Lufthansa CityLine',
-                color: '#0066CC',
-                alternatives: ['CL', 'LHC', 'CityLine']
-            },
-            LHX: {
-                code: 'LHX', 
-                name: 'Lufthansa Private Jet',
-                color: '#FFD700',
-                alternatives: ['LH', 'DLH', 'Lufthansa']
-            },
-            // Zusätzliche Test-Airlines
-            DLH: {
-                code: 'DLH',
-                name: 'Deutsche Lufthansa AG',
-                color: '#FFD700',
-                alternatives: ['LH']
-            },
-            LH: {
-                code: 'LH',
-                name: 'Lufthansa',
-                color: '#FFD700',
-                alternatives: ['DLH']
-            }
-        },
-        pageSize: 10, // Standard wie in API-Dokumentation
-        rateLimitDelay: 2000 // Erhöht auf 2 Sekunden
-    };
+const FleetDatabase = (function () {
+	// Konfiguration
+	const config = {
+		rapidApiKey: "b76afbf516mshf864818d919de86p10475ejsna65b718a8602",
+		rapidApiHost: "aerodatabox.p.rapidapi.com",
+		baseUrl: "https://aerodatabox.p.rapidapi.com",
+		airlines: {
+			// Verschiedene Lufthansa-Codes testen
+			CLH: {
+				code: "CLH",
+				name: "Lufthansa CityLine",
+				color: "#0066CC",
+				alternatives: ["CL", "LHC", "CityLine"],
+			},
+			LHX: {
+				code: "LHX",
+				name: "Lufthansa Private Jet",
+				color: "#FFD700",
+				alternatives: ["LH", "DLH", "Lufthansa"],
+			},
+			// Zusätzliche Test-Airlines
+			DLH: {
+				code: "DLH",
+				name: "Deutsche Lufthansa AG",
+				color: "#FFD700",
+				alternatives: ["LH"],
+			},
+			LH: {
+				code: "LH",
+				name: "Lufthansa",
+				color: "#FFD700",
+				alternatives: ["DLH"],
+			},
+		},
+		pageSize: 10, // Standard wie in API-Dokumentation
+		rateLimitDelay: 2000, // Erhöht auf 2 Sekunden
+	};
 
-    // Interne Datenstrukturen
-    let fleetData = [];
-    let filteredData = [];
-    let sortOrder = { column: 'airline', direction: 'asc' };
-    let lastApiCall = 0;
+	// Interne Datenstrukturen
+	let fleetData = [];
+	let filteredData = [];
+	let sortOrder = { column: "airline", direction: "asc" };
+	let lastApiCall = 0;
 
-    // DOM-Elemente
-    let elements = {};
+	// DOM-Elemente
+	let elements = {};
 
-    /**
-     * Initialisierung der Fleet Database
-     */
-    function init() {
-        console.log('🛩️ Fleet Database wird initialisiert...');
-        
-        // DOM-Elemente referenzieren
-        elements = {
-            loadButton: document.getElementById('loadFleetData'),
-            exportButton: document.getElementById('exportFleetData'),
-            airlineFilter: document.getElementById('airlineFilter'),
-            aircraftTypeFilter: document.getElementById('aircraftTypeFilter'),
-            searchFilter: document.getElementById('searchFilter'),
-            fleetStatus: document.getElementById('fleetStatus'),
-            fleetCount: document.getElementById('fleetCount'),
-            fleetTable: document.getElementById('fleetTable'),
-            fleetTableBody: document.getElementById('fleetTableBody'),
-            fleetTableEmpty: document.getElementById('fleetTableEmpty'),
-            fleetTableLoading: document.getElementById('fleetTableLoading')
-        };
+	/**
+	 * Initialisierung der Fleet Database
+	 */
+	function init() {
+		console.log("🛩️ Fleet Database wird initialisiert...");
 
-        // Event-Listener einrichten
-        setupEventListeners();
-        
-        // Initial leere Tabelle anzeigen
-        showEmptyState();
-        
-        console.log('✅ Fleet Database initialisiert');
-    }
+		// DOM-Elemente referenzieren
+		elements = {
+			loadButton: document.getElementById("loadFleetData"),
+			exportButton: document.getElementById("exportFleetData"),
+			airlineFilter: document.getElementById("airlineFilter"),
+			aircraftTypeFilter: document.getElementById("aircraftTypeFilter"),
+			searchFilter: document.getElementById("searchFilter"),
+			fleetStatus: document.getElementById("fleetStatus"),
+			fleetCount: document.getElementById("fleetCount"),
+			fleetTable: document.getElementById("fleetTable"),
+			fleetTableBody: document.getElementById("fleetTableBody"),
+			fleetTableEmpty: document.getElementById("fleetTableEmpty"),
+			fleetTableLoading: document.getElementById("fleetTableLoading"),
+		};
 
-    /**
-     * Event-Listener einrichten
-     */
-    function setupEventListeners() {
-        // Laden-Button
-        if (elements.loadButton) {
-            elements.loadButton.addEventListener('click', loadFleetData);
-        }
+		// Event-Listener einrichten
+		setupEventListeners();
 
-        // Export-Button
-        if (elements.exportButton) {
-            elements.exportButton.addEventListener('click', exportFleetData);
-        }
+		// Initial leere Tabelle anzeigen
+		showEmptyState();
 
-        // Test-Button
-        const testButton = document.getElementById('testAPI');
-        if (testButton) {
-            testButton.addEventListener('click', testAPIConnection);
-        }
+		console.log("✅ Fleet Database initialisiert");
+	}
 
-        // Filter-Event-Listener
-        if (elements.airlineFilter) {
-            elements.airlineFilter.addEventListener('change', applyFilters);
-        }
-        
-        if (elements.aircraftTypeFilter) {
-            elements.aircraftTypeFilter.addEventListener('change', applyFilters);
-        }
-        
-        if (elements.searchFilter) {
-            elements.searchFilter.addEventListener('input', debounce(applyFilters, 300));
-        }
+	/**
+	 * Event-Listener einrichten
+	 */
+	function setupEventListeners() {
+		// Laden-Button
+		if (elements.loadButton) {
+			elements.loadButton.addEventListener("click", loadFleetData);
+		}
 
-        // Sortier-Event-Listener für Tabellenspalten
-        const sortableHeaders = document.querySelectorAll('[data-sort]');
-        sortableHeaders.forEach(header => {
-            header.addEventListener('click', () => {
-                const column = header.getAttribute('data-sort');
-                sortData(column);
-            });
-        });
-    }
+		// Export-Button
+		if (elements.exportButton) {
+			elements.exportButton.addEventListener("click", exportFleetData);
+		}
 
-    /**
-     * Flottendaten für beide Airlines laden - VEREINFACHTE VERSION
-     */
-    async function loadFleetData() {
-        console.log('📡 Starte das Laden der Flottendaten...');
-        
-        showLoadingState();
-        updateStatus('Lade Flottendaten...');
-        
-        try {
-            fleetData = [];
-            
-            // CLH Flotte laden
-            updateStatus('Lade CLH (Lufthansa CityLine) Flotte...');
-            const clhData = await loadSimpleAirlineFleet('CLH');
-            
-            // LHX Flotte laden  
-            updateStatus('Lade LHX (Lufthansa Private Jet) Flotte...');
-            const lhxData = await loadSimpleAirlineFleet('LHX');
-            
-            // Daten zusammenführen
-            fleetData = [...clhData, ...lhxData];
-            
-            console.log(`✅ ${fleetData.length} Flugzeuge geladen`);
-            updateStatus(`${fleetData.length} Flugzeuge erfolgreich geladen`);
-            
-            // Flugzeugtypen für Filter extrahieren
-            updateAircraftTypeFilter();
-            
-            // Airline-Filter aktualisieren
-            updateAirlineFilter();
-            
-            // Tabelle aktualisieren
-            applyFilters();
-            
-        } catch (error) {
-            console.error('❌ Fehler beim Laden der Flottendaten:', error);
-            updateStatus('Fehler beim Laden der Flottendaten: ' + error.message);
-            showEmptyState();
-        }
-    }
+		// Test-Button
+		const testButton = document.getElementById("testAPI");
+		if (testButton) {
+			testButton.addEventListener("click", testAPIConnection);
+		}
 
-    /**
-     * Vereinfachte Airline-Flotte laden basierend auf funktionierendem Code-Snippet
-     */
-    async function loadSimpleAirlineFleet(airlineCode) {
-        // Exakt das Format aus dem funktionierenden Code-Snippet
-        const url = `${config.baseUrl}/airlines/${airlineCode}/aircrafts?pageSize=${config.pageSize}&pageOffset=0&withRegistrations=false`;
-        
-        console.log(`📡 Lade ${airlineCode} Flotte von: ${url}`);
-        
-        // Rate Limiting
-        await rateLimitDelay();
-        
-        return new Promise((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            xhr.withCredentials = true;
+		// Filter-Event-Listener
+		if (elements.airlineFilter) {
+			elements.airlineFilter.addEventListener("change", applyFilters);
+		}
 
-            xhr.addEventListener('readystatechange', function () {
-                if (this.readyState === this.DONE) {
-                    console.log(`📊 ${airlineCode} Response Status: ${this.status}`);
-                    console.log(`📊 ${airlineCode} Response Text:`, this.responseText);
-                    
-                    if (this.status === 200) {
-                        try {
-                            const data = JSON.parse(this.responseText);
-                            console.log(`✅ ${airlineCode} API-Antwort:`, data);
-                            
-                            // KORREKTUR: Verschiedene Datenstrukturen handhaben
-                            let aircrafts = [];
-                            if (data.items) {
-                                // AeroDataBox Format: { items: [...] }
-                                aircrafts = data.items;
-                            } else if (data.aircrafts) {
-                                // Alternatives Format: { aircrafts: [...] }
-                                aircrafts = data.aircrafts;
-                            } else if (Array.isArray(data)) {
-                                // Direktes Array
-                                aircrafts = data;
-                            } else {
-                                console.warn(`⚠️ Unbekannte Datenstruktur für ${airlineCode}:`, data);
-                                aircrafts = [];
-                            }
-                            
-                            console.log(`📊 ${airlineCode}: ${aircrafts.length} Flugzeuge gefunden`);
-                            
-                            const processedAircrafts = aircrafts.map(aircraft => ({
-                                ...aircraft,
-                                airline: airlineCode,
-                                airlineName: config.airlines[airlineCode]?.name || airlineCode,
-                                airlineColor: config.airlines[airlineCode]?.color || '#666666',
-                                registration: aircraft.registration || aircraft.reg || aircraft.tail || 'Unknown',
-                                aircraftType: aircraft.aircraftType || aircraft.model || aircraft.typeName || 'Unknown',
-                                model: aircraft.model || aircraft.modelCode || 'Unknown',
-                                manufacturingYear: aircraft.manufacturingYear || aircraft.deliveryDate?.split('-')[0] || 'Unknown',
-                                engines: aircraft.engines || `${aircraft.numEngines || 'Unknown'} × ${aircraft.engineType || 'Jet'}`
-                            }));
-                            
-                            resolve(processedAircrafts);
-                        } catch (parseError) {
-                            console.error(`❌ ${airlineCode} JSON Parse Error:`, parseError);
-                            reject(new Error(`JSON Parse Error für ${airlineCode}: ${parseError.message}`));
-                        }
-                    } else {
-                        console.error(`❌ ${airlineCode} HTTP Error: ${this.status} ${this.statusText}`);
-                        console.error(`❌ ${airlineCode} Error Response:`, this.responseText);
-                        reject(new Error(`HTTP ${this.status} für ${airlineCode}: ${this.statusText} - ${this.responseText}`));
-                    }
-                }
-            });
+		if (elements.aircraftTypeFilter) {
+			elements.aircraftTypeFilter.addEventListener("change", applyFilters);
+		}
 
-            xhr.open('GET', url);
-            xhr.setRequestHeader('x-rapidapi-key', config.rapidApiKey);
-            xhr.setRequestHeader('x-rapidapi-host', config.rapidApiHost);
+		if (elements.searchFilter) {
+			elements.searchFilter.addEventListener(
+				"input",
+				debounce(applyFilters, 300)
+			);
+		}
 
-            xhr.send(null);
-        });
-    }
+		// Sortier-Event-Listener für Tabellenspalten
+		const sortableHeaders = document.querySelectorAll("[data-sort]");
+		sortableHeaders.forEach((header) => {
+			header.addEventListener("click", () => {
+				const column = header.getAttribute("data-sort");
+				sortData(column);
+			});
+		});
+	}
 
-    /**
-     * Testet verschiedene API-Endpoints um den korrekten zu finden
-     */
-    async function testApiEndpoints() {
-        console.log('🧪 Teste API-Endpoints...');
-        
-        const testEndpoints = [
-            '/airlines/CLH',
-            '/airlines/CLH/fleet',
-            '/airlines/CLH/aircrafts',
-            '/operators/CLH/aircrafts',
-            '/airlines/DLH',
-            '/airlines/LH'
-        ];
-        
-        for (const endpoint of testEndpoints) {
-            try {
-                const url = `${config.baseUrl}${endpoint}`;
-                console.log(`🔍 Teste Endpoint: ${url}`);
-                
-                await rateLimitDelay();
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'X-RapidAPI-Key': config.rapidApiKey,
-                        'X-RapidAPI-Host': config.rapidApiHost
-                    }
-                });
-                
-                console.log(`📊 ${endpoint}: Status ${response.status} ${response.statusText}`);
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log(`✅ ${endpoint} funktioniert:`, data);
-                    
-                    // Detaillierte Analyse der Datenstruktur
-                    if (data) {
-                        console.log(`📋 Datenstruktur-Analyse für ${endpoint}:`);
-                        console.log(`   - Typ: ${typeof data}`);
-                        console.log(`   - Ist Array: ${Array.isArray(data)}`);
-                        console.log(`   - Keys:`, Object.keys(data));
-                        if (data.aircrafts) {
-                            console.log(`   - Anzahl Flugzeuge: ${data.aircrafts.length}`);
-                        }
-                    }
-                } else {
-                    // Fehlerdetails ausgeben
-                    try {
-                        const errorData = await response.json();
-                        console.log(`❌ ${endpoint} Fehler-Details:`, errorData);
-                    } catch (e) {
-                        const errorText = await response.text();
-                        console.log(`❌ ${endpoint} Fehler-Text:`, errorText);
-                    }
-                }
-            } catch (error) {
-                console.log(`❌ ${endpoint} Netzwerk-Fehler:`, error.message);
-            }
-        }
-    }
+	/**
+	 * Flottendaten für beide Airlines laden - VEREINFACHTE VERSION
+	 */
+	async function loadFleetData() {
+		console.log("📡 Starte das Laden der Flottendaten...");
 
-    /**
-     * Flotte einer bestimmten Airline laden
-     */
-    async function loadAirlineFleet(airlineCode) {
-        console.log(`📡 Lade ${airlineCode} Flotte...`);
-        
-        // SCHRITT 2: Verschiedene URL-Varianten testen
-        const urlVariants = [
-            `${config.baseUrl}/airlines/${airlineCode}/aircrafts`,
-            `${config.baseUrl}/airlines/${airlineCode}/fleet`,
-            `${config.baseUrl}/operators/${airlineCode}/aircrafts`,
-            `${config.baseUrl}/airlines/${airlineCode}`
-        ];
-        
-        for (let i = 0; i < urlVariants.length; i++) {
-            const url = urlVariants[i];
-            console.log(`� Teste URL ${i+1}/${urlVariants.length}: ${url}`);
-            
-            await rateLimitDelay();
-            
-            try {
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'X-RapidAPI-Key': config.rapidApiKey,
-                        'X-RapidAPI-Host': config.rapidApiHost
-                    }
-                });
+		showLoadingState();
+		updateStatus("Lade Flottendaten...");
 
-                console.log(`📊 ${airlineCode} Response Status: ${response.status} ${response.statusText}`);
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log(`✅ ${airlineCode} API-Antwort von ${url}:`, data);
-                    
-                    // Verschiedene Datenstrukturen handhaben
-                    let aircrafts = [];
-                    if (data.aircrafts) {
-                        aircrafts = data.aircrafts;
-                    } else if (Array.isArray(data)) {
-                        aircrafts = data;
-                    } else if (data.fleet) {
-                        aircrafts = data.fleet;
-                    } else {
-                        console.log(`⚠️ Unbekannte Datenstruktur für ${airlineCode}:`, data);
-                        aircrafts = [];
-                    }
-                    
-                    console.log(`📊 ${airlineCode}: ${aircrafts.length} Flugzeuge gefunden`);
-                    
-                    return aircrafts.map(aircraft => ({
-                        ...aircraft,
-                        airline: airlineCode,
-                        airlineName: config.airlines[airlineCode]?.name || airlineCode,
-                        airlineColor: config.airlines[airlineCode]?.color || '#666666',
-                        registration: aircraft.registration || aircraft.reg || aircraft.tail || 'Unknown'
-                    }));
-                    
-                } else {
-                    // Detaillierte Fehleranalyse
-                    let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-                    try {
-                        const errorData = await response.json();
-                        errorMessage += ` - ${JSON.stringify(errorData)}`;
-                    } catch (e) {
-                        const errorText = await response.text();
-                        errorMessage += ` - ${errorText}`;
-                    }
-                    console.error(`❌ API-Fehler für ${airlineCode} (${url}): ${errorMessage}`);
-                    
-                    // Nur bei der letzten URL einen Fehler werfen
-                    if (i === urlVariants.length - 1) {
-                        throw new Error(`Alle API-Endpoints fehlgeschlagen für ${airlineCode}: ${errorMessage}`);
-                    }
-                }
-            } catch (error) {
-                console.error(`❌ Netzwerk-Fehler für ${airlineCode} (${url}):`, error);
-                
-                // Nur bei der letzten URL einen Fehler werfen
-                if (i === urlVariants.length - 1) {
-                    throw error;
-                }
-            }
-        }
-        
-        // Fallback: Leeres Array zurückgeben
-        console.warn(`⚠️ Keine Daten für ${airlineCode} gefunden, verwende leeres Array`);
-        return [];
-    }
+		try {
+			fleetData = [];
 
-    /**
-     * Rate Limiting für API-Aufrufe
-     */
-    async function rateLimitDelay() {
-        const now = Date.now();
-        const timeSinceLastCall = now - lastApiCall;
-        
-        if (timeSinceLastCall < config.rateLimitDelay) {
-            const waitTime = config.rateLimitDelay - timeSinceLastCall;
-            console.log(`⏱️ Rate Limiting: Warte ${waitTime}ms...`);
-            await new Promise(resolve => setTimeout(resolve, waitTime));
-        }
-        
-        lastApiCall = Date.now();
-    }
+			// CLH Flotte laden
+			updateStatus("Lade CLH (Lufthansa CityLine) Flotte...");
+			const clhData = await loadSimpleAirlineFleet("CLH");
 
-    /**
-     * Filter anwenden
-     */
-    function applyFilters() {
-        let filtered = [...fleetData];
-        
-        // Airline-Filter
-        const airlineFilter = elements.airlineFilter?.value;
-        if (airlineFilter && airlineFilter !== 'all') {
-            filtered = filtered.filter(aircraft => aircraft.airline === airlineFilter);
-        }
-        
-        // Flugzeugtyp-Filter
-        const typeFilter = elements.aircraftTypeFilter?.value;
-        if (typeFilter && typeFilter !== 'all') {
-            filtered = filtered.filter(aircraft => 
-                aircraft.aircraftType === typeFilter || 
-                aircraft.model === typeFilter
-            );
-        }
-        
-        // Such-Filter
-        const searchTerm = elements.searchFilter?.value?.toLowerCase();
-        if (searchTerm) {
-            filtered = filtered.filter(aircraft => 
-                (aircraft.registration?.toLowerCase().includes(searchTerm)) ||
-                (aircraft.aircraftType?.toLowerCase().includes(searchTerm)) ||
-                (aircraft.model?.toLowerCase().includes(searchTerm)) ||
-                (aircraft.airlineName?.toLowerCase().includes(searchTerm))
-            );
-        }
-        
-        filteredData = filtered;
-        
-        // Sortierung anwenden
-        applySorting();
-        
-        // Tabelle aktualisieren
-        renderFleetTable();
-        
-        // Anzahl aktualisieren
-        updateFleetCount(filteredData.length, fleetData.length);
-    }
+			// LHX Flotte laden
+			updateStatus("Lade LHX (Lufthansa Private Jet) Flotte...");
+			const lhxData = await loadSimpleAirlineFleet("LHX");
 
-    /**
-     * Sortierung anwenden
-     */
-    function applySorting() {
-        const { column, direction } = sortOrder;
-        
-        filteredData.sort((a, b) => {
-            let valueA = a[column] || '';
-            let valueB = b[column] || '';
-            
-            // Numerische Werte für Jahr
-            if (column === 'manufacturingYear') {
-                valueA = parseInt(valueA) || 0;
-                valueB = parseInt(valueB) || 0;
-            } else {
-                // String-Vergleich
-                valueA = valueA.toString().toLowerCase();
-                valueB = valueB.toString().toLowerCase();
-            }
-            
-            let comparison = 0;
-            if (valueA < valueB) comparison = -1;
-            if (valueA > valueB) comparison = 1;
-            
-            return direction === 'asc' ? comparison : -comparison;
-        });
-    }
+			// Daten zusammenführen
+			fleetData = [...clhData, ...lhxData];
 
-    /**
-     * Sortierung für eine Spalte ändern
-     */
-    function sortData(column) {
-        if (sortOrder.column === column) {
-            // Richtung umkehren wenn gleiche Spalte
-            sortOrder.direction = sortOrder.direction === 'asc' ? 'desc' : 'asc';
-        } else {
-            // Neue Spalte, standardmäßig aufsteigend
-            sortOrder.column = column;
-            sortOrder.direction = 'asc';
-        }
-        
-        // Sortier-Indikatoren aktualisieren
-        updateSortIndicators();
-        
-        // Filter erneut anwenden (mit neuer Sortierung)
-        applyFilters();
-    }
+			console.log(`✅ ${fleetData.length} Flugzeuge geladen`);
+			updateStatus(`${fleetData.length} Flugzeuge erfolgreich geladen`);
 
-    /**
-     * Sortier-Indikatoren in Tabellenkopf aktualisieren
-     */
-    function updateSortIndicators() {
-        const headers = document.querySelectorAll('[data-sort]');
-        headers.forEach(header => {
-            const indicator = header.querySelector('.sort-indicator');
-            const column = header.getAttribute('data-sort');
-            
-            if (column === sortOrder.column) {
-                indicator.textContent = sortOrder.direction === 'asc' ? '↑' : '↓';
-                header.classList.add('bg-blue-100');
-            } else {
-                indicator.textContent = '↕';
-                header.classList.remove('bg-blue-100');
-            }
-        });
-    }
+			// Flugzeugtypen für Filter extrahieren
+			updateAircraftTypeFilter();
 
-    /**
-     * Flugzeugtyp-Filter aktualisieren
-     */
-    function updateAircraftTypeFilter() {
-        if (!elements.aircraftTypeFilter) return;
-        
-        // Eindeutige Flugzeugtypen extrahieren
-        const types = [...new Set(fleetData.map(aircraft => aircraft.aircraftType).filter(Boolean))];
-        types.sort();
-        
-        // Filter-Optionen aktualisieren
-        elements.aircraftTypeFilter.innerHTML = '<option value="all">Alle Typen</option>';
-        types.forEach(type => {
-            const option = document.createElement('option');
-            option.value = type;
-            option.textContent = type;
-            elements.aircraftTypeFilter.appendChild(option);
-        });
-        
-        // Airline-Filter auch dynamisch aktualisieren
-        updateAirlineFilter();
-    }
+			// Airline-Filter aktualisieren
+			updateAirlineFilter();
 
-    /**
-     * Airline-Filter mit gefundenen Airlines aktualisieren
-     */
-    function updateAirlineFilter() {
-        if (!elements.airlineFilter) return;
-        
-    /**
-     * Airline-Filter aktualisieren basierend auf geladenen Daten
-     */
-    function updateAirlineFilter() {
-        if (!elements.airlineFilter) return;
-        
-        // Eindeutige Airlines extrahieren
-        const airlines = [...new Set(fleetData.map(aircraft => aircraft.airline).filter(Boolean))];
-        airlines.sort();
-        
-        // Filter-Optionen aktualisieren
-        elements.airlineFilter.innerHTML = '<option value="all">Alle Airlines</option>';
-        airlines.forEach(airlineCode => {
-            const option = document.createElement('option');
-            option.value = airlineCode;
-            const airlineInfo = config.airlines[airlineCode];
-            option.textContent = airlineInfo ? 
-                `${airlineCode} - ${airlineInfo.name}` : 
-                airlineCode;
-            elements.airlineFilter.appendChild(option);
-        });
-        
-        console.log(`📊 Filter aktualisiert: ${airlines.length} Airlines gefunden`);
-    }
-    }
+			// Tabelle aktualisieren
+			applyFilters();
+		} catch (error) {
+			console.error("❌ Fehler beim Laden der Flottendaten:", error);
+			updateStatus("Fehler beim Laden der Flottendaten: " + error.message);
+			showEmptyState();
+		}
+	}
 
-    /**
-     * Flottentabelle rendern
-     */
-    function renderFleetTable() {
-        if (!elements.fleetTableBody) return;
-        
-        if (filteredData.length === 0) {
-            showEmptyState();
-            return;
-        }
-        
-        hideEmptyState();
-        
-        const tbody = elements.fleetTableBody;
-        tbody.innerHTML = '';
-        
-        filteredData.forEach(aircraft => {
-            const row = createFleetTableRow(aircraft);
-            tbody.appendChild(row);
-        });
-    }
+	/**
+	 * Vereinfachte Airline-Flotte laden basierend auf funktionierendem Code-Snippet
+	 */
+	async function loadSimpleAirlineFleet(airlineCode) {
+		// Exakt das Format aus dem funktionierenden Code-Snippet
+		const url = `${config.baseUrl}/airlines/${airlineCode}/aircrafts?pageSize=${config.pageSize}&pageOffset=0&withRegistrations=false`;
 
-    /**
-     * Tabellenzeile für ein Flugzeug erstellen
-     */
-    function createFleetTableRow(aircraft) {
-        const row = document.createElement('tr');
-        row.className = 'hover:bg-gray-50 transition-colors';
-        
-        row.innerHTML = `
+		console.log(`📡 Lade ${airlineCode} Flotte von: ${url}`);
+
+		// Rate Limiting
+		await rateLimitDelay();
+
+		return new Promise((resolve, reject) => {
+			const xhr = new XMLHttpRequest();
+			xhr.withCredentials = true;
+
+			xhr.addEventListener("readystatechange", function () {
+				if (this.readyState === this.DONE) {
+					console.log(`📊 ${airlineCode} Response Status: ${this.status}`);
+					console.log(`📊 ${airlineCode} Response Text:`, this.responseText);
+
+					if (this.status === 200) {
+						try {
+							const data = JSON.parse(this.responseText);
+							console.log(`✅ ${airlineCode} API-Antwort:`, data);
+
+							// KORREKTUR: Verschiedene Datenstrukturen handhaben
+							let aircrafts = [];
+							if (data.items) {
+								// AeroDataBox Format: { items: [...] }
+								aircrafts = data.items;
+							} else if (data.aircrafts) {
+								// Alternatives Format: { aircrafts: [...] }
+								aircrafts = data.aircrafts;
+							} else if (Array.isArray(data)) {
+								// Direktes Array
+								aircrafts = data;
+							} else {
+								console.warn(
+									`⚠️ Unbekannte Datenstruktur für ${airlineCode}:`,
+									data
+								);
+								aircrafts = [];
+							}
+
+							console.log(
+								`📊 ${airlineCode}: ${aircrafts.length} Flugzeuge gefunden`
+							);
+
+							const processedAircrafts = aircrafts.map((aircraft) => ({
+								...aircraft,
+								airline: airlineCode,
+								airlineName: config.airlines[airlineCode]?.name || airlineCode,
+								airlineColor: config.airlines[airlineCode]?.color || "#666666",
+								registration:
+									aircraft.registration ||
+									aircraft.reg ||
+									aircraft.tail ||
+									"Unknown",
+								aircraftType:
+									aircraft.aircraftType ||
+									aircraft.model ||
+									aircraft.typeName ||
+									"Unknown",
+								model: aircraft.model || aircraft.modelCode || "Unknown",
+								manufacturingYear:
+									aircraft.manufacturingYear ||
+									aircraft.deliveryDate?.split("-")[0] ||
+									"Unknown",
+								engines:
+									aircraft.engines ||
+									`${aircraft.numEngines || "Unknown"} × ${
+										aircraft.engineType || "Jet"
+									}`,
+							}));
+
+							resolve(processedAircrafts);
+						} catch (parseError) {
+							console.error(`❌ ${airlineCode} JSON Parse Error:`, parseError);
+							reject(
+								new Error(
+									`JSON Parse Error für ${airlineCode}: ${parseError.message}`
+								)
+							);
+						}
+					} else {
+						console.error(
+							`❌ ${airlineCode} HTTP Error: ${this.status} ${this.statusText}`
+						);
+						console.error(
+							`❌ ${airlineCode} Error Response:`,
+							this.responseText
+						);
+						reject(
+							new Error(
+								`HTTP ${this.status} für ${airlineCode}: ${this.statusText} - ${this.responseText}`
+							)
+						);
+					}
+				}
+			});
+
+			xhr.open("GET", url);
+			xhr.setRequestHeader("x-rapidapi-key", config.rapidApiKey);
+			xhr.setRequestHeader("x-rapidapi-host", config.rapidApiHost);
+
+			xhr.send(null);
+		});
+	}
+
+	/**
+	 * Testet verschiedene API-Endpoints um den korrekten zu finden
+	 */
+	async function testApiEndpoints() {
+		console.log("🧪 Teste API-Endpoints...");
+
+		const testEndpoints = [
+			"/airlines/CLH",
+			"/airlines/CLH/fleet",
+			"/airlines/CLH/aircrafts",
+			"/operators/CLH/aircrafts",
+			"/airlines/DLH",
+			"/airlines/LH",
+		];
+
+		for (const endpoint of testEndpoints) {
+			try {
+				const url = `${config.baseUrl}${endpoint}`;
+				console.log(`🔍 Teste Endpoint: ${url}`);
+
+				await rateLimitDelay();
+				const response = await fetch(url, {
+					method: "GET",
+					headers: {
+						"X-RapidAPI-Key": config.rapidApiKey,
+						"X-RapidAPI-Host": config.rapidApiHost,
+					},
+				});
+
+				console.log(
+					`📊 ${endpoint}: Status ${response.status} ${response.statusText}`
+				);
+
+				if (response.ok) {
+					const data = await response.json();
+					console.log(`✅ ${endpoint} funktioniert:`, data);
+
+					// Detaillierte Analyse der Datenstruktur
+					if (data) {
+						console.log(`📋 Datenstruktur-Analyse für ${endpoint}:`);
+						console.log(`   - Typ: ${typeof data}`);
+						console.log(`   - Ist Array: ${Array.isArray(data)}`);
+						console.log(`   - Keys:`, Object.keys(data));
+						if (data.aircrafts) {
+							console.log(`   - Anzahl Flugzeuge: ${data.aircrafts.length}`);
+						}
+					}
+				} else {
+					// Fehlerdetails ausgeben
+					try {
+						const errorData = await response.json();
+						console.log(`❌ ${endpoint} Fehler-Details:`, errorData);
+					} catch (e) {
+						const errorText = await response.text();
+						console.log(`❌ ${endpoint} Fehler-Text:`, errorText);
+					}
+				}
+			} catch (error) {
+				console.log(`❌ ${endpoint} Netzwerk-Fehler:`, error.message);
+			}
+		}
+	}
+
+	/**
+	 * Flotte einer bestimmten Airline laden
+	 */
+	async function loadAirlineFleet(airlineCode) {
+		console.log(`📡 Lade ${airlineCode} Flotte...`);
+
+		// SCHRITT 2: Verschiedene URL-Varianten testen
+		const urlVariants = [
+			`${config.baseUrl}/airlines/${airlineCode}/aircrafts`,
+			`${config.baseUrl}/airlines/${airlineCode}/fleet`,
+			`${config.baseUrl}/operators/${airlineCode}/aircrafts`,
+			`${config.baseUrl}/airlines/${airlineCode}`,
+		];
+
+		for (let i = 0; i < urlVariants.length; i++) {
+			const url = urlVariants[i];
+			console.log(`� Teste URL ${i + 1}/${urlVariants.length}: ${url}`);
+
+			await rateLimitDelay();
+
+			try {
+				const response = await fetch(url, {
+					method: "GET",
+					headers: {
+						"X-RapidAPI-Key": config.rapidApiKey,
+						"X-RapidAPI-Host": config.rapidApiHost,
+					},
+				});
+
+				console.log(
+					`📊 ${airlineCode} Response Status: ${response.status} ${response.statusText}`
+				);
+
+				if (response.ok) {
+					const data = await response.json();
+					console.log(`✅ ${airlineCode} API-Antwort von ${url}:`, data);
+
+					// Verschiedene Datenstrukturen handhaben
+					let aircrafts = [];
+					if (data.aircrafts) {
+						aircrafts = data.aircrafts;
+					} else if (Array.isArray(data)) {
+						aircrafts = data;
+					} else if (data.fleet) {
+						aircrafts = data.fleet;
+					} else {
+						console.log(
+							`⚠️ Unbekannte Datenstruktur für ${airlineCode}:`,
+							data
+						);
+						aircrafts = [];
+					}
+
+					console.log(
+						`📊 ${airlineCode}: ${aircrafts.length} Flugzeuge gefunden`
+					);
+
+					return aircrafts.map((aircraft) => ({
+						...aircraft,
+						airline: airlineCode,
+						airlineName: config.airlines[airlineCode]?.name || airlineCode,
+						airlineColor: config.airlines[airlineCode]?.color || "#666666",
+						registration:
+							aircraft.registration ||
+							aircraft.reg ||
+							aircraft.tail ||
+							"Unknown",
+					}));
+				} else {
+					// Detaillierte Fehleranalyse
+					let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+					try {
+						const errorData = await response.json();
+						errorMessage += ` - ${JSON.stringify(errorData)}`;
+					} catch (e) {
+						const errorText = await response.text();
+						errorMessage += ` - ${errorText}`;
+					}
+					console.error(
+						`❌ API-Fehler für ${airlineCode} (${url}): ${errorMessage}`
+					);
+
+					// Nur bei der letzten URL einen Fehler werfen
+					if (i === urlVariants.length - 1) {
+						throw new Error(
+							`Alle API-Endpoints fehlgeschlagen für ${airlineCode}: ${errorMessage}`
+						);
+					}
+				}
+			} catch (error) {
+				console.error(`❌ Netzwerk-Fehler für ${airlineCode} (${url}):`, error);
+
+				// Nur bei der letzten URL einen Fehler werfen
+				if (i === urlVariants.length - 1) {
+					throw error;
+				}
+			}
+		}
+
+		// Fallback: Leeres Array zurückgeben
+		console.warn(
+			`⚠️ Keine Daten für ${airlineCode} gefunden, verwende leeres Array`
+		);
+		return [];
+	}
+
+	/**
+	 * Rate Limiting für API-Aufrufe
+	 */
+	async function rateLimitDelay() {
+		const now = Date.now();
+		const timeSinceLastCall = now - lastApiCall;
+
+		if (timeSinceLastCall < config.rateLimitDelay) {
+			const waitTime = config.rateLimitDelay - timeSinceLastCall;
+			console.log(`⏱️ Rate Limiting: Warte ${waitTime}ms...`);
+			await new Promise((resolve) => setTimeout(resolve, waitTime));
+		}
+
+		lastApiCall = Date.now();
+	}
+
+	/**
+	 * Filter anwenden
+	 */
+	function applyFilters() {
+		let filtered = [...fleetData];
+
+		// Airline-Filter
+		const airlineFilter = elements.airlineFilter?.value;
+		if (airlineFilter && airlineFilter !== "all") {
+			filtered = filtered.filter(
+				(aircraft) => aircraft.airline === airlineFilter
+			);
+		}
+
+		// Flugzeugtyp-Filter
+		const typeFilter = elements.aircraftTypeFilter?.value;
+		if (typeFilter && typeFilter !== "all") {
+			filtered = filtered.filter(
+				(aircraft) =>
+					aircraft.aircraftType === typeFilter || aircraft.model === typeFilter
+			);
+		}
+
+		// Such-Filter
+		const searchTerm = elements.searchFilter?.value?.toLowerCase();
+		if (searchTerm) {
+			filtered = filtered.filter(
+				(aircraft) =>
+					aircraft.registration?.toLowerCase().includes(searchTerm) ||
+					aircraft.aircraftType?.toLowerCase().includes(searchTerm) ||
+					aircraft.model?.toLowerCase().includes(searchTerm) ||
+					aircraft.airlineName?.toLowerCase().includes(searchTerm)
+			);
+		}
+
+		filteredData = filtered;
+
+		// Sortierung anwenden
+		applySorting();
+
+		// Tabelle aktualisieren
+		renderFleetTable();
+
+		// Anzahl aktualisieren
+		updateFleetCount(filteredData.length, fleetData.length);
+	}
+
+	/**
+	 * Sortierung anwenden
+	 */
+	function applySorting() {
+		const { column, direction } = sortOrder;
+
+		filteredData.sort((a, b) => {
+			let valueA = a[column] || "";
+			let valueB = b[column] || "";
+
+			// Numerische Werte für Jahr
+			if (column === "manufacturingYear") {
+				valueA = parseInt(valueA) || 0;
+				valueB = parseInt(valueB) || 0;
+			} else {
+				// String-Vergleich
+				valueA = valueA.toString().toLowerCase();
+				valueB = valueB.toString().toLowerCase();
+			}
+
+			let comparison = 0;
+			if (valueA < valueB) comparison = -1;
+			if (valueA > valueB) comparison = 1;
+
+			return direction === "asc" ? comparison : -comparison;
+		});
+	}
+
+	/**
+	 * Sortierung für eine Spalte ändern
+	 */
+	function sortData(column) {
+		if (sortOrder.column === column) {
+			// Richtung umkehren wenn gleiche Spalte
+			sortOrder.direction = sortOrder.direction === "asc" ? "desc" : "asc";
+		} else {
+			// Neue Spalte, standardmäßig aufsteigend
+			sortOrder.column = column;
+			sortOrder.direction = "asc";
+		}
+
+		// Sortier-Indikatoren aktualisieren
+		updateSortIndicators();
+
+		// Filter erneut anwenden (mit neuer Sortierung)
+		applyFilters();
+	}
+
+	/**
+	 * Sortier-Indikatoren in Tabellenkopf aktualisieren
+	 */
+	function updateSortIndicators() {
+		const headers = document.querySelectorAll("[data-sort]");
+		headers.forEach((header) => {
+			const indicator = header.querySelector(".sort-indicator");
+			const column = header.getAttribute("data-sort");
+
+			if (column === sortOrder.column) {
+				indicator.textContent = sortOrder.direction === "asc" ? "↑" : "↓";
+				header.classList.add("bg-blue-100");
+			} else {
+				indicator.textContent = "↕";
+				header.classList.remove("bg-blue-100");
+			}
+		});
+	}
+
+	/**
+	 * Flugzeugtyp-Filter aktualisieren
+	 */
+	function updateAircraftTypeFilter() {
+		if (!elements.aircraftTypeFilter) return;
+
+		// Eindeutige Flugzeugtypen extrahieren
+		const types = [
+			...new Set(
+				fleetData.map((aircraft) => aircraft.aircraftType).filter(Boolean)
+			),
+		];
+		types.sort();
+
+		// Filter-Optionen aktualisieren
+		elements.aircraftTypeFilter.innerHTML =
+			'<option value="all">Alle Typen</option>';
+		types.forEach((type) => {
+			const option = document.createElement("option");
+			option.value = type;
+			option.textContent = type;
+			elements.aircraftTypeFilter.appendChild(option);
+		});
+
+		// Airline-Filter auch dynamisch aktualisieren
+		updateAirlineFilter();
+	}
+
+	/**
+	 * Airline-Filter mit gefundenen Airlines aktualisieren
+	 */
+	function updateAirlineFilter() {
+		if (!elements.airlineFilter) return;
+
+		/**
+		 * Airline-Filter aktualisieren basierend auf geladenen Daten
+		 */
+		function updateAirlineFilter() {
+			if (!elements.airlineFilter) return;
+
+			// Eindeutige Airlines extrahieren
+			const airlines = [
+				...new Set(
+					fleetData.map((aircraft) => aircraft.airline).filter(Boolean)
+				),
+			];
+			airlines.sort();
+
+			// Filter-Optionen aktualisieren
+			elements.airlineFilter.innerHTML =
+				'<option value="all">Alle Airlines</option>';
+			airlines.forEach((airlineCode) => {
+				const option = document.createElement("option");
+				option.value = airlineCode;
+				const airlineInfo = config.airlines[airlineCode];
+				option.textContent = airlineInfo
+					? `${airlineCode} - ${airlineInfo.name}`
+					: airlineCode;
+				elements.airlineFilter.appendChild(option);
+			});
+
+			console.log(
+				`📊 Filter aktualisiert: ${airlines.length} Airlines gefunden`
+			);
+		}
+	}
+
+	/**
+	 * Flottentabelle rendern
+	 */
+	function renderFleetTable() {
+		if (!elements.fleetTableBody) return;
+
+		if (filteredData.length === 0) {
+			showEmptyState();
+			return;
+		}
+
+		hideEmptyState();
+
+		const tbody = elements.fleetTableBody;
+		tbody.innerHTML = "";
+
+		filteredData.forEach((aircraft) => {
+			const row = createFleetTableRow(aircraft);
+			tbody.appendChild(row);
+		});
+	}
+
+	/**
+	 * Tabellenzeile für ein Flugzeug erstellen
+	 */
+	function createFleetTableRow(aircraft) {
+		const row = document.createElement("tr");
+		row.className = "hover:bg-gray-50 transition-colors";
+
+		row.innerHTML = `
             <td class="px-4 py-3 whitespace-nowrap">
                 <div class="flex items-center">
-                    <div class="w-3 h-3 rounded-full mr-2" style="background-color: ${aircraft.airlineColor}"></div>
-                    <span class="text-sm font-medium text-gray-900">${aircraft.airline}</span>
-                    <span class="text-xs text-gray-500 ml-1">${aircraft.airlineName}</span>
+                    <div class="w-3 h-3 rounded-full mr-2" style="background-color: ${
+											aircraft.airlineColor
+										}"></div>
+                    <span class="text-sm font-medium text-gray-900">${
+											aircraft.airline
+										}</span>
+                    <span class="text-xs text-gray-500 ml-1">${
+											aircraft.airlineName
+										}</span>
                 </div>
             </td>
             <td class="px-4 py-3 whitespace-nowrap">
-                <span class="text-sm font-mono text-gray-900">${aircraft.registration || '-'}</span>
+                <span class="text-sm font-mono text-gray-900">${
+									aircraft.registration || "-"
+								}</span>
             </td>
             <td class="px-4 py-3 whitespace-nowrap">
-                <span class="text-sm text-gray-900">${aircraft.aircraftType || '-'}</span>
+                <span class="text-sm text-gray-900">${
+									aircraft.aircraftType || "-"
+								}</span>
             </td>
             <td class="px-4 py-3 whitespace-nowrap">
-                <span class="text-sm text-gray-900">${aircraft.model || '-'}</span>
+                <span class="text-sm text-gray-900">${
+									aircraft.model || "-"
+								}</span>
             </td>
             <td class="px-4 py-3 whitespace-nowrap">
-                <span class="text-sm text-gray-900">${aircraft.manufacturingYear || '-'}</span>
+                <span class="text-sm text-gray-900">${
+									aircraft.manufacturingYear || "-"
+								}</span>
             </td>
             <td class="px-4 py-3 whitespace-nowrap">
-                <span class="text-sm text-gray-900">${formatEngines(aircraft.engines) || '-'}</span>
+                <span class="text-sm text-gray-900">${
+									formatEngines(aircraft.engines) || "-"
+								}</span>
             </td>
             <td class="px-4 py-3 whitespace-nowrap text-sm">
                 <button class="text-blue-600 hover:text-blue-800 mr-2" 
-                        onclick="FleetDatabase.viewAircraftDetails('${aircraft.registration}')"
+                        onclick="FleetDatabase.viewAircraftDetails('${
+													aircraft.registration
+												}')"
                         title="Details anzeigen">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
@@ -639,7 +725,9 @@ const FleetDatabase = (function() {
                     </svg>
                 </button>
                 <button class="text-green-600 hover:text-green-800" 
-                        onclick="FleetDatabase.useInHangar('${aircraft.registration}')"
+                        onclick="FleetDatabase.useInHangar('${
+													aircraft.registration
+												}')"
                         title="In HangarPlanner verwenden">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
@@ -648,237 +736,265 @@ const FleetDatabase = (function() {
                 </button>
             </td>
         `;
-        
-        return row;
-    }
 
-    /**
-     * Triebwerke formatieren - verbessert für AeroDataBox Datenstruktur
-     */
-    function formatEngines(engines) {
-        if (!engines) return '';
-        
-        // Wenn es bereits ein String ist (von der Datennormalisierung)
-        if (typeof engines === 'string') {
-            return engines;
-        }
-        
-        // Wenn es ein Array ist
-        if (Array.isArray(engines)) {
-            return engines.map(engine => {
-                if (typeof engine === 'string') return engine;
-                if (engine.model) return engine.model;
-                if (engine.type) return engine.type;
-                return 'Unknown';
-            }).join(', ');
-        }
-        
-        // Fallback
-        return engines.toString();
-    }
+		return row;
+	}
 
-    /**
-     * Loading-Zustand anzeigen
-     */
-    function showLoadingState() {
-        if (elements.fleetTableEmpty) elements.fleetTableEmpty.style.display = 'none';
-        if (elements.fleetTableLoading) elements.fleetTableLoading.style.display = 'block';
-        if (elements.fleetTable) elements.fleetTable.style.display = 'table';
-    }
+	/**
+	 * Triebwerke formatieren - verbessert für AeroDataBox Datenstruktur
+	 */
+	function formatEngines(engines) {
+		if (!engines) return "";
 
-    /**
-     * Leeren Zustand anzeigen
-     */
-    function showEmptyState() {
-        if (elements.fleetTableLoading) elements.fleetTableLoading.style.display = 'none';
-        if (elements.fleetTableEmpty) elements.fleetTableEmpty.style.display = 'block';
-        if (elements.fleetTable) elements.fleetTable.style.display = 'none';
-    }
+		// Wenn es bereits ein String ist (von der Datennormalisierung)
+		if (typeof engines === "string") {
+			return engines;
+		}
 
-    /**
-     * Leeren Zustand verstecken
-     */
-    function hideEmptyState() {
-        if (elements.fleetTableLoading) elements.fleetTableLoading.style.display = 'none';
-        if (elements.fleetTableEmpty) elements.fleetTableEmpty.style.display = 'none';
-        if (elements.fleetTable) elements.fleetTable.style.display = 'table';
-    }
+		// Wenn es ein Array ist
+		if (Array.isArray(engines)) {
+			return engines
+				.map((engine) => {
+					if (typeof engine === "string") return engine;
+					if (engine.model) return engine.model;
+					if (engine.type) return engine.type;
+					return "Unknown";
+				})
+				.join(", ");
+		}
 
-    /**
-     * Status-Text aktualisieren
-     */
-    function updateStatus(message) {
-        if (elements.fleetStatus) {
-            elements.fleetStatus.textContent = message;
-        }
-        console.log('📊 Status:', message);
-    }
+		// Fallback
+		return engines.toString();
+	}
 
-    /**
-     * Flugzeuganzahl aktualisieren
-     */
-    function updateFleetCount(filtered, total) {
-        if (elements.fleetCount) {
-            if (filtered === total) {
-                elements.fleetCount.textContent = `${total} Flugzeuge geladen`;
-            } else {
-                elements.fleetCount.textContent = `${filtered} von ${total} Flugzeugen angezeigt`;
-            }
-        }
-    }
+	/**
+	 * Loading-Zustand anzeigen
+	 */
+	function showLoadingState() {
+		if (elements.fleetTableEmpty)
+			elements.fleetTableEmpty.style.display = "none";
+		if (elements.fleetTableLoading)
+			elements.fleetTableLoading.style.display = "block";
+		if (elements.fleetTable) elements.fleetTable.style.display = "table";
+	}
 
-    /**
-     * Flottendaten exportieren
-     */
-    function exportFleetData() {
-        if (filteredData.length === 0) {
-            alert('Keine Daten zum Exportieren verfügbar. Bitte laden Sie zuerst die Flottendaten.');
-            return;
-        }
-        
-        const csvContent = generateCSV(filteredData);
-        downloadCSV(csvContent, 'fleet-database.csv');
-        
-        updateStatus(`${filteredData.length} Flugzeuge exportiert`);
-    }
+	/**
+	 * Leeren Zustand anzeigen
+	 */
+	function showEmptyState() {
+		if (elements.fleetTableLoading)
+			elements.fleetTableLoading.style.display = "none";
+		if (elements.fleetTableEmpty)
+			elements.fleetTableEmpty.style.display = "block";
+		if (elements.fleetTable) elements.fleetTable.style.display = "none";
+	}
 
-    /**
-     * CSV-Inhalt generieren
-     */
-    function generateCSV(data) {
-        const headers = ['Airline', 'Airline Name', 'Registration', 'Aircraft Type', 'Model', 'Manufacturing Year', 'Engines'];
-        const csvRows = [headers.join(',')];
-        
-        data.forEach(aircraft => {
-            const row = [
-                aircraft.airline || '',
-                aircraft.airlineName || '',
-                aircraft.registration || '',
-                aircraft.aircraftType || '',
-                aircraft.model || '',
-                aircraft.manufacturingYear || '',
-                formatEngines(aircraft.engines) || ''
-            ].map(field => `"${field.toString().replace(/"/g, '""')}"`);
-            
-            csvRows.push(row.join(','));
-        });
-        
-        return csvRows.join('\n');
-    }
+	/**
+	 * Leeren Zustand verstecken
+	 */
+	function hideEmptyState() {
+		if (elements.fleetTableLoading)
+			elements.fleetTableLoading.style.display = "none";
+		if (elements.fleetTableEmpty)
+			elements.fleetTableEmpty.style.display = "none";
+		if (elements.fleetTable) elements.fleetTable.style.display = "table";
+	}
 
-    /**
-     * CSV-Datei herunterladen
-     */
-    function downloadCSV(csvContent, filename) {
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        
-        if (link.download !== undefined) {
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            link.setAttribute('download', filename);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-    }
+	/**
+	 * Status-Text aktualisieren
+	 */
+	function updateStatus(message) {
+		if (elements.fleetStatus) {
+			elements.fleetStatus.textContent = message;
+		}
+		console.log("📊 Status:", message);
+	}
 
-    /**
-     * Flugzeugdetails anzeigen (Placeholder)
-     */
-    function viewAircraftDetails(registration) {
-        alert(`Details für ${registration} würden hier angezeigt werden.\n\nDiese Funktion kann später ausgebaut werden.`);
-    }
+	/**
+	 * Flugzeuganzahl aktualisieren
+	 */
+	function updateFleetCount(filtered, total) {
+		if (elements.fleetCount) {
+			if (filtered === total) {
+				elements.fleetCount.textContent = `${total} Flugzeuge geladen`;
+			} else {
+				elements.fleetCount.textContent = `${filtered} von ${total} Flugzeugen angezeigt`;
+			}
+		}
+	}
 
-    /**
-     * Flugzeug im HangarPlanner verwenden
-     */
-    function useInHangar(registration) {
-        // Registrierung in localStorage speichern für Übergabe an HangarPlanner
-        localStorage.setItem('selectedAircraft', registration);
-        
-        // Zurück zum HangarPlanner
-        if (confirm(`Möchten Sie ${registration} im HangarPlanner verwenden?\n\nSie werden zur Hauptseite weitergeleitet.`)) {
-            window.location.href = 'index.html';
-        }
-    }
+	/**
+	 * Flottendaten exportieren
+	 */
+	function exportFleetData() {
+		if (filteredData.length === 0) {
+			alert(
+				"Keine Daten zum Exportieren verfügbar. Bitte laden Sie zuerst die Flottendaten."
+			);
+			return;
+		}
 
-    /**
-     * Debounce-Funktion für Such-Input
-     */
-    function debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    }
+		const csvContent = generateCSV(filteredData);
+		downloadCSV(csvContent, "fleet-database.csv");
 
-    // Öffentliche API
-    return {
-        init,
-        loadFleetData,
-        exportFleetData,
-        viewAircraftDetails,
-        useInHangar,
-        getFleetData: () => fleetData,
-        getFilteredData: () => filteredData,
-        testAPI: testAPIConnection // Neue Test-Funktion für Debugging
-    };
+		updateStatus(`${filteredData.length} Flugzeuge exportiert`);
+	}
 
-    /**
-     * Test-Funktion für API-Verbindung
-     */
-    function testAPIConnection() {
-        console.log('🧪 Teste API-Verbindung...');
-        
-        // Test für CLH
-        const testUrl = `${config.baseUrl}/airlines/CLH/aircrafts?pageSize=1&pageOffset=0&withRegistrations=false`;
-        console.log('📡 Test-URL:', testUrl);
-        
-        const xhr = new XMLHttpRequest();
-        xhr.withCredentials = true;
+	/**
+	 * CSV-Inhalt generieren
+	 */
+	function generateCSV(data) {
+		const headers = [
+			"Airline",
+			"Airline Name",
+			"Registration",
+			"Aircraft Type",
+			"Model",
+			"Manufacturing Year",
+			"Engines",
+		];
+		const csvRows = [headers.join(",")];
 
-        xhr.addEventListener('readystatechange', function () {
-            if (this.readyState === this.DONE) {
-                console.log('📊 Test Response Status:', this.status);
-                console.log('📊 Test Response Text:', this.responseText);
-                
-                if (this.status === 200) {
-                    console.log('✅ API-Verbindung erfolgreich!');
-                    try {
-                        const data = JSON.parse(this.responseText);
-                        console.log('✅ API-Test Daten:', data);
-                    } catch (e) {
-                        console.error('❌ JSON Parse Error:', e);
-                    }
-                } else {
-                    console.error('❌ API-Test fehlgeschlagen:', this.status, this.statusText);
-                }
-            }
-        });
+		data.forEach((aircraft) => {
+			const row = [
+				aircraft.airline || "",
+				aircraft.airlineName || "",
+				aircraft.registration || "",
+				aircraft.aircraftType || "",
+				aircraft.model || "",
+				aircraft.manufacturingYear || "",
+				formatEngines(aircraft.engines) || "",
+			].map((field) => `"${field.toString().replace(/"/g, '""')}"`);
 
-        xhr.open('GET', testUrl);
-        xhr.setRequestHeader('x-rapidapi-key', config.rapidApiKey);
-        xhr.setRequestHeader('x-rapidapi-host', config.rapidApiHost);
-        xhr.send(null);
-    }
+			csvRows.push(row.join(","));
+		});
+
+		return csvRows.join("\n");
+	}
+
+	/**
+	 * CSV-Datei herunterladen
+	 */
+	function downloadCSV(csvContent, filename) {
+		const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+		const link = document.createElement("a");
+
+		if (link.download !== undefined) {
+			const url = URL.createObjectURL(blob);
+			link.setAttribute("href", url);
+			link.setAttribute("download", filename);
+			link.style.visibility = "hidden";
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+		}
+	}
+
+	/**
+	 * Flugzeugdetails anzeigen (Placeholder)
+	 */
+	function viewAircraftDetails(registration) {
+		alert(
+			`Details für ${registration} würden hier angezeigt werden.\n\nDiese Funktion kann später ausgebaut werden.`
+		);
+	}
+
+	/**
+	 * Flugzeug im HangarPlanner verwenden
+	 */
+	function useInHangar(registration) {
+		// Registrierung in localStorage speichern für Übergabe an HangarPlanner
+		localStorage.setItem("selectedAircraft", registration);
+
+		// Zurück zum HangarPlanner
+		if (
+			confirm(
+				`Möchten Sie ${registration} im HangarPlanner verwenden?\n\nSie werden zur Hauptseite weitergeleitet.`
+			)
+		) {
+			window.location.href = "index.html";
+		}
+	}
+
+	/**
+	 * Debounce-Funktion für Such-Input
+	 */
+	function debounce(func, wait) {
+		let timeout;
+		return function executedFunction(...args) {
+			const later = () => {
+				clearTimeout(timeout);
+				func(...args);
+			};
+			clearTimeout(timeout);
+			timeout = setTimeout(later, wait);
+		};
+	}
+
+	// Öffentliche API
+	return {
+		init,
+		loadFleetData,
+		exportFleetData,
+		viewAircraftDetails,
+		useInHangar,
+		getFleetData: () => fleetData,
+		getFilteredData: () => filteredData,
+		testAPI: testAPIConnection, // Neue Test-Funktion für Debugging
+	};
+
+	/**
+	 * Test-Funktion für API-Verbindung
+	 */
+	function testAPIConnection() {
+		console.log("🧪 Teste API-Verbindung...");
+
+		// Test für CLH
+		const testUrl = `${config.baseUrl}/airlines/CLH/aircrafts?pageSize=1&pageOffset=0&withRegistrations=false`;
+		console.log("📡 Test-URL:", testUrl);
+
+		const xhr = new XMLHttpRequest();
+		xhr.withCredentials = true;
+
+		xhr.addEventListener("readystatechange", function () {
+			if (this.readyState === this.DONE) {
+				console.log("📊 Test Response Status:", this.status);
+				console.log("📊 Test Response Text:", this.responseText);
+
+				if (this.status === 200) {
+					console.log("✅ API-Verbindung erfolgreich!");
+					try {
+						const data = JSON.parse(this.responseText);
+						console.log("✅ API-Test Daten:", data);
+					} catch (e) {
+						console.error("❌ JSON Parse Error:", e);
+					}
+				} else {
+					console.error(
+						"❌ API-Test fehlgeschlagen:",
+						this.status,
+						this.statusText
+					);
+				}
+			}
+		});
+
+		xhr.open("GET", testUrl);
+		xhr.setRequestHeader("x-rapidapi-key", config.rapidApiKey);
+		xhr.setRequestHeader("x-rapidapi-host", config.rapidApiHost);
+		xhr.send(null);
+	}
 })();
 
 // Initialisierung wenn DOM bereit ist
-document.addEventListener('DOMContentLoaded', function() {
-    FleetDatabase.init();
-    
-    // Wetter-API laden (falls verfügbar)
-    if (typeof WeatherAPI !== 'undefined') {
-        WeatherAPI.init();
-        WeatherAPI.updateWeatherDisplay();
-    }
+document.addEventListener("DOMContentLoaded", function () {
+	FleetDatabase.init();
+
+	// Wetter-API laden (falls verfügbar)
+	if (typeof WeatherAPI !== "undefined") {
+		WeatherAPI.init();
+		WeatherAPI.updateWeatherDisplay();
+	}
 });
 
 // Global verfügbar machen

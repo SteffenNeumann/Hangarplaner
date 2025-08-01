@@ -37,7 +37,7 @@ const FleetDatabase = (function () {
 				alternatives: ["DLH"],
 			},
 		},
-		pageSize: 10, // Standard wie in API-Dokumentation
+		pageSize: 10, // API-Limit: Werte zwischen 0 und 10
 		rateLimitDelay: 2000, // Erhöht auf 2 Sekunden
 	};
 
@@ -127,7 +127,7 @@ const FleetDatabase = (function () {
 	}
 
 	/**
-	 * Flottendaten für beide Airlines laden - VEREINFACHTE VERSION
+	 * Flottendaten für beide Airlines laden - ERWEITERTE VERSION FÜR VOLLSTÄNDIGE DATENERFASSUNG
 	 */
 	async function loadFleetData() {
 		console.log("📡 Starte das Laden der Flottendaten...");
@@ -139,18 +139,23 @@ const FleetDatabase = (function () {
 			fleetData = [];
 
 			// CLH Flotte laden
-			updateStatus("Lade CLH (Lufthansa CityLine) Flotte...");
+			updateStatus("Lade CLH (Lufthansa CityLine) Flotte - alle Seiten...");
 			const clhData = await loadSimpleAirlineFleet("CLH");
+			updateStatus(`CLH: ${clhData.length} Flugzeuge geladen. Lade LHX...`);
 
 			// LHX Flotte laden
-			updateStatus("Lade LHX (Lufthansa Private Jet) Flotte...");
+			updateStatus("Lade LHX (Lufthansa Private Jet) Flotte - alle Seiten...");
 			const lhxData = await loadSimpleAirlineFleet("LHX");
 
 			// Daten zusammenführen
 			fleetData = [...clhData, ...lhxData];
 
-			console.log(`✅ ${fleetData.length} Flugzeuge geladen`);
-			updateStatus(`${fleetData.length} Flugzeuge erfolgreich geladen`);
+			console.log(
+				`✅ ${fleetData.length} Flugzeuge geladen (CLH: ${clhData.length}, LHX: ${lhxData.length})`
+			);
+			updateStatus(
+				`${fleetData.length} Flugzeuge erfolgreich geladen (CLH: ${clhData.length}, LHX: ${lhxData.length})`
+			);
 
 			// Flugzeugtypen für Filter extrahieren
 			updateAircraftTypeFilter();
@@ -168,17 +173,64 @@ const FleetDatabase = (function () {
 	}
 
 	/**
-	 * Vereinfachte Airline-Flotte laden basierend auf funktionierendem Code-Snippet
+	 * Alle Seiten einer Airline-Flotte laden (erweitert für vollständige Datenerfassung)
 	 */
 	async function loadSimpleAirlineFleet(airlineCode) {
-		// Exakt das Format aus dem funktionierenden Code-Snippet
-		const url = `${config.baseUrl}/airlines/${airlineCode}/aircrafts?pageSize=${config.pageSize}&pageOffset=0&withRegistrations=false`;
+		const allAircrafts = [];
+		let pageOffset = 0;
+		let hasMoreData = true;
+		const pageSize = config.pageSize; // Verwende API-konforme pageSize (max 10)
 
-		console.log(`📡 Lade ${airlineCode} Flotte von: ${url}`);
+		console.log(`📡 Lade ${airlineCode} Flotte (alle Seiten)...`);
 
-		// Rate Limiting
-		await rateLimitDelay();
+		while (hasMoreData) {
+			const url = `${config.baseUrl}/airlines/${airlineCode}/aircrafts?pageSize=${pageSize}&pageOffset=${pageOffset}&withRegistrations=false`;
 
+			console.log(`📡 Lade Seite: ${url}`);
+
+			// Rate Limiting
+			await rateLimitDelay();
+
+			try {
+				const pageData = await loadSinglePage(url, airlineCode);
+
+				if (pageData && pageData.length > 0) {
+					allAircrafts.push(...pageData);
+					pageOffset += pageSize;
+					console.log(
+						`📊 ${airlineCode}: ${
+							pageData.length
+						} Flugzeuge auf Seite ${Math.floor(
+							pageOffset / pageSize
+						)} geladen. Gesamt: ${allAircrafts.length}`
+					);
+
+					// Wenn weniger als pageSize zurückgegeben wird, sind wir am Ende
+					if (pageData.length < pageSize) {
+						hasMoreData = false;
+					}
+				} else {
+					hasMoreData = false;
+				}
+			} catch (error) {
+				console.error(
+					`❌ Fehler beim Laden der Seite für ${airlineCode}:`,
+					error
+				);
+				hasMoreData = false;
+			}
+		}
+
+		console.log(
+			`✅ ${airlineCode}: Insgesamt ${allAircrafts.length} Flugzeuge geladen`
+		);
+		return allAircrafts;
+	}
+
+	/**
+	 * Einzelne Seite der API laden
+	 */
+	async function loadSinglePage(url, airlineCode) {
 		return new Promise((resolve, reject) => {
 			const xhr = new XMLHttpRequest();
 			xhr.withCredentials = true;
@@ -186,7 +238,6 @@ const FleetDatabase = (function () {
 			xhr.addEventListener("readystatechange", function () {
 				if (this.readyState === this.DONE) {
 					console.log(`📊 ${airlineCode} Response Status: ${this.status}`);
-					console.log(`📊 ${airlineCode} Response Text:`, this.responseText);
 
 					if (this.status === 200) {
 						try {
@@ -212,36 +263,56 @@ const FleetDatabase = (function () {
 								aircrafts = [];
 							}
 
-							console.log(
-								`📊 ${airlineCode}: ${aircrafts.length} Flugzeuge gefunden`
-							);
+							const processedAircrafts = aircrafts.map((aircraft) => {
+								// Berechne Alter in Jahren
+								const currentYear = new Date().getFullYear();
+								const manufactYear =
+									parseInt(aircraft.manufacturingYear) ||
+									parseInt(aircraft.deliveryDate?.split("-")[0]) ||
+									null;
+								const ageYears = manufactYear
+									? currentYear - manufactYear
+									: "Unknown";
 
-							const processedAircrafts = aircrafts.map((aircraft) => ({
-								...aircraft,
-								airline: airlineCode,
-								airlineName: config.airlines[airlineCode]?.name || airlineCode,
-								airlineColor: config.airlines[airlineCode]?.color || "#666666",
-								registration:
-									aircraft.registration ||
-									aircraft.reg ||
-									aircraft.tail ||
-									"Unknown",
-								aircraftType:
-									aircraft.aircraftType ||
-									aircraft.model ||
-									aircraft.typeName ||
-									"Unknown",
-								model: aircraft.model || aircraft.modelCode || "Unknown",
-								manufacturingYear:
-									aircraft.manufacturingYear ||
-									aircraft.deliveryDate?.split("-")[0] ||
-									"Unknown",
-								engines:
-									aircraft.engines ||
-									`${aircraft.numEngines || "Unknown"} × ${
-										aircraft.engineType || "Jet"
-									}`,
-							}));
+								return {
+									...aircraft,
+									airline: airlineCode,
+									airlineName:
+										config.airlines[airlineCode]?.name || airlineCode,
+									airlineColor:
+										config.airlines[airlineCode]?.color || "#666666",
+									registration:
+										aircraft.registration ||
+										aircraft.reg ||
+										aircraft.tail ||
+										"Unknown",
+									aircraftType:
+										aircraft.aircraftType ||
+										aircraft.model ||
+										aircraft.typeName ||
+										"Unknown",
+									serial:
+										aircraft.serial ||
+										aircraft.serialNumber ||
+										aircraft.msn ||
+										"Unknown",
+									numSeats:
+										aircraft.numSeats ||
+										aircraft.seatCount ||
+										aircraft.maxSeats ||
+										"Unknown",
+									manufacturingYear: manufactYear || "Unknown",
+									firstFlightDate:
+										aircraft.firstFlightDate ||
+										aircraft.firstFlight ||
+										"Unknown",
+									deliveryDate:
+										aircraft.deliveryDate || aircraft.delivery || "Unknown",
+									registrationDate:
+										aircraft.registrationDate || aircraft.regDate || "Unknown",
+									ageYears: ageYears,
+								};
+							});
 
 							resolve(processedAircrafts);
 						} catch (parseError) {
@@ -519,10 +590,22 @@ const FleetDatabase = (function () {
 			let valueA = a[column] || "";
 			let valueB = b[column] || "";
 
-			// Numerische Werte für Jahr
-			if (column === "manufacturingYear") {
+			// Numerische Werte für bestimmte Spalten
+			if (
+				column === "manufacturingYear" ||
+				column === "ageYears" ||
+				column === "numSeats"
+			) {
 				valueA = parseInt(valueA) || 0;
 				valueB = parseInt(valueB) || 0;
+			} else if (
+				column === "firstFlightDate" ||
+				column === "deliveryDate" ||
+				column === "registrationDate"
+			) {
+				// Datum-Sortierung
+				valueA = new Date(valueA || "1900-01-01").getTime();
+				valueB = new Date(valueB || "1900-01-01").getTime();
 			} else {
 				// String-Vergleich
 				valueA = valueA.toString().toLowerCase();
@@ -698,7 +781,12 @@ const FleetDatabase = (function () {
             </td>
             <td class="px-4 py-3 whitespace-nowrap">
                 <span class="text-sm text-gray-900">${
-									aircraft.model || "-"
+									aircraft.serial || "-"
+								}</span>
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap">
+                <span class="text-sm text-gray-900">${
+									aircraft.numSeats || "-"
 								}</span>
             </td>
             <td class="px-4 py-3 whitespace-nowrap">
@@ -708,7 +796,22 @@ const FleetDatabase = (function () {
             </td>
             <td class="px-4 py-3 whitespace-nowrap">
                 <span class="text-sm text-gray-900">${
-									formatEngines(aircraft.engines) || "-"
+									formatDate(aircraft.firstFlightDate) || "-"
+								}</span>
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap">
+                <span class="text-sm text-gray-900">${
+									formatDate(aircraft.deliveryDate) || "-"
+								}</span>
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap">
+                <span class="text-sm text-gray-900">${
+									formatDate(aircraft.registrationDate) || "-"
+								}</span>
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap">
+                <span class="text-sm text-gray-900">${
+									aircraft.ageYears !== "Unknown" ? aircraft.ageYears : "-"
 								}</span>
             </td>
             <td class="px-4 py-3 whitespace-nowrap text-sm">
@@ -765,6 +868,26 @@ const FleetDatabase = (function () {
 
 		// Fallback
 		return engines.toString();
+	}
+
+	/**
+	 * Datum formatieren für die Anzeige
+	 */
+	function formatDate(dateString) {
+		if (!dateString || dateString === "Unknown") return "";
+
+		try {
+			const date = new Date(dateString);
+			if (isNaN(date.getTime())) return dateString; // Fallback für ungültige Datumsformate
+
+			return date.toLocaleDateString("de-DE", {
+				year: "numeric",
+				month: "2-digit",
+				day: "2-digit",
+			});
+		} catch (error) {
+			return dateString; // Fallback bei Fehlern
+		}
 	}
 
 	/**
@@ -940,7 +1063,7 @@ const FleetDatabase = (function () {
 		useInHangar,
 		getFleetData: () => fleetData,
 		getFilteredData: () => filteredData,
-		testAPI: testAPIConnection, // Neue Test-Funktion für Debugging
+		testAPIConnection, // Korrigierte Test-Funktion für Debugging
 	};
 
 	/**

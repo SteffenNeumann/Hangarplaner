@@ -7,6 +7,33 @@ const TimetableManager = (() => {
 	let currentFilter = "all";
 	let currentSort = "arrival";
 
+	// Airline-Mapping: IATA-Code zu vollständigem Namen
+	const airlineMapping = {
+		LH: "Lufthansa",
+		CL: "CityLine",
+		VL: "CityAirlines",
+		DE: "Condor",
+		EW: "Eurowings",
+		X3: "TUIfly",
+		BA: "British Airways",
+		AF: "Air France",
+		KL: "KLM",
+		UA: "United Airlines",
+		DL: "Delta Air Lines",
+		AA: "American Airlines",
+		LX: "Swiss",
+		OS: "Austrian Airlines",
+		AZ: "ITA Airways",
+		IB: "Iberia",
+		KM: "Air Malta", // Ergänzt basierend auf API-Beispiel
+		SN: "Brussels Airlines",
+		TP: "TAP Air Portugal",
+		FR: "Ryanair",
+		U2: "easyJet",
+		W6: "Wizz Air",
+		VY: "Vueling",
+	};
+
 	/**
 	 * Initialisiert die Timetable
 	 */
@@ -48,12 +75,17 @@ const TimetableManager = (() => {
 
 		timetableData = [];
 
-		// Durchlaufe alle Kacheln (1-12 und dynamische)
-		for (let i = 1; i <= 12; i++) {
-			const cellData = extractDataFromCell(i);
-			if (cellData) {
-				timetableData.push(cellData);
-			}
+		// Sammle Daten aus den Haupt-Kacheln (im hangarGrid)
+		const mainGrid = document.getElementById("hangarGrid");
+		if (mainGrid) {
+			const mainCells = mainGrid.querySelectorAll(".hangar-cell");
+			mainCells.forEach((cell, index) => {
+				const cellNumber = index + 1; // 1-basierte Nummerierung
+				const cellData = extractDataFromCell(cell, cellNumber);
+				if (cellData) {
+					timetableData.push(cellData);
+				}
+			});
 		}
 
 		// Sammle auch Daten aus dynamischen Kacheln
@@ -62,7 +94,7 @@ const TimetableManager = (() => {
 			const dynamicCells = dynamicGrid.querySelectorAll(".hangar-cell");
 			dynamicCells.forEach((cell, index) => {
 				const cellNumber = 13 + index; // Fortlaufende Nummerierung
-				const cellData = extractDataFromDynamicCell(cell, cellNumber);
+				const cellData = extractDataFromCell(cell, cellNumber);
 				if (cellData) {
 					timetableData.push(cellData);
 				}
@@ -75,35 +107,28 @@ const TimetableManager = (() => {
 
 	/**
 	 * Extrahiert Flugdaten aus einer Kachel
-	 * @param {number} cellNumber - Kachelnummer
+	 * @param {HTMLElement} cell - Das Kachel-DOM-Element
+	 * @param {number} cellNumber - Kachelnummer für Identifikation
 	 * @returns {Object|null} Flugdaten oder null
 	 */
-	const extractDataFromCell = (cellNumber) => {
-		const aircraftInput = document.getElementById(`aircraft-id-${cellNumber}`);
-		const departureTimeEl = document.querySelector(
-			`#cell-${cellNumber} .departure-time`
-		);
-		const arrivalTimeEl = document.querySelector(
-			`#cell-${cellNumber} .arrival-time`
-		);
-		const fromAirportEl = document.querySelector(
-			`#cell-${cellNumber} .from-airport`
-		);
-		const toAirportEl = document.querySelector(
-			`#cell-${cellNumber} .to-airport`
-		);
-		const statusLight = document.querySelector(
-			`#cell-${cellNumber} .status-light`
-		);
-		const notesEl = document.getElementById(`notes-${cellNumber}`);
+	const extractDataFromCell = (cell, cellNumber) => {
+		if (!cell) return null;
+
+		const aircraftInput = cell.querySelector(`#aircraft-${cellNumber}`);
+		const departureTimeEl = cell.querySelector(`#departure-time-${cellNumber}`);
+		const arrivalTimeEl = cell.querySelector(`#arrival-time-${cellNumber}`);
+		const fromAirportEl = cell.querySelector(".from-airport");
+		const toAirportEl = cell.querySelector(".to-airport");
+		const statusLight = cell.querySelector(".status-light");
+		const notesEl = cell.querySelector(`#notes-${cellNumber}`);
 
 		if (!aircraftInput || !aircraftInput.value.trim()) {
 			return null; // Keine Aircraft ID
 		}
 
 		const aircraftId = aircraftInput.value.trim();
-		const departureTime = departureTimeEl?.textContent?.trim() || "--:--";
-		const arrivalTime = arrivalTimeEl?.textContent?.trim() || "--:--";
+		const departureTime = departureTimeEl?.value?.trim() || "--:--";
+		const arrivalTime = arrivalTimeEl?.value?.trim() || "--:--";
 		const fromAirport = fromAirportEl?.textContent?.trim() || "---";
 		const toAirport = toAirportEl?.textContent?.trim() || "---";
 		const notes = notesEl?.value?.trim() || "";
@@ -111,6 +136,7 @@ const TimetableManager = (() => {
 		// Status aus dem Statuslicht ermitteln
 		let status = "inactive";
 		let isOvernight = false;
+		let airline = "---";
 
 		if (statusLight) {
 			if (statusLight.classList.contains("status-green")) {
@@ -123,9 +149,7 @@ const TimetableManager = (() => {
 		}
 
 		// Prüfe auf Übernachtung (🏨 Symbol in Route oder spezielle Kennzeichnung)
-		const positionEl = document.querySelector(
-			`#cell-${cellNumber} .position-text`
-		);
+		const positionEl = cell.querySelector(".position-text");
 		const positionText = positionEl?.textContent?.trim() || "";
 
 		if (positionText.includes("🏨")) {
@@ -133,21 +157,82 @@ const TimetableManager = (() => {
 			status = "overnight";
 		}
 
-		return {
-			position: cellNumber,
+		// Airline aus gespeicherten API-Daten extrahieren (PRIORITÄT 1)
+		// Zuerst: Prüfe data-airline Attribut (von API gesetzt)
+		const storedAirline = cell.getAttribute("data-airline");
+		if (storedAirline && storedAirline !== "---") {
+			// Prüfe ob es ein IATA-Code ist und konvertiere zu Vollname
+			if (airlineMapping[storedAirline]) {
+				airline = airlineMapping[storedAirline];
+			} else {
+				airline = storedAirline; // Verwende direkt (bereits Vollname)
+			}
+
+			console.log(`✈️ Airline aus API-Daten: ${airline} (${storedAirline})`);
+		}
+
+		// PRIORITÄT 2: Prüfe data-flight-number Attribut
+		if (airline === "---") {
+			const storedFlightNumber = cell.getAttribute("data-flight-number");
+			if (storedFlightNumber) {
+				const flightMatch = storedFlightNumber.match(/^([A-Z]{2})/);
+				if (flightMatch) {
+					const airlineCode = flightMatch[1];
+					airline = airlineMapping[airlineCode] || airlineCode;
+					console.log(
+						`✈️ Airline aus Flight Number: ${airline} (${airlineCode})`
+					);
+				}
+			}
+		}
+
+		// Fallback: Airline aus Flight Number extrahieren (nur wenn nicht bereits gefunden)
+		if (airline === "---") {
+			// Suche nach Flight Number in verschiedenen möglichen Elementen
+			const flightNumberEl = cell.querySelector(
+				`[class*="flight-number"], .route-info, .position-text`
+			);
+
+			if (flightNumberEl) {
+				const text = flightNumberEl.textContent || "";
+				// Suche nach Fluggesellschaftscode (2 Buchstaben gefolgt von Zahlen)
+				const flightMatch = text.match(/([A-Z]{2})[\s]*\d+/);
+				if (flightMatch) {
+					const airlineCode = flightMatch[1];
+					airline = airlineMapping[airlineCode] || airlineCode;
+				}
+			}
+		}
+
+		// Weitere Fallback-Suche in Notes und Position Text
+		if (airline === "---") {
+			const allText = (positionText + " " + notes).toUpperCase();
+			for (const [code, name] of Object.entries(airlineMapping)) {
+				if (allText.includes(code)) {
+					airline = name;
+					break;
+				}
+			}
+		}
+
+		const flightData = {
+			cellNumber,
 			aircraftId,
-			status,
-			isOvernight,
+			departureTime,
+			arrivalTime,
 			fromAirport,
 			toAirport,
-			arrivalTime,
-			departureTime,
-			route: positionText,
 			notes,
+			status,
+			airline,
+			isOvernight,
 			// Für Sortierung - konvertiere Zeiten zu vergleichbaren Werten
 			arrivalTimeSort: convertTimeToMinutes(arrivalTime),
 			departureTimeSort: convertTimeToMinutes(departureTime),
 		};
+
+		console.log(`✅ Daten aus Kachel ${cellNumber} extrahiert:`, flightData);
+		return flightData;
 	};
 
 	/**
@@ -164,21 +249,47 @@ const TimetableManager = (() => {
 			return null;
 		}
 
-		// Implementierung für dynamische Kacheln
-		// (Details abhängig von der spezifischen Struktur der dynamischen Kacheln)
+		// Versuche auch hier Airline-Daten zu extrahieren
+		let airline = "---";
+
+		// Prüfe data-airline Attribut (von API gesetzt)
+		const storedAirline = cell.getAttribute("data-airline");
+		if (storedAirline && storedAirline !== "---") {
+			// Prüfe ob es ein IATA-Code ist und konvertiere zu Vollname
+			if (airlineMapping[storedAirline]) {
+				airline = airlineMapping[storedAirline];
+			} else {
+				airline = storedAirline; // Verwende direkt (bereits Vollname)
+			}
+		}
+
+		// PRIORITÄT 2: Prüfe data-flight-number Attribut für dynamische Kacheln
+		if (airline === "---") {
+			const storedFlightNumber = cell.getAttribute("data-flight-number");
+			if (storedFlightNumber) {
+				const flightMatch = storedFlightNumber.match(/^([A-Z]{2})/);
+				if (flightMatch) {
+					const airlineCode = flightMatch[1];
+					airline = airlineMapping[airlineCode] || airlineCode;
+				}
+			}
+		}
+
+		// Implementierung für dynamische Kacheln - erweiterte Datenextraktion
 		return {
-			position: cellNumber,
+			cellNumber,
 			aircraftId: aircraftInput.value.trim(),
 			status: "active",
 			isOvernight: false,
+			airline: airline,
 			fromAirport: "---",
 			toAirport: "---",
 			arrivalTime: "--:--",
 			departureTime: "--:--",
-			route: "",
 			notes: "",
-			arrivalTimeSort: 0,
-			departureTimeSort: 0,
+			// Für Sortierung - konvertiere Zeiten zu vergleichbaren Werten
+			arrivalTimeSort: convertTimeToMinutes("--:--"),
+			departureTimeSort: convertTimeToMinutes("--:--"),
 		};
 	};
 
@@ -217,6 +328,24 @@ const TimetableManager = (() => {
 				);
 			case "all":
 			default:
+				// Prüfe ob Filter eine Airline ist
+				const isAirlineFilter =
+					Object.values(airlineMapping).includes(currentFilter) ||
+					Object.keys(airlineMapping).includes(currentFilter);
+
+				if (isAirlineFilter) {
+					return data.filter((item) => {
+						return (
+							item.airline === currentFilter ||
+							Object.keys(airlineMapping).find(
+								(key) =>
+									airlineMapping[key] === currentFilter &&
+									item.airline === airlineMapping[key]
+							)
+						);
+					});
+				}
+
 				return data;
 		}
 	};
@@ -234,11 +363,46 @@ const TimetableManager = (() => {
 				case "aircraft":
 					return a.aircraftId.localeCompare(b.aircraftId);
 				case "position":
-					return a.position - b.position;
+					return a.cellNumber - b.cellNumber;
+				case "airline":
+					return a.airline.localeCompare(b.airline);
 				case "arrival":
 				default:
 					return a.arrivalTimeSort - b.arrivalTimeSort;
 			}
+		});
+	};
+
+	/**
+	 * Aktualisiert die Filter-Optionen basierend auf verfügbaren Airlines
+	 */
+	const updateFilterOptions = () => {
+		const filterSelect = document.getElementById("timetableFilter");
+		if (!filterSelect) return;
+
+		// Sammle alle einzigartigen Airlines aus den Daten
+		const airlines = [
+			...new Set(
+				timetableData
+					.map((item) => item.airline)
+					.filter((airline) => airline !== "---")
+			),
+		];
+
+		// Lösche alle Optionen außer den Standard-Optionen
+		const options = filterSelect.querySelectorAll("option");
+		options.forEach((option) => {
+			if (!["all", "overnight", "active"].includes(option.value)) {
+				option.remove();
+			}
+		});
+
+		// Füge Airline-Optionen hinzu
+		airlines.sort().forEach((airline) => {
+			const option = document.createElement("option");
+			option.value = airline;
+			option.textContent = `Airline: ${airline}`;
+			filterSelect.appendChild(option);
 		});
 	};
 
@@ -251,6 +415,9 @@ const TimetableManager = (() => {
 		const countEl = document.getElementById("timetableCount");
 
 		if (!tbody) return;
+
+		// Filter-Optionen aktualisieren
+		updateFilterOptions();
 
 		// Daten filtern und sortieren
 		let filteredData = filterData(timetableData);
@@ -285,14 +452,13 @@ const TimetableManager = (() => {
 	 */
 	const createTableRow = (item) => {
 		const statusClass = getStatusClass(item.status);
-		const statusText = getStatusText(item.status);
 
 		return `
-			<tr onclick="TimetableManager.scrollToCell(${item.position})" class="cursor-pointer hover:bg-gray-50">
-				<td class="timetable-position">${item.position}</td>
+			<tr onclick="TimetableManager.scrollToCell(${item.cellNumber})" class="cursor-pointer hover:bg-gray-50">
+				<td class="timetable-position">${item.cellNumber}</td>
 				<td class="timetable-aircraft">${item.aircraftId}</td>
 				<td>
-					<span class="timetable-status ${statusClass}">${statusText}</span>
+					<span class="timetable-airline">${item.airline}</span>
 				</td>
 				<td>
 					<span class="timetable-airport">${item.fromAirport}</span>

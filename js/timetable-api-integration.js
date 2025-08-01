@@ -313,8 +313,101 @@ class TimetableAPIManager {
 	 */
 	createTableRow(flight) {
 		const position = flight.position || "--";
-		const statusClass = this.getStatusClass(flight.status || "unknown");
-		const statusText = this.getStatusText(flight.status || "unknown");
+
+		// KORRIGIERT: Verwende echte Airline-Daten aus der API-Antwort
+		let airline = "---";
+		let airlineDisplay = "---";
+
+		// DEBUG: Zeige verfügbare Airline-Daten
+		console.log(`🔍 DEBUG Flight Airline Data:`, flight.airline);
+
+		// Priorität 1: Verwende echte Airline-Daten aus der JSON-API-Antwort
+		if (flight.airline) {
+			if (flight.airline.name) {
+				// Vollständiger Airline-Name verfügbar - verwende diesen
+				airline = flight.airline.name;
+				airlineDisplay = flight.airline.name;
+				console.log(`✈️ Airline aus API-Name: ${airlineDisplay}`);
+			} else if (flight.airline.iata) {
+				// Nur IATA-Code verfügbar - konvertiere zu Vollname falls möglich
+				const airlineMapping = {
+					LH: "Lufthansa",
+					CL: "CityLine",
+					VL: "CityAirlines",
+					DE: "Condor",
+					EW: "Eurowings",
+					X3: "TUIfly",
+					BA: "British Airways",
+					AF: "Air France",
+					KL: "KLM",
+					UA: "United Airlines",
+					DL: "Delta Air Lines",
+					AA: "American Airlines",
+					LX: "Swiss",
+					OS: "Austrian Airlines",
+					AZ: "ITA Airways",
+					IB: "Iberia",
+					KM: "Air Malta",
+					SN: "Brussels Airlines",
+					TP: "TAP Air Portugal",
+					FR: "Ryanair",
+					U2: "easyJet",
+					W6: "Wizz Air",
+					VY: "Vueling",
+				};
+
+				airline = flight.airline.iata;
+				airlineDisplay =
+					airlineMapping[flight.airline.iata] || flight.airline.iata;
+				console.log(
+					`✈️ Airline aus API-IATA: ${airlineDisplay} (${flight.airline.iata})`
+				);
+			}
+		}
+
+		// Fallback: Extrahiere aus Flight Number (nur wenn keine API-Daten vorhanden)
+		if (airline === "---") {
+			const flightNumber =
+				flight.arrival?.flightNumber || flight.departure?.flightNumber || "";
+			if (flightNumber) {
+				const match = flightNumber.match(/([A-Z]{2})\d+/);
+				if (match) {
+					const airlineCode = match[1];
+					const airlineMapping = {
+						LH: "Lufthansa",
+						CL: "CityLine",
+						VL: "CityAirlines",
+						DE: "Condor",
+						EW: "Eurowings",
+						X3: "TUIfly",
+						BA: "British Airways",
+						AF: "Air France",
+						KL: "KLM",
+						UA: "United Airlines",
+						DL: "Delta Air Lines",
+						AA: "American Airlines",
+						LX: "Swiss",
+						OS: "Austrian Airlines",
+						AZ: "ITA Airways",
+						IB: "Iberia",
+						KM: "Air Malta",
+						SN: "Brussels Airlines",
+						TP: "TAP Air Portugal",
+						FR: "Ryanair",
+						U2: "easyJet",
+						W6: "Wizz Air",
+						VY: "Vueling",
+					};
+					airline = airlineCode;
+					airlineDisplay = airlineMapping[airlineCode] || airlineCode;
+					console.log(
+						`✈️ Airline aus Flight Number Fallback: ${airlineDisplay} (${airlineCode})`
+					);
+				}
+			}
+		}
+
+		console.log(`🏷️ Final Airline Display: ${airlineDisplay}`);
 
 		return `
 			<tr class="hover:bg-gray-50 transition-colors duration-150">
@@ -323,8 +416,8 @@ class TimetableAPIManager {
 					flight.registration
 				}</td>
 				<td class="px-4 py-3">
-					<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}">
-						${statusText}
+					<span class="timetable-airline" style="font-weight: 500; color: #2563eb; background-color: #eff6ff; padding: 2px 6px; border-radius: 4px; font-size: 0.875rem;">
+						${airlineDisplay}
 					</span>
 				</td>
 				<td class="px-4 py-3 text-sm text-gray-500">${flight.arrival.from}</td>

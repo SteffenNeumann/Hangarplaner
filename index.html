@@ -1341,6 +1341,7 @@
 											<option value="arrival">Ankunftszeit</option>
 											<option value="departure">Abflugzeit</option>
 											<option value="aircraft">Aircraft ID</option>
+											<option value="airline">Airline</option>
 											<option value="position">Position</option>
 										</select>
 									</div>
@@ -1385,7 +1386,7 @@
 											</th>
 											<th
 												class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
-												Status
+												Airline
 											</th>
 											<th
 												class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
@@ -2260,21 +2261,13 @@
 						.forEach((input) => {
 							input.addEventListener("input", function (e) {
 								formatAircraftId(e.target);
-								// KORREKTUR: Aircraft ID Change Handler hinzufügen
-								if (
-									window.hangarEvents &&
-									window.hangarEvents.handleAircraftIdChange
-								) {
-									window.hangarEvents.handleAircraftIdChange(
-										e.target.id,
-										e.target.value
-									);
-								}
+								// KORREKTUR: Aircraft ID Change Handler ENTFERNT vom input Event
+								// API-Aufrufe sollen nur beim Verlassen des Feldes (blur) stattfinden
 							});
 
 							input.addEventListener("blur", function (e) {
 								formatAircraftId(e.target);
-								// KORREKTUR: Aircraft ID Change Handler auch bei blur hinzufügen
+								// KORREKTUR: Aircraft ID Change Handler NUR bei blur - API-Aufruf erst nach vollständiger Eingabe
 								if (
 									window.hangarEvents &&
 									window.hangarEvents.handleAircraftIdChange

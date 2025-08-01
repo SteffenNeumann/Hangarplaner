@@ -693,16 +693,15 @@ function setupEventListenersForTile(tileElement, cellId) {
 	const aircraftInput = tileElement.querySelector(`#aircraft-${cellId}`);
 	if (aircraftInput && !aircraftInput.hasAttribute("data-listener-added")) {
 		aircraftInput.addEventListener("input", function (e) {
+			// NUR Formatierung während der Eingabe, KEIN API-Aufruf
 			if (typeof formatAircraftId === "function") {
 				const formatted = formatAircraftId(e.target.value);
 				if (formatted !== e.target.value) {
 					e.target.value = formatted;
 				}
 			}
-			// KORREKTUR: Aircraft ID Change Handler hinzufügen
-			if (window.hangarEvents && window.hangarEvents.handleAircraftIdChange) {
-				window.hangarEvents.handleAircraftIdChange(e.target.id, e.target.value);
-			}
+			// KORREKTUR: Aircraft ID Change Handler ENTFERNT vom input Event
+			// API-Aufrufe sollen nur beim Verlassen des Feldes (blur) stattfinden
 		});
 		aircraftInput.addEventListener("blur", function (e) {
 			if (typeof formatAircraftId === "function") {
@@ -711,7 +710,7 @@ function setupEventListenersForTile(tileElement, cellId) {
 					e.target.value = formatted;
 				}
 			}
-			// KORREKTUR: Aircraft ID Change Handler auch bei blur hinzufügen
+			// KORREKTUR: Aircraft ID Change Handler NUR bei blur - API-Aufruf erst nach vollständiger Eingabe
 			if (window.hangarEvents && window.hangarEvents.handleAircraftIdChange) {
 				window.hangarEvents.handleAircraftIdChange(e.target.id, e.target.value);
 			}

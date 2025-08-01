@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fleet Database - HangarPlanner</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Bestehende CSS-Dateien -->
+    <link rel="stylesheet" href="css/hangarplanner-ui.css">
+    <link rel="stylesheet" href="css/info-widget.css">
+    <link rel="stylesheet" href="css/weather-widget.css">
+    <link rel="stylesheet" href="css/userinfo-widget.css">
+    <link rel="stylesheet" href="css/dark-mode-zoom.css">
+    <link rel="stylesheet" href="css/fleet-database.css">
+    
+    <!-- Tailwind Konfiguration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'industrial-dark': '#2d3748',
+                        'industrial-medium': '#4a5568',
+                        'industrial-light': '#718096',
+                        'industrial-accent': '#ff7043'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-industrial-dark text-white font-sans">
+    <div class="flex h-screen">
+        <!-- Hauptbereich mit Flotten-Datenbank -->
+        <div class="flex-grow flex flex-col content-container">
+            <!-- Header mit Navigation -->
+            <header class="bg-white p-4 shadow-md">
+                <!-- Navigation zurück zur Hauptseite -->
+                <div class="flex items-center space-x-4">
+                    <button 
+                        id="backToMain" 
+                        class="bg-industrial-accent text-white px-4 py-2 rounded hover:bg-industrial-medium transition-colors flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                  d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                        </svg>
+                        Zurück zum HangarPlanner
+                    </button>
+                    <h1 class="text-2xl font-bold text-industrial-dark">Fleet Database</h1>
+                </div>
+            </header>
+
+            <!-- Hauptinhalt -->
+            <div class="flex-grow bg-white p-4 overflow-auto">
+                <!-- Filter und Steuerungsbereich -->
+                <div class="mb-6 bg-gray-50 p-4 rounded-lg">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                        <!-- Airline Filter -->
+                        <div>
+                            <label for="airlineFilter" class="block text-sm font-medium text-gray-700 mb-2">
+                                Airline Filter
+                            </label>
+                            <select id="airlineFilter" class="w-full border border-gray-300 rounded-md px-3 py-2 bg-white">
+                                <option value="all">Alle Airlines</option>
+                                <option value="CLH">CLH - Lufthansa CityLine</option>
+                                <option value="LHX">LHX - Lufthansa Private Jet</option>
+                            </select>
+                        </div>
+
+                        <!-- Flugzeugtyp Filter -->
+                        <div>
+                            <label for="aircraftTypeFilter" class="block text-sm font-medium text-gray-700 mb-2">
+                                Flugzeugtyp
+                            </label>
+                            <select id="aircraftTypeFilter" class="w-full border border-gray-300 rounded-md px-3 py-2 bg-white">
+                                <option value="all">Alle Typen</option>
+                            </select>
+                        </div>
+
+                        <!-- Suchfeld -->
+                        <div>
+                            <label for="searchFilter" class="block text-sm font-medium text-gray-700 mb-2">
+                                Suche (Registrierung/Typ)
+                            </label>
+                            <input type="text" id="searchFilter" 
+                                   placeholder="z.B. D-AIZZ, A320" 
+                                   class="w-full border border-gray-300 rounded-md px-3 py-2">
+                        </div>
+
+                        <!-- Aktionen -->
+                        <div class="flex space-x-2">
+                            <button id="loadFleetData" 
+                                    class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md flex items-center">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                </svg>
+                                Daten laden
+                            </button>
+                            <button id="exportFleetData" 
+                                    class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md flex items-center">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                          d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                Export
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status- und Informationsbereich -->
+                <div class="mb-4 flex justify-between items-center">
+                    <div id="fleetStatus" class="text-sm text-gray-600">
+                        Bereit zum Laden der Flottendaten...
+                    </div>
+                    <div id="fleetCount" class="text-sm font-medium text-gray-800">
+                        0 Flugzeuge geladen
+                    </div>
+                </div>
+
+                <!-- Tabellendarstellung -->
+                <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table id="fleetTable" class="w-full">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-200" data-sort="airline">
+                                        Airline
+                                        <span class="sort-indicator ml-1">↕</span>
+                                    </th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-200" data-sort="registration">
+                                        Registrierung
+                                        <span class="sort-indicator ml-1">↕</span>
+                                    </th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-200" data-sort="aircraftType">
+                                        Flugzeugtyp
+                                        <span class="sort-indicator ml-1">↕</span>
+                                    </th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-200" data-sort="model">
+                                        Modell
+                                        <span class="sort-indicator ml-1">↕</span>
+                                    </th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-200" data-sort="manufacturingYear">
+                                        Baujahr
+                                        <span class="sort-indicator ml-1">↕</span>
+                                    </th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-200" data-sort="engines">
+                                        Triebwerke
+                                        <span class="sort-indicator ml-1">↕</span>
+                                    </th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Aktionen
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="fleetTableBody" class="bg-white divide-y divide-gray-200">
+                                <!-- Daten werden hier dynamisch eingefügt -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Leer-Status -->
+                    <div id="fleetTableEmpty" class="p-8 text-center text-gray-500">
+                        <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                        </svg>
+                        <p class="text-lg font-medium mb-2">Keine Flottendaten verfügbar</p>
+                        <p class="text-sm">Klicken Sie auf "Daten laden", um die Flottendaten abzurufen</p>
+                    </div>
+
+                    <!-- Loading Indicator -->
+                    <div id="fleetTableLoading" class="hidden p-8 text-center">
+                        <div class="flex justify-center items-center">
+                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mr-3"></div>
+                            <span class="text-gray-600">Lade Flottendaten...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript-Dateien -->
+    <script src="js/helpers.js"></script>
+    <script src="js/weather-api.js"></script>
+    <script src="js/fleet-database.js"></script>
+
+    <!-- Zeit-Update Script -->
+    <script>
+        function updateTimeDisplay() {
+            const now = new Date();
+            const localTime = now.toLocaleTimeString("de-DE", {
+                hour: "2-digit",
+                minute: "2-digit",
+            });
+            const utcTime = now.toUTCString().split(" ")[4].substring(0, 5);
+
+            const localTimeElement = document.getElementById("local-time");
+            const utcTimeElement = document.getElementById("utc-time");
+
+            if (localTimeElement) {
+                localTimeElement.textContent = localTime;
+            }
+            if (utcTimeElement) {
+                utcTimeElement.textContent = utcTime;
+            }
+        }
+
+        // Navigation zurück zur Hauptseite
+        document.getElementById('backToMain').addEventListener('click', function() {
+            window.location.href = 'index.html';
+        });
+
+        // Zeit-Update starten
+        updateTimeDisplay();
+        setInterval(updateTimeDisplay, 60000);
+    </script>
+</body>
+</html>

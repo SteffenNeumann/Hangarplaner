@@ -1718,6 +1718,40 @@
 						</div>
 					</div>
 
+					<!-- Fleet Database -->
+					<div class="sidebar-accordion-item">
+						<div
+							class="sidebar-accordion-header"
+							onclick="toggleAccordion(this)">
+							<div class="sidebar-header-content">
+								<i class="sidebar-icon">🛩️</i>
+								<h3 class="sidebar-section-title">Fleet Database</h3>
+							</div>
+							<i class="dropdown-arrow">▼</i>
+						</div>
+						<div class="sidebar-accordion-content">
+							<div class="sidebar-form-group">
+								<p class="text-sm text-gray-400 mb-3">
+									Durchsuchen Sie die Flotten von CLH (Lufthansa CityLine) und LHX (Lufthansa Private Jet).
+								</p>
+								<button 
+									id="openFleetDatabase" 
+									class="sidebar-btn sidebar-btn-primary w-full flex items-center justify-center">
+									<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+											  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+									</svg>
+									Fleet Database öffnen
+								</button>
+								<div class="mt-2 text-xs text-gray-500">
+									• CLH: Lufthansa CityLine<br>
+									• LHX: Lufthansa Private Jet<br>
+									• Filterfunktionen verfügbar
+								</div>
+							</div>
+						</div>
+					</div>
+
 					<!-- Flugdaten abrufen -->
 					<div class="sidebar-accordion-item">
 						<div
@@ -1912,6 +1946,43 @@
 							</button>
 						</div>
 					</div>
+
+					<!-- Fleet Database Navigation -->
+					<div class="sidebar-accordion-item">
+						<div
+							class="sidebar-accordion-header"
+							onclick="toggleAccordion(this)">
+							<div class="sidebar-header-content">
+								<i class="sidebar-icon">✈️</i>
+								<h3 class="sidebar-section-title">Fleet Database</h3>
+							</div>
+							<i class="dropdown-arrow">▼</i>
+						</div>
+						<div class="sidebar-accordion-content">
+							<div class="sidebar-form-group">
+								<div class="sidebar-form-description">
+									Browse and manage aircraft fleet data from CLH and LHX airlines
+								</div>
+							</div>
+							
+							<button
+								id="fleetDatabaseBtn"
+								onclick="window.location.href='fleet-database.html'"
+								class="sidebar-btn sidebar-btn-primary w-full flex items-center justify-center">
+								<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+										  d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
+								</svg>
+								Open Fleet Database
+							</button>
+							
+							<div class="sidebar-form-group">
+								<div class="text-xs text-gray-300 text-center">
+									Access CLH & LHX fleet information
+								</div>
+							</div>
+						</div>
+					</div>
 				</div>
 
 				<!-- Versteckte File-Input-Elemente -->
@@ -2031,6 +2102,15 @@
 									"Empfohlene Ordnerstruktur: HangarPlanner/Projekte/ für Projekte und HangarPlanner/Einstellungen/ für Einstellungen"
 								);
 							}
+						});
+					}
+
+					// Event-Handler für Fleet Database Button
+					const openFleetDatabaseBtn = document.getElementById("openFleetDatabase");
+					if (openFleetDatabaseBtn) {
+						openFleetDatabaseBtn.addEventListener("click", function () {
+							console.log("🛩️ Öffne Fleet Database...");
+							window.location.href = "fleet-database.html";
 						});
 					}
 

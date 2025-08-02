@@ -46,6 +46,7 @@ const FleetDatabase = (function () {
 	let filteredData = [];
 	let sortOrder = { column: "airline", direction: "asc" };
 	let lastApiCall = 0;
+	let isLoading = false; // Load Protection Flag
 
 	// DOM-Elemente
 	let elements = {};
@@ -91,22 +92,23 @@ const FleetDatabase = (function () {
 		console.log("🔘 Load Button verfügbar:", !!elements.loadButton);
 
 		// DIREKTES RACE CONDITION FIX: Prüfe sofort nach der Initialisierung
-		setTimeout(() => {
-			console.log(
-				"🚀 INIT: Prüfe FleetDatabaseManager direkt nach FleetDatabase.init()"
-			);
-			if (
-				window.fleetDatabaseManager &&
-				window.fleetDatabaseManager.isInitialized
-			) {
-				console.log(
-					"✅ INIT: FleetDatabaseManager bereit - starte automatische Datenladung"
-				);
-				loadFleetData();
-			} else {
-				console.log("⏳ INIT: FleetDatabaseManager noch nicht bereit");
-			}
-		}, 50);
+		// Entferne überflüssigen Init-Check
+		// setTimeout(() => {
+		// 	console.log(
+		// 		"🚀 INIT: Prüfe FleetDatabaseManager direkt nach FleetDatabase.init()"
+		// 	);
+		// 	if (
+		// 		window.fleetDatabaseManager &&
+		// 		window.fleetDatabaseManager.isInitialized
+		// 	) {
+		// 		console.log(
+		// 			"✅ INIT: FleetDatabaseManager bereit - starte automatische Datenladung"
+		// 		);
+		// 		loadFleetData();
+		// 	} else {
+		// 		console.log("⏳ INIT: FleetDatabaseManager noch nicht bereit");
+		// 	}
+		// }, 50);
 	}
 
 	/**
@@ -160,6 +162,14 @@ const FleetDatabase = (function () {
 	 */
 	async function loadFleetData() {
 		console.log("📡 loadFleetData() aufgerufen!");
+		
+		// Load Protection: Verhindere mehrfache parallele Ladungen
+		if (isLoading) {
+			console.log("⏳ Datenladung bereits im Gange - überspringe...");
+			return;
+		}
+		
+		isLoading = true;
 		console.log("📡 Starte das Laden der Flottendaten...");
 
 		showLoadingState();
@@ -195,22 +205,35 @@ const FleetDatabase = (function () {
 				console.log("🔍 FLEET DATA LENGTH:", fleetData.length);
 
 				updateStatus(
-					`${fleetData.length} Flugzeuge aus der Datenbank geladen. Führe API-Abgleich durch...`
+					`${fleetData.length} Flugzeuge aus der Datenbank geladen. Prüfe API-Aktualisierung...`
 				);
 				console.log(`📥 ${fleetData.length} Flugzeuge aus dem Cache geladen`);
 
-				// API-Daten laden für Abgleich
-				console.log("📡 Starte API-Datenabgleich...");
-				const apiData = await loadAllFleetDataFromAPI();
-				console.log("📊 API-Daten erhalten:", apiData);
+				// Prüfe ob API-Aktualisierung nötig ist (z.B. nur einmal täglich)
+				const lastSync = stats.lastApiSync || 0;
+				const now = Date.now();
+				const syncInterval = 24 * 60 * 60 * 1000; // 24 Stunden
+				const needsSync = (now - lastSync) > syncInterval;
 
-				// Differential-Synchronisation durchführen
-				console.log("🔄 Starte Differential-Synchronisation...");
-				await window.fleetDatabaseManager.syncWithApiData(apiData);
+				if (needsSync) {
+					console.log("🔄 API-Synchronisation wird durchgeführt (letzte Sync vor >24h)...");
+					
+					// API-Daten laden für Abgleich
+					console.log("📡 Starte API-Datenabgleich...");
+					const apiData = await loadAllFleetDataFromAPI();
+					console.log("📊 API-Daten erhalten:", apiData);
 
-				// Aktualisierte Daten laden
-				const updatedData = window.fleetDatabaseManager.getFleetData();
-				fleetData = convertFleetDataForTable(updatedData);
+					// Differential-Synchronisation durchführen (ohne neue Datenladung)
+					console.log("🔄 Starte Differential-Synchronisation...");
+					await window.fleetDatabaseManager.syncWithApiData(apiData, { skipReload: true });
+
+					// Aktualisierte Daten laden (nur einmal)
+					const updatedData = window.fleetDatabaseManager.getFleetData();
+					fleetData = convertFleetDataForTable(updatedData);
+					console.log("✅ Synchronisation abgeschlossen");
+				} else {
+					console.log("⏭️ API-Synchronisation übersprungen (letzte Sync < 24h)");
+				}
 			} else {
 				// Erste Ladung - Daten von API holen und Datenbank füllen
 				updateStatus("Erste Synchronisation - lade Daten von der API...");
@@ -245,6 +268,10 @@ const FleetDatabase = (function () {
 			console.error("📄 Error Stack:", error.stack);
 			updateStatus("Fehler beim Laden der Flottendaten: " + error.message);
 			showEmptyState();
+		} finally {
+			// Load Protection zurücksetzen
+			isLoading = false;
+			console.log("🔓 Datenladung abgeschlossen - Load Protection deaktiviert");
 		}
 	}
 
@@ -1300,170 +1327,41 @@ document.addEventListener("DOMContentLoaded", function () {
 	console.log("🚀 DOM geladen - starte Fleet Database Initialisierung...");
 	FleetDatabase.init();
 
+	// Einmaliger Event-Listener für Fleet Database Manager Bereitschaft
+	let dataLoadTriggered = false;
+	
+	function triggerDataLoad() {
+		if (dataLoadTriggered) {
+			console.log("� Datenladung bereits ausgelöst - überspringe...");
+			return;
+		}
+		dataLoadTriggered = true;
+		console.log("🎯 Starte einmalige automatische Datenladung...");
+		FleetDatabase.loadFleetData();
+	}
+
 	// Event-Listener für Fleet Database Manager Bereitschaft
 	window.addEventListener("fleetDatabaseManagerReady", function (event) {
 		console.log("🎉 Fleet Database Manager Ready Event erhalten!");
-		console.log("📊 Event Details:", event.detail);
-
+		console.log("� Event Details:", event.detail);
+		
 		// Kurze Verzögerung für UI-Stabilisierung
 		setTimeout(() => {
-			console.log("� Starte automatische Datenladung nach Event...");
-			FleetDatabase.loadFleetData();
+			triggerDataLoad();
 		}, 200);
 	});
 
-	// RACE CONDITION FIX: Sofort prüfen ob FleetDatabaseManager bereits bereit ist
+	// Fallback: Prüfung nach 1 Sekunde ob Manager bereits bereit ist
 	setTimeout(() => {
-		console.log(
-			"🔧 Race Condition Check: Prüfe FleetDatabaseManager Status..."
-		);
-		console.log(
-			"🔍 window.fleetDatabaseManager:",
-			!!window.fleetDatabaseManager
-		);
-		console.log(
-			"🔍 isInitialized:",
-			window.fleetDatabaseManager?.isInitialized
-		);
-
-		if (
-			window.fleetDatabaseManager &&
-			window.fleetDatabaseManager.isInitialized
-		) {
-			console.log(
-				"✅ FleetDatabaseManager bereits bereit - starte sofortige Datenladung..."
-			);
-			FleetDatabase.loadFleetData();
-		} else if (window.fleetDatabaseManager) {
-			console.log(
-				"⏳ FleetDatabaseManager existiert aber nicht initialisiert - warte..."
-			);
-			window.fleetDatabaseManager.waitForInitialization().then(() => {
-				console.log(
-					"✅ FleetDatabaseManager jetzt bereit - starte Datenladung..."
-				);
-				FleetDatabase.loadFleetData();
-			});
+		console.log("� Fallback Check: Prüfe FleetDatabaseManager Status...");
+		
+		if (window.fleetDatabaseManager && window.fleetDatabaseManager.isInitialized) {
+			console.log("✅ FleetDatabaseManager bereits bereit - starte Datenladung...");
+			triggerDataLoad();
 		} else {
-			console.log(
-				"❌ FleetDatabaseManager noch nicht verfügbar - verwende Fallback..."
-			);
-		}
-	}, 500); // Erhöhtes Timeout für bessere Stabilität
-
-	// ZUSÄTZLICHER MANUAL TRIGGER: Nach 1 Sekunde versuchen
-	setTimeout(() => {
-		console.log(
-			"🔄 MANUAL TRIGGER: Versuche manuelles Laden nach 1 Sekunde..."
-		);
-		if (
-			window.fleetDatabaseManager &&
-			window.fleetDatabaseManager.isInitialized
-		) {
-			console.log("✅ MANUAL: FleetDatabaseManager bereit - lade Daten");
-			FleetDatabase.loadFleetData();
-		} else {
-			console.log("❌ MANUAL: FleetDatabaseManager noch nicht bereit");
+			console.log("⏳ FleetDatabaseManager noch nicht bereit - warte auf Event...");
 		}
 	}, 1000);
-
-	// BACKUP LÖSUNG: Button-Klick simulieren nach 2 Sekunden
-	setTimeout(() => {
-		console.log("🔴 BACKUP: Simuliere Button-Klick als letzte Lösung...");
-		const loadButton = document.getElementById("loadFleetData");
-		if (loadButton) {
-			console.log("🔘 BACKUP: Load Button gefunden - triggere Klick");
-			loadButton.click();
-		} else {
-			console.log("❌ BACKUP: Load Button nicht gefunden");
-		}
-	}, 2000);
-
-	// Fallback: Robuste automatische Datenladung falls Event verpasst wurde
-	function startAutoLoadFallback() {
-		console.log("🔍 Fallback: Prüfe Fleet Database Manager Verfügbarkeit...");
-
-		if (
-			window.fleetDatabaseManager &&
-			window.fleetDatabaseManager.isInitialized
-		) {
-			console.log("✅ Fleet Database Manager bereits bereit (Fallback)");
-			setTimeout(() => {
-				console.log("🚀 Starte Fallback-Datenladung...");
-				FleetDatabase.loadFleetData();
-			}, 100);
-		} else if (window.fleetDatabaseManager) {
-			console.log(
-				"⏳ Fleet Database Manager existiert, warte auf Initialisierung (Fallback)..."
-			);
-			window.fleetDatabaseManager
-				.waitForInitialization()
-				.then(() => {
-					console.log(
-						"🚀 Fleet Database Manager initialisiert (Fallback) - lade Daten..."
-					);
-					FleetDatabase.loadFleetData();
-				})
-				.catch((error) => {
-					console.error(
-						"❌ Fallback Fehler bei automatischer Datenladung:",
-						error
-					);
-				});
-		} else {
-			console.log(
-				"⏳ Fleet Database Manager noch nicht verfügbar (Fallback)..."
-			);
-			// Erweiterte Warteschleife
-			let attempts = 0;
-			const maxAttempts = 20; // 10 Sekunden
-
-			const checkManager = () => {
-				attempts++;
-				console.log(
-					`🔍 Fallback Versuch ${attempts}/${maxAttempts}: Suche Fleet Database Manager...`
-				);
-
-				if (window.fleetDatabaseManager) {
-					console.log(
-						"✅ Fleet Database Manager gefunden (Fallback Warteschleife)!"
-					);
-
-					if (window.fleetDatabaseManager.isInitialized) {
-						console.log("🚀 Bereits initialisiert (Fallback) - lade Daten...");
-						FleetDatabase.loadFleetData();
-					} else {
-						console.log("⏳ Warte auf Initialisierung (Fallback)...");
-						window.fleetDatabaseManager
-							.waitForInitialization()
-							.then(() => {
-								console.log(
-									"🚀 Automatisches Laden nach Fallback-Warteschleife..."
-								);
-								FleetDatabase.loadFleetData();
-							})
-							.catch((error) => {
-								console.error("❌ Fallback Warteschleife Fehler:", error);
-							});
-					}
-				} else if (attempts < maxAttempts) {
-					setTimeout(checkManager, 500);
-				} else {
-					console.warn(
-						"⚠️ Fleet Database Manager nicht gefunden nach 10 Sekunden (Fallback)"
-					);
-					console.log(
-						"🔧 Verwenden Sie den 'Daten laden' Button für manuelle Ladung"
-					);
-				}
-			};
-
-			setTimeout(checkManager, 1000);
-		}
-	}
-
-	// Starte Fallback nach Verzögerung (falls Event verpasst wurde)
-	setTimeout(startAutoLoadFallback, 2000);
 
 	// Wetter-API laden (falls verfügbar)
 	if (typeof WeatherAPI !== "undefined") {

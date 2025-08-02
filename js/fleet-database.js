@@ -78,6 +78,17 @@ const FleetDatabase = (function () {
 		showEmptyState();
 
 		console.log("✅ Fleet Database initialisiert");
+
+		// Debug: Zeige aktuellen Status
+		console.log("🔍 Fleet Database Debug Info:", {
+			fleetDataLength: fleetData.length,
+			filteredDataLength: filteredData.length,
+			hasFleetManager: !!window.fleetDatabaseManager,
+			managerInitialized: window.fleetDatabaseManager?.isInitialized,
+		});
+
+		// TESTING: Button für manuelles Laden
+		console.log("🔘 Load Button verfügbar:", !!elements.loadButton);
 	}
 
 	/**
@@ -130,6 +141,7 @@ const FleetDatabase = (function () {
 	 * Flottendaten für beide Airlines laden - MIT SERVERSEITIGER DATENBANK
 	 */
 	async function loadFleetData() {
+		console.log("📡 loadFleetData() aufgerufen!");
 		console.log("📡 Starte das Laden der Flottendaten...");
 
 		showLoadingState();
@@ -268,6 +280,7 @@ const FleetDatabase = (function () {
 	 * Konvertiert Fleet Database Daten für die Tabellen-Anzeige
 	 */
 	function convertFleetDataForTable(fleetDbData) {
+		console.log("🔄 convertFleetDataForTable aufgerufen mit:", fleetDbData);
 		const tableData = [];
 
 		if (
@@ -275,13 +288,19 @@ const FleetDatabase = (function () {
 			!fleetDbData.fleetDatabase ||
 			!fleetDbData.fleetDatabase.airlines
 		) {
+			console.log("⚠️ Fehlende Datenstruktur in convertFleetDataForTable");
 			return tableData;
 		}
 
 		const airlines = fleetDbData.fleetDatabase.airlines;
+		console.log("✈️ Airlines gefunden:", Object.keys(airlines));
 
 		for (const [airlineCode, airline] of Object.entries(airlines)) {
+			console.log(`🔍 Verarbeite Airline ${airlineCode}:`, airline);
 			if (airline.aircrafts && Array.isArray(airline.aircrafts)) {
+				console.log(
+					`✈️ ${airline.aircrafts.length} Flugzeuge in ${airlineCode}`
+				);
 				for (const aircraft of airline.aircrafts) {
 					tableData.push({
 						...aircraft,
@@ -293,6 +312,9 @@ const FleetDatabase = (function () {
 			}
 		}
 
+		console.log(
+			`✅ convertFleetDataForTable: ${tableData.length} Flugzeuge konvertiert`
+		);
 		return tableData;
 	}
 
@@ -661,6 +683,8 @@ const FleetDatabase = (function () {
 	 * Filter anwenden
 	 */
 	function applyFilters() {
+		console.log("🔍 applyFilters() aufgerufen");
+		console.log("📊 fleetData.length:", fleetData.length);
 		let filtered = [...fleetData];
 
 		// Airline-Filter
@@ -693,11 +717,13 @@ const FleetDatabase = (function () {
 		}
 
 		filteredData = filtered;
+		console.log("📊 Nach Filterung: filteredData.length:", filteredData.length);
 
 		// Sortierung anwenden
 		applySorting();
 
 		// Tabelle aktualisieren
+		console.log("🔄 Rufe renderFleetTable() auf...");
 		renderFleetTable();
 
 		// Anzahl aktualisieren
@@ -854,22 +880,37 @@ const FleetDatabase = (function () {
 	 * Flottentabelle rendern
 	 */
 	function renderFleetTable() {
-		if (!elements.fleetTableBody) return;
+		console.log("🎨 renderFleetTable() aufgerufen");
+		console.log("📊 filteredData.length:", filteredData.length);
+		console.log("🔍 elements.fleetTableBody:", !!elements.fleetTableBody);
+
+		if (!elements.fleetTableBody) {
+			console.error("❌ fleetTableBody Element nicht gefunden!");
+			return;
+		}
 
 		if (filteredData.length === 0) {
+			console.log("📭 Keine gefilterten Daten - zeige Empty State");
 			showEmptyState();
 			return;
 		}
 
+		console.log("✅ Verstecke Empty State und rendere Tabelle");
 		hideEmptyState();
 
 		const tbody = elements.fleetTableBody;
 		tbody.innerHTML = "";
 
-		filteredData.forEach((aircraft) => {
+		filteredData.forEach((aircraft, index) => {
+			console.log(
+				`🛩️ Rendere Flugzeug ${index + 1}:`,
+				aircraft.registration || "Unknown"
+			);
 			const row = createFleetTableRow(aircraft);
 			tbody.appendChild(row);
 		});
+
+		console.log(`✅ ${filteredData.length} Flugzeuge erfolgreich gerendert`);
 	}
 
 	/**
@@ -1250,6 +1291,36 @@ document.addEventListener("DOMContentLoaded", function () {
 		}, 200);
 	});
 
+	// RACE CONDITION FIX: Sofort prüfen ob FleetDatabaseManager bereits bereit ist
+	setTimeout(() => {
+		console.log(
+			"🔧 Race Condition Check: Prüfe FleetDatabaseManager Status..."
+		);
+		if (
+			window.fleetDatabaseManager &&
+			window.fleetDatabaseManager.isInitialized
+		) {
+			console.log(
+				"✅ FleetDatabaseManager bereits bereit - starte sofortige Datenladung..."
+			);
+			FleetDatabase.loadFleetData();
+		} else if (window.fleetDatabaseManager) {
+			console.log(
+				"⏳ FleetDatabaseManager existiert aber nicht initialisiert - warte..."
+			);
+			window.fleetDatabaseManager.waitForInitialization().then(() => {
+				console.log(
+					"✅ FleetDatabaseManager jetzt bereit - starte Datenladung..."
+				);
+				FleetDatabase.loadFleetData();
+			});
+		} else {
+			console.log(
+				"❌ FleetDatabaseManager noch nicht verfügbar - verwende Fallback..."
+			);
+		}
+	}, 100);
+
 	// Fallback: Robuste automatische Datenladung falls Event verpasst wurde
 	function startAutoLoadFallback() {
 		console.log("🔍 Fallback: Prüfe Fleet Database Manager Verfügbarkeit...");
@@ -1345,3 +1416,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
 // Global verfügbar machen
 window.FleetDatabase = FleetDatabase;
+
+// Test-Funktion für direktes Laden
+window.testFleetDatabaseLoad = function () {
+	console.log("🧪 Test: Lade Flottendaten direkt...");
+	FleetDatabase.loadFleetData();
+};
+
+console.log("🧪 Test-Funktion verfügbar: testFleetDatabaseLoad()");

@@ -65,18 +65,18 @@
 				<!-- Hauptinhalt -->
 				<div class="flex-grow bg-white p-4 overflow-auto">
 					<!-- Filter und Steuerungsbereich -->
-					<div class="mb-6 bg-gray-50 p-4 rounded-lg">
+					<div class="mb-6 bg-gray-50 p-4 rounded-lg fleet-filters-enhanced">
 						<div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
 							<!-- Airline Filter -->
 							<div>
 								<label
 									for="airlineFilter"
-									class="block text-sm font-medium text-gray-700 mb-2">
+									class="block text-sm font-medium text-gray-900 mb-1">
 									Airline Filter
 								</label>
 								<select
 									id="airlineFilter"
-									class="w-full border border-gray-300 rounded-md px-3 py-2 bg-white">
+									class="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 focus:ring-2 focus:ring-industrial-accent focus:border-industrial-accent">
 									<option value="all">Alle Airlines</option>
 									<option value="CLH">CLH - Lufthansa CityLine</option>
 									<option value="LHX">LHX - Lufthansa Private Jet</option>
@@ -87,12 +87,12 @@
 							<div>
 								<label
 									for="aircraftTypeFilter"
-									class="block text-sm font-medium text-gray-700 mb-2">
+									class="block text-sm font-medium text-gray-900 mb-1">
 									Flugzeugtyp
 								</label>
 								<select
 									id="aircraftTypeFilter"
-									class="w-full border border-gray-300 rounded-md px-3 py-2 bg-white">
+									class="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 focus:ring-2 focus:ring-industrial-accent focus:border-industrial-accent">
 									<option value="all">Alle Typen</option>
 								</select>
 							</div>
@@ -101,23 +101,23 @@
 							<div>
 								<label
 									for="searchFilter"
-									class="block text-sm font-medium text-gray-700 mb-2">
+									class="block text-sm font-medium text-gray-900 mb-1">
 									Suche (Registrierung/Typ)
 								</label>
 								<input
 									type="text"
 									id="searchFilter"
 									placeholder="z.B. D-AIZZ, A320"
-									class="w-full border border-gray-300 rounded-md px-3 py-2" />
+									class="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-industrial-accent focus:border-industrial-accent" />
 							</div>
 
 							<!-- Aktionen -->
 							<div class="flex space-x-2">
 								<button
 									id="loadFleetData"
-									class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md flex items-center">
+									class="fleet-action-btn-enhanced fleet-action-btn-primary">
 									<svg
-										class="w-4 h-4 mr-2"
+										class="w-4 h-4"
 										fill="none"
 										stroke="currentColor"
 										viewBox="0 0 24 24">
@@ -131,9 +131,9 @@
 								</button>
 								<button
 									id="exportFleetData"
-									class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md flex items-center">
+									class="fleet-action-btn-enhanced fleet-action-btn-secondary">
 									<svg
-										class="w-4 h-4 mr-2"
+										class="w-4 h-4"
 										fill="none"
 										stroke="currentColor"
 										viewBox="0 0 24 24">

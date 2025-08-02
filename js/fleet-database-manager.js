@@ -53,6 +53,13 @@ class FleetDatabaseManager {
 			this.isInitialized = true;
 			console.log("✅ Fleet Database Manager erfolgreich initialisiert");
 
+			// Event für andere Module aussenden
+			window.dispatchEvent(
+				new CustomEvent("fleetDatabaseManagerReady", {
+					detail: { manager: this, data: this.localCache },
+				})
+			);
+
 			// Callback ausführen wenn Daten geladen wurden
 			if (this.onDataLoaded && typeof this.onDataLoaded === "function") {
 				this.onDataLoaded(this.localCache);

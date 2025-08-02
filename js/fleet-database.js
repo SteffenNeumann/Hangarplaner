@@ -1235,50 +1235,106 @@ const FleetDatabase = (function () {
 
 // Initialisierung wenn DOM bereit ist
 document.addEventListener("DOMContentLoaded", function () {
+	console.log("🚀 DOM geladen - starte Fleet Database Initialisierung...");
 	FleetDatabase.init();
 
-	// Event-Listener für Fleet Database Manager Initialisierung
-	if (window.fleetDatabaseManager) {
-		// Direkt laden wenn bereits initialisiert
-		if (window.fleetDatabaseManager.isInitialized) {
-			console.log("🚀 Fleet Database Manager bereits initialisiert - lade Daten sofort...");
-			setTimeout(() => FleetDatabase.loadFleetData(), 100);
-		} else {
-			// Warten auf Initialisierung
-			window.fleetDatabaseManager.waitForInitialization()
+	// Event-Listener für Fleet Database Manager Bereitschaft
+	window.addEventListener("fleetDatabaseManagerReady", function (event) {
+		console.log("🎉 Fleet Database Manager Ready Event erhalten!");
+		console.log("📊 Event Details:", event.detail);
+
+		// Kurze Verzögerung für UI-Stabilisierung
+		setTimeout(() => {
+			console.log("� Starte automatische Datenladung nach Event...");
+			FleetDatabase.loadFleetData();
+		}, 200);
+	});
+
+	// Fallback: Robuste automatische Datenladung falls Event verpasst wurde
+	function startAutoLoadFallback() {
+		console.log("🔍 Fallback: Prüfe Fleet Database Manager Verfügbarkeit...");
+
+		if (
+			window.fleetDatabaseManager &&
+			window.fleetDatabaseManager.isInitialized
+		) {
+			console.log("✅ Fleet Database Manager bereits bereit (Fallback)");
+			setTimeout(() => {
+				console.log("🚀 Starte Fallback-Datenladung...");
+				FleetDatabase.loadFleetData();
+			}, 100);
+		} else if (window.fleetDatabaseManager) {
+			console.log(
+				"⏳ Fleet Database Manager existiert, warte auf Initialisierung (Fallback)..."
+			);
+			window.fleetDatabaseManager
+				.waitForInitialization()
 				.then(() => {
-					console.log("🚀 Automatisches Laden der Fleet-Daten nach Initialisierung...");
+					console.log(
+						"🚀 Fleet Database Manager initialisiert (Fallback) - lade Daten..."
+					);
 					FleetDatabase.loadFleetData();
 				})
-				.catch(error => {
-					console.error("❌ Fehler bei automatischer Datenladung:", error);
+				.catch((error) => {
+					console.error(
+						"❌ Fallback Fehler bei automatischer Datenladung:",
+						error
+					);
 				});
-		}
-	} else {
-		// Fallback: Warte auf Fleet Database Manager
-		console.log("⏳ Warte auf Fleet Database Manager...");
-		let attempts = 0;
-		const checkManager = () => {
-			attempts++;
-			if (window.fleetDatabaseManager) {
-				console.log("✅ Fleet Database Manager gefunden - starte automatische Datenladung...");
-				window.fleetDatabaseManager.waitForInitialization()
-					.then(() => {
-						console.log("🚀 Automatisches Laden der Fleet-Daten nach Verzögerung...");
+		} else {
+			console.log(
+				"⏳ Fleet Database Manager noch nicht verfügbar (Fallback)..."
+			);
+			// Erweiterte Warteschleife
+			let attempts = 0;
+			const maxAttempts = 20; // 10 Sekunden
+
+			const checkManager = () => {
+				attempts++;
+				console.log(
+					`🔍 Fallback Versuch ${attempts}/${maxAttempts}: Suche Fleet Database Manager...`
+				);
+
+				if (window.fleetDatabaseManager) {
+					console.log(
+						"✅ Fleet Database Manager gefunden (Fallback Warteschleife)!"
+					);
+
+					if (window.fleetDatabaseManager.isInitialized) {
+						console.log("🚀 Bereits initialisiert (Fallback) - lade Daten...");
 						FleetDatabase.loadFleetData();
-					})
-					.catch(error => {
-						console.error("❌ Fehler bei verzögerter automatischer Datenladung:", error);
-					});
-			} else if (attempts < 10) {
-				// Versuche es nochmal in 500ms (max 5 Sekunden)
-				setTimeout(checkManager, 500);
-			} else {
-				console.warn("⚠️ Fleet Database Manager nicht gefunden - manuelle Datenladung erforderlich");
-			}
-		};
-		setTimeout(checkManager, 500);
+					} else {
+						console.log("⏳ Warte auf Initialisierung (Fallback)...");
+						window.fleetDatabaseManager
+							.waitForInitialization()
+							.then(() => {
+								console.log(
+									"🚀 Automatisches Laden nach Fallback-Warteschleife..."
+								);
+								FleetDatabase.loadFleetData();
+							})
+							.catch((error) => {
+								console.error("❌ Fallback Warteschleife Fehler:", error);
+							});
+					}
+				} else if (attempts < maxAttempts) {
+					setTimeout(checkManager, 500);
+				} else {
+					console.warn(
+						"⚠️ Fleet Database Manager nicht gefunden nach 10 Sekunden (Fallback)"
+					);
+					console.log(
+						"🔧 Verwenden Sie den 'Daten laden' Button für manuelle Ladung"
+					);
+				}
+			};
+
+			setTimeout(checkManager, 1000);
+		}
 	}
+
+	// Starte Fallback nach Verzögerung (falls Event verpasst wurde)
+	setTimeout(startAutoLoadFallback, 2000);
 
 	// Wetter-API laden (falls verfügbar)
 	if (typeof WeatherAPI !== "undefined") {

@@ -1237,6 +1237,49 @@ const FleetDatabase = (function () {
 document.addEventListener("DOMContentLoaded", function () {
 	FleetDatabase.init();
 
+	// Event-Listener für Fleet Database Manager Initialisierung
+	if (window.fleetDatabaseManager) {
+		// Direkt laden wenn bereits initialisiert
+		if (window.fleetDatabaseManager.isInitialized) {
+			console.log("🚀 Fleet Database Manager bereits initialisiert - lade Daten sofort...");
+			setTimeout(() => FleetDatabase.loadFleetData(), 100);
+		} else {
+			// Warten auf Initialisierung
+			window.fleetDatabaseManager.waitForInitialization()
+				.then(() => {
+					console.log("🚀 Automatisches Laden der Fleet-Daten nach Initialisierung...");
+					FleetDatabase.loadFleetData();
+				})
+				.catch(error => {
+					console.error("❌ Fehler bei automatischer Datenladung:", error);
+				});
+		}
+	} else {
+		// Fallback: Warte auf Fleet Database Manager
+		console.log("⏳ Warte auf Fleet Database Manager...");
+		let attempts = 0;
+		const checkManager = () => {
+			attempts++;
+			if (window.fleetDatabaseManager) {
+				console.log("✅ Fleet Database Manager gefunden - starte automatische Datenladung...");
+				window.fleetDatabaseManager.waitForInitialization()
+					.then(() => {
+						console.log("🚀 Automatisches Laden der Fleet-Daten nach Verzögerung...");
+						FleetDatabase.loadFleetData();
+					})
+					.catch(error => {
+						console.error("❌ Fehler bei verzögerter automatischer Datenladung:", error);
+					});
+			} else if (attempts < 10) {
+				// Versuche es nochmal in 500ms (max 5 Sekunden)
+				setTimeout(checkManager, 500);
+			} else {
+				console.warn("⚠️ Fleet Database Manager nicht gefunden - manuelle Datenladung erforderlich");
+			}
+		};
+		setTimeout(checkManager, 500);
+	}
+
 	// Wetter-API laden (falls verfügbar)
 	if (typeof WeatherAPI !== "undefined") {
 		WeatherAPI.init();

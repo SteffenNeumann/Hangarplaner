@@ -162,13 +162,13 @@ const FleetDatabase = (function () {
 	 */
 	async function loadFleetData() {
 		console.log("📡 loadFleetData() aufgerufen!");
-		
+
 		// Load Protection: Verhindere mehrfache parallele Ladungen
 		if (isLoading) {
 			console.log("⏳ Datenladung bereits im Gange - überspringe...");
 			return;
 		}
-		
+
 		isLoading = true;
 		console.log("📡 Starte das Laden der Flottendaten...");
 
@@ -213,11 +213,13 @@ const FleetDatabase = (function () {
 				const lastSync = stats.lastApiSync || 0;
 				const now = Date.now();
 				const syncInterval = 24 * 60 * 60 * 1000; // 24 Stunden
-				const needsSync = (now - lastSync) > syncInterval;
+				const needsSync = now - lastSync > syncInterval;
 
 				if (needsSync) {
-					console.log("🔄 API-Synchronisation wird durchgeführt (letzte Sync vor >24h)...");
-					
+					console.log(
+						"🔄 API-Synchronisation wird durchgeführt (letzte Sync vor >24h)..."
+					);
+
 					// API-Daten laden für Abgleich
 					console.log("📡 Starte API-Datenabgleich...");
 					const apiData = await loadAllFleetDataFromAPI();
@@ -225,14 +227,18 @@ const FleetDatabase = (function () {
 
 					// Differential-Synchronisation durchführen (ohne neue Datenladung)
 					console.log("🔄 Starte Differential-Synchronisation...");
-					await window.fleetDatabaseManager.syncWithApiData(apiData, { skipReload: true });
+					await window.fleetDatabaseManager.syncWithApiData(apiData, {
+						skipReload: true,
+					});
 
 					// Aktualisierte Daten laden (nur einmal)
 					const updatedData = window.fleetDatabaseManager.getFleetData();
 					fleetData = convertFleetDataForTable(updatedData);
 					console.log("✅ Synchronisation abgeschlossen");
 				} else {
-					console.log("⏭️ API-Synchronisation übersprungen (letzte Sync < 24h)");
+					console.log(
+						"⏭️ API-Synchronisation übersprungen (letzte Sync < 24h)"
+					);
 				}
 			} else {
 				// Erste Ladung - Daten von API holen und Datenbank füllen
@@ -1329,7 +1335,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 	// Einmaliger Event-Listener für Fleet Database Manager Bereitschaft
 	let dataLoadTriggered = false;
-	
+
 	function triggerDataLoad() {
 		if (dataLoadTriggered) {
 			console.log("� Datenladung bereits ausgelöst - überspringe...");
@@ -1344,7 +1350,7 @@ document.addEventListener("DOMContentLoaded", function () {
 	window.addEventListener("fleetDatabaseManagerReady", function (event) {
 		console.log("🎉 Fleet Database Manager Ready Event erhalten!");
 		console.log("� Event Details:", event.detail);
-		
+
 		// Kurze Verzögerung für UI-Stabilisierung
 		setTimeout(() => {
 			triggerDataLoad();
@@ -1354,12 +1360,19 @@ document.addEventListener("DOMContentLoaded", function () {
 	// Fallback: Prüfung nach 1 Sekunde ob Manager bereits bereit ist
 	setTimeout(() => {
 		console.log("� Fallback Check: Prüfe FleetDatabaseManager Status...");
-		
-		if (window.fleetDatabaseManager && window.fleetDatabaseManager.isInitialized) {
-			console.log("✅ FleetDatabaseManager bereits bereit - starte Datenladung...");
+
+		if (
+			window.fleetDatabaseManager &&
+			window.fleetDatabaseManager.isInitialized
+		) {
+			console.log(
+				"✅ FleetDatabaseManager bereits bereit - starte Datenladung..."
+			);
 			triggerDataLoad();
 		} else {
-			console.log("⏳ FleetDatabaseManager noch nicht bereit - warte auf Event...");
+			console.log(
+				"⏳ FleetDatabaseManager noch nicht bereit - warte auf Event..."
+			);
 		}
 	}, 1000);
 

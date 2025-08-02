@@ -127,7 +127,7 @@ const FleetDatabase = (function () {
 	}
 
 	/**
-	 * Flottendaten für beide Airlines laden - ERWEITERTE VERSION FÜR VOLLSTÄNDIGE DATENERFASSUNG
+	 * Flottendaten für beide Airlines laden - MIT SERVERSEITIGER DATENBANK
 	 */
 	async function loadFleetData() {
 		console.log("📡 Starte das Laden der Flottendaten...");
@@ -136,26 +136,68 @@ const FleetDatabase = (function () {
 		updateStatus("Lade Flottendaten...");
 
 		try {
-			fleetData = [];
+			// Prüfe ob Fleet Database Manager verfügbar ist
+			if (!window.fleetDatabaseManager) {
+				console.error("❌ Fleet Database Manager nicht verfügbar");
+				throw new Error("Fleet Database Manager nicht initialisiert");
+			}
 
-			// CLH Flotte laden
-			updateStatus("Lade CLH (Lufthansa CityLine) Flotte - alle Seiten...");
-			const clhData = await loadSimpleAirlineFleet("CLH");
-			updateStatus(`CLH: ${clhData.length} Flugzeuge geladen. Lade LHX...`);
+			// Warte bis Fleet Database Manager initialisiert ist
+			updateStatus("Warte auf Fleet Database Initialisierung...");
+			console.log("⏳ Warte auf Fleet Database Manager Initialisierung...");
 
-			// LHX Flotte laden
-			updateStatus("Lade LHX (Lufthansa Private Jet) Flotte - alle Seiten...");
-			const lhxData = await loadSimpleAirlineFleet("LHX");
+			await window.fleetDatabaseManager.waitForInitialization();
+			console.log("✅ Fleet Database Manager ist bereit");
 
-			// Daten zusammenführen
-			fleetData = [...clhData, ...lhxData];
+			// Prüfe ob bereits Daten in der Datenbank vorhanden sind
+			const stats = window.fleetDatabaseManager.getStatistics();
+			console.log("📊 Fleet Database Status:", stats);
 
-			console.log(
-				`✅ ${fleetData.length} Flugzeuge geladen (CLH: ${clhData.length}, LHX: ${lhxData.length})`
-			);
-			updateStatus(
-				`${fleetData.length} Flugzeuge erfolgreich geladen (CLH: ${clhData.length}, LHX: ${lhxData.length})`
-			);
+			if (stats.totalAircrafts > 0) {
+				// Daten aus der Datenbank laden
+				updateStatus("Lade vorhandene Daten aus der Fleet-Datenbank...");
+				const cachedData = window.fleetDatabaseManager.getFleetData();
+
+				// Daten für die Tabelle konvertieren
+				fleetData = convertFleetDataForTable(cachedData);
+
+				updateStatus(
+					`${fleetData.length} Flugzeuge aus der Datenbank geladen. Führe API-Abgleich durch...`
+				);
+				console.log(`📥 ${fleetData.length} Flugzeuge aus dem Cache geladen`);
+
+				// API-Daten laden für Abgleich
+				console.log("📡 Starte API-Datenabgleich...");
+				const apiData = await loadAllFleetDataFromAPI();
+				console.log("📊 API-Daten erhalten:", apiData);
+
+				// Differential-Synchronisation durchführen
+				console.log("🔄 Starte Differential-Synchronisation...");
+				await window.fleetDatabaseManager.syncWithApiData(apiData);
+
+				// Aktualisierte Daten laden
+				const updatedData = window.fleetDatabaseManager.getFleetData();
+				fleetData = convertFleetDataForTable(updatedData);
+			} else {
+				// Erste Ladung - Daten von API holen und Datenbank füllen
+				updateStatus("Erste Synchronisation - lade Daten von der API...");
+				console.log("🆕 Erste Synchronisation wird durchgeführt...");
+
+				const apiData = await loadAllFleetDataFromAPI();
+				console.log("📊 API-Daten für Erst-Synchronisation erhalten:", apiData);
+
+				// Daten in der serverseitigen Datenbank speichern
+				console.log("💾 Speichere Daten in der Fleet Database...");
+				await window.fleetDatabaseManager.syncWithApiData(apiData);
+
+				// Daten für die Tabelle laden
+				const savedData = window.fleetDatabaseManager.getFleetData();
+				fleetData = convertFleetDataForTable(savedData);
+				console.log("✅ Daten erfolgreich in Fleet Database gespeichert");
+			}
+
+			console.log(`✅ ${fleetData.length} Flugzeuge verfügbar`);
+			updateStatus(`${fleetData.length} Flugzeuge erfolgreich geladen`);
 
 			// Flugzeugtypen für Filter extrahieren
 			updateAircraftTypeFilter();
@@ -167,9 +209,91 @@ const FleetDatabase = (function () {
 			applyFilters();
 		} catch (error) {
 			console.error("❌ Fehler beim Laden der Flottendaten:", error);
+			console.error("📄 Error Stack:", error.stack);
 			updateStatus("Fehler beim Laden der Flottendaten: " + error.message);
 			showEmptyState();
 		}
+	}
+
+	/**
+	 * Alle Flottendaten von der API laden (für Synchronisation)
+	 */
+	async function loadAllFleetDataFromAPI() {
+		console.log("📡 Starte API-Datenladung...");
+		const apiData = {
+			airlines: {},
+		};
+
+		try {
+			// CLH Flotte laden
+			updateStatus("Lade CLH (Lufthansa CityLine) Flotte von API...");
+			console.log("📡 Lade CLH Flotte...");
+			const clhData = await loadSimpleAirlineFleet("CLH");
+			console.log(`📊 CLH: ${clhData.length} Flugzeuge erhalten`);
+
+			if (clhData.length > 0) {
+				apiData.airlines.CLH = {
+					name: "Lufthansa CityLine",
+					color: "#0066CC",
+					aircrafts: clhData,
+				};
+			}
+
+			// LHX Flotte laden
+			updateStatus("Lade LHX (Lufthansa Private Jet) Flotte von API...");
+			console.log("📡 Lade LHX Flotte...");
+			const lhxData = await loadSimpleAirlineFleet("LHX");
+			console.log(`📊 LHX: ${lhxData.length} Flugzeuge erhalten`);
+
+			if (lhxData.length > 0) {
+				apiData.airlines.LHX = {
+					name: "Lufthansa Private Jet",
+					color: "#FFD700",
+					aircrafts: lhxData,
+				};
+			}
+
+			console.log(
+				`📊 API-Daten geladen: CLH=${clhData.length}, LHX=${lhxData.length}`
+			);
+			console.log("📊 API-Daten Struktur:", apiData);
+			return apiData;
+		} catch (error) {
+			console.error("❌ Fehler beim Laden der API-Daten:", error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Konvertiert Fleet Database Daten für die Tabellen-Anzeige
+	 */
+	function convertFleetDataForTable(fleetDbData) {
+		const tableData = [];
+
+		if (
+			!fleetDbData ||
+			!fleetDbData.fleetDatabase ||
+			!fleetDbData.fleetDatabase.airlines
+		) {
+			return tableData;
+		}
+
+		const airlines = fleetDbData.fleetDatabase.airlines;
+
+		for (const [airlineCode, airline] of Object.entries(airlines)) {
+			if (airline.aircrafts && Array.isArray(airline.aircrafts)) {
+				for (const aircraft of airline.aircrafts) {
+					tableData.push({
+						...aircraft,
+						airline: airlineCode,
+						airlineName: airline.name,
+						airlineColor: airline.color,
+					});
+				}
+			}
+		}
+
+		return tableData;
 	}
 
 	/**

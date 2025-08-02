@@ -276,10 +276,53 @@
 		<!-- JavaScript-Dateien -->
 		<script src="js/helpers.js"></script>
 		<script src="js/weather-api.js"></script>
+		<script src="js/fleet-database-manager.js"></script>
 		<script src="js/fleet-database.js"></script>
 
-		<!-- Zeit-Update Script -->
+		<!-- Debug und Zeit-Update Script -->
 		<script>
+			// Debug-Funktionen für Fleet Database
+			window.debugFleetDatabase = function () {
+				console.log("🔍 Fleet Database Debug gestartet...");
+
+				// Prüfe Fleet Database Manager
+				if (!window.fleetDatabaseManager) {
+					console.error("❌ Fleet Database Manager nicht verfügbar");
+					return;
+				}
+
+				console.log("✅ Fleet Database Manager verfügbar");
+				console.log("📊 Manager Zustand:", {
+					isInitialized: window.fleetDatabaseManager.isInitialized,
+					syncInProgress: window.fleetDatabaseManager.syncInProgress,
+					apiEndpoint: window.fleetDatabaseManager.apiEndpoint,
+				});
+
+				// Teste Server-Verbindung
+				fetch("sync/fleet-database.php?action=status")
+					.then((response) => {
+						console.log(
+							"📡 Server Response:",
+							response.status,
+							response.statusText
+						);
+						return response.json();
+					})
+					.then((data) => {
+						console.log("📊 Server-Status:", data);
+					})
+					.catch((error) => {
+						console.error("❌ Server-Fehler:", error);
+					});
+
+				// Zeige Cache-Status
+				const stats = window.fleetDatabaseManager.getStatistics();
+				console.log("💾 Cache-Statistiken:", stats);
+			};
+
+			// Debug-Button zu Konsole hinzufügen
+			console.log("🛠️ Debug-Funktion verfügbar: debugFleetDatabase()");
+
 			function updateTimeDisplay() {
 				const now = new Date();
 				const localTime = now.toLocaleTimeString("de-DE", {

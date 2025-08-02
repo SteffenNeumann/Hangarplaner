@@ -1,0 +1,15 @@
+{
+	"fleetDatabase": {
+		"version": "1.0.0",
+		"lastUpdate": null,
+		"airlines": {},
+		"metadata": {
+			"created": null,
+			"lastModified": null,
+			"totalAircrafts": 0,
+			"syncStatus": "never_synced",
+			"apiCalls": 0,
+			"lastApiSync": null
+		}
+	}
+}

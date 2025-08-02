@@ -1,0 +1,31 @@
+{
+	"fleetDatabase": {
+		"version": "1.0.0",
+		"lastUpdate": null,
+		"airlines": {
+			"CLH": {
+				"code": "CLH",
+				"name": "Lufthansa CityLine",
+				"color": "#0066CC",
+				"aircrafts": [],
+				"lastSync": null,
+				"totalCount": 0
+			},
+			"LHX": {
+				"code": "LHX",
+				"name": "Lufthansa Private Jet",
+				"color": "#FFD700",
+				"aircrafts": [],
+				"lastSync": null,
+				"totalCount": 0
+			}
+		},
+		"metadata": {
+			"created": null,
+			"lastModified": null,
+			"totalAircrafts": 0,
+			"syncStatus": "never_synced",
+			"apiCalls": 0
+		}
+	}
+}

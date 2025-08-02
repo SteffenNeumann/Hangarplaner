@@ -89,6 +89,24 @@ const FleetDatabase = (function () {
 
 		// TESTING: Button für manuelles Laden
 		console.log("🔘 Load Button verfügbar:", !!elements.loadButton);
+
+		// DIREKTES RACE CONDITION FIX: Prüfe sofort nach der Initialisierung
+		setTimeout(() => {
+			console.log(
+				"🚀 INIT: Prüfe FleetDatabaseManager direkt nach FleetDatabase.init()"
+			);
+			if (
+				window.fleetDatabaseManager &&
+				window.fleetDatabaseManager.isInitialized
+			) {
+				console.log(
+					"✅ INIT: FleetDatabaseManager bereit - starte automatische Datenladung"
+				);
+				loadFleetData();
+			} else {
+				console.log("⏳ INIT: FleetDatabaseManager noch nicht bereit");
+			}
+		}, 50);
 	}
 
 	/**
@@ -169,9 +187,12 @@ const FleetDatabase = (function () {
 				// Daten aus der Datenbank laden
 				updateStatus("Lade vorhandene Daten aus der Fleet-Datenbank...");
 				const cachedData = window.fleetDatabaseManager.getFleetData();
+				console.log("🔍 CACHED DATA STRUCTURE:", cachedData);
 
 				// Daten für die Tabelle konvertieren
 				fleetData = convertFleetDataForTable(cachedData);
+				console.log("🔍 CONVERTED FLEET DATA:", fleetData);
+				console.log("🔍 FLEET DATA LENGTH:", fleetData.length);
 
 				updateStatus(
 					`${fleetData.length} Flugzeuge aus der Datenbank geladen. Führe API-Abgleich durch...`
@@ -1296,6 +1317,15 @@ document.addEventListener("DOMContentLoaded", function () {
 		console.log(
 			"🔧 Race Condition Check: Prüfe FleetDatabaseManager Status..."
 		);
+		console.log(
+			"🔍 window.fleetDatabaseManager:",
+			!!window.fleetDatabaseManager
+		);
+		console.log(
+			"🔍 isInitialized:",
+			window.fleetDatabaseManager?.isInitialized
+		);
+
 		if (
 			window.fleetDatabaseManager &&
 			window.fleetDatabaseManager.isInitialized
@@ -1319,7 +1349,35 @@ document.addEventListener("DOMContentLoaded", function () {
 				"❌ FleetDatabaseManager noch nicht verfügbar - verwende Fallback..."
 			);
 		}
-	}, 100);
+	}, 500); // Erhöhtes Timeout für bessere Stabilität
+
+	// ZUSÄTZLICHER MANUAL TRIGGER: Nach 1 Sekunde versuchen
+	setTimeout(() => {
+		console.log(
+			"🔄 MANUAL TRIGGER: Versuche manuelles Laden nach 1 Sekunde..."
+		);
+		if (
+			window.fleetDatabaseManager &&
+			window.fleetDatabaseManager.isInitialized
+		) {
+			console.log("✅ MANUAL: FleetDatabaseManager bereit - lade Daten");
+			FleetDatabase.loadFleetData();
+		} else {
+			console.log("❌ MANUAL: FleetDatabaseManager noch nicht bereit");
+		}
+	}, 1000);
+
+	// BACKUP LÖSUNG: Button-Klick simulieren nach 2 Sekunden
+	setTimeout(() => {
+		console.log("🔴 BACKUP: Simuliere Button-Klick als letzte Lösung...");
+		const loadButton = document.getElementById("loadFleetData");
+		if (loadButton) {
+			console.log("🔘 BACKUP: Load Button gefunden - triggere Klick");
+			loadButton.click();
+		} else {
+			console.log("❌ BACKUP: Load Button nicht gefunden");
+		}
+	}, 2000);
 
 	// Fallback: Robuste automatische Datenladung falls Event verpasst wurde
 	function startAutoLoadFallback() {

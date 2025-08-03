@@ -359,8 +359,13 @@ class TimetableAPIManager {
 	 */
 	analyzeSimpleOvernight(registration, todayFlights, currentDate, airportCode) {
 		if (!todayFlights || todayFlights.length === 0) {
+			console.log(`⚠️ ${registration}: Keine Flugdaten für ${currentDate}`);
 			return null;
 		}
+
+		console.log(
+			`🔍 DEBUG ${registration}: Analysiere ${todayFlights.length} Flüge für ${currentDate}`
+		);
 
 		// Finde ALLE Ankünfte in der Zielstation heute
 		const arrivalsToday = todayFlights.filter(
@@ -369,7 +374,17 @@ class TimetableAPIManager {
 				flight.arrival?.airport?.icao === airportCode
 		);
 
+		console.log(
+			`🔍 DEBUG ${registration}: ${arrivalsToday.length} Ankünfte in ${airportCode} gefunden`
+		);
+		arrivalsToday.forEach((flight) => {
+			console.log(
+				`   📥 Ankunft: ${flight.arrival?.scheduledTime?.utc} ${flight.number} von ${flight.departure?.airport?.iata}`
+			);
+		});
+
 		if (arrivalsToday.length === 0) {
+			console.log(`❌ ${registration}: Keine Ankünfte in ${airportCode}`);
 			return null; // Keine Ankünfte in Zielstation
 		}
 
@@ -380,32 +395,72 @@ class TimetableAPIManager {
 				flight.departure?.airport?.icao === airportCode
 		);
 
-		// Sortiere Ankünfte nach Zeit (letzte zuerst)
-		const lastArrival = arrivalsToday.sort(
-			(a, b) =>
-				new Date(b.arrival?.scheduledTime?.utc || 0) -
-				new Date(a.arrival?.scheduledTime?.utc || 0)
-		)[0];
+		console.log(
+			`🔍 DEBUG ${registration}: ${departuresFromStation.length} Abflüge von ${airportCode} gefunden`
+		);
+		departuresFromStation.forEach((flight) => {
+			console.log(
+				`   📤 Abflug: ${flight.departure?.scheduledTime?.utc} ${flight.number} nach ${flight.arrival?.airport?.iata}`
+			);
+		});
+
+		// Sortiere Ankünfte nach Zeit (letzte zuerst) - KORRIGIERT: Kopiere Array zuerst
+		const sortedArrivals = [...arrivalsToday].sort((a, b) => {
+			const timeA = a.arrival?.scheduledTime?.utc;
+			const timeB = b.arrival?.scheduledTime?.utc;
+
+			// Robuste Null/Undefined-Behandlung
+			if (!timeA && !timeB) return 0;
+			if (!timeA) return 1; // A nach hinten
+			if (!timeB) return -1; // B nach hinten
+
+			return new Date(timeB) - new Date(timeA); // Neueste zuerst
+		});
+
+		const lastArrival = sortedArrivals[0];
+
+		if (!lastArrival || !lastArrival.arrival?.scheduledTime?.utc) {
+			console.log(
+				`⚠️ Keine gültige letzte Ankunft für ${registration} in ${airportCode}`
+			);
+			return null;
+		}
 
 		// VEREINFACHTE REGEL:
 		// Hat Aircraft heute Ankunft in Station UND keine Abflüge danach? → Übernachtung
-		const lastArrivalTime = new Date(lastArrival.arrival?.scheduledTime?.utc);
+		const lastArrivalTime = new Date(lastArrival.arrival.scheduledTime.utc);
+
+		console.log(
+			`🔍 DEBUG ${registration}: Letzte Ankunft in ${airportCode}: ${lastArrival.arrival.scheduledTime.utc} (${lastArrival.number})`
+		);
 
 		// Prüfe ob es Abflüge NACH der letzten Ankunft gibt
 		const departuresAfterArrival = departuresFromStation.filter((flight) => {
 			const depTime = new Date(flight.departure?.scheduledTime?.utc);
-			return depTime > lastArrivalTime;
+			const isAfterArrival = depTime > lastArrivalTime;
+
+			if (isAfterArrival) {
+				console.log(
+					`🔍 DEBUG ${registration}: Abflug NACH letzter Ankunft gefunden: ${flight.departure.scheduledTime.utc} (${flight.number})`
+				);
+			}
+
+			return isAfterArrival;
 		});
+
+		console.log(
+			`🔍 DEBUG ${registration}: ${departuresAfterArrival.length} Abflüge nach letzter Ankunft`
+		);
 
 		// ÜBERNACHTUNG = Letzte Ankunft in Station + keine weiteren Abflüge heute
 		if (departuresAfterArrival.length === 0) {
 			console.log(
-				`🌙 VEREINFACHT: ${registration} übernachtet in ${airportCode}`
+				`🌙 ÜBERNACHTUNG BESTÄTIGT: ${registration} übernachtet in ${airportCode}`
 			);
 			console.log(
-				`   Letzte Ankunft: ${lastArrival.arrival?.scheduledTime?.utc} ${lastArrival.number}`
+				`   ✅ Letzte Ankunft: ${lastArrival.arrival.scheduledTime.utc} ${lastArrival.number}`
 			);
-			console.log(`   Keine weiteren Abflüge heute gefunden`);
+			console.log(`   ✅ Keine weiteren Abflüge heute gefunden`);
 
 			return {
 				registration: registration,
@@ -438,6 +493,10 @@ class TimetableAPIManager {
 				overnightDuration: "tbd", // Wird morgen bestimmt
 				position: "--",
 			};
+		} else {
+			console.log(
+				`❌ KEINE ÜBERNACHTUNG: ${registration} in ${airportCode} - ${departuresAfterArrival.length} Abflüge nach letzter Ankunft`
+			);
 		}
 
 		return null; // Keine Übernachtung

@@ -958,6 +958,41 @@ window.debugFleetTimetable = async function () {
 	}
 };
 
+// Debug-Funktion für Fleet Database-basierte Timetable
+window.debugFleetTimetable = async function () {
+	console.log("🧪 === DEBUG: Fleet Database-basierte Timetable ===");
+
+	try {
+		// Prüfe Fleet Database Manager
+		if (!window.fleetDatabaseManager) {
+			console.error("❌ Fleet Database Manager nicht verfügbar");
+			return;
+		}
+
+		// Warte auf Initialisierung
+		await window.fleetDatabaseManager.waitForInitialization();
+
+		// Hole Fleet Daten
+		const aircrafts = window.fleetDatabaseManager.getAllAircrafts();
+		console.log(`📋 ${aircrafts.length} Aircraft Registrations verfügbar`);
+
+		// Zeige erste 5 Registrations
+		const sample = aircrafts.slice(0, 5).map((a) => a.registration);
+		console.log("🔍 Beispiel-Registrations:", sample);
+
+		// Teste Timetable Manager
+		if (window.TimetableAPIManager) {
+			console.log("🕐 Starte Fleet Database-basierte Timetable-Erstellung...");
+			await window.TimetableAPIManager.forceRefreshTimetable();
+			console.log("✅ Timetable-Test abgeschlossen");
+		} else {
+			console.error("❌ TimetableAPIManager nicht verfügbar");
+		}
+	} catch (error) {
+		console.error("❌ Fehler beim Fleet Timetable Debug:", error);
+	}
+};
+
 // Initialisierung nach DOM-Bereitschaft und Script-Laden
 if (document.readyState === "loading") {
 	document.addEventListener("DOMContentLoaded", () => {
@@ -970,4 +1005,5 @@ if (document.readyState === "loading") {
 }
 
 console.log("✅ Timetable API Integration geladen");
+console.log("🛠️ Debug-Funktion verfügbar: debugFleetTimetable()");
 console.log("🛠️ Debug-Funktion verfügbar: debugFleetTimetable()");

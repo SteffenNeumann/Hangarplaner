@@ -584,19 +584,30 @@ class FleetDatabaseManager {
 		const aircrafts = [];
 		const fleetDb = this.localCache.fleetDatabase;
 
+		// Debug: Zeige Struktur der Fleet Database
+		console.log("🔍 Fleet Database Struktur:", fleetDb);
+		console.log("🔍 Airlines verfügbar:", Object.keys(fleetDb.airlines || {}));
+
+		// Prüfe ob Airlines existieren
+		if (!fleetDb.airlines || typeof fleetDb.airlines !== "object") {
+			console.log("⚠️ Keine Airlines in Fleet Database gefunden");
+			return [];
+		}
+
 		// Durchlaufe alle Airlines
 		Object.values(fleetDb.airlines).forEach((airline) => {
-			// Durchlaufe alle Aircraft Types pro Airline
-			Object.values(airline.aircraftTypes).forEach((aircraftType) => {
-				// Durchlaufe alle Aircraft pro Type
-				aircraftType.aircrafts.forEach((aircraft) => {
+			console.log(`🔍 Verarbeite Airline:`, airline);
+
+			// Prüfe ob Airline aircrafts Array hat (neue Struktur aus PHP)
+			if (airline.aircrafts && Array.isArray(airline.aircrafts)) {
+				airline.aircrafts.forEach((aircraft) => {
 					aircrafts.push({
 						registration: aircraft.registration,
-						aircraftType: aircraftType.type,
+						aircraftType: aircraft.aircraftType || aircraft.type || "Unknown",
 						airline: {
-							iata: airline.iata,
-							name: airline.name,
-							icao: airline.icao,
+							iata: airline.code || airline.iata || "",
+							name: airline.name || "",
+							icao: airline.icao || "",
 						},
 						serial: aircraft.serial,
 						numSeats: aircraft.numSeats,
@@ -607,7 +618,41 @@ class FleetDatabaseManager {
 						ageYears: aircraft.ageYears,
 					});
 				});
-			});
+			}
+			// Fallback: Prüfe ob alte aircraftTypes Struktur vorhanden ist
+			else if (
+				airline.aircraftTypes &&
+				typeof airline.aircraftTypes === "object"
+			) {
+				Object.values(airline.aircraftTypes).forEach((aircraftType) => {
+					if (aircraftType.aircrafts && Array.isArray(aircraftType.aircrafts)) {
+						aircraftType.aircrafts.forEach((aircraft) => {
+							aircrafts.push({
+								registration: aircraft.registration,
+								aircraftType: aircraftType.type || "Unknown",
+								airline: {
+									iata: airline.iata || airline.code || "",
+									name: airline.name || "",
+									icao: airline.icao || "",
+								},
+								serial: aircraft.serial,
+								numSeats: aircraft.numSeats,
+								manufacturingYear: aircraft.manufacturingYear,
+								firstFlightDate: aircraft.firstFlightDate,
+								deliveryDate: aircraft.deliveryDate,
+								registrationDate: aircraft.registrationDate,
+								ageYears: aircraft.ageYears,
+							});
+						});
+					}
+				});
+			} else {
+				console.log(
+					`⚠️ Airline ${
+						airline.name || "unbekannt"
+					} hat keine gültige Aircraft-Struktur`
+				);
+			}
 		});
 
 		console.log(

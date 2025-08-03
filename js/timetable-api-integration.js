@@ -273,9 +273,7 @@ class TimetableAPIManager {
 			`🚀 VEREINFACHTE API-Abfrage: ${limitedRegistrations.length} Aircraft für ${currentDate} in ${airportCode}`
 		);
 		console.log(
-			`💰 Geschätzte API-Calls: ${limitedRegistrations.length} (gespart: ${
-				aircraftRegistrations.length - limitedRegistrations.length
-			})`
+			`💰 Geschätzte API-Calls: ${limitedRegistrations.length} für Tag 1 + bis zu ${limitedRegistrations.length} für Folgetag-Vervollständigung`
 		);
 
 		// Verarbeite in kleineren Batches
@@ -346,7 +344,126 @@ class TimetableAPIManager {
 		);
 		console.log(`💰 API-Calls verwendet: ${limitedRegistrations.length}`);
 
+		// VERBESSERUNG: Für alle gefundenen Übernachtungs-Aircraft den Folgetag abfragen
+		if (overnightFlights.length > 0) {
+			console.log(
+				`🔄 Erweitere Übernachtungsdaten mit Folgetag-Informationen...`
+			);
+			await this.enhanceOvernightFlightsWithNextDay(
+				overnightFlights,
+				nextDate,
+				airportCode
+			);
+		}
+
 		return overnightFlights;
+	}
+
+	/**
+	 * Erweitert Übernachtungsdaten mit Folgetag-Informationen
+	 * @param {Array} overnightFlights - Array mit gefundenen Übernachtungsflügen
+	 * @param {string} nextDate - Folgetag (YYYY-MM-DD)
+	 * @param {string} airportCode - Zielflughafen
+	 */
+	async enhanceOvernightFlightsWithNextDay(
+		overnightFlights,
+		nextDate,
+		airportCode
+	) {
+		const rateLimitDelay = 1500; // Etwas schneller da weniger Aircraft
+
+		console.log(
+			`🌅 Erweitere ${overnightFlights.length} Übernachtungen mit Folgetag-Daten für ${nextDate}`
+		);
+
+		for (let i = 0; i < overnightFlights.length; i++) {
+			const flight = overnightFlights[i];
+			const registration = flight.registration;
+
+			try {
+				console.log(`📅 Folgetag-Abfrage: ${registration} am ${nextDate}`);
+
+				// Hole Flugdaten für den Folgetag
+				const nextDayFlights = await this.fetchAircraftFlights(
+					registration,
+					nextDate
+				);
+
+				if (nextDayFlights && nextDayFlights.length > 0) {
+					// Finde ersten Abflug von der aktuellen Station
+					const departuresFromStation = nextDayFlights.filter(
+						(nextFlight) =>
+							nextFlight.departure?.airport?.iata === airportCode ||
+							nextFlight.departure?.airport?.icao === airportCode
+					);
+
+					console.log(
+						`🔍 DEBUG ${registration}: ${departuresFromStation.length} Abflüge von ${airportCode} am ${nextDate}`
+					);
+
+					if (departuresFromStation.length > 0) {
+						// Sortiere nach Zeit - nehme den frühesten Abflug
+						const firstDeparture = departuresFromStation.sort(
+							(a, b) =>
+								new Date(a.departure?.scheduledTime?.utc || 0) -
+								new Date(b.departure?.scheduledTime?.utc || 0)
+						)[0];
+
+						// Aktualisiere die Übernachtungsdaten
+						flight.departure = {
+							from: airportCode,
+							to:
+								firstDeparture.arrival?.airport?.iata ||
+								firstDeparture.arrival?.airport?.icao ||
+								"---",
+							time: this.formatTime(
+								firstDeparture.departure?.scheduledTime?.utc
+							),
+							date: nextDate,
+							flightNumber: firstDeparture.number || "",
+						};
+
+						// Aktualisiere Route
+						flight.route = `${flight.arrival.from} → ${flight.departure.to}`;
+
+						// Berechne Übernachtungsdauer
+						if (flight.arrival.time && flight.departure.time) {
+							flight.overnightDuration = this.calculateOvernightDuration(
+								flight.arrival.date + "T" + flight.arrival.time + ":00Z",
+								flight.departure.date + "T" + flight.departure.time + ":00Z"
+							);
+						}
+
+						console.log(
+							`✅ ${registration}: Folgetag-Daten ergänzt - Abflug ${flight.departure.time} nach ${flight.departure.to}`
+						);
+					} else {
+						console.log(
+							`⚠️ ${registration}: Kein Abflug von ${airportCode} am ${nextDate} gefunden`
+						);
+					}
+				} else {
+					console.log(`⚠️ ${registration}: Keine Flugdaten für ${nextDate}`);
+				}
+
+				// Rate Limiting zwischen Abfragen
+				if (i < overnightFlights.length - 1) {
+					await new Promise((resolve) => setTimeout(resolve, rateLimitDelay));
+				}
+			} catch (error) {
+				console.error(
+					`❌ Fehler bei Folgetag-Abfrage für ${registration}:`,
+					error
+				);
+				// Setze Fehlerstatus aber fahre fort
+				flight.departure.time = "Error";
+				flight.departure.flightNumber = "API Error";
+			}
+		}
+
+		console.log(
+			`🏁 Folgetag-Erweiterung abgeschlossen: ${overnightFlights.length} Aircraft aktualisiert`
+		);
 	}
 
 	/**
@@ -674,19 +791,50 @@ class TimetableAPIManager {
 
 	/**
 	 * Berechnet Übernachtungsdauer zwischen zwei Zeiten
-	 * @param {string} arrivalTime - Ankunftszeit (ISO)
-	 * @param {string} departureTime - Abflugzeit (ISO)
+	 * @param {string} arrivalTime - Ankunftszeit (ISO oder kombiniert)
+	 * @param {string} departureTime - Abflugzeit (ISO oder kombiniert)
 	 * @returns {string} Formatierte Dauer
 	 */
 	calculateOvernightDuration(arrivalTime, departureTime) {
 		try {
-			const arrival = new Date(arrivalTime);
-			const departure = new Date(departureTime);
+			// Flexibles Parsing für verschiedene Zeitformate
+			let arrival, departure;
+
+			if (arrivalTime.includes("T")) {
+				// ISO Format: 2025-08-03T14:30:00Z
+				arrival = new Date(arrivalTime);
+			} else {
+				// Legacy format fallback
+				arrival = new Date(arrivalTime);
+			}
+
+			if (departureTime.includes("T")) {
+				// ISO Format: 2025-08-04T08:15:00Z
+				departure = new Date(departureTime);
+			} else {
+				// Legacy format fallback
+				departure = new Date(departureTime);
+			}
+
+			if (isNaN(arrival.getTime()) || isNaN(departure.getTime())) {
+				console.log(
+					`⚠️ Ungültige Zeiten für Dauer-Berechnung: ${arrivalTime} → ${departureTime}`
+				);
+				return "n/a";
+			}
+
 			const diffMs = departure - arrival;
 			const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
 			const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+			// Verhindere negative Dauern
+			if (diffHours < 0) {
+				return "n/a";
+			}
+
 			return `${diffHours}h ${diffMinutes}m`;
 		} catch (error) {
+			console.error("Fehler bei Dauer-Berechnung:", error);
 			return "n/a";
 		}
 	}

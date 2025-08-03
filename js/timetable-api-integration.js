@@ -456,7 +456,9 @@ class TimetableAPIManager {
 						flight.departure.flightNumber = "Data pending";
 					}
 				} else {
-					console.log(`⚠️ ${registration}: Keine Flugdaten für ${nextDate} verfügbar (möglicherweise noch zu früh)`);
+					console.log(
+						`⚠️ ${registration}: Keine Flugdaten für ${nextDate} verfügbar (möglicherweise noch zu früh)`
+					);
 					// Setze Platzhalter für "noch nicht verfügbar"
 					flight.departure.time = "pending";
 					flight.departure.flightNumber = "Data pending";
@@ -464,7 +466,9 @@ class TimetableAPIManager {
 
 				// Rate Limiting zwischen Abfragen
 				if (i < overnightFlights.length - 1) {
-					console.log(`⏳ Warte ${rateLimitDelay/1000}s vor nächster Abfrage...`);
+					console.log(
+						`⏳ Warte ${rateLimitDelay / 1000}s vor nächster Abfrage...`
+					);
 					await new Promise((resolve) => setTimeout(resolve, rateLimitDelay));
 				}
 			} catch (error) {
@@ -482,7 +486,6 @@ class TimetableAPIManager {
 			`🏁 Individuelle Folgetag-Erweiterung abgeschlossen: ${overnightFlights.length} Aircraft verarbeitet`
 		);
 	}
-
 
 	/**
 	 * VEREINFACHTE Übernachtungsanalyse - nur heutiger Tag

@@ -248,10 +248,11 @@ class TimetableAPIManager {
 	}
 
 	/**
-	 * Führt individuelle API-Abfragen für alle Aircraft Registrations durch
+	 * Führt effiziente API-Abfragen für Aircraft Übernachtungen durch
+	 * VEREINFACHT: Nur heutiger Tag, letzte Ankunft = Übernachtung
 	 * @param {Array} aircraftRegistrations - Array mit Aircraft Registrations
-	 * @param {string} currentDate - Aktuelles Datum (YYYY-MM-DD)
-	 * @param {string} nextDate - Folgetag (YYYY-MM-DD)
+	 * @param {string} currentDate - Heutiges Datum (YYYY-MM-DD)
+	 * @param {string} nextDate - Folgetag (YYYY-MM-DD) - wird ignoriert
 	 * @param {string} airportCode - Zielflughafen (z.B. "MUC")
 	 * @returns {Promise<Array>} Array mit Übernachtungsflügen
 	 */
@@ -262,72 +263,184 @@ class TimetableAPIManager {
 		airportCode
 	) {
 		const overnightFlights = [];
-		const rateLimitDelay = 1500; // 1.5 Sekunden zwischen API-Calls
-		let processedCount = 0;
+		const rateLimitDelay = 2000; // 2 Sekunden zwischen API-Calls (weniger aggressiv)
+		const batchSize = 5; // Verarbeite nur 5 Aircraft parallel
+
+		// Filtere Aircraft - nur die ersten 20 um API-Kosten zu sparen
+		const limitedRegistrations = aircraftRegistrations.slice(0, 20);
 
 		console.log(
-			`🚀 Starte individuelle API-Abfragen für ${aircraftRegistrations.length} Flugzeuge...`
+			`🚀 VEREINFACHTE API-Abfrage: ${limitedRegistrations.length} Aircraft für ${currentDate} in ${airportCode}`
+		);
+		console.log(
+			`💰 Geschätzte API-Calls: ${limitedRegistrations.length} (gespart: ${
+				aircraftRegistrations.length - limitedRegistrations.length
+			})`
 		);
 
-		for (const registration of aircraftRegistrations) {
-			try {
-				processedCount++;
+		// Verarbeite in kleineren Batches
+		for (let i = 0; i < limitedRegistrations.length; i += batchSize) {
+			const batch = limitedRegistrations.slice(i, i + batchSize);
 
-				// Status-Update
-				this.updateStatus(
-					`Verarbeite ${registration} (${processedCount}/${aircraftRegistrations.length})...`
-				);
+			console.log(
+				`📦 Verarbeite Batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(
+					limitedRegistrations.length / batchSize
+				)}: ${batch.join(", ")}`
+			);
 
-				console.log(
-					`📡 API-Abfrage für ${registration} - Tag 1: ${currentDate}`
-				);
+			// Batch parallel verarbeiten
+			const batchPromises = batch.map(async (registration, index) => {
+				try {
+					// Status-Update
+					this.updateStatus(
+						`Batch ${Math.floor(i / batchSize) + 1}: ${registration}...`
+					);
 
-				// Tag 1: Aktuelle Tag-Flüge abrufen
-				const day1Flights = await this.fetchAircraftFlights(
-					registration,
-					currentDate
-				);
+					console.log(`� API-Abfrage: ${registration} am ${currentDate}`);
 
-				// Rate Limiting
+					// NUR HEUTE: Eine API-Abfrage pro Aircraft
+					const todayFlights = await this.fetchAircraftFlights(
+						registration,
+						currentDate
+					);
+
+					// VEREINFACHTE LOGIK: Analysiere nur heutigen Tag
+					const overnightData = this.analyzeSimpleOvernight(
+						registration,
+						todayFlights,
+						currentDate,
+						airportCode
+					);
+
+					if (overnightData) {
+						console.log(`✅ Übernachtung identifiziert: ${registration}`);
+						return overnightData;
+					}
+
+					return null;
+				} catch (error) {
+					console.error(`❌ Fehler bei ${registration}:`, error);
+					return null;
+				}
+			});
+
+			// Warte auf Batch-Completion
+			const batchResults = await Promise.all(batchPromises);
+
+			// Sammle Ergebnisse
+			batchResults.forEach((result) => {
+				if (result) {
+					overnightFlights.push(result);
+				}
+			});
+
+			// Rate Limiting zwischen Batches (nicht zwischen einzelnen Aircraft)
+			if (i + batchSize < limitedRegistrations.length) {
+				console.log(`⏳ Warte ${rateLimitDelay / 1000}s vor nächstem Batch...`);
 				await new Promise((resolve) => setTimeout(resolve, rateLimitDelay));
-
-				console.log(`📡 API-Abfrage für ${registration} - Tag 2: ${nextDate}`);
-
-				// Tag 2: Folgetag-Flüge abrufen
-				const day2Flights = await this.fetchAircraftFlights(
-					registration,
-					nextDate
-				);
-
-				// Analysiere Übernachtung
-				const overnightData = this.analyzeOvernightFlight(
-					registration,
-					day1Flights,
-					day2Flights,
-					currentDate,
-					nextDate,
-					airportCode
-				);
-
-				if (overnightData) {
-					overnightFlights.push(overnightData);
-					console.log(`✅ Übernachtung für ${registration} identifiziert`);
-				}
-
-				// Rate Limiting zwischen Aircraft
-				if (processedCount < aircraftRegistrations.length) {
-					await new Promise((resolve) => setTimeout(resolve, rateLimitDelay));
-				}
-			} catch (error) {
-				console.error(`❌ Fehler bei ${registration}:`, error);
-				// Weiter mit nächstem Aircraft
 			}
 		}
 
 		console.log(
-			`🏁 Abfragen abgeschlossen: ${overnightFlights.length} Übernachtungen von ${aircraftRegistrations.length} Flugzeugen`
+			`🏁 VEREINFACHTE Abfrage abgeschlossen: ${overnightFlights.length} Übernachtungen von ${limitedRegistrations.length} Aircraft`
 		);
+		console.log(`💰 API-Calls verwendet: ${limitedRegistrations.length}`);
+
 		return overnightFlights;
+	}
+
+	/**
+	 * VEREINFACHTE Übernachtungsanalyse - nur heutiger Tag
+	 * @param {string} registration - Aircraft Registration
+	 * @param {Array} todayFlights - Flüge von heute
+	 * @param {string} currentDate - Heutiges Datum
+	 * @param {string} airportCode - Zielflughafen
+	 * @returns {Object|null} Übernachtungsdaten oder null
+	 */
+	analyzeSimpleOvernight(registration, todayFlights, currentDate, airportCode) {
+		if (!todayFlights || todayFlights.length === 0) {
+			return null;
+		}
+
+		// Finde ALLE Ankünfte in der Zielstation heute
+		const arrivalsToday = todayFlights.filter(
+			(flight) =>
+				flight.arrival?.airport?.iata === airportCode ||
+				flight.arrival?.airport?.icao === airportCode
+		);
+
+		if (arrivalsToday.length === 0) {
+			return null; // Keine Ankünfte in Zielstation
+		}
+
+		// Finde ALLE Abflüge von der Zielstation heute
+		const departuresFromStation = todayFlights.filter(
+			(flight) =>
+				flight.departure?.airport?.iata === airportCode ||
+				flight.departure?.airport?.icao === airportCode
+		);
+
+		// Sortiere Ankünfte nach Zeit (letzte zuerst)
+		const lastArrival = arrivalsToday.sort(
+			(a, b) =>
+				new Date(b.arrival?.scheduledTime?.utc || 0) -
+				new Date(a.arrival?.scheduledTime?.utc || 0)
+		)[0];
+
+		// VEREINFACHTE REGEL:
+		// Hat Aircraft heute Ankunft in Station UND keine Abflüge danach? → Übernachtung
+		const lastArrivalTime = new Date(lastArrival.arrival?.scheduledTime?.utc);
+
+		// Prüfe ob es Abflüge NACH der letzten Ankunft gibt
+		const departuresAfterArrival = departuresFromStation.filter((flight) => {
+			const depTime = new Date(flight.departure?.scheduledTime?.utc);
+			return depTime > lastArrivalTime;
+		});
+
+		// ÜBERNACHTUNG = Letzte Ankunft in Station + keine weiteren Abflüge heute
+		if (departuresAfterArrival.length === 0) {
+			console.log(
+				`🌙 VEREINFACHT: ${registration} übernachtet in ${airportCode}`
+			);
+			console.log(
+				`   Letzte Ankunft: ${lastArrival.arrival?.scheduledTime?.utc} ${lastArrival.number}`
+			);
+			console.log(`   Keine weiteren Abflüge heute gefunden`);
+
+			return {
+				registration: registration,
+				aircraftType: lastArrival.aircraft?.model || "Unknown",
+				airline: {
+					name: lastArrival.airline?.name || "",
+					iata: lastArrival.airline?.iata || "",
+					icao: lastArrival.airline?.icao || "",
+				},
+				arrival: {
+					from:
+						lastArrival.departure?.airport?.iata ||
+						lastArrival.departure?.airport?.icao ||
+						"",
+					to: airportCode,
+					time: this.formatTime(lastArrival.arrival?.scheduledTime?.utc),
+					date: currentDate,
+					flightNumber: lastArrival.number || "",
+				},
+				departure: {
+					from: airportCode,
+					to: "---", // Unbekannt da nur heute analysiert
+					time: "---", // Unbekannt da nur heute analysiert
+					date: "---",
+					flightNumber: "---",
+				},
+				route: `${
+					lastArrival.departure?.airport?.iata || "---"
+				} → ${airportCode} (overnight)`,
+				overnightDuration: "tbd", // Wird morgen bestimmt
+				position: "--",
+			};
+		}
+
+		return null; // Keine Übernachtung
 	}
 
 	/**

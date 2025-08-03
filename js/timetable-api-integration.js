@@ -152,7 +152,7 @@ class TimetableAPIManager {
 	}
 
 	/**
-	 * Aktualisiert die Timetable-Daten über die AeroDataBox API
+	 * Aktualisiert die Timetable-Daten basierend auf Fleet Database und individuellen API-Abfragen
 	 */
 	async refreshTimetable() {
 		if (this.isLoading) {
@@ -164,33 +164,76 @@ class TimetableAPIManager {
 		this.updateLoadingState(true);
 
 		try {
-			console.log("🔄 Refreshing Timetable via AeroDataBox API...");
+			console.log(
+				"🔄 Refreshing Timetable via Fleet Database + individuelle API-Abfragen..."
+			);
 
-			// Erweiterte Prüfung der API-Verfügbarkeit
-			if (typeof window.AeroDataBoxAPI === "undefined") {
-				throw new Error(
-					"AeroDataBox API nicht geladen - window.AeroDataBoxAPI ist undefined"
+			// Hole aktuelle Datum-Einstellungen aus der UI
+			const currentDateInput = document.getElementById("currentDateInput");
+			const nextDateInput = document.getElementById("nextDateInput");
+			const airportCodeInput = document.getElementById("airportCodeInput");
+
+			const today = new Date().toISOString().split("T")[0];
+			const tomorrow = new Date(new Date().setDate(new Date().getDate() + 1))
+				.toISOString()
+				.split("T")[0];
+
+			const currentDate = currentDateInput?.value || today;
+			const nextDate = nextDateInput?.value || tomorrow;
+			const airportCode =
+				airportCodeInput?.value?.trim().toUpperCase() || "MUC";
+
+			console.log(`📅 Abfragezeitraum: ${currentDate} → ${nextDate}`);
+			console.log(`🏢 Zielstation: ${airportCode}`);
+
+			// Prüfe Fleet Database Manager Verfügbarkeit
+			if (!window.fleetDatabaseManager) {
+				throw new Error("Fleet Database Manager nicht verfügbar");
+			}
+
+			// Warte auf Fleet Database Initialisierung
+			await window.fleetDatabaseManager.waitForInitialization();
+
+			// Hole alle Fleet Database Daten
+			const fleetData = window.fleetDatabaseManager.getAllAircrafts();
+
+			if (!fleetData || fleetData.length === 0) {
+				console.log(
+					"⚠️ Keine Fleet Database Daten verfügbar - lade zuerst Fleet Daten"
 				);
+				this.showError(
+					"Keine Fleet Database Daten verfügbar. Bitte laden Sie zuerst die Fleet Database."
+				);
+				return;
 			}
-
-			if (!window.AeroDataBoxAPI) {
-				throw new Error("AeroDataBox API ist null oder undefined");
-			}
-
-			if (
-				typeof window.AeroDataBoxAPI.generateOvernightTimetable !== "function"
-			) {
-				throw new Error("generateOvernightTimetable Funktion nicht verfügbar");
-			}
-
-			console.log("✅ API-Verfügbarkeit bestätigt, starte Datenabfrage...");
-
-			// Rufe die neue generateOvernightTimetable Funktion auf
-			this.overnightFlights =
-				await window.AeroDataBoxAPI.generateOvernightTimetable();
 
 			console.log(
-				`✅ ${this.overnightFlights.length} Übernachtungsflüge erhalten`
+				`✈️ ${fleetData.length} Flugzeuge in Fleet Database gefunden`
+			);
+
+			// Prüfe AeroDataBox API Verfügbarkeit
+			if (!window.AeroDataBoxAPI) {
+				throw new Error("AeroDataBox API nicht verfügbar");
+			}
+
+			// Erstelle Liste aller Aircraft Registrations
+			const aircraftRegistrations = fleetData
+				.map((aircraft) => aircraft.registration)
+				.filter(Boolean);
+			console.log(
+				`📋 ${aircraftRegistrations.length} Aircraft Registrations für API-Abfragen`
+			);
+
+			// Führe individuelle API-Abfragen für jede Aircraft Registration durch
+			this.overnightFlights = await this.queryIndividualAircraftFlights(
+				aircraftRegistrations,
+				currentDate,
+				nextDate,
+				airportCode
+			);
+
+			console.log(
+				`✅ ${this.overnightFlights.length} Übernachtungsflüge identifiziert`
 			);
 
 			// Rendere die Timetable
@@ -201,6 +244,292 @@ class TimetableAPIManager {
 		} finally {
 			this.isLoading = false;
 			this.updateLoadingState(false);
+		}
+	}
+
+	/**
+	 * Führt individuelle API-Abfragen für alle Aircraft Registrations durch
+	 * @param {Array} aircraftRegistrations - Array mit Aircraft Registrations
+	 * @param {string} currentDate - Aktuelles Datum (YYYY-MM-DD)
+	 * @param {string} nextDate - Folgetag (YYYY-MM-DD)
+	 * @param {string} airportCode - Zielflughafen (z.B. "MUC")
+	 * @returns {Promise<Array>} Array mit Übernachtungsflügen
+	 */
+	async queryIndividualAircraftFlights(
+		aircraftRegistrations,
+		currentDate,
+		nextDate,
+		airportCode
+	) {
+		const overnightFlights = [];
+		const rateLimitDelay = 1500; // 1.5 Sekunden zwischen API-Calls
+		let processedCount = 0;
+
+		console.log(
+			`🚀 Starte individuelle API-Abfragen für ${aircraftRegistrations.length} Flugzeuge...`
+		);
+
+		for (const registration of aircraftRegistrations) {
+			try {
+				processedCount++;
+
+				// Status-Update
+				this.updateStatus(
+					`Verarbeite ${registration} (${processedCount}/${aircraftRegistrations.length})...`
+				);
+
+				console.log(
+					`📡 API-Abfrage für ${registration} - Tag 1: ${currentDate}`
+				);
+
+				// Tag 1: Aktuelle Tag-Flüge abrufen
+				const day1Flights = await this.fetchAircraftFlights(
+					registration,
+					currentDate
+				);
+
+				// Rate Limiting
+				await new Promise((resolve) => setTimeout(resolve, rateLimitDelay));
+
+				console.log(`📡 API-Abfrage für ${registration} - Tag 2: ${nextDate}`);
+
+				// Tag 2: Folgetag-Flüge abrufen
+				const day2Flights = await this.fetchAircraftFlights(
+					registration,
+					nextDate
+				);
+
+				// Analysiere Übernachtung
+				const overnightData = this.analyzeOvernightFlight(
+					registration,
+					day1Flights,
+					day2Flights,
+					currentDate,
+					nextDate,
+					airportCode
+				);
+
+				if (overnightData) {
+					overnightFlights.push(overnightData);
+					console.log(`✅ Übernachtung für ${registration} identifiziert`);
+				}
+
+				// Rate Limiting zwischen Aircraft
+				if (processedCount < aircraftRegistrations.length) {
+					await new Promise((resolve) => setTimeout(resolve, rateLimitDelay));
+				}
+			} catch (error) {
+				console.error(`❌ Fehler bei ${registration}:`, error);
+				// Weiter mit nächstem Aircraft
+			}
+		}
+
+		console.log(
+			`🏁 Abfragen abgeschlossen: ${overnightFlights.length} Übernachtungen von ${aircraftRegistrations.length} Flugzeugen`
+		);
+		return overnightFlights;
+	}
+
+	/**
+	 * Holt Flugdaten für eine Aircraft Registration an einem bestimmten Tag
+	 * @param {string} registration - Aircraft Registration (z.B. "D-ACNP")
+	 * @param {string} date - Datum (YYYY-MM-DD)
+	 * @returns {Promise<Array>} Array mit Flugdaten
+	 */
+	async fetchAircraftFlights(registration, date) {
+		try {
+			const apiUrl = `https://aerodatabox.p.rapidapi.com/flights/reg/${registration}/${date}?withAircraftImage=false&withLocation=false&dateLocalRole=Both`;
+
+			const response = await fetch(apiUrl, {
+				method: "GET",
+				headers: {
+					"x-rapidapi-key":
+						"b76afbf516mshf864818d919de86p10475ejsna65b718a8602",
+					"x-rapidapi-host": "aerodatabox.p.rapidapi.com",
+				},
+			});
+
+			if (!response.ok) {
+				throw new Error(
+					`API-Fehler: ${response.status} ${response.statusText}`
+				);
+			}
+
+			const data = await response.json();
+
+			// Stelle sicher, dass wir ein Array zurückgeben
+			return Array.isArray(data) ? data : data ? [data] : [];
+		} catch (error) {
+			console.error(
+				`❌ API-Abfrage für ${registration} am ${date} fehlgeschlagen:`,
+				error
+			);
+			return [];
+		}
+	}
+
+	/**
+	 * Analysiert ob Aircraft einen Übernachtungsflug hat
+	 * @param {string} registration - Aircraft Registration
+	 * @param {Array} day1Flights - Flüge Tag 1
+	 * @param {Array} day2Flights - Flüge Tag 2
+	 * @param {string} currentDate - Aktuelles Datum
+	 * @param {string} nextDate - Folgetag
+	 * @param {string} airportCode - Zielflughafen
+	 * @returns {Object|null} Übernachtungsdaten oder null
+	 */
+	analyzeOvernightFlight(
+		registration,
+		day1Flights,
+		day2Flights,
+		currentDate,
+		nextDate,
+		airportCode
+	) {
+		// Finde letzte Ankunft am Tag 1 in airportCode
+		const day1Arrivals = day1Flights.filter(
+			(flight) =>
+				flight.arrival?.airport?.iata === airportCode ||
+				flight.arrival?.airport?.icao === airportCode
+		);
+
+		// Finde ersten Abflug am Tag 2 von airportCode
+		const day2Departures = day2Flights.filter(
+			(flight) =>
+				flight.departure?.airport?.iata === airportCode ||
+				flight.departure?.airport?.icao === airportCode
+		);
+
+		// Sortiere Ankünfte Tag 1 nach Zeit (letzte zuerst)
+		const lastArrival = day1Arrivals.sort(
+			(a, b) =>
+				new Date(b.arrival?.scheduledTime?.utc || 0) -
+				new Date(a.arrival?.scheduledTime?.utc || 0)
+		)[0];
+
+		// Sortiere Abflüge Tag 2 nach Zeit (erste zuerst)
+		const firstDeparture = day2Departures.sort(
+			(a, b) =>
+				new Date(a.departure?.scheduledTime?.utc || 0) -
+				new Date(b.departure?.scheduledTime?.utc || 0)
+		)[0];
+
+		// Prüfe ob Übernachtung vorliegt
+		if (lastArrival && firstDeparture) {
+			// Prüfe ob es weitere Abflüge am Tag 1 nach der letzten Ankunft gibt
+			const arrivalTime = new Date(lastArrival.arrival?.scheduledTime?.utc);
+			const laterDepartures = day1Flights.filter((flight) => {
+				const depTime = new Date(flight.departure?.scheduledTime?.utc);
+				return (
+					depTime > arrivalTime &&
+					(flight.departure?.airport?.iata === airportCode ||
+						flight.departure?.airport?.icao === airportCode)
+				);
+			});
+
+			// Übernachtung nur wenn keine weiteren Abflüge am Tag 1
+			if (laterDepartures.length === 0) {
+				console.log(`🌙 Übernachtung bestätigt für ${registration}:`);
+				console.log(
+					`   Ankunft: ${lastArrival.arrival?.scheduledTime?.utc} ${lastArrival.number}`
+				);
+				console.log(
+					`   Abflug:  ${firstDeparture.departure?.scheduledTime?.utc} ${firstDeparture.number}`
+				);
+
+				return {
+					registration: registration,
+					aircraftType:
+						lastArrival.aircraft?.model ||
+						firstDeparture.aircraft?.model ||
+						"Unknown",
+					airline: {
+						name:
+							lastArrival.airline?.name || firstDeparture.airline?.name || "",
+						iata:
+							lastArrival.airline?.iata || firstDeparture.airline?.iata || "",
+						icao:
+							lastArrival.airline?.icao || firstDeparture.airline?.icao || "",
+					},
+					arrival: {
+						from:
+							lastArrival.departure?.airport?.iata ||
+							lastArrival.departure?.airport?.icao ||
+							"",
+						to: airportCode,
+						time: this.formatTime(lastArrival.arrival?.scheduledTime?.utc),
+						date: currentDate,
+						flightNumber: lastArrival.number || "",
+					},
+					departure: {
+						from: airportCode,
+						to:
+							firstDeparture.arrival?.airport?.iata ||
+							firstDeparture.arrival?.airport?.icao ||
+							"",
+						time: this.formatTime(firstDeparture.departure?.scheduledTime?.utc),
+						date: nextDate,
+						flightNumber: firstDeparture.number || "",
+					},
+					route: `${lastArrival.departure?.airport?.iata || ""} → ${
+						firstDeparture.arrival?.airport?.iata || ""
+					}`,
+					overnightDuration: this.calculateOvernightDuration(
+						lastArrival.arrival?.scheduledTime?.utc,
+						firstDeparture.departure?.scheduledTime?.utc
+					),
+					position: "--", // Position wird später gesetzt oder über andere Logik ermittelt
+				};
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Formatiert ISO-Zeit zu HH:MM
+	 * @param {string} isoTime - ISO Zeitstring
+	 * @returns {string} Formatierte Zeit
+	 */
+	formatTime(isoTime) {
+		if (!isoTime) return "--:--";
+		try {
+			return isoTime.substring(11, 16); // Extrahiere HH:MM aus ISO-String
+		} catch (error) {
+			return "--:--";
+		}
+	}
+
+	/**
+	 * Berechnet Übernachtungsdauer zwischen zwei Zeiten
+	 * @param {string} arrivalTime - Ankunftszeit (ISO)
+	 * @param {string} departureTime - Abflugzeit (ISO)
+	 * @returns {string} Formatierte Dauer
+	 */
+	calculateOvernightDuration(arrivalTime, departureTime) {
+		try {
+			const arrival = new Date(arrivalTime);
+			const departure = new Date(departureTime);
+			const diffMs = departure - arrival;
+			const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+			const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+			return `${diffHours}h ${diffMinutes}m`;
+		} catch (error) {
+			return "n/a";
+		}
+	}
+
+	/**
+	 * Hilfsfunktion für Status-Updates während der Verarbeitung
+	 * @param {string} message - Status-Nachricht
+	 */
+	updateStatus(message) {
+		console.log(`📊 ${message}`);
+
+		// Optional: Update UI status element
+		const statusElement = document.getElementById("fetchStatus");
+		if (statusElement) {
+			statusElement.textContent = message;
 		}
 	}
 
@@ -594,6 +923,41 @@ function initializeTimetableManager() {
 	window.TimetableAPIManager = TimetableAPIManagerInstance;
 }
 
+// Debug-Funktion für Fleet Database-basierte Timetable
+window.debugFleetTimetable = async function () {
+	console.log("🧪 === DEBUG: Fleet Database-basierte Timetable ===");
+
+	try {
+		// Prüfe Fleet Database Manager
+		if (!window.fleetDatabaseManager) {
+			console.error("❌ Fleet Database Manager nicht verfügbar");
+			return;
+		}
+
+		// Warte auf Initialisierung
+		await window.fleetDatabaseManager.waitForInitialization();
+
+		// Hole Fleet Daten
+		const aircrafts = window.fleetDatabaseManager.getAllAircrafts();
+		console.log(`📋 ${aircrafts.length} Aircraft Registrations verfügbar`);
+
+		// Zeige erste 5 Registrations
+		const sample = aircrafts.slice(0, 5).map((a) => a.registration);
+		console.log("🔍 Beispiel-Registrations:", sample);
+
+		// Teste Timetable Manager
+		if (window.TimetableAPIManager) {
+			console.log("🕐 Starte Fleet Database-basierte Timetable-Erstellung...");
+			await window.TimetableAPIManager.forceRefreshTimetable();
+			console.log("✅ Timetable-Test abgeschlossen");
+		} else {
+			console.error("❌ TimetableAPIManager nicht verfügbar");
+		}
+	} catch (error) {
+		console.error("❌ Fehler beim Fleet Timetable Debug:", error);
+	}
+};
+
 // Initialisierung nach DOM-Bereitschaft und Script-Laden
 if (document.readyState === "loading") {
 	document.addEventListener("DOMContentLoaded", () => {
@@ -606,3 +970,4 @@ if (document.readyState === "loading") {
 }
 
 console.log("✅ Timetable API Integration geladen");
+console.log("🛠️ Debug-Funktion verfügbar: debugFleetTimetable()");

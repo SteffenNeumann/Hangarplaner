@@ -572,6 +572,75 @@ class FleetDatabaseManager {
 	}
 
 	/**
+	 * Alle Aircraft Registrations aus der Fleet Database abrufen
+	 * @returns {Array} Array mit allen Aircraft-Objekten {registration, aircraftType, airline, etc.}
+	 */
+	getAllAircrafts() {
+		if (!this.localCache || !this.localCache.fleetDatabase) {
+			console.log("⚠️ Fleet Database Cache nicht verfügbar");
+			return [];
+		}
+
+		const aircrafts = [];
+		const fleetDb = this.localCache.fleetDatabase;
+
+		// Durchlaufe alle Airlines
+		Object.values(fleetDb.airlines).forEach((airline) => {
+			// Durchlaufe alle Aircraft Types pro Airline
+			Object.values(airline.aircraftTypes).forEach((aircraftType) => {
+				// Durchlaufe alle Aircraft pro Type
+				aircraftType.aircrafts.forEach((aircraft) => {
+					aircrafts.push({
+						registration: aircraft.registration,
+						aircraftType: aircraftType.type,
+						airline: {
+							iata: airline.iata,
+							name: airline.name,
+							icao: airline.icao,
+						},
+						serial: aircraft.serial,
+						numSeats: aircraft.numSeats,
+						manufacturingYear: aircraft.manufacturingYear,
+						firstFlightDate: aircraft.firstFlightDate,
+						deliveryDate: aircraft.deliveryDate,
+						registrationDate: aircraft.registrationDate,
+						ageYears: aircraft.ageYears,
+					});
+				});
+			});
+		});
+
+		console.log(
+			`📋 ${aircrafts.length} Aircraft Registrations aus Fleet Database extrahiert`
+		);
+		return aircrafts;
+	}
+
+	/**
+	 * Aircraft Registrations nach Airline filtern
+	 * @param {string} airlineIata - IATA-Code der Airline (z.B. "CLH", "LHX")
+	 * @returns {Array} Gefilterte Aircraft-Liste
+	 */
+	getAircraftsByAirline(airlineIata) {
+		const allAircrafts = this.getAllAircrafts();
+		return allAircrafts.filter(
+			(aircraft) => aircraft.airline.iata === airlineIata
+		);
+	}
+
+	/**
+	 * Aircraft Registrations nach Flugzeugtyp filtern
+	 * @param {string} aircraftType - Flugzeugtyp (z.B. "A320", "A321")
+	 * @returns {Array} Gefilterte Aircraft-Liste
+	 */
+	getAircraftsByType(aircraftType) {
+		const allAircrafts = this.getAllAircrafts();
+		return allAircrafts.filter(
+			(aircraft) => aircraft.aircraftType === aircraftType
+		);
+	}
+
+	/**
 	 * Cache-Status prüfen
 	 */
 	isCacheValid() {

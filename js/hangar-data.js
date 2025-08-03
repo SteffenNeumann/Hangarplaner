@@ -1475,6 +1475,74 @@ window.hangarData.updateAircraftFromFlightData = async function (
 		return;
 	}
 
+	// ✅ NEUE FUNKTION: Last Update Badge hinzufügen/aktualisieren
+	function updateLastUpdateBadge(cellId, source = "api") {
+		const primaryTile = document.querySelector(
+			`#hangarGrid .hangar-cell:nth-child(${cellId})`
+		);
+		const secondaryTile = document.querySelector(
+			`#secondaryHangarGrid .hangar-cell:nth-child(${cellId - 100})`
+		);
+		const tile = primaryTile || secondaryTile;
+
+		if (!tile) return;
+
+		// Entferne vorhandenes Badge
+		const existingBadge = tile.querySelector(".last-update-badge");
+		if (existingBadge) {
+			existingBadge.remove();
+		}
+
+		// Suche den Header-Bereich für die Positionierung
+		const cardHeader = tile.querySelector(".card-header");
+		const headerElements = tile.querySelector(".header-elements");
+		const targetContainer = headerElements || cardHeader || tile;
+
+		// Erstelle neues Badge
+		const badge = document.createElement("div");
+		badge.className = "last-update-badge fresh";
+		badge.title = `Letztes Update: ${new Date().toLocaleString()} (${source})`;
+
+		const now = new Date();
+		badge.textContent = now.toLocaleTimeString("de-DE", {
+			hour: "2-digit",
+			minute: "2-digit",
+		});
+
+		// Speichere Timestamp für spätere Aktualisierung
+		badge.dataset.timestamp = now.getTime();
+		badge.dataset.source = source;
+
+		// ✅ NEUE POSITIONIERUNG: Zentriert im Header zwischen Status und Position - DEZENT
+		badge.style.position = "absolute";
+		badge.style.top = "8px";
+		badge.style.left = "50%";
+		badge.style.transform = "translateX(-50%)";
+		badge.style.fontSize = "9px";
+		badge.style.padding = "2px 6px";
+		badge.style.borderRadius = "8px";
+		badge.style.backgroundColor = "rgba(34, 197, 94, 0.1)"; // Sehr transparentes Grün
+		badge.style.color = "#16a34a"; // Dunkleres Grün für Text
+		badge.style.border = "1px solid rgba(34, 197, 94, 0.3)"; // Subtile Umrandung
+		badge.style.zIndex = "20";
+		badge.style.fontWeight = "500"; // Weniger bold
+		badge.style.boxShadow = "none"; // Kein Schatten für dezentere Optik
+		badge.style.minWidth = "40px";
+		badge.style.textAlign = "center";
+		badge.style.fontFamily = "monospace"; // Monospace für Zeitanzeige
+
+		// Stelle sicher dass das Tile relative Positionierung hat
+		if (getComputedStyle(tile).position === "static") {
+			tile.style.position = "relative";
+		}
+
+		tile.appendChild(badge);
+
+		console.log(
+			`🏷️ Update-Badge für Kachel ${cellId} zentriert im Header gesetzt: ${badge.textContent}`
+		);
+	}
+
 	// Suche nach Kacheln mit der entsprechenden Aircraft ID
 	const primaryTiles = document.querySelectorAll("#hangarGrid .hangar-cell");
 	const secondaryTiles = document.querySelectorAll(
@@ -1611,6 +1679,9 @@ window.hangarData.updateAircraftFromFlightData = async function (
 			// 		).trim();
 			// 	}
 			// }
+
+			// ✅ NEUE FUNKTION: Last Update Badge hinzufügen
+			updateLastUpdateBadge(cellId, "api");
 
 			updatedTiles++;
 		}
@@ -2307,3 +2378,50 @@ console.log("🔧 HangarPlanner Aircraft ID Koordinationssystem initialisiert");
 
 // Alias für Kompatibilität: Globale Verfügbarkeit unter beiden Namen
 window.HangarData = window.hangarData;
+
+// ✅ NEUE FUNKTION: Badge-Status basierend auf Alter automatisch aktualisieren
+function refreshAllUpdateBadges() {
+	const badges = document.querySelectorAll(".last-update-badge");
+	const now = Date.now();
+
+	badges.forEach((badge) => {
+		const timestamp = parseInt(badge.dataset.timestamp);
+		const ageMinutes = (now - timestamp) / (1000 * 60);
+
+		// ✅ DEZENTE Farben - Aktualisiere basierend auf Alter
+		if (ageMinutes < 5) {
+			// Fresh - Subtiles Grün
+			badge.style.backgroundColor = "rgba(34, 197, 94, 0.1)";
+			badge.style.color = "#16a34a";
+			badge.style.border = "1px solid rgba(34, 197, 94, 0.3)";
+		} else if (ageMinutes < 30) {
+			// Recent - Subtiles Blau
+			badge.style.backgroundColor = "rgba(59, 130, 246, 0.1)";
+			badge.style.color = "#1d4ed8";
+			badge.style.border = "1px solid rgba(59, 130, 246, 0.3)";
+		} else if (ageMinutes < 120) {
+			// Old - Subtiles Orange
+			badge.style.backgroundColor = "rgba(245, 158, 11, 0.1)";
+			badge.style.color = "#d97706";
+			badge.style.border = "1px solid rgba(245, 158, 11, 0.3)";
+		} else {
+			// Stale - Subtiles Rot
+			badge.style.backgroundColor = "rgba(239, 68, 68, 0.1)";
+			badge.style.color = "#dc2626";
+			badge.style.border = "1px solid rgba(239, 68, 68, 0.3)";
+		}
+
+		// Tooltip aktualisieren
+		const source = badge.dataset.source || "unknown";
+		const updateTime = new Date(timestamp).toLocaleString();
+		badge.title = `Letztes Update: ${updateTime} (${source}) - ${Math.round(
+			ageMinutes
+		)}min alt`;
+	});
+}
+
+// Auto-Refresh der Badge-Status alle 60 Sekunden
+setInterval(refreshAllUpdateBadges, 60000);
+
+// Globale Verfügbarkeit
+window.refreshAllUpdateBadges = refreshAllUpdateBadges;

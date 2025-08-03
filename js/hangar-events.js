@@ -624,12 +624,43 @@ function handleAircraftIdChange(aircraftInputId, newValue) {
 						currentDate,
 						nextDate
 					)
-						.then((flightData) => {
+						.then(async (flightData) => {
 							console.log(
 								`✅ Flugdaten erhalten für ${newValue.trim()}:`,
 								flightData
 							);
-							// Daten werden automatisch über updateTileWithFlightData verarbeitet
+
+							// ✅ KORREKTUR: UI-Update nach erfolgreichem API-Aufruf
+							if (
+								flightData &&
+								window.HangarData &&
+								typeof window.HangarData.updateAircraftFromFlightData ===
+									"function"
+							) {
+								try {
+									await window.HangarData.updateAircraftFromFlightData(
+										newValue.trim(),
+										flightData
+									);
+									console.log(
+										`✅ UI-Kacheln für ${newValue.trim()} erfolgreich aktualisiert`
+									);
+
+									// ✅ NEUE FUNKTION: Update-Badge für manuelle Eingabe setzen
+									if (window.refreshAllUpdateBadges) {
+										setTimeout(window.refreshAllUpdateBadges, 100);
+									}
+								} catch (updateError) {
+									console.error(
+										`❌ Fehler beim UI-Update für ${newValue.trim()}:`,
+										updateError
+									);
+								}
+							} else if (flightData) {
+								console.warn(
+									"❌ HangarData.updateAircraftFromFlightData nicht verfügbar - UI wird nicht aktualisiert"
+								);
+							}
 						})
 						.catch((error) => {
 							console.error(

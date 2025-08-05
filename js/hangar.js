@@ -195,6 +195,11 @@ function initialize() {
 		// console.log("AeroDataBox API initialisiert");
 	}
 
+	if (window.Flightradar24API) {
+		window.Flightradar24API.init();
+		// console.log("Flightradar24 API initialisiert");
+	}
+
 	// console.log("HangarPlanner-Anwendung erfolgreich initialisiert!");
 }
 

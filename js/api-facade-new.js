@@ -93,7 +93,7 @@ const FlightDataAPI = (function () {
 	};
 
 	/**
-	 * Behandelt Flightradar24 API-Anfragen - VEREINFACHT: Alle Flüge anzeigen
+	 * Behandelt Flightradar24 API-Anfragen
 	 */
 	const handleFlightradar24Request = async function (
 		aircraftId,
@@ -107,156 +107,109 @@ const FlightDataAPI = (function () {
 			);
 		}
 
-		console.log(
-			`[API-FASSADE] Verwende Flightradar24 API für ${aircraftId} - VEREINFACHT: Alle Flüge`
-		);
+		console.log(`[API-FASSADE] Verwende Flightradar24 API für ${aircraftId}`);
 
-		// Hole aktuellen Flughafen für Filterung
+		// Hole aktuellen Flughafen für Übernachtungslogik
 		const selectedAirport =
 			document.getElementById("airportCodeInput")?.value || "MUC";
-		console.log(`[API-FASSADE] Gewählter Flughafen: ${selectedAirport}`);
 
-		// VEREINFACHT: Hole einfach alle Flugdaten für beide Tage
-		const [currentDayData, nextDayData] = await Promise.all([
-			window.Flightradar24API.getAircraftFlights(aircraftId, currentDate),
-			window.Flightradar24API.getAircraftFlights(aircraftId, nextDate),
-		]);
-
-		const currentDayFlights = currentDayData.data || [];
-		const nextDayFlights = nextDayData.data || [];
-		const allFlights = [...currentDayFlights, ...nextDayFlights];
-
-		console.log(
-			`[API-FASSADE] Gefundene Flüge: ${currentDayFlights.length} am ${currentDate}, ${nextDayFlights.length} am ${nextDate}`
+		// Verwende die Übernachtungslogik von Flightradar24
+		const overnightResult = await window.Flightradar24API.getOvernightFlights(
+			aircraftId,
+			selectedAirport,
+			currentDate,
+			nextDate
 		);
 
-		if (allFlights.length === 0) {
-			console.log(`[API-FASSADE] Keine Flüge für ${aircraftId} gefunden`);
-			return {
-				originCode: "",
-				destCode: "",
-				departureTime: "",
-				arrivalTime: "",
-				positionText: `Keine Flüge für ${aircraftId} gefunden`,
-				data: [],
-				_isUtc: true,
-				_source: "flightradar24",
-				_noDataFound: true,
-			};
-		}
+		// Konvertiere Flightradar24-Ergebnis in das erwartete Format
+		if (
+			overnightResult.hasOvernightStay &&
+			overnightResult.lastArrival &&
+			overnightResult.firstDeparture
+		) {
+			// Extrahiere Daten aus dem letzten Ankunftsflug
+			const lastArrival = overnightResult.lastArrival;
+			const firstDeparture = overnightResult.firstDeparture;
 
-		// VEREINFACHT: Filtere Flüge nach dem gewählten Flughafen (Ankunft ODER Abflug)
-		const airportFlights = allFlights.filter((flight) => {
-			const depPoint = flight.flightPoints?.find((p) => p.departurePoint);
-			const arrPoint = flight.flightPoints?.find((p) => p.arrivalPoint);
-
-			const departureAirport = depPoint?.iataCode;
-			const arrivalAirport = arrPoint?.iataCode;
-
-			// Flug ist relevant, wenn er VOM oder ZUM gewählten Flughafen ist
-			return (
-				departureAirport === selectedAirport ||
-				arrivalAirport === selectedAirport
-			);
-		});
-
-		console.log(
-			`[API-FASSADE] ${airportFlights.length} von ${allFlights.length} Flügen sind relevant für Flughafen ${selectedAirport}`
-		);
-
-		// Debug-Ausgabe aller relevanten Flüge
-		if (airportFlights.length > 0) {
-			console.log(`[API-FASSADE] Relevante Flüge für ${selectedAirport}:`);
-			airportFlights.forEach((flight, index) => {
-				const depPoint = flight.flightPoints?.find((p) => p.departurePoint);
-				const arrPoint = flight.flightPoints?.find((p) => p.arrivalPoint);
-				const depTime =
-					depPoint?.departure?.timings?.[0]?.value?.substring(0, 5) || "--:--";
-				const arrTime =
-					arrPoint?.arrival?.timings?.[0]?.value?.substring(0, 5) || "--:--";
-
-				console.log(
-					`[API-FASSADE] ${index + 1}. ${flight.scheduledDepartureDate}: ${
-						depPoint?.iataCode
-					} (${depTime}) → ${arrPoint?.iataCode} (${arrTime}) [${
-						flight.flightDesignator?.fullFlightNumber
-					}]`
-				);
-			});
-		}
-
-		// VEREINFACHT: Nimm einfach den ersten und letzten relevanten Flug für die Anzeige
-		if (airportFlights.length > 0) {
-			// Sortiere nach Datum und Zeit
-			const sortedFlights = airportFlights.sort((a, b) => {
-				const dateA = a.scheduledDepartureDate || currentDate;
-				const dateB = b.scheduledDepartureDate || currentDate;
-
-				if (dateA !== dateB) return dateA.localeCompare(dateB);
-
-				// Bei gleichem Datum nach Zeit sortieren
-				const depPointA = a.flightPoints?.find((p) => p.departurePoint);
-				const depPointB = b.flightPoints?.find((p) => p.departurePoint);
-				const timeA = depPointA?.departure?.timings?.[0]?.value || "00:00";
-				const timeB = depPointB?.departure?.timings?.[0]?.value || "00:00";
-
-				return timeA.localeCompare(timeB);
-			});
-
-			const firstFlight = sortedFlights[0];
-			const lastFlight = sortedFlights[sortedFlights.length - 1];
-
-			const firstDepPoint = firstFlight.flightPoints?.find(
-				(p) => p.departurePoint
-			);
-			const firstArrPoint = firstFlight.flightPoints?.find(
+			const arrivalPoint = lastArrival.flightPoints?.find(
 				(p) => p.arrivalPoint
 			);
-			const lastDepPoint = lastFlight.flightPoints?.find(
+			const departurePoint = firstDeparture.flightPoints?.find(
 				(p) => p.departurePoint
 			);
-			const lastArrPoint = lastFlight.flightPoints?.find((p) => p.arrivalPoint);
+
+			const arrivalTime =
+				arrivalPoint?.arrival?.timings?.[0]?.value?.substring(0, 5) || "--:--";
+			const departureTime =
+				departurePoint?.departure?.timings?.[0]?.value?.substring(0, 5) ||
+				"--:--";
+
+			const originCode =
+				lastArrival.flightPoints?.find((p) => p.departurePoint)?.iataCode || "";
+			const destCode =
+				firstDeparture.flightPoints?.find((p) => p.arrivalPoint)?.iataCode ||
+				"";
 
 			return {
-				originCode: firstDepPoint?.iataCode || "",
-				destCode: lastArrPoint?.iataCode || "",
-				departureTime:
-					firstDepPoint?.departure?.timings?.[0]?.value?.substring(0, 5) ||
-					"--:--",
-				arrivalTime:
-					lastArrPoint?.arrival?.timings?.[0]?.value?.substring(0, 5) ||
-					"--:--",
-				positionText: `${sortedFlights.length} Flüge für ${selectedAirport} gefunden`,
-				data: sortedFlights, // Alle relevanten Flüge zurückgeben
+				originCode: originCode,
+				destCode: destCode,
+				departureTime: departureTime,
+				arrivalTime: arrivalTime,
+				positionText: `${originCode} → ${selectedAirport} → ${destCode}`,
+				data: [lastArrival, firstDeparture],
 				_isUtc: true,
 				_source: "flightradar24",
-				_allFlights: allFlights, // Alle Flüge für Debug-Zwecke
-				_airportFilter: selectedAirport,
+				_hasOvernightStay: true,
 			};
 		} else {
-			// Wenn keine Flüge für den gewählten Flughafen gefunden wurden, zeige trotzdem alle Flüge
-			console.log(
-				`[API-FASSADE] Keine Flüge für ${selectedAirport} gefunden, zeige alle gefundenen Flüge`
-			);
+			// Keine Übernachtung gefunden - versuche einzelne Flugdaten für beide Tage
+			const [currentDayData, nextDayData] = await Promise.all([
+				window.Flightradar24API.getAircraftFlights(aircraftId, currentDate),
+				window.Flightradar24API.getAircraftFlights(aircraftId, nextDate),
+			]);
 
-			const firstFlight = allFlights[0];
-			const depPoint = firstFlight.flightPoints?.find((p) => p.departurePoint);
-			const arrPoint = firstFlight.flightPoints?.find((p) => p.arrivalPoint);
+			const allFlights = [
+				...(currentDayData.data || []),
+				...(nextDayData.data || []),
+			];
 
-			return {
-				originCode: depPoint?.iataCode || "",
-				destCode: arrPoint?.iataCode || "",
-				departureTime:
-					depPoint?.departure?.timings?.[0]?.value?.substring(0, 5) || "--:--",
-				arrivalTime:
-					arrPoint?.arrival?.timings?.[0]?.value?.substring(0, 5) || "--:--",
-				positionText: `${allFlights.length} Flüge gefunden (keine für ${selectedAirport})`,
-				data: allFlights,
-				_isUtc: true,
-				_source: "flightradar24",
-				_noAirportMatch: true,
-				_airportFilter: selectedAirport,
-			};
+			if (allFlights.length > 0) {
+				// Nimm den ersten gefundenen Flug als Beispiel
+				const firstFlight = allFlights[0];
+				const depPoint = firstFlight.flightPoints?.find(
+					(p) => p.departurePoint
+				);
+				const arrPoint = firstFlight.flightPoints?.find((p) => p.arrivalPoint);
+
+				return {
+					originCode: depPoint?.iataCode || "",
+					destCode: arrPoint?.iataCode || "",
+					departureTime:
+						depPoint?.departure?.timings?.[0]?.value?.substring(0, 5) ||
+						"--:--",
+					arrivalTime:
+						arrPoint?.arrival?.timings?.[0]?.value?.substring(0, 5) || "--:--",
+					positionText: `${depPoint?.iataCode || "???"} → ${
+						arrPoint?.iataCode || "???"
+					}`,
+					data: allFlights,
+					_isUtc: true,
+					_source: "flightradar24",
+					_hasOvernightStay: false,
+				};
+			} else {
+				return {
+					originCode: "",
+					destCode: "",
+					departureTime: "",
+					arrivalTime: "",
+					positionText: "",
+					data: [],
+					_isUtc: true,
+					_source: "flightradar24",
+					_noDataFound: true,
+				};
+			}
 		}
 	};
 

@@ -92,6 +92,63 @@ const Flightradar24API = (() => {
 	};
 
 	/**
+	 * Generiert valide Datumspärchen für Übernachtungslogik
+	 * @param {string} baseDate - Basis-Datum (optional, Standard: gestern)
+	 * @returns {Object} {currentDate, nextDate} - Beide Daten sind FR24-API-kompatibel
+	 */
+	const getValidOvernightDates = (baseDate = null) => {
+		const today = new Date();
+
+		if (baseDate) {
+			// Prüfe ob baseDate in der Zukunft liegt
+			const baseDateObj = new Date(baseDate);
+			if (baseDateObj > today) {
+				console.warn(
+					`[FR24-PROXY] Basis-Datum ${baseDate} liegt in der Zukunft - verwende gestrigen Tag`
+				);
+				baseDate = null;
+			}
+		}
+
+		if (!baseDate) {
+			// Verwende gestrigen Tag als "aktueller Tag" und vorgestrigen als "Vortag"
+			const yesterday = new Date(today);
+			yesterday.setDate(today.getDate() - 1);
+
+			const dayBeforeYesterday = new Date(today);
+			dayBeforeYesterday.setDate(today.getDate() - 2);
+
+			return {
+				currentDate: formatDate(dayBeforeYesterday), // z.B. 2025-08-05
+				nextDate: formatDate(yesterday), // z.B. 2025-08-06
+				note: "Verwendet historische Daten (gestern/vorgestern) für FR24 API Kompatibilität",
+			};
+		} else {
+			// Verwende gegebenes Basis-Datum und den Folgetag
+			const baseObj = new Date(baseDate);
+			const nextObj = new Date(baseObj);
+			nextObj.setDate(baseObj.getDate() + 1);
+
+			// Prüfe ob Folgetag noch valide ist
+			if (nextObj > today) {
+				throw new Error(
+					`Folgetag ${formatDate(
+						nextObj
+					)} würde in der Zukunft liegen - FR24 API erlaubt nur heute oder frühere Daten`
+				);
+			}
+
+			return {
+				currentDate: formatDate(baseObj),
+				nextDate: formatDate(nextObj),
+				note: `Verwendet benutzerdefinierte Daten (${formatDate(
+					baseObj
+				)}/${formatDate(nextObj)})`,
+			};
+		}
+	};
+
+	/**
 	 * Konvertiert einen Unix-Timestamp in HH:MM Format
 	 * @param {number} timestamp - Unix-Timestamp
 	 * @returns {string} Zeit im Format HH:MM
@@ -278,15 +335,27 @@ const Flightradar24API = (() => {
 		try {
 			const registration = aircraftRegistration.trim().toUpperCase();
 
-			// Datum validieren
+			// Datum validieren - FR24 API erlaubt nur heute oder frühere Daten
 			const queryDate = new Date(date);
 			const today = new Date();
 			today.setHours(0, 0, 0, 0);
 
-			if (
-				queryDate > today.setFullYear(today.getFullYear() + 1) ||
-				queryDate < today.setFullYear(today.getFullYear() - 2)
-			) {
+			// Prüfe Future-Dates (FR24 API Beschränkung)
+			if (queryDate > today) {
+				if (config.debugMode) {
+					console.log(
+						`[FR24-PROXY] Datum ${date} liegt in der Zukunft - FR24 API erlaubt nur heute oder frühere Daten für ${registration}`
+					);
+				}
+				updateFetchStatus(
+					`FR24 API Beschränkung: Datum ${date} liegt in der Zukunft - nur heute oder frühere Daten verfügbar`,
+					true
+				);
+				return { data: [] };
+			}
+
+			// Prüfe zu alte Daten
+			if (queryDate < today.setFullYear(today.getFullYear() - 2)) {
 				if (config.debugMode) {
 					console.log(
 						`[FR24-PROXY] Datum ${date} außerhalb des gültigen Bereichs für ${registration}`
@@ -508,20 +577,31 @@ const Flightradar24API = (() => {
 	};
 
 	/**
-	 * Erweiterte Funktion: Findet Übernachtungsflüge
+	 * Erweiterte Funktion: Findet Übernachtungsflüge (FR24-API-kompatibel)
 	 * @param {string} aircraftId - Flugzeugregistrierung
 	 * @param {string} selectedAirport - IATA-Code des ausgewählten Flughafens
-	 * @param {string} currentDate - Aktuelles Datum (YYYY-MM-DD)
-	 * @param {string} nextDate - Folgetag (YYYY-MM-DD)
+	 * @param {string} currentDate - Aktuelles Datum (YYYY-MM-DD, optional)
+	 * @param {string} nextDate - Folgetag (YYYY-MM-DD, optional)
 	 * @returns {Promise<Object>} Übernachtungsflugdaten
 	 */
 	const getOvernightFlights = async (
 		aircraftId,
 		selectedAirport,
-		currentDate,
-		nextDate
+		currentDate = null,
+		nextDate = null
 	) => {
 		try {
+			// Wenn keine Daten angegeben, automatisch valide Daten generieren
+			if (!currentDate || !nextDate) {
+				const validDates = getValidOvernightDates(currentDate);
+				currentDate = validDates.currentDate;
+				nextDate = validDates.nextDate;
+
+				console.log(
+					`[FR24-PROXY] 🏨 Automatisch generierte valide Daten: ${currentDate} → ${nextDate}`
+				);
+			}
+
 			if (config.debugMode) {
 				console.log(
 					`\n[FR24-PROXY] 🏨 === ÜBERNACHTUNGS-PRÜFUNG FÜR ${aircraftId} ===`
@@ -722,6 +802,7 @@ const Flightradar24API = (() => {
 		getAircraftFlights,
 		getOvernightFlights,
 		formatDate,
+		getValidOvernightDates,
 		formatTimeFromTimestamp,
 		convertToUnifiedFormat,
 		getConfig: () => ({ ...config }),
@@ -729,6 +810,9 @@ const Flightradar24API = (() => {
 		testAPI: async (registration = "D-AIBL", date = "2025-08-07") => {
 			console.log(
 				`[FR24-PROXY] 🧪 === API TEST FÜR ${registration} AM ${date} ===`
+			);
+			console.log(
+				`[FR24-PROXY] ⚠️ Hinweis: FR24 API erlaubt nur heute oder frühere Daten`
 			);
 
 			try {
@@ -758,61 +842,46 @@ const Flightradar24API = (() => {
 				return { data: [], error: error.message };
 			}
 		},
-		testRawAPI: async (registration = "D-AIBL") => {
-			console.log(`[FR24-PROXY] 🔍 === RAW PROXY TEST FÜR ${registration} ===`);
+		testOvernightLogic: async (registration = "D-AIBL", airport = "FRA") => {
+			console.log(
+				`[FR24-PROXY] 🏨 === ÜBERNACHTUNGSLOGIK TEST FÜR ${registration} AN ${airport} ===`
+			);
 
-			const endpoints = [
-				`${config.proxyPath}?registration=${registration}&date=2025-08-07&endpoint=history`,
-				`${config.proxyPath}?registration=${registration}&date=2025-08-07&endpoint=aircraft`,
-				`${config.proxyPath}?registration=${registration}&date=2025-08-07&endpoint=flights`,
-			];
+			try {
+				// Automatisch valide Daten generieren
+				const validDates = getValidOvernightDates();
+				console.log(`[FR24-PROXY] 🏨 Verwende valide Daten:`, validDates);
 
-			for (let i = 0; i < endpoints.length; i++) {
-				const url = endpoints[i];
-				console.log(`[FR24-PROXY] 🔍 Teste Endpunkt ${i + 1}: ${url}`);
+				const result = await getOvernightFlights(
+					registration,
+					airport,
+					validDates.currentDate,
+					validDates.nextDate
+				);
 
-				try {
-					const response = await fetch(url);
+				console.log(`[FR24-PROXY] 🏨 Übernachtungstest-Ergebnis:`, result);
+
+				if (result.hasOvernightStay) {
+					console.log(`[FR24-PROXY] 🏨 ✅ Übernachtung gefunden!`);
 					console.log(
-						`[FR24-PROXY] 🔍 Status ${i + 1}: ${response.status} ${
-							response.statusText
-						}`
+						`[FR24-PROXY] 🏨 Letzte Ankunft:`,
+						result.lastArrival?.flightDesignator?.fullFlightNumber
 					);
-
-					if (response.ok) {
-						const text = await response.text();
-						console.log(
-							`[FR24-PROXY] 🔍 Response ${i + 1} (${text.length} chars):`,
-							text.substring(0, 500)
-						);
-
-						try {
-							const data = JSON.parse(text);
-							console.log(`[FR24-PROXY] 🔍 Parsed ${i + 1}:`, data);
-
-							if (data.success && data.data) {
-								console.log(
-									`[FR24-PROXY] 🔍 ✅ Endpunkt ${i + 1} erfolgreich!`
-								);
-							} else {
-								console.log(
-									`[FR24-PROXY] 🔍 ⚠️ Endpunkt ${i + 1}: ${
-										data.error || "Keine Daten"
-									}`
-								);
-							}
-						} catch (e) {
-							console.log(
-								`[FR24-PROXY] 🔍 JSON Parse Error ${i + 1}:`,
-								e.message
-							);
-						}
-					}
-				} catch (error) {
-					console.error(`[FR24-PROXY] 🔍 Error ${i + 1}:`, error.message);
+					console.log(
+						`[FR24-PROXY] 🏨 Erster Abflug:`,
+						result.firstDeparture?.flightDesignator?.fullFlightNumber
+					);
+				} else {
+					console.log(`[FR24-PROXY] 🏨 ❌ Keine Übernachtung gefunden`);
 				}
 
-				await new Promise((resolve) => setTimeout(resolve, 1000));
+				return result;
+			} catch (error) {
+				console.error(
+					`[FR24-PROXY] 🏨 ❌ Übernachtungstest fehlgeschlagen:`,
+					error
+				);
+				return { hasOvernightStay: false, error: error.message };
 			}
 		},
 	};

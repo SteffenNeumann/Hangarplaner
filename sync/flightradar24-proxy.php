@@ -93,6 +93,12 @@ function validateParams() {
         throw new Exception("Ungültiges Datum (Format: YYYY-MM-DD)");
     }
     
+    // FR24 API Datumsbeschränkung: Nur heute oder frühere Daten
+    $today = date('Y-m-d');
+    if ($date > $today) {
+        throw new Exception("FR24 API erlaubt nur Abfragen für heute ($today) oder frühere Daten. Angefragtes Datum: $date");
+    }
+    
     // Endpoint validieren
     $allowedEndpoints = ['history', 'aircraft', 'flights'];
     if (!in_array($endpoint, $allowedEndpoints)) {

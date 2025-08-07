@@ -95,7 +95,7 @@ const FlightDataAPI = (function () {
 	};
 
 	/**
-	 * Behandelt Aviationstack API-Anfragen - OPTIMAL für Übernachtungslogik
+	 * Behandelt Aviationstack API-Anfragen - Free-Plan angepasst für Flughafen-basierte Suche
 	 */
 	const handleAviationstackRequest = async function (
 		aircraftId,
@@ -110,7 +110,10 @@ const FlightDataAPI = (function () {
 		}
 
 		console.log(
-			`[API-FASSADE] Verwende Aviationstack API für ${aircraftId} - Übernachtungslogik mit ${currentDate} und ${nextDate}`
+			`[API-FASSADE] Verwende Aviationstack API (Free-Plan) für ${aircraftId} - Flughafen-basierte Suche`
+		);
+		console.log(
+			`💡 TIPP: Basic-Plan ($10/Monat) ermöglicht direkte Aircraft-Registrierung-Suche`
 		);
 
 		// Hole aktuellen Flughafen für Kontext
@@ -132,17 +135,20 @@ const FlightDataAPI = (function () {
 
 			// Wenn keine Daten gefunden wurden
 			if (!overnightData.today.length && !overnightData.tomorrow.length) {
-				console.log(`[API-FASSADE] Keine Flüge für ${aircraftId} gefunden`);
+				console.log(
+					`[API-FASSADE] Keine Flüge für Flughafen ${selectedAirport} gefunden`
+				);
 				return {
 					originCode: "",
 					destCode: "",
 					departureTime: "",
 					arrivalTime: "",
-					positionText: `Keine Flüge für ${aircraftId} gefunden`,
+					positionText: `Keine Flüge für ${selectedAirport} gefunden (Free-Plan)`,
 					data: [],
 					_isUtc: true,
 					_source: "aviationstack",
 					_noDataFound: true,
+					_freePlanNote: "Aircraft-Registrierung im Free-Plan nicht verfügbar",
 				};
 			}
 
@@ -153,9 +159,25 @@ const FlightDataAPI = (function () {
 			let destCode = "";
 			let positionText = "";
 
+			// Versuche spezifische Aircraft-Daten zu finden, falls verfügbar
+			let relevantTodayFlights = overnightData.today;
+			let relevantTomorrowFlights = overnightData.tomorrow;
+
+			if (overnightData.aircraftSpecific) {
+				// Spezifisches Flugzeug gefunden!
+				relevantTodayFlights = overnightData.aircraftTodayFlights || [];
+				relevantTomorrowFlights = overnightData.aircraftTomorrowFlights || [];
+				positionText = `✅ ${aircraftId} spezifisch gefunden!`;
+			} else {
+				// Free-Plan Limitation: Zeige alle Flughafen-Flüge
+				positionText = `⚠️ Free-Plan: ${
+					overnightData.today.length + overnightData.tomorrow.length
+				} Flüge am ${selectedAirport}`;
+			}
+
 			// Letzter Flug heute (Ankunft)
-			if (overnightData.today.length > 0) {
-				const lastToday = overnightData.today[overnightData.today.length - 1];
+			if (relevantTodayFlights.length > 0) {
+				const lastToday = relevantTodayFlights[relevantTodayFlights.length - 1];
 				if (lastToday.arrival.scheduled) {
 					arrivalTime = new Date(
 						lastToday.arrival.scheduled
@@ -169,8 +191,8 @@ const FlightDataAPI = (function () {
 			}
 
 			// Erster Flug morgen (Abflug)
-			if (overnightData.tomorrow.length > 0) {
-				const firstTomorrow = overnightData.tomorrow[0];
+			if (relevantTomorrowFlights.length > 0) {
+				const firstTomorrow = relevantTomorrowFlights[0];
 				if (firstTomorrow.departure.scheduled) {
 					departureTime = new Date(
 						firstTomorrow.departure.scheduled
@@ -189,20 +211,8 @@ const FlightDataAPI = (function () {
 				}
 			}
 
-			// Position Text erstellen
-			if (overnightData.overnight) {
-				positionText = `Übernachtung: ${overnightData.today.length} heute, ${overnightData.tomorrow.length} morgen`;
-			} else if (
-				overnightData.today.length > 0 ||
-				overnightData.tomorrow.length > 0
-			) {
-				positionText = `${
-					overnightData.today.length + overnightData.tomorrow.length
-				} Flüge gefunden`;
-			}
-
-			// Alle Flüge für Detailansicht kombinieren
-			const allFlights = [...overnightData.today, ...overnightData.tomorrow];
+			// Alle relevanten Flüge für Detailansicht kombinieren
+			const allFlights = [...relevantTodayFlights, ...relevantTomorrowFlights];
 
 			return {
 				originCode,
@@ -215,6 +225,9 @@ const FlightDataAPI = (function () {
 				_source: "aviationstack",
 				_overnightData: overnightData,
 				_airportFilter: selectedAirport,
+				_freePlanMode: true,
+				_aircraftSpecific: overnightData.aircraftSpecific,
+				_allAirportFlights: [...overnightData.today, ...overnightData.tomorrow], // Alle Flughafen-Flüge für Debug
 			};
 		} catch (error) {
 			console.error(`[API-FASSADE] Fehler bei Aviationstack-Anfrage:`, error);
@@ -223,12 +236,13 @@ const FlightDataAPI = (function () {
 				destCode: "",
 				departureTime: "",
 				arrivalTime: "",
-				positionText: "Fehler beim Laden der Flugdaten",
+				positionText: "Fehler beim Laden der Flugdaten (Free-Plan)",
 				data: [],
 				_isUtc: true,
 				_source: "aviationstack",
 				_error: error.message,
 				_clearFields: true,
+				_freePlanNote: "Aircraft-Registrierung im Free-Plan nicht verfügbar",
 			};
 		}
 	};

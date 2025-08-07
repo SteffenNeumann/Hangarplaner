@@ -1,4 +1,41 @@
-# Aviationstack API Integration
+# Aviationstack API Integration - **Free Plan Modus**
+
+## 🚨 **WICHTIGER HINWEIS: Free-Plan Einschränkungen**
+
+Die Aviationstack API im **Free-Plan** hat kritische Einschränkungen, die die ursprünglich geplante Funktionalität beeinträchtigen:
+
+### ❌ **Was NICHT funktioniert (Free-Plan):**
+
+- **Aircraft-Registrierung (`aircraft_iata`) wird NICHT unterstützt** → HTTP 403 Fehler
+- **Future Flights Endpoint (`/flightsFuture`) ist kostenpflichtig**
+- **Das `aircraft` Feld ist meist `null`**
+
+### ✅ **Was FUNKTIONIERT (Free-Plan):**
+
+- **Flughafen-basierte Suche** (`dep_iata`, `arr_iata`)
+- **Standard `/flights` Endpoint**
+- **Datum-spezifische Suche** (`flight_date`)
+
+### 🚀 **Upgrade auf Basic-Plan ($10/Monat):**
+
+Bei einem zukünftigen Upgrade auf den Basic-Plan werden **ALLE** geplanten Features verfügbar:
+
+- ✅ **Aircraft-Registrierung (`aircraft_iata`)** voll unterstützt
+- ✅ **Future Flights Endpoint** mit 7-Tage-Vorhersage
+- ✅ **Komplette `aircraft` Daten** verfügbar
+- ✅ **5.000 Requests/Monat** statt 500
+- ✅ **Perfekte Übernachtungslogik** ohne Einschränkungen
+
+## 🔄 **Angepasste Implementierung**
+
+Die aktuelle Implementierung wurde komplett an die Free-Plan-Einschränkungen angepasst:
+
+### **Neue Funktionsweise:**
+
+1. **Flughafen-basierte Suche**: Suche nach allen Flügen von/nach dem gewählten Flughafen
+2. **Nachträgliche Filterung**: Versuche das gewünschte Flugzeug in den Ergebnissen zu finden
+3. **Fallback-Modus**: Falls kein spezifisches Flugzeug gefunden wird, zeige alle Flughafen-Flüge
+4. **Transparente Kommunikation**: UI zeigt Free-Plan-Limitationen an
 
 ## 🎯 Übersicht
 

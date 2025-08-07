@@ -1,13 +1,19 @@
 /**
  * Aviationstack API Integration
- * Implementierung für zukünftige Flugdaten mit Flugzeugregistrierung-Suche
- * Optimal für Übernachtungslogik mit future flight data
+ * AKTUELL: Free-Plan Modus mit Flughafen-basierter Suche
+ * UPGRADE: Basic-Plan ($10/Monat) für volle Aircraft-Registrierung-Funktionalität
  *
- * API Features:
- * - Dedicated /flightsFuture endpoint für zukünftige Flüge
- * - Aircraft registration search (aircraft_iata parameter)
- * - Bis zu 7 Tage im Voraus
- * - Sehr kostengünstig ($10-50/Monat)
+ * Free-Plan Features:
+ * - Flughafen-basierte Suche (dep_iata, arr_iata)
+ * - Standard /flights endpoint
+ * - 500 Requests/Monat
+ *
+ * Basic-Plan Features (bei zukünftigem Upgrade):
+ * - Aircraft registration search (aircraft_iata parameter) ✅
+ * - Dedicated /flightsFuture endpoint für zukünftige Flüge ✅
+ * - Bis zu 7 Tage im Voraus ✅
+ * - 5.000 Requests/Monat ✅
+ * - Perfekte Übernachtungslogik ✅
  *
  * Erstellt: August 2025
  */
@@ -23,7 +29,22 @@ class AviationstackAPI {
 			lastReset: Date.now(),
 		};
 
-		console.log("✅ Aviationstack API initialisiert");
+		// Plan-Konfiguration (einfaches Upgrade durch Änderung auf 'basic')
+		this.plan = "free"; // 'free' oder 'basic'
+		this.features = {
+			aircraftSearch: this.plan === "basic", // aircraft_iata Parameter
+			futureEndpoint: this.plan === "basic", // /flightsFuture endpoint
+			fullAircraftData: this.plan === "basic", // Vollständige aircraft Daten
+		};
+
+		console.log(
+			`✅ Aviationstack API initialisiert (${this.plan.toUpperCase()}-Plan)`
+		);
+		if (this.plan === "free") {
+			console.log(
+				`💡 Upgrade auf Basic-Plan ($10/Monat) für volle Funktionalität verfügbar`
+			);
+		}
 	}
 
 	/**
@@ -91,13 +112,17 @@ class AviationstackAPI {
 	}
 
 	/**
-	 * Zukünftige Flüge abrufen (Hauptfunktion für Übernachtungslogik)
+	 * Zukünftige Flüge abrufen (Flughafen-basiert - Free Plan kompatibel)
 	 */
 	async getFutureFlights(aircraftRegistration, options = {}) {
 		try {
-			const params = {
-				aircraft_iata: aircraftRegistration.toUpperCase(),
-			};
+			console.log(
+				`⚠️ HINWEIS: Free-Plan unterstützt keine Aircraft-Registrierung-Suche`
+			);
+			console.log(`🔄 Verwende Flughafen-basierte Suche stattdessen`);
+
+			// Free-Plan: Verwende Flughafen-Parameter statt aircraft_iata
+			const params = {};
 
 			// Optionale Parameter hinzufügen
 			if (options.flight_date) {
@@ -106,47 +131,79 @@ class AviationstackAPI {
 
 			if (options.dep_iata) {
 				params.dep_iata = options.dep_iata.toUpperCase();
-			}
-
-			if (options.arr_iata) {
+			} else if (options.arr_iata) {
 				params.arr_iata = options.arr_iata.toUpperCase();
+			} else {
+				// Fallback: Standard-Flughafen verwenden
+				params.dep_iata = "MUC"; // München als Standard
 			}
 
 			if (options.limit) {
 				params.limit = Math.min(options.limit, 100); // Max 100 per request
 			}
 
-			const response = await this.makeRequest("flightsFuture", params);
+			// Verwende Standard-Endpoint da flightsFuture eventuell auch kostenpflichtig ist
+			const response = await this.makeRequest("flights", params);
 
 			if (!response.data || response.data.length === 0) {
-				console.log(
-					`⚠️ Keine zukünftigen Flüge für ${aircraftRegistration} gefunden`
-				);
+				console.log(`⚠️ Keine Flüge für die angegebenen Parameter gefunden`);
 				return [];
 			}
 
-			return this.formatFlightData(response.data);
+			// Filtere nach Aircraft-Registrierung falls verfügbar (wird meist null sein)
+			let filteredFlights = response.data;
+			if (aircraftRegistration && aircraftRegistration !== "") {
+				filteredFlights = response.data.filter((flight) => {
+					return (
+						flight.aircraft &&
+						flight.aircraft.registration &&
+						flight.aircraft.registration.toUpperCase() ===
+							aircraftRegistration.toUpperCase()
+					);
+				});
+
+				if (filteredFlights.length === 0) {
+					console.log(
+						`⚠️ Keine Flüge für Aircraft ${aircraftRegistration} gefunden (Free-Plan Limitation)`
+					);
+					// Gib alle Flüge zurück für Kontext
+					console.log(`🔄 Zeige alle Flüge für den Flughafen`);
+					filteredFlights = response.data;
+				}
+			}
+
+			return this.formatFlightData(filteredFlights);
 		} catch (error) {
-			console.error(
-				`❌ Fehler beim Abrufen zukünftiger Flüge für ${aircraftRegistration}:`,
-				error
-			);
+			console.error(`❌ Fehler beim Abrufen von Flügen:`, error);
 			throw error;
 		}
 	}
 
 	/**
-	 * Aktuelle/historische Flüge abrufen
+	 * Aktuelle/historische Flüge abrufen (Flughafen-basiert - Free Plan kompatibel)
 	 */
 	async getCurrentFlights(aircraftRegistration, options = {}) {
 		try {
-			const params = {
-				aircraft_iata: aircraftRegistration.toUpperCase(),
-			};
+			console.log(
+				`⚠️ HINWEIS: Free-Plan unterstützt keine Aircraft-Registrierung-Suche`
+			);
+			console.log(`🔄 Verwende Flughafen-basierte Suche stattdessen`);
+
+			// Free-Plan: Verwende Flughafen-Parameter statt aircraft_iata
+			const params = {};
 
 			// Optionale Parameter hinzufügen
 			if (options.flight_date) {
 				params.flight_date = options.flight_date;
+			}
+
+			if (options.dep_iata) {
+				params.dep_iata = options.dep_iata.toUpperCase();
+			} else if (options.arr_iata) {
+				params.arr_iata = options.arr_iata.toUpperCase();
+			} else {
+				// Fallback: Standard-Flughafen verwenden
+				params.dep_iata = "MUC"; // München als Standard
 			}
 
 			if (options.flight_status) {
@@ -156,18 +213,35 @@ class AviationstackAPI {
 			const response = await this.makeRequest("flights", params);
 
 			if (!response.data || response.data.length === 0) {
-				console.log(
-					`⚠️ Keine aktuellen Flüge für ${aircraftRegistration} gefunden`
-				);
+				console.log(`⚠️ Keine Flüge für die angegebenen Parameter gefunden`);
 				return [];
 			}
 
-			return this.formatFlightData(response.data);
+			// Filtere nach Aircraft-Registrierung falls verfügbar (wird meist null sein)
+			let filteredFlights = response.data;
+			if (aircraftRegistration && aircraftRegistration !== "") {
+				filteredFlights = response.data.filter((flight) => {
+					return (
+						flight.aircraft &&
+						flight.aircraft.registration &&
+						flight.aircraft.registration.toUpperCase() ===
+							aircraftRegistration.toUpperCase()
+					);
+				});
+
+				if (filteredFlights.length === 0) {
+					console.log(
+						`⚠️ Keine Flüge für Aircraft ${aircraftRegistration} gefunden (Free-Plan Limitation)`
+					);
+					// Gib alle Flüge zurück für Kontext
+					console.log(`🔄 Zeige alle Flüge für den Flughafen`);
+					filteredFlights = response.data;
+				}
+			}
+
+			return this.formatFlightData(filteredFlights);
 		} catch (error) {
-			console.error(
-				`❌ Fehler beim Abrufen aktueller Flüge für ${aircraftRegistration}:`,
-				error
-			);
+			console.error(`❌ Fehler beim Abrufen von Flügen:`, error);
 			throw error;
 		}
 	}
@@ -212,12 +286,15 @@ class AviationstackAPI {
 	}
 
 	/**
-	 * Übernachtungslogik: Flüge für heute und morgen
+	 * Übernachtungslogik: Flüge für heute und morgen (Free-Plan angepasst)
 	 */
-	async getOvernightFlights(aircraftRegistration, airportCode = null) {
+	async getOvernightFlights(aircraftRegistration, airportCode = "MUC") {
 		try {
 			console.log(
-				`🌙 Übernachtungslogik für ${aircraftRegistration} gestartet`
+				`🌙 Übernachtungslogik für ${aircraftRegistration} am Flughafen ${airportCode} gestartet`
+			);
+			console.log(
+				`⚠️ HINWEIS: Free-Plan arbeitet flughafen-basiert, nicht flugzeug-spezifisch`
 			);
 
 			const today = new Date();
@@ -229,60 +306,137 @@ class AviationstackAPI {
 
 			const results = {
 				aircraft: aircraftRegistration,
+				airport: airportCode,
 				today: [],
 				tomorrow: [],
 				overnight: false,
+				freePlanNote: "Flughafen-basierte Suche (Free-Plan Limitation)",
 			};
 
-			// Heutige Flüge (letzter Flug)
+			// Heutige Flüge vom Flughafen (Abflüge)
 			try {
 				const todayFlights = await this.getCurrentFlights(
 					aircraftRegistration,
 					{
 						flight_date: todayStr,
+						dep_iata: airportCode,
 					}
 				);
 				results.today = todayFlights;
+				console.log(
+					`✅ ${todayFlights.length} Flüge heute von ${airportCode} gefunden`
+				);
 			} catch (error) {
 				console.warn(
-					`⚠️ Keine heutigen Flüge für ${aircraftRegistration}:`,
+					`⚠️ Keine heutigen Flüge von ${airportCode}:`,
 					error.message
 				);
 			}
 
-			// Morgige Flüge (erster Flug)
+			// Morgige Flüge vom Flughafen (Abflüge)
 			try {
 				const tomorrowFlights = await this.getFutureFlights(
 					aircraftRegistration,
 					{
 						flight_date: tomorrowStr,
+						dep_iata: airportCode,
 					}
 				);
 				results.tomorrow = tomorrowFlights;
+				console.log(
+					`✅ ${tomorrowFlights.length} Flüge morgen von ${airportCode} gefunden`
+				);
 			} catch (error) {
 				console.warn(
-					`⚠️ Keine morgigen Flüge für ${aircraftRegistration}:`,
+					`⚠️ Keine morgigen Flüge von ${airportCode}:`,
 					error.message
 				);
 			}
 
+			// Alternative: Auch Ankünfte prüfen falls keine Abflüge
+			if (results.today.length === 0) {
+				try {
+					console.log(`🔄 Prüfe Ankünfte für heute am ${airportCode}`);
+					const todayArrivals = await this.getCurrentFlights(
+						aircraftRegistration,
+						{
+							flight_date: todayStr,
+							arr_iata: airportCode,
+						}
+					);
+					results.today = todayArrivals;
+					console.log(
+						`✅ ${todayArrivals.length} Ankünfte heute am ${airportCode} gefunden`
+					);
+				} catch (error) {
+					console.warn(
+						`⚠️ Keine heutigen Ankünfte am ${airportCode}:`,
+						error.message
+					);
+				}
+			}
+
+			if (results.tomorrow.length === 0) {
+				try {
+					console.log(`🔄 Prüfe Ankünfte für morgen am ${airportCode}`);
+					const tomorrowArrivals = await this.getFutureFlights(
+						aircraftRegistration,
+						{
+							flight_date: tomorrowStr,
+							arr_iata: airportCode,
+						}
+					);
+					results.tomorrow = tomorrowArrivals;
+					console.log(
+						`✅ ${tomorrowArrivals.length} Ankünfte morgen am ${airportCode} gefunden`
+					);
+				} catch (error) {
+					console.warn(
+						`⚠️ Keine morgigen Ankünfte am ${airportCode}:`,
+						error.message
+					);
+				}
+			}
+
 			// Übernachtungslogik prüfen
 			if (results.today.length > 0 && results.tomorrow.length > 0) {
-				const lastToday = results.today[results.today.length - 1];
-				const firstTomorrow = results.tomorrow[0];
+				results.overnight = true;
+				console.log(
+					`✅ Flugaktivität an beiden Tagen am ${airportCode} erkannt`
+				);
 
-				if (lastToday && firstTomorrow) {
-					results.overnight = true;
-					results.lastArrival = lastToday.arrival;
-					results.nextDeparture = firstTomorrow.departure;
+				// Versuche das gewünschte Flugzeug zu finden
+				const aircraftTodayFlights = results.today.filter(
+					(f) =>
+						f.aircraft &&
+						f.aircraft.registration &&
+						f.aircraft.registration.toUpperCase() ===
+							aircraftRegistration.toUpperCase()
+				);
 
-					console.log(`✅ Übernachtung erkannt: ${aircraftRegistration}`);
+				const aircraftTomorrowFlights = results.tomorrow.filter(
+					(f) =>
+						f.aircraft &&
+						f.aircraft.registration &&
+						f.aircraft.registration.toUpperCase() ===
+							aircraftRegistration.toUpperCase()
+				);
+
+				if (
+					aircraftTodayFlights.length > 0 ||
+					aircraftTomorrowFlights.length > 0
+				) {
 					console.log(
-						`   Letzter Flug heute: ${lastToday.arrival?.airport} um ${lastToday.arrival?.scheduled}`
+						`🎯 Spezifisches Flugzeug ${aircraftRegistration} gefunden!`
 					);
+					results.aircraftSpecific = true;
+					results.aircraftTodayFlights = aircraftTodayFlights;
+					results.aircraftTomorrowFlights = aircraftTomorrowFlights;
+				} else {
 					console.log(
-						`   Erster Flug morgen: ${firstTomorrow.departure?.airport} um ${firstTomorrow.departure?.scheduled}`
+						`⚠️ Spezifisches Flugzeug ${aircraftRegistration} nicht gefunden (Free-Plan Limitation)`
 					);
+					results.aircraftSpecific = false;
 				}
 			}
 
@@ -363,38 +517,56 @@ class AviationstackAPI {
 	}
 
 	/**
-	 * API-Test-Funktion
+	 * API-Test-Funktion (Free-Plan angepasst)
 	 */
 	async testAPI(aircraftRegistration = "D-AIBL") {
 		try {
-			console.log(`🧪 Teste Aviationstack API mit ${aircraftRegistration}`);
+			console.log(`🧪 Teste Aviationstack API (Free-Plan) mit Flughafen MUC`);
+			console.log(
+				`⚠️ Aircraft-Registrierung ${aircraftRegistration} wird gesucht, aber Free-Plan Limitations beachten`
+			);
 
-			const tomorrow = new Date();
-			tomorrow.setDate(tomorrow.getDate() + 1);
-			const tomorrowStr = tomorrow.toISOString().split("T")[0];
+			const today = new Date();
+			const todayStr = today.toISOString().split("T")[0];
 
-			// Test zukünftige Flüge
-			const futureFlights = await this.getFutureFlights(aircraftRegistration, {
-				flight_date: tomorrowStr,
-				limit: 5,
-			});
+			// Test mit Flughafen-Parametern
+			const currentFlights = await this.getCurrentFlights(
+				aircraftRegistration,
+				{
+					flight_date: todayStr,
+					dep_iata: "MUC",
+					limit: 5,
+				}
+			);
 
 			console.log(
-				`✅ API-Test erfolgreich: ${futureFlights.length} zukünftige Flüge gefunden`
+				`✅ API-Test erfolgreich: ${currentFlights.length} Flüge von MUC gefunden`
+			);
+
+			// Prüfe ob das gewünschte Flugzeug dabei ist
+			const aircraftFlights = currentFlights.filter(
+				(flight) =>
+					flight.aircraft &&
+					flight.aircraft.registration &&
+					flight.aircraft.registration.toUpperCase() ===
+						aircraftRegistration.toUpperCase()
 			);
 
 			return {
 				success: true,
-				api: "Aviationstack",
+				api: "Aviationstack (Free Plan)",
 				aircraft: aircraftRegistration,
-				futureFlights: futureFlights.length,
-				data: futureFlights.slice(0, 3), // Erste 3 Flüge
+				totalFlights: currentFlights.length,
+				aircraftSpecificFlights: aircraftFlights.length,
+				aircraftFound: aircraftFlights.length > 0,
+				freePlanNote: "Aircraft registration ist im Free-Plan meist null",
+				data: currentFlights.slice(0, 3), // Erste 3 Flüge
 			};
 		} catch (error) {
 			console.error("❌ API-Test fehlgeschlagen:", error);
 			return {
 				success: false,
-				api: "Aviationstack",
+				api: "Aviationstack (Free Plan)",
 				error: error.message,
 			};
 		}

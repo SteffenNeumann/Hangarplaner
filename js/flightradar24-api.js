@@ -5,15 +5,39 @@
  */
 
 const Flightradar24API = (() => {
-	// API-Konfiguration für Flightradar24
+	// API-Konfiguration für Flightradar24 (Hybrid: Native API + RapidAPI Fallback)
 	const config = {
-		baseUrl: "https://flightradar24-com.p.rapidapi.com",
-		aircraftEndpoint: "/aircraft",
-		flightsEndpoint: "/flights",
+		// Native API (primär, aber CORS-beschränkt)
+		nativeApiUrl: "https://fr24api.flightradar24.com",
+		nativeApiToken:
+			"01988313-fa93-7159-9a43-872a2a31e88b|Kt9JoOnJRS6R1QMUmiu9gFmYh9PSh7rD1tLqgeNZ58450385",
+
+		// RapidAPI als Fallback (CORS-freundlich)
+		rapidApiUrl: "https://flightradar24-com.p.rapidapi.com",
+		rapidApiKey: "b76afbf516mshf864818d919de86p10475ejsna65b718a8602",
 		rapidApiHost: "flightradar24-com.p.rapidapi.com",
-		rapidApiKey: "b76afbf516mshf864818d919de86p10475ejsna65b718a8602", // Gleicher RapidAPI Key
-		debugMode: true, // Debug-Modus für zusätzliche Konsolenausgaben
-		rateLimitDelay: 1500, // 1.5 Sekunden Verzögerung zwischen API-Anfragen (Flightradar24 ist restriktiver)
+
+		// CORS-Proxy als Alternative
+		corsProxy: "https://cors-anywhere.herokuapp.com/",
+
+		// API-Endpunkte
+		nativeEndpoints: {
+			aircraft: "/v1/aircraft",
+			flights: "/v1/flights",
+			history: "/v1/history",
+		},
+		rapidEndpoints: {
+			aircraft: "/aircraft",
+			flights: "/flights",
+			search: "/search",
+		},
+
+		debugMode: true,
+		rateLimitDelay: 1000,
+
+		// Automatische API-Auswahl
+		preferNativeApi: false, // Auf false setzen wegen CORS
+		useCorsProxy: false, // Optional: CORS-Proxy verwenden
 	};
 
 	// Tracking der letzten API-Anfrage für Rate Limiting
@@ -27,11 +51,18 @@ const Flightradar24API = (() => {
 		// Nur die notwendigen Optionen übernehmen
 		if (options.debugMode !== undefined)
 			config.debugMode = Boolean(options.debugMode);
+		if (options.nativeApiToken) config.nativeApiToken = options.nativeApiToken;
 		if (options.rapidApiKey) config.rapidApiKey = options.rapidApiKey;
+		if (options.preferNativeApi !== undefined)
+			config.preferNativeApi = Boolean(options.preferNativeApi);
+		if (options.useCorsProxy !== undefined)
+			config.useCorsProxy = Boolean(options.useCorsProxy);
 
 		if (config.debugMode) {
 			console.log(
-				`Flightradar24API initialisiert: nur Flightradar24 API aktiviert`
+				`Flightradar24API initialisiert: ${
+					config.preferNativeApi ? "Native API bevorzugt" : "RapidAPI bevorzugt"
+				} (CORS-Proxy: ${config.useCorsProxy ? "aktiviert" : "deaktiviert"})`
 			);
 		}
 	};
@@ -374,7 +405,207 @@ const Flightradar24API = (() => {
 	};
 
 	/**
-	 * Macht die API-Anfrage für ein bestimmtes Flugzeug bei Flightradar24
+	 * Konvertiert Native Flightradar24 API Daten in das einheitliche Format
+	 * @param {Array} nativeData - Daten von der Native Flightradar24 API
+	 * @param {string} aircraftRegistration - Flugzeugregistrierung
+	 * @param {string} date - Abfragedatum
+	 * @returns {Object} Vereinheitlichte Flugdaten
+	 */
+	const convertToUnifiedFormatNative = (
+		nativeData,
+		aircraftRegistration,
+		date
+	) => {
+		if (!nativeData || (Array.isArray(nativeData) && nativeData.length === 0)) {
+			return { data: [] };
+		}
+
+		const flightsArray = Array.isArray(nativeData) ? nativeData : [nativeData];
+
+		const formattedData = flightsArray
+			.map((flight) => {
+				try {
+					// Native API Datenextraktion
+					let departureIata = "???";
+					let arrivalIata = "???";
+
+					// Native API Airport Codes
+					if (flight.departure && flight.departure.airport) {
+						departureIata =
+							flight.departure.airport.iata ||
+							flight.departure.airport.code ||
+							"???";
+					} else if (flight.origin) {
+						departureIata =
+							flight.origin.iata || flight.origin.code || flight.origin;
+					}
+
+					if (flight.arrival && flight.arrival.airport) {
+						arrivalIata =
+							flight.arrival.airport.iata ||
+							flight.arrival.airport.code ||
+							"???";
+					} else if (flight.destination) {
+						arrivalIata =
+							flight.destination.iata ||
+							flight.destination.code ||
+							flight.destination;
+					}
+
+					// Native API Zeiten
+					let departureTime = "--:--";
+					let arrivalTime = "--:--";
+
+					if (flight.departure && flight.departure.scheduled_time) {
+						departureTime = formatTimeFromTimestamp(
+							flight.departure.scheduled_time
+						);
+					} else if (flight.scheduled_departure) {
+						departureTime = formatTimeFromTimestamp(flight.scheduled_departure);
+					}
+
+					if (flight.arrival && flight.arrival.scheduled_time) {
+						arrivalTime = formatTimeFromTimestamp(
+							flight.arrival.scheduled_time
+						);
+					} else if (flight.scheduled_arrival) {
+						arrivalTime = formatTimeFromTimestamp(flight.scheduled_arrival);
+					}
+
+					// Native API Airline/Flight Info
+					let airlineName = "";
+					let airlineIata = "";
+					let airlineIcao = "";
+					let flightNumber = "";
+					let fullFlightNumber = "";
+
+					if (flight.airline) {
+						airlineName = flight.airline.name || "";
+						airlineIata = flight.airline.iata || "";
+						airlineIcao = flight.airline.icao || "";
+					}
+
+					if (flight.flight_number) {
+						fullFlightNumber = flight.flight_number;
+						if (fullFlightNumber.length > 2) {
+							if (!airlineIata) airlineIata = fullFlightNumber.slice(0, 2);
+							flightNumber = fullFlightNumber.slice(2);
+						}
+					} else if (flight.callsign) {
+						fullFlightNumber = flight.callsign;
+					}
+
+					// Native API Aircraft Info
+					let aircraftType = "Unknown";
+					let registration = aircraftRegistration || "";
+
+					if (flight.aircraft) {
+						aircraftType =
+							flight.aircraft.type || flight.aircraft.model || "Unknown";
+						registration = flight.aircraft.registration || registration;
+					}
+
+					// Datum
+					let scheduledDepartureDate = date;
+					if (flight.departure && flight.departure.scheduled_time) {
+						scheduledDepartureDate = new Date(
+							flight.departure.scheduled_time * 1000
+						)
+							.toISOString()
+							.substring(0, 10);
+					} else if (flight.scheduled_departure) {
+						scheduledDepartureDate = new Date(flight.scheduled_departure * 1000)
+							.toISOString()
+							.substring(0, 10);
+					} else if (flight.date) {
+						scheduledDepartureDate = flight.date;
+					}
+
+					return {
+						type: "DatedFlight",
+						scheduledDepartureDate: scheduledDepartureDate,
+						flightDesignator: {
+							carrierCode: airlineIata,
+							carrierName: airlineName,
+							carrierIcao: airlineIcao,
+							flightNumber: flightNumber,
+							fullFlightNumber: fullFlightNumber,
+						},
+						flightPoints: [
+							{
+								departurePoint: true,
+								arrivalPoint: false,
+								iataCode: departureIata,
+								departure: {
+									timings: [
+										{
+											qualifier: "STD",
+											value: departureTime + ":00.000",
+											isUtc: true,
+										},
+									],
+								},
+							},
+							{
+								departurePoint: false,
+								arrivalPoint: true,
+								iataCode: arrivalIata,
+								arrival: {
+									timings: [
+										{
+											qualifier: "STA",
+											value: arrivalTime + ":00.000",
+											isUtc: true,
+										},
+									],
+								},
+							},
+						],
+						legs: [
+							{
+								aircraftEquipment: {
+									aircraftType: aircraftType,
+								},
+								aircraftRegistration: registration,
+							},
+						],
+						_source: "flightradar24-native",
+						_rawFlightData: flight,
+						_isUtc: true,
+					};
+				} catch (error) {
+					console.error(
+						"[FR24] Fehler bei der Konvertierung eines Native API Fluges:",
+						error,
+						flight
+					);
+					return null;
+				}
+			})
+			.filter(Boolean);
+
+		if (config.debugMode && formattedData.length > 0) {
+			console.log(
+				`[FR24] ✅ ${formattedData.length} Native API Flüge erfolgreich konvertiert`
+			);
+			formattedData.forEach((flight, index) => {
+				const depPoint = flight.flightPoints.find((p) => p.departurePoint);
+				const arrPoint = flight.flightPoints.find((p) => p.arrivalPoint);
+				console.log(
+					`[FR24] ${index + 1}. ${flight.scheduledDepartureDate}: ${
+						depPoint.iataCode
+					} → ${arrPoint.iataCode} (${
+						flight.flightDesignator.fullFlightNumber
+					})`
+				);
+			});
+		}
+
+		return { data: formattedData };
+	};
+
+	/**
+	 * Macht die API-Anfrage für ein bestimmtes Flugzeug über PHP-Proxy
 	 * @param {string} aircraftRegistration - Flugzeugregistrierung (z.B. "D-AIBL")
 	 * @param {string} date - Datum im Format YYYY-MM-DD
 	 * @returns {Promise<Object>} Flugdaten
@@ -389,7 +620,6 @@ const Flightradar24API = (() => {
 			const today = new Date();
 			today.setHours(0, 0, 0, 0);
 
-			// Für Datumsanfragen in der fernen Zukunft oder Vergangenheit leeres Ergebnis zurückgeben
 			if (
 				queryDate > today.setFullYear(today.getFullYear() + 1) ||
 				queryDate < today.setFullYear(today.getFullYear() - 2)
@@ -406,121 +636,118 @@ const Flightradar24API = (() => {
 				return { data: [] };
 			}
 
-			updateFetchStatus(`Verarbeite ${registration} - API-Anfrage läuft...`);
+			updateFetchStatus(
+				`Verarbeite ${registration} - API-Anfrage über PHP-Proxy läuft...`
+			);
 
-			// KORRIGIERT: Verwende verschiedene Flightradar24 API-Endpunkte
 			return await rateLimiter(async () => {
-				// Versuche verschiedene API-Endpunkte für Flightradar24
-				const apiEndpoints = [
-					// Endpunkt 1: Aircraft Details (funktioniert meist am besten)
-					`${config.baseUrl}/flights/list-by-aircraft?reg=${registration}&limit=100`,
-					// Endpunkt 2: Alternative Aircraft API
-					`${config.baseUrl}/aircraft/details?reg=${registration}`,
-					// Endpunkt 3: Search API
-					`${config.baseUrl}/search?query=${registration}&limit=50`,
+				// PHP-Proxy Endpunkte (CORS-freundlich)
+				const proxyEndpoints = [
+					// Endpunkt 1: History API über Proxy
+					`sync/flightradar24-proxy.php?registration=${registration}&date=${date}&endpoint=history`,
+					// Endpunkt 2: Aircraft API über Proxy
+					`sync/flightradar24-proxy.php?registration=${registration}&date=${date}&endpoint=aircraft`,
+					// Endpunkt 3: Flights API über Proxy
+					`sync/flightradar24-proxy.php?registration=${registration}&date=${date}&endpoint=flights`,
 				];
 
 				let lastError = null;
 
-				for (let i = 0; i < apiEndpoints.length; i++) {
-					const apiUrl = apiEndpoints[i];
+				for (let i = 0; i < proxyEndpoints.length; i++) {
+					const proxyUrl = proxyEndpoints[i];
 
 					if (config.debugMode) {
-						console.log(`[FR24] Versuche API-Endpunkt ${i + 1}/3: ${apiUrl}`);
+						console.log(
+							`[FR24] Versuche PHP-Proxy Endpunkt ${i + 1}/3: ${proxyUrl}`
+						);
 					}
 
 					try {
-						// API-Anfrage durchführen mit RapidAPI-Headers
+						// Einfacher GET-Request über PHP-Proxy (löst CORS-Problem)
 						const options = {
 							method: "GET",
 							headers: {
-								"x-rapidapi-key": config.rapidApiKey,
-								"x-rapidapi-host": config.rapidApiHost,
+								"Content-Type": "application/json",
+								Accept: "application/json",
 							},
 						};
 
-						const response = await fetch(apiUrl, options);
+						const response = await fetch(proxyUrl, options);
 
 						if (!response.ok) {
 							const errorText = await response.text();
-							lastError = `API-Endpunkt ${i + 1} fehlgeschlagen: ${
+							lastError = `PHP-Proxy Endpunkt ${i + 1} fehlgeschlagen: ${
 								response.status
 							} ${response.statusText}. Details: ${errorText}`;
 							console.warn(`[FR24] ${lastError}`);
-							continue; // Versuche nächsten Endpunkt
+							continue;
 						}
 
-						// Prüfe, ob die Antwort Inhalt hat, bevor JSON-Parsing versucht wird
 						const responseText = await response.text();
 
 						if (!responseText || responseText.trim() === "") {
 							console.warn(
-								`[FR24] Leere Antwort von API-Endpunkt ${
+								`[FR24] Leere Antwort von PHP-Proxy Endpunkt ${
 									i + 1
 								} für ${registration}`
 							);
-							continue; // Versuche nächsten Endpunkt
+							continue;
 						}
 
-						let data;
+						let proxyResponse;
 						try {
-							data = JSON.parse(responseText);
+							proxyResponse = JSON.parse(responseText);
 						} catch (jsonError) {
 							console.error(
-								`[FR24] JSON-Parsing-Fehler bei Endpunkt ${
+								`[FR24] JSON-Parsing-Fehler bei PHP-Proxy Endpunkt ${
 									i + 1
 								} für ${registration}:`,
 								jsonError
 							);
-							continue; // Versuche nächsten Endpunkt
+							continue;
 						}
+
+						// Prüfe PHP-Proxy Response
+						if (!proxyResponse.success) {
+							console.warn(`[FR24] PHP-Proxy Fehler: ${proxyResponse.error}`);
+							continue;
+						}
+
+						const data = proxyResponse.data;
 
 						if (config.debugMode) {
 							console.log(
-								`[FR24] API-Antwort von Endpunkt ${i + 1} für ${registration}:`,
+								`[FR24] PHP-Proxy Antwort von Endpunkt ${
+									i + 1
+								} für ${registration}:`,
 								data
 							);
 						}
 
-						// Prüfe die Datenstruktur von Flightradar24 - ERWEITERT für verschiedene Formate
+						// Native FR24 API Datenstruktur verarbeiten
 						let flightsData = null;
 
-						// Format 1: Standard result.response.data
-						if (
+						// Format 1: Native API Standard Format
+						if (data.flights && Array.isArray(data.flights)) {
+							flightsData = data.flights;
+						}
+						// Format 2: History API Format
+						else if (
 							data.result &&
-							data.result.response &&
-							data.result.response.data
+							data.result.flights &&
+							Array.isArray(data.result.flights)
 						) {
-							flightsData = data.result.response.data;
+							flightsData = data.result.flights;
 						}
-						// Format 2: Direkte data property
-						else if (data.data && Array.isArray(data.data)) {
-							flightsData = data.data;
-						}
-						// Format 3: Aircraft details mit flights
-						else if (data.aircraft && data.aircraft.flights) {
-							flightsData = data.aircraft.flights;
-						}
-						// Format 4: Search results
-						else if (data.results && Array.isArray(data.results)) {
-							// Filtere nach Aircraft-Results
-							const aircraftResults = data.results.filter(
-								(r) => r.type === "aircraft" && r.registration === registration
-							);
-							if (aircraftResults.length > 0 && aircraftResults[0].flights) {
-								flightsData = aircraftResults[0].flights;
-							}
-						}
-						// Format 5: Direkte Array-Antwort
+						// Format 3: Direct Array Response
 						else if (Array.isArray(data)) {
 							flightsData = data;
 						}
-						// Format 6: Flüge direkt im Root-Level
-						else if (data.flights && Array.isArray(data.flights)) {
-							flightsData = data.flights;
+						// Format 4: Data Container
+						else if (data.data && Array.isArray(data.data)) {
+							flightsData = data.data;
 						}
 
-						// Wenn Flugdaten gefunden wurden, verarbeite sie
 						if (
 							flightsData &&
 							Array.isArray(flightsData) &&
@@ -529,30 +756,24 @@ const Flightradar24API = (() => {
 							console.log(
 								`[FR24] ✅ Erfolgreich ${
 									flightsData.length
-								} Flüge von Endpunkt ${i + 1} erhalten`
+								} Flüge von PHP-Proxy Endpunkt ${i + 1} erhalten`
 							);
 
-							// Filtere die Ergebnisse nach dem angeforderten Datum
+							// Filtere nach Datum (Native API sollte bereits gefiltert haben)
 							let filteredFlights = flightsData.filter((flight) => {
-								// Versuche das Datum aus verschiedenen Feldern zu extrahieren
 								let flightDate = null;
 
-								if (flight.time?.scheduled?.departure) {
-									flightDate = new Date(flight.time.scheduled.departure * 1000)
+								// Native API Datumsfelder
+								if (flight.departure && flight.departure.scheduled_time) {
+									flightDate = new Date(flight.departure.scheduled_time * 1000)
 										.toISOString()
 										.substring(0, 10);
-								} else if (flight.departure_time) {
-									flightDate = new Date(flight.departure_time * 1000)
-										.toISOString()
-										.substring(0, 10);
-								} else if (flight.std) {
-									flightDate = new Date(flight.std * 1000)
+								} else if (flight.scheduled_departure) {
+									flightDate = new Date(flight.scheduled_departure * 1000)
 										.toISOString()
 										.substring(0, 10);
 								} else if (flight.date) {
 									flightDate = flight.date;
-								} else if (flight.scheduledTimeUtc) {
-									flightDate = flight.scheduledTimeUtc.substring(0, 10);
 								}
 
 								return flightDate === date;
@@ -564,49 +785,46 @@ const Flightradar24API = (() => {
 								);
 							}
 
-							// Falls keine passenden Flüge nach Datumsfilterung, nehme die neuesten
 							if (filteredFlights.length === 0 && flightsData.length > 0) {
 								console.log(
 									`[FR24] Keine Flüge für das Datum ${date} gefunden, verwende alle verfügbaren Flüge für Analyse`
 								);
-								filteredFlights = flightsData.slice(0, 10); // Begrenzte Anzahl für Performance
+								filteredFlights = flightsData.slice(0, 10);
 							}
 
 							updateFetchStatus(
-								`Flightradar24 Abfrage für ${registration} erfolgreich: ${filteredFlights.length} Flüge gefunden`
+								`PHP-Proxy Flightradar24 Abfrage für ${registration} erfolgreich: ${filteredFlights.length} Flüge gefunden`
 							);
 
-							// Formatieren und zurückgeben
-							return convertToUnifiedFormat(
+							return convertToUnifiedFormatNative(
 								filteredFlights,
 								registration,
 								date
 							);
 						} else {
 							console.log(
-								`[FR24] Keine verwertbaren Flugdaten in Endpunkt ${
+								`[FR24] Keine verwertbaren Flugdaten in PHP-Proxy Endpunkt ${
 									i + 1
 								} gefunden`
 							);
-							continue; // Versuche nächsten Endpunkt
+							continue;
 						}
 					} catch (endpointError) {
-						lastError = `Fehler bei Endpunkt ${i + 1}: ${
+						lastError = `Fehler bei PHP-Proxy Endpunkt ${i + 1}: ${
 							endpointError.message
 						}`;
 						console.error(`[FR24] ${lastError}`);
-						continue; // Versuche nächsten Endpunkt
+						continue;
 					}
 				}
 
-				// Wenn alle Endpunkte fehlgeschlagen sind
 				throw new Error(
-					`Alle API-Endpunkte fehlgeschlagen. Letzter Fehler: ${lastError}`
+					`Alle PHP-Proxy Endpunkte fehlgeschlagen. Letzter Fehler: ${lastError}`
 				);
 			});
 		} catch (error) {
 			console.error(
-				`[FR24] Fehler bei API-Anfrage für ${aircraftRegistration}:`,
+				`[FR24] Fehler bei PHP-Proxy API-Anfrage für ${aircraftRegistration}:`,
 				error
 			);
 			updateFetchStatus(
@@ -614,7 +832,6 @@ const Flightradar24API = (() => {
 				true
 			);
 
-			// Bei Fehlern leeres Datenarray zurückgeben
 			return { data: [] };
 		}
 	};
@@ -880,21 +1097,24 @@ const Flightradar24API = (() => {
 		formatDate,
 		formatTimeFromTimestamp,
 		convertToUnifiedFormat,
+		convertToUnifiedFormatNative, // Neue Native-Konvertierung
 		// Konfiguration für Debugging
 		getConfig: () => ({ ...config }),
 		updateConfig: (newConfig) => Object.assign(config, newConfig),
 		// DEBUG-Funktion für direktes Testen
 		testAPI: async (registration = "D-AIBL", date = "2025-08-05") => {
 			console.log(
-				`[FR24] 🧪 === DEBUG TEST FÜR ${registration} AM ${date} ===`
+				`[FR24] 🧪 === NATIVE API DEBUG TEST FÜR ${registration} AM ${date} ===`
 			);
 
 			try {
 				const result = await getAircraftFlights(registration, date);
-				console.log(`[FR24] 🧪 Test-Ergebnis:`, result);
+				console.log(`[FR24] 🧪 Native Test-Ergebnis:`, result);
 
 				if (result.data && result.data.length > 0) {
-					console.log(`[FR24] 🧪 ✅ ${result.data.length} Flüge gefunden!`);
+					console.log(
+						`[FR24] 🧪 ✅ ${result.data.length} Native Flüge gefunden!`
+					);
 					result.data.forEach((flight, index) => {
 						const dep = flight.flightPoints.find((p) => p.departurePoint);
 						const arr = flight.flightPoints.find((p) => p.arrivalPoint);
@@ -905,42 +1125,31 @@ const Flightradar24API = (() => {
 						);
 					});
 				} else {
-					console.log(`[FR24] 🧪 ❌ Keine Flüge gefunden`);
+					console.log(`[FR24] 🧪 ❌ Keine Native Flüge gefunden`);
 				}
 
 				return result;
 			} catch (error) {
-				console.error(`[FR24] 🧪 ❌ Test fehlgeschlagen:`, error);
+				console.error(`[FR24] 🧪 ❌ Native Test fehlgeschlagen:`, error);
 				return { data: [], error: error.message };
 			}
 		},
-		// Direkte API-Endpunkt-Tests
+		// Direkte API-Endpunkt-Tests für PHP-Proxy
 		testRawAPI: async (registration = "D-AIBL") => {
-			console.log(`[FR24] 🔍 === RAW API TEST FÜR ${registration} ===`);
+			console.log(`[FR24] 🔍 === PHP-PROXY TEST FÜR ${registration} ===`);
 
-			// Teste verschiedene API-Endpunkte direkt
 			const endpoints = [
-				`${config.baseUrl}/flights/list-by-aircraft?reg=${registration}&limit=50`,
-				`${config.baseUrl}/aircraft/details?reg=${registration}`,
-				`${config.baseUrl}/search?query=${registration}&limit=20`,
-				`${config.baseUrl}/flights?reg=${registration}`,
-				`${config.baseUrl}/aircraft?reg=${registration}`,
+				`sync/flightradar24-proxy.php?registration=${registration}&date=2025-08-07&endpoint=history`,
+				`sync/flightradar24-proxy.php?registration=${registration}&date=2025-08-07&endpoint=aircraft`,
+				`sync/flightradar24-proxy.php?registration=${registration}&date=2025-08-07&endpoint=flights`,
 			];
-
-			const options = {
-				method: "GET",
-				headers: {
-					"x-rapidapi-key": config.rapidApiKey,
-					"x-rapidapi-host": config.rapidApiHost,
-				},
-			};
 
 			for (let i = 0; i < endpoints.length; i++) {
 				const url = endpoints[i];
-				console.log(`[FR24] 🔍 Teste Endpunkt ${i + 1}: ${url}`);
+				console.log(`[FR24] 🔍 Teste PHP-Proxy Endpunkt ${i + 1}: ${url}`);
 
 				try {
-					const response = await fetch(url, options);
+					const response = await fetch(url);
 					console.log(
 						`[FR24] 🔍 Status ${i + 1}: ${response.status} ${
 							response.statusText
@@ -950,23 +1159,32 @@ const Flightradar24API = (() => {
 					if (response.ok) {
 						const text = await response.text();
 						console.log(
-							`[FR24] 🔍 Response ${i + 1} (${text.length} chars):`,
+							`[FR24] 🔍 PHP-Proxy Response ${i + 1} (${text.length} chars):`,
 							text.substring(0, 500)
 						);
 
 						try {
 							const data = JSON.parse(text);
-							console.log(`[FR24] 🔍 Parsed ${i + 1}:`, data);
+							console.log(`[FR24] 🔍 PHP-Proxy Parsed ${i + 1}:`, data);
+
+							if (data.success && data.data) {
+								console.log(`[FR24] 🔍 ✅ Endpunkt ${i + 1} erfolgreich!`);
+							} else {
+								console.log(
+									`[FR24] 🔍 ⚠️ Endpunkt ${i + 1}: ${
+										data.error || "Keine Daten"
+									}`
+								);
+							}
 						} catch (e) {
 							console.log(`[FR24] 🔍 JSON Parse Error ${i + 1}:`, e.message);
 						}
 					}
 				} catch (error) {
-					console.error(`[FR24] 🔍 Error ${i + 1}:`, error.message);
+					console.error(`[FR24] 🔍 PHP-Proxy Error ${i + 1}:`, error.message);
 				}
 
-				// Warte zwischen Anfragen
-				await new Promise((resolve) => setTimeout(resolve, 2000));
+				await new Promise((resolve) => setTimeout(resolve, 1000));
 			}
 		},
 	};

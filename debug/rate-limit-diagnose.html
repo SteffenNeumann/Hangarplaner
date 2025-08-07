@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="de">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>FR24 Rate Limiting Diagnose</title>
+		<style>
+			body {
+				font-family: monospace;
+				background: #1a1a1a;
+				color: #00ff00;
+				padding: 20px;
+				line-height: 1.6;
+			}
+			.status {
+				border: 1px solid #333;
+				margin: 10px 0;
+				padding: 15px;
+				background: #222;
+			}
+			.success {
+				border-color: #00ff00;
+			}
+			.warning {
+				border-color: #ffaa00;
+				color: #ffaa00;
+			}
+			.error {
+				border-color: #ff0000;
+				color: #ff0000;
+			}
+			.info {
+				border-color: #00aaff;
+				color: #00aaff;
+			}
+			button {
+				background: #333;
+				color: #fff;
+				border: none;
+				padding: 10px 20px;
+				margin: 5px;
+				cursor: pointer;
+			}
+			button:hover {
+				background: #555;
+			}
+			pre {
+				background: #000;
+				padding: 10px;
+				overflow-x: auto;
+			}
+			.timestamp {
+				color: #666;
+				font-size: 0.9em;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>🚦 FR24 Rate Limiting Diagnose</h1>
+
+		<div class="status info">
+			<h3>📊 Rate Limiting Status (FR24: 10 Requests/Minute)</h3>
+			<p>Optimierte Wartezeiten für 10 req/min Limit:</p>
+			<ul>
+				<li>
+					Client-seitig: <strong>6.5 Sekunden</strong> = 9 req/min (sicher)
+				</li>
+				<li>Server-seitig: <strong>7 Sekunden</strong> pro IP</li>
+				<li>
+					Retry bei 429: <strong>9, 12, 15 Sekunden</strong> (linear backoff)
+				</li>
+				<li>Globale Sperre: <strong>1s Burst-Schutz</strong> nur</li>
+				<li>FR24 Limit: <strong>10 Requests pro Minute</strong></li>
+			</ul>
+		</div>
+
+		<div class="status">
+			<h3>🧪 Test-Funktionen</h3>
+			<button onclick="testSingleRequest()">🔍 Einzel-Request testen</button>
+			<button onclick="testRateLimiting()">⏱️ Rate Limiting testen</button>
+			<button onclick="checkProxyStatus()">📡 Proxy Status prüfen</button>
+			<button onclick="clearCache()">🗑️ Cache leeren</button>
+		</div>
+
+		<div class="status">
+			<h3>📝 Live Log</h3>
+			<div
+				id="log"
+				style="
+					height: 400px;
+					overflow-y: auto;
+					background: #000;
+					padding: 10px;
+					white-space: pre-wrap;
+				"></div>
+		</div>
+
+		<script>
+			const logDiv = document.getElementById("log");
+
+			function addLog(message, type = "info") {
+				const timestamp = new Date().toLocaleTimeString();
+				const colors = {
+					info: "#00ff00",
+					warning: "#ffaa00",
+					error: "#ff0000",
+					success: "#00aaff",
+				};
+
+				const logEntry = `[${timestamp}] ${message}\n`;
+				logDiv.innerHTML += `<span style="color: ${
+					colors[type] || "#00ff00"
+				}">${logEntry}</span>`;
+				logDiv.scrollTop = logDiv.scrollHeight;
+			}
+
+			async function testSingleRequest() {
+				addLog("🔍 === EINZEL-REQUEST TEST ===", "info");
+
+				const registration = "D-AIBL";
+				const date = "2025-08-07";
+				const url = `sync/flightradar24-proxy.php?registration=${registration}&date=${date}&endpoint=flights`;
+
+				addLog(`Testing: ${url}`, "info");
+
+				try {
+					const startTime = Date.now();
+					const response = await fetch(url);
+					const endTime = Date.now();
+					const duration = endTime - startTime;
+
+					addLog(
+						`HTTP ${response.status} - ${duration}ms`,
+						response.ok ? "success" : "error"
+					);
+
+					const data = await response.text();
+
+					if (response.ok) {
+						const parsed = JSON.parse(data);
+						if (parsed.success) {
+							addLog(
+								`✅ Erfolg: ${
+									parsed.data ? Object.keys(parsed.data).length : 0
+								} Datensätze`,
+								"success"
+							);
+						} else {
+							addLog(`❌ API Fehler: ${parsed.error}`, "error");
+						}
+					} else {
+						addLog(`❌ HTTP Fehler: ${data}`, "error");
+					}
+				} catch (error) {
+					addLog(`❌ Network Fehler: ${error.message}`, "error");
+				}
+			}
+
+			async function testRateLimiting() {
+				addLog("⏱️ === RATE LIMITING TEST (10 req/min) ===", "warning");
+				addLog("Teste 3 Requests mit 7s Abstand...", "info");
+
+				const registration = "D-ACNL";
+				const date = "2025-08-08";
+
+				for (let i = 1; i <= 3; i++) {
+					addLog(`Request ${i}/3 startet...`, "info");
+
+					const startTime = Date.now();
+
+					try {
+						const response = await fetch(
+							`sync/flightradar24-proxy.php?registration=${registration}&date=${date}&endpoint=flights`
+						);
+						const endTime = Date.now();
+						const duration = endTime - startTime;
+
+						addLog(
+							`Request ${i}: HTTP ${response.status} - ${duration}ms`,
+							response.ok ? "success" : "warning"
+						);
+
+						if (!response.ok) {
+							const errorData = await response.text();
+							addLog(`Fehler ${i}: ${errorData}`, "error");
+						} else {
+							addLog(`✅ Request ${i} erfolgreich`, "success");
+						}
+					} catch (error) {
+						addLog(`Request ${i} failed: ${error.message}`, "error");
+					}
+
+					// 7 Sekunden Pause zwischen Tests (entspricht Server-Rate-Limit)
+					if (i < 3) {
+						addLog(
+							`Warte 7s vor nächstem Request (Rate Limit: 10/min)...`,
+							"info"
+						);
+
+						// Countdown anzeigen
+						for (let countdown = 7; countdown > 0; countdown--) {
+							await new Promise((resolve) => setTimeout(resolve, 1000));
+							if (countdown > 1) {
+								addLog(`Noch ${countdown - 1}s...`, "info");
+							}
+						}
+					}
+				}
+
+				addLog(
+					"⏱️ Rate Limiting Test beendet - Sollten keine 429 Fehler sein!",
+					"success"
+				);
+			}
+
+			async function checkProxyStatus() {
+				addLog("📡 === PROXY STATUS CHECK ===", "info");
+
+				try {
+					const response = await fetch("sync/flightradar24-proxy.php?debug=1");
+					const data = await response.text();
+
+					addLog(`Proxy Response:`, "info");
+					addLog(data, "success");
+				} catch (error) {
+					addLog(`Proxy Check fehlgeschlagen: ${error.message}`, "error");
+				}
+			}
+
+			async function clearCache() {
+				addLog("🗑️ Cache wird geleert...", "warning");
+				// Simuliere Cache-Clearing
+				localStorage.clear();
+				sessionStorage.clear();
+				addLog("✅ Local Storage geleert", "success");
+			}
+
+			// Automatischer Start
+			addLog("🚦 FR24 Rate Limiting Diagnose gestartet", "success");
+			addLog("Klicken Sie auf die Buttons um Tests zu starten", "info");
+		</script>
+	</body>
+</html>

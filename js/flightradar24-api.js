@@ -8,7 +8,7 @@ const Flightradar24API = (() => {
 	// API-Konfiguration für PHP-Proxy
 	const config = {
 		debugMode: true,
-		rateLimitDelay: 3000, // 3 Sekunden zwischen Anfragen (erhöht von 1000ms)
+		rateLimitDelay: 6500, // 6.5 Sekunden = 9 Requests/Minute (sicher unter 10/min)
 		// PHP-Proxy-Pfad (relativ zur Website)
 		proxyPath: "sync/flightradar24-proxy.php",
 	};

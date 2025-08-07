@@ -54,10 +54,10 @@ function makeFlightradar24Request($url, $maxRetries = 3) {
         // Bei 429 (Rate Limit) - warte und versuche erneut
         if ($httpCode === 429) {
             $retryCount++;
-            $waitTime = pow(2, $retryCount); // Exponential backoff: 2, 4, 8 Sekunden
+            $waitTime = 6 + ($retryCount * 3); // 9, 12, 15 Sekunden (weniger aggressiv)
             
             if ($retryCount < $maxRetries) {
-                error_log("Rate limit hit, waiting {$waitTime}s before retry {$retryCount}/{$maxRetries}");
+                error_log("FR24 Rate limit hit (10/min), waiting {$waitTime}s before retry {$retryCount}/{$maxRetries} for URL: $url");
                 sleep($waitTime);
                 continue;
             } else {
@@ -161,20 +161,41 @@ function logRequest($params, $success, $error = null) {
 
 // Hauptverarbeitung
 try {
-    // Rate Limiting: Max 1 Request pro Sekunde pro IP
-    $lockFile = __DIR__ . '/locks/rate_limit_' . md5($_SERVER['REMOTE_ADDR'] ?? 'unknown') . '.lock';
-    $lockDir = dirname($lockFile);
+    // GLOBALES Rate Limiting: Verhindere Burst-Requests (optional bei 10/min)
+    $globalLockFile = __DIR__ . '/locks/global_rate_limit.lock';
+    $lockDir = dirname($globalLockFile);
     if (!is_dir($lockDir)) {
         mkdir($lockDir, 0755, true);
     }
+    
+    // Nur kurze globale Sperre (1s) um Burst-Requests zu vermeiden
+    if (file_exists($globalLockFile)) {
+        $lockTime = filemtime($globalLockFile);
+        $timeSinceLock = time() - $lockTime;
+        
+        // Entferne alte Sperren (älter als 10 Sekunden)
+        if ($timeSinceLock > 10) {
+            unlink($globalLockFile);
+        } else if ($timeSinceLock < 1) {
+            error_log("FR24 Global burst protection: waiting 1s...");
+            sleep(1);
+        }
+    }
+    
+    // Setze globale Sperre
+    touch($globalLockFile);
+    
+    // Rate Limiting: 6.5s zwischen Requests (max 9/min, unter FR24 Limit von 10/min)
+    $lockFile = __DIR__ . '/locks/rate_limit_' . md5($_SERVER['REMOTE_ADDR'] ?? 'unknown') . '.lock';
     
     // Prüfe letzten Request
     if (file_exists($lockFile)) {
         $lastRequest = (int)file_get_contents($lockFile);
         $timeSinceLastRequest = time() - $lastRequest;
         
-        if ($timeSinceLastRequest < 2) { // 2 Sekunden Wartezeit
-            $waitTime = 2 - $timeSinceLastRequest;
+        if ($timeSinceLastRequest < 7) { // 7 Sekunden Wartezeit (sicher unter 10/min)
+            $waitTime = 7 - $timeSinceLastRequest;
+            error_log("FR24 Rate Limiter: Warte {$waitTime}s für IP " . $_SERVER['REMOTE_ADDR'] . " (10 req/min limit)");
             sleep($waitTime);
         }
     }
@@ -202,6 +223,11 @@ try {
     // API-Request ausführen
     $response = makeFlightradar24Request($apiUrl);
     
+    // Globale Sperre entfernen
+    if (file_exists($globalLockFile)) {
+        unlink($globalLockFile);
+    }
+    
     // Response validieren
     $decodedResponse = json_decode($response, true);
     if (json_last_error() !== JSON_ERROR_NONE) {
@@ -227,6 +253,12 @@ try {
     echo json_encode($result);
     
 } catch (Exception $e) {
+    // Globale Sperre entfernen
+    $globalLockFile = __DIR__ . '/locks/global_rate_limit.lock';
+    if (file_exists($globalLockFile)) {
+        unlink($globalLockFile);
+    }
+    
     // Fehler loggen
     if (isset($params)) {
         logRequest($params, false, $e->getMessage());

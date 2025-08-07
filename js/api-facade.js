@@ -1,14 +1,14 @@
 /**
  * API-Fassade für die einheitliche Handhabung verschiedener Flugdaten-APIs
  * Dient als zentraler Zugangspunkt für alle Flugdatenabfragen
- * ERWEITERT: AeroDataBox und Flightradar24 unterstützt
+ * ERWEITERT: AeroDataBox, Aviationstack und API Market unterstützt
  */
 
 // Selbst ausführende Funktion für Kapselung
 const FlightDataAPI = (function () {
-	// Erweiterte Konfiguration - AeroDataBox und Flightradar24 als Provider
+	// Erweiterte Konfiguration - AeroDataBox, Aviationstack und API Market als Provider
 	const config = {
-		providers: ["aerodatabox", "flightradar24", "apimarket"],
+		providers: ["aerodatabox", "aviationstack", "apimarket"],
 		activeProvider: "aerodatabox", // Standard: AeroDataBox
 	};
 
@@ -62,12 +62,14 @@ const FlightDataAPI = (function () {
 			}
 
 			// Provider-spezifische API-Aufrufe
-			if (config.activeProvider === "flightradar24") {
-				return await handleFlightradar24Request(
+			if (config.activeProvider === "aviationstack") {
+				return await handleAviationstackRequest(
 					aircraftId,
 					currentDate,
 					nextDate
 				);
+			} else if (config.activeProvider === "apimarket") {
+				return await handleAPIMarketRequest(aircraftId, currentDate, nextDate);
 			} else {
 				// Standard: AeroDataBox
 				return await handleAeroDataBoxRequest(
@@ -93,171 +95,169 @@ const FlightDataAPI = (function () {
 	};
 
 	/**
-	 * Behandelt Flightradar24 API-Anfragen - VEREINFACHT: Alle Flüge anzeigen
+	 * Behandelt Aviationstack API-Anfragen - OPTIMAL für Übernachtungslogik
 	 */
-	const handleFlightradar24Request = async function (
+	const handleAviationstackRequest = async function (
 		aircraftId,
 		currentDate,
 		nextDate
 	) {
-		// Sicherstellen, dass Flightradar24API verfügbar ist
-		if (!window.Flightradar24API) {
+		// Sicherstellen, dass AviationstackAPI verfügbar ist
+		if (!window.aviationstackAPI) {
 			throw new Error(
-				"Flightradar24API ist nicht verfügbar. Bitte laden Sie die flightradar24-api.js Datei."
+				"AviationstackAPI ist nicht verfügbar. Bitte laden Sie die aviationstack-api.js Datei."
 			);
 		}
 
 		console.log(
-			`[API-FASSADE] Verwende Flightradar24 API für ${aircraftId} - VEREINFACHT: Alle Flüge`
+			`[API-FASSADE] Verwende Aviationstack API für ${aircraftId} - Übernachtungslogik mit ${currentDate} und ${nextDate}`
 		);
 
-		// Hole aktuellen Flughafen für Filterung
+		// Hole aktuellen Flughafen für Kontext
 		const selectedAirport =
 			document.getElementById("airportCodeInput")?.value || "MUC";
 		console.log(`[API-FASSADE] Gewählter Flughafen: ${selectedAirport}`);
 
-		// VEREINFACHT: Hole einfach alle Flugdaten für beide Tage
-		const [currentDayData, nextDayData] = await Promise.all([
-			window.Flightradar24API.getAircraftFlights(aircraftId, currentDate),
-			window.Flightradar24API.getAircraftFlights(aircraftId, nextDate),
-		]);
+		try {
+			// Verwende die spezialisierte Übernachtungslogik der Aviationstack API
+			const overnightData = await window.aviationstackAPI.getOvernightFlights(
+				aircraftId,
+				selectedAirport
+			);
 
-		const currentDayFlights = currentDayData.data || [];
-		const nextDayFlights = nextDayData.data || [];
-		const allFlights = [...currentDayFlights, ...nextDayFlights];
+			console.log(
+				`[API-FASSADE] Aviationstack Übernachtungsdaten:`,
+				overnightData
+			);
 
-		console.log(
-			`[API-FASSADE] Gefundene Flüge: ${currentDayFlights.length} am ${currentDate}, ${nextDayFlights.length} am ${nextDate}`
-		);
+			// Wenn keine Daten gefunden wurden
+			if (!overnightData.today.length && !overnightData.tomorrow.length) {
+				console.log(`[API-FASSADE] Keine Flüge für ${aircraftId} gefunden`);
+				return {
+					originCode: "",
+					destCode: "",
+					departureTime: "",
+					arrivalTime: "",
+					positionText: `Keine Flüge für ${aircraftId} gefunden`,
+					data: [],
+					_isUtc: true,
+					_source: "aviationstack",
+					_noDataFound: true,
+				};
+			}
 
-		if (allFlights.length === 0) {
-			console.log(`[API-FASSADE] Keine Flüge für ${aircraftId} gefunden`);
+			// Extrahiere Ankunfts- und Abflugdaten für UI
+			let arrivalTime = "--:--";
+			let departureTime = "--:--";
+			let originCode = "";
+			let destCode = "";
+			let positionText = "";
+
+			// Letzter Flug heute (Ankunft)
+			if (overnightData.today.length > 0) {
+				const lastToday = overnightData.today[overnightData.today.length - 1];
+				if (lastToday.arrival.scheduled) {
+					arrivalTime = new Date(
+						lastToday.arrival.scheduled
+					).toLocaleTimeString("de-DE", {
+						hour: "2-digit",
+						minute: "2-digit",
+					});
+				}
+				originCode = lastToday.departure.iata || "";
+				destCode = lastToday.arrival.iata || "";
+			}
+
+			// Erster Flug morgen (Abflug)
+			if (overnightData.tomorrow.length > 0) {
+				const firstTomorrow = overnightData.tomorrow[0];
+				if (firstTomorrow.departure.scheduled) {
+					departureTime = new Date(
+						firstTomorrow.departure.scheduled
+					).toLocaleTimeString("de-DE", {
+						hour: "2-digit",
+						minute: "2-digit",
+					});
+				}
+				// Falls noch kein Origin gesetzt, verwende den Abflugort von morgen
+				if (!originCode) {
+					originCode = firstTomorrow.departure.iata || "";
+				}
+				// Zielort für morgen
+				if (firstTomorrow.arrival.iata) {
+					destCode = firstTomorrow.arrival.iata || destCode;
+				}
+			}
+
+			// Position Text erstellen
+			if (overnightData.overnight) {
+				positionText = `Übernachtung: ${overnightData.today.length} heute, ${overnightData.tomorrow.length} morgen`;
+			} else if (
+				overnightData.today.length > 0 ||
+				overnightData.tomorrow.length > 0
+			) {
+				positionText = `${
+					overnightData.today.length + overnightData.tomorrow.length
+				} Flüge gefunden`;
+			}
+
+			// Alle Flüge für Detailansicht kombinieren
+			const allFlights = [...overnightData.today, ...overnightData.tomorrow];
+
+			return {
+				originCode,
+				destCode,
+				departureTime,
+				arrivalTime,
+				positionText,
+				data: allFlights,
+				_isUtc: true,
+				_source: "aviationstack",
+				_overnightData: overnightData,
+				_airportFilter: selectedAirport,
+			};
+		} catch (error) {
+			console.error(`[API-FASSADE] Fehler bei Aviationstack-Anfrage:`, error);
 			return {
 				originCode: "",
 				destCode: "",
 				departureTime: "",
 				arrivalTime: "",
-				positionText: `Keine Flüge für ${aircraftId} gefunden`,
+				positionText: "Fehler beim Laden der Flugdaten",
 				data: [],
 				_isUtc: true,
-				_source: "flightradar24",
-				_noDataFound: true,
+				_source: "aviationstack",
+				_error: error.message,
+				_clearFields: true,
 			};
 		}
+	};
 
-		// VEREINFACHT: Filtere Flüge nach dem gewählten Flughafen (Ankunft ODER Abflug)
-		const airportFlights = allFlights.filter((flight) => {
-			const depPoint = flight.flightPoints?.find((p) => p.departurePoint);
-			const arrPoint = flight.flightPoints?.find((p) => p.arrivalPoint);
+	/**
+	 * Behandelt API Market Anfragen - Placeholder für zukünftige Integration
+	 */
+	const handleAPIMarketRequest = async function (
+		aircraftId,
+		currentDate,
+		nextDate
+	) {
+		console.log(`[API-FASSADE] API Market Provider gewählt für ${aircraftId}`);
 
-			const departureAirport = depPoint?.iataCode;
-			const arrivalAirport = arrPoint?.iataCode;
+		// Placeholder - API Market ist noch nicht implementiert
+		console.warn("[API-FASSADE] API Market ist noch nicht implementiert");
 
-			// Flug ist relevant, wenn er VOM oder ZUM gewählten Flughafen ist
-			return (
-				departureAirport === selectedAirport ||
-				arrivalAirport === selectedAirport
-			);
-		});
-
-		console.log(
-			`[API-FASSADE] ${airportFlights.length} von ${allFlights.length} Flügen sind relevant für Flughafen ${selectedAirport}`
-		);
-
-		// Debug-Ausgabe aller relevanten Flüge
-		if (airportFlights.length > 0) {
-			console.log(`[API-FASSADE] Relevante Flüge für ${selectedAirport}:`);
-			airportFlights.forEach((flight, index) => {
-				const depPoint = flight.flightPoints?.find((p) => p.departurePoint);
-				const arrPoint = flight.flightPoints?.find((p) => p.arrivalPoint);
-				const depTime =
-					depPoint?.departure?.timings?.[0]?.value?.substring(0, 5) || "--:--";
-				const arrTime =
-					arrPoint?.arrival?.timings?.[0]?.value?.substring(0, 5) || "--:--";
-
-				console.log(
-					`[API-FASSADE] ${index + 1}. ${flight.scheduledDepartureDate}: ${
-						depPoint?.iataCode
-					} (${depTime}) → ${arrPoint?.iataCode} (${arrTime}) [${
-						flight.flightDesignator?.fullFlightNumber
-					}]`
-				);
-			});
-		}
-
-		// VEREINFACHT: Nimm einfach den ersten und letzten relevanten Flug für die Anzeige
-		if (airportFlights.length > 0) {
-			// Sortiere nach Datum und Zeit
-			const sortedFlights = airportFlights.sort((a, b) => {
-				const dateA = a.scheduledDepartureDate || currentDate;
-				const dateB = b.scheduledDepartureDate || currentDate;
-
-				if (dateA !== dateB) return dateA.localeCompare(dateB);
-
-				// Bei gleichem Datum nach Zeit sortieren
-				const depPointA = a.flightPoints?.find((p) => p.departurePoint);
-				const depPointB = b.flightPoints?.find((p) => p.departurePoint);
-				const timeA = depPointA?.departure?.timings?.[0]?.value || "00:00";
-				const timeB = depPointB?.departure?.timings?.[0]?.value || "00:00";
-
-				return timeA.localeCompare(timeB);
-			});
-
-			const firstFlight = sortedFlights[0];
-			const lastFlight = sortedFlights[sortedFlights.length - 1];
-
-			const firstDepPoint = firstFlight.flightPoints?.find(
-				(p) => p.departurePoint
-			);
-			const firstArrPoint = firstFlight.flightPoints?.find(
-				(p) => p.arrivalPoint
-			);
-			const lastDepPoint = lastFlight.flightPoints?.find(
-				(p) => p.departurePoint
-			);
-			const lastArrPoint = lastFlight.flightPoints?.find((p) => p.arrivalPoint);
-
-			return {
-				originCode: firstDepPoint?.iataCode || "",
-				destCode: lastArrPoint?.iataCode || "",
-				departureTime:
-					firstDepPoint?.departure?.timings?.[0]?.value?.substring(0, 5) ||
-					"--:--",
-				arrivalTime:
-					lastArrPoint?.arrival?.timings?.[0]?.value?.substring(0, 5) ||
-					"--:--",
-				positionText: `${sortedFlights.length} Flüge für ${selectedAirport} gefunden`,
-				data: sortedFlights, // Alle relevanten Flüge zurückgeben
-				_isUtc: true,
-				_source: "flightradar24",
-				_allFlights: allFlights, // Alle Flüge für Debug-Zwecke
-				_airportFilter: selectedAirport,
-			};
-		} else {
-			// Wenn keine Flüge für den gewählten Flughafen gefunden wurden, zeige trotzdem alle Flüge
-			console.log(
-				`[API-FASSADE] Keine Flüge für ${selectedAirport} gefunden, zeige alle gefundenen Flüge`
-			);
-
-			const firstFlight = allFlights[0];
-			const depPoint = firstFlight.flightPoints?.find((p) => p.departurePoint);
-			const arrPoint = firstFlight.flightPoints?.find((p) => p.arrivalPoint);
-
-			return {
-				originCode: depPoint?.iataCode || "",
-				destCode: arrPoint?.iataCode || "",
-				departureTime:
-					depPoint?.departure?.timings?.[0]?.value?.substring(0, 5) || "--:--",
-				arrivalTime:
-					arrPoint?.arrival?.timings?.[0]?.value?.substring(0, 5) || "--:--",
-				positionText: `${allFlights.length} Flüge gefunden (keine für ${selectedAirport})`,
-				data: allFlights,
-				_isUtc: true,
-				_source: "flightradar24",
-				_noAirportMatch: true,
-				_airportFilter: selectedAirport,
-			};
-		}
+		return {
+			originCode: "",
+			destCode: "",
+			departureTime: "",
+			arrivalTime: "",
+			positionText: "API Market noch nicht implementiert",
+			data: [],
+			_isUtc: true,
+			_source: "apimarket",
+			_notImplemented: true,
+			_clearFields: true,
+		};
 	};
 
 	/**
@@ -322,14 +322,37 @@ const FlightDataAPI = (function () {
 		);
 
 		try {
-			if (config.activeProvider === "flightradar24") {
-				if (!window.Flightradar24API) {
-					throw new Error("Flightradar24API ist nicht verfügbar");
+			if (config.activeProvider === "aviationstack") {
+				if (!window.aviationstackAPI) {
+					throw new Error("AviationstackAPI ist nicht verfügbar");
 				}
-				return await window.Flightradar24API.getAircraftFlights(
-					aircraftId,
-					date
-				);
+				// Prüfe ob Datum in der Zukunft liegt
+				const today = new Date();
+				const queryDate = new Date(date);
+				const isNextDate = queryDate > today;
+
+				if (isNextDate) {
+					// Zukünftige Flüge
+					const flights = await window.aviationstackAPI.getFutureFlights(
+						aircraftId,
+						{
+							flight_date: date,
+						}
+					);
+					return { data: flights };
+				} else {
+					// Aktuelle/historische Flüge
+					const flights = await window.aviationstackAPI.getCurrentFlights(
+						aircraftId,
+						{
+							flight_date: date,
+						}
+					);
+					return { data: flights };
+				}
+			} else if (config.activeProvider === "apimarket") {
+				console.warn("[API-FASSADE] API Market noch nicht implementiert");
+				return { data: [], _notImplemented: true };
 			} else {
 				// Standard: AeroDataBox
 				if (!window.AeroDataBoxAPI) {

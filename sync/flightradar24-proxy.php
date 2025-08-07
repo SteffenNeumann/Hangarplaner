@@ -21,41 +21,58 @@ const FR24_API_BASE = 'https://fr24api.flightradar24.com/api';
 const FR24_API_TOKEN = '01988313-fa93-7159-9a43-872a2a31e88b|Kt9JoOnJRS6R1QMUmiu9gFmYh9PSh7rD1tLqgeNZ58450385';
 
 /**
- * Macht cURL-Request zur Flightradar24 API
+ * Macht cURL-Request zur Flightradar24 API mit Retry-Logik
  */
-function makeFlightradar24Request($url) {
-    $ch = curl_init();
+function makeFlightradar24Request($url, $maxRetries = 3) {
+    $retryCount = 0;
     
-    curl_setopt_array($ch, [
-        CURLOPT_URL => $url,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 30,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_HTTPHEADER => [
-            'Authorization: Bearer ' . FR24_API_TOKEN,
+    while ($retryCount < $maxRetries) {
+        // FR24 API Token
+        $fr24_token = '01988313-fa93-7159-9a43-872a2a31e88b|Kt9JoOnJRS6R1QMUmiu9gFmYh9PSh7rD1tLqgeNZ58450385';
+        
+        // FR24 API Headers
+        $curl = curl_init();
+        curl_setopt($curl, CURLOPT_URL, $url);
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($curl, CURLOPT_HTTPHEADER, [
+            'Authorization: Bearer ' . $fr24_token,
             'Accept: application/json',
             'Accept-Version: v1',
-            'User-Agent: Hangarplaner/1.0'
-        ],
-        CURLOPT_SSL_VERIFYPEER => true,
-        CURLOPT_SSL_VERIFYHOST => 2
-    ]);
-    
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $error = curl_error($ch);
-    
-    curl_close($ch);
-    
-    if ($error) {
-        throw new Exception("cURL Error: " . $error);
+            'User-Agent: HangarPlanner/3.0 FlightAPI/Native'
+        ]);
+        
+        $response = curl_exec($curl);
+        $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        $error = curl_error($curl);
+        
+        curl_close($curl);
+        
+        if ($error) {
+            throw new Exception("cURL Error: " . $error);
+        }
+        
+        // Bei 429 (Rate Limit) - warte und versuche erneut
+        if ($httpCode === 429) {
+            $retryCount++;
+            $waitTime = pow(2, $retryCount); // Exponential backoff: 2, 4, 8 Sekunden
+            
+            if ($retryCount < $maxRetries) {
+                error_log("Rate limit hit, waiting {$waitTime}s before retry {$retryCount}/{$maxRetries}");
+                sleep($waitTime);
+                continue;
+            } else {
+                throw new Exception("HTTP Error: $httpCode - $response");
+            }
+        }
+        
+        if ($httpCode !== 200) {
+            throw new Exception("HTTP Error: " . $httpCode . " - " . $response);
+        }
+        
+        return $response;
     }
     
-    if ($httpCode !== 200) {
-        throw new Exception("HTTP Error: " . $httpCode . " - " . $response);
-    }
-    
-    return $response;
+    throw new Exception("Max retries exceeded");
 }
 
 /**
@@ -144,6 +161,27 @@ function logRequest($params, $success, $error = null) {
 
 // Hauptverarbeitung
 try {
+    // Rate Limiting: Max 1 Request pro Sekunde pro IP
+    $lockFile = __DIR__ . '/locks/rate_limit_' . md5($_SERVER['REMOTE_ADDR'] ?? 'unknown') . '.lock';
+    $lockDir = dirname($lockFile);
+    if (!is_dir($lockDir)) {
+        mkdir($lockDir, 0755, true);
+    }
+    
+    // Prüfe letzten Request
+    if (file_exists($lockFile)) {
+        $lastRequest = (int)file_get_contents($lockFile);
+        $timeSinceLastRequest = time() - $lastRequest;
+        
+        if ($timeSinceLastRequest < 2) { // 2 Sekunden Wartezeit
+            $waitTime = 2 - $timeSinceLastRequest;
+            sleep($waitTime);
+        }
+    }
+    
+    // Speichere aktuellen Zeitstempel
+    file_put_contents($lockFile, time());
+    
     // Parameter validieren
     $params = validateParams();
     

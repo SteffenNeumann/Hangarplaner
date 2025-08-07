@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // API-Konfiguration
-const FR24_API_BASE = 'https://fr24api.flightradar24.com';
+const FR24_API_BASE = 'https://fr24api.flightradar24.com/api';
 const FR24_API_TOKEN = '01988313-fa93-7159-9a43-872a2a31e88b|Kt9JoOnJRS6R1QMUmiu9gFmYh9PSh7rD1tLqgeNZ58450385';
 
 /**
@@ -33,8 +33,8 @@ function makeFlightradar24Request($url) {
         CURLOPT_FOLLOWLOCATION => true,
         CURLOPT_HTTPHEADER => [
             'Authorization: Bearer ' . FR24_API_TOKEN,
-            'Content-Type: application/json',
             'Accept: application/json',
+            'Accept-Version: v1',
             'User-Agent: Hangarplaner/1.0'
         ],
         CURLOPT_SSL_VERIFYPEER => true,
@@ -97,18 +97,23 @@ function buildApiUrl($params) {
     $date = $params['date'];
     $endpoint = $params['endpoint'];
     
+    // Datum in FR24-Format konvertieren (YYYY-MM-DDTHH:MM:SS)
+    $datetime_from = $date . 'T00:00:00';
+    $datetime_to = $date . 'T23:59:59';
+    
     switch ($endpoint) {
         case 'history':
-            return FR24_API_BASE . "/v1/history?registration={$registration}&from={$date}&to={$date}";
-            
-        case 'aircraft':
-            return FR24_API_BASE . "/v1/aircraft/{$registration}/flights?date={$date}";
-            
         case 'flights':
-            return FR24_API_BASE . "/v1/flights?registration={$registration}&date={$date}";
+        case 'aircraft':
+            // Flight Summary API für historische Flugdaten nach Registrierung
+            return FR24_API_BASE . "/flight-summary/full?registrations={$registration}&flight_datetime_from={$datetime_from}&flight_datetime_to={$datetime_to}";
+            
+        case 'live':
+            // Live Flight Positions für aktuelle Flugdaten
+            return FR24_API_BASE . "/live/flight-positions/full?registrations={$registration}";
             
         default:
-            throw new Exception("Unbekannter Endpoint");
+            throw new Exception("Unbekannter Endpoint: $endpoint");
     }
 }
 

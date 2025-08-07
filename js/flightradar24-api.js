@@ -207,6 +207,7 @@ const Flightradar24API = (() => {
 										},
 									],
 								},
+								_rawFlightData: flight, // Für Übernachtungslogik
 							},
 							{
 								departurePoint: false,
@@ -221,6 +222,7 @@ const Flightradar24API = (() => {
 										},
 									],
 								},
+								_rawFlightData: flight, // Für Übernachtungslogik
 							},
 						],
 						legs: [
@@ -434,36 +436,75 @@ const Flightradar24API = (() => {
 	};
 
 	/**
-	 * Hilfsfunktion: Extrahiert Zeit aus einem Flight Point
+	 * Hilfsfunktion: Extrahiert Zeit aus einem Flight Point (FR24 API kompatibel)
 	 * @param {Object} flightPoint - Flight Point Objekt
 	 * @returns {number} Zeit als Minuten seit Mitternacht
 	 */
 	const getTimeFromFlightPoint = (flightPoint) => {
 		if (!flightPoint) return 0;
 
+		// FR24 API: Versuche zuerst neue Datenstruktur mit timings
 		const timings =
 			flightPoint.departure?.timings || flightPoint.arrival?.timings;
-		if (!timings || !timings.length) return 0;
 
-		const timeStr = timings[0].value;
-		const [hours, minutes] = timeStr.split(":").map(Number);
-		return hours * 60 + minutes;
+		if (timings && timings.length > 0) {
+			const timeStr = timings[0].value;
+			const [hours, minutes] = timeStr.split(":").map(Number);
+			return hours * 60 + minutes;
+		}
+
+		// FR24 API Fallback: Direkte Zeitextraktion aus Raw Data
+		const rawData = flightPoint._rawFlightData;
+		if (rawData) {
+			let timeStr = null;
+
+			if (flightPoint.departurePoint && rawData.datetime_takeoff) {
+				const takeoffDate = new Date(rawData.datetime_takeoff);
+				timeStr = takeoffDate.toISOString().substring(11, 16);
+			} else if (flightPoint.arrivalPoint && rawData.datetime_landed) {
+				const landedDate = new Date(rawData.datetime_landed);
+				timeStr = landedDate.toISOString().substring(11, 16);
+			}
+
+			if (timeStr) {
+				const [hours, minutes] = timeStr.split(":").map(Number);
+				return hours * 60 + minutes;
+			}
+		}
+
+		return 0;
 	};
 
 	/**
-	 * Hilfsfunktion: Extrahiert Zeitstring aus einem Flight Point
+	 * Hilfsfunktion: Extrahiert Zeitstring aus einem Flight Point (FR24 API kompatibel)
 	 * @param {Object} flightPoint - Flight Point Objekt
 	 * @returns {string} Zeit als "HH:MM"
 	 */
 	const getTimeStringFromFlightPoint = (flightPoint) => {
 		if (!flightPoint) return "--:--";
 
+		// FR24 API: Versuche zuerst neue Datenstruktur mit timings
 		const timings =
 			flightPoint.departure?.timings || flightPoint.arrival?.timings;
-		if (!timings || !timings.length) return "--:--";
 
-		const timeStr = timings[0].value;
-		return timeStr.substring(0, 5);
+		if (timings && timings.length > 0) {
+			const timeStr = timings[0].value;
+			return timeStr.substring(0, 5);
+		}
+
+		// FR24 API Fallback: Direkte Zeitextraktion aus Raw Data
+		const rawData = flightPoint._rawFlightData;
+		if (rawData) {
+			if (flightPoint.departurePoint && rawData.datetime_takeoff) {
+				const takeoffDate = new Date(rawData.datetime_takeoff);
+				return takeoffDate.toISOString().substring(11, 16);
+			} else if (flightPoint.arrivalPoint && rawData.datetime_landed) {
+				const landedDate = new Date(rawData.datetime_landed);
+				return landedDate.toISOString().substring(11, 16);
+			}
+		}
+
+		return "--:--";
 	};
 
 	/**
@@ -485,6 +526,10 @@ const Flightradar24API = (() => {
 				console.log(
 					`\n[FR24-PROXY] 🏨 === ÜBERNACHTUNGS-PRÜFUNG FÜR ${aircraftId} ===`
 				);
+				console.log(`[FR24-PROXY] Prüfe Station: ${selectedAirport}`);
+				console.log(
+					`[FR24-PROXY] Datum 1: ${currentDate}, Datum 2: ${nextDate}`
+				);
 			}
 
 			const [currentDayData, nextDayData] = await Promise.all([
@@ -503,7 +548,20 @@ const Flightradar24API = (() => {
 			const currentDayFlightsToAirport = currentDayFlights
 				.filter((flight) => {
 					const arrivalPoint = flight.flightPoints?.find((p) => p.arrivalPoint);
-					return arrivalPoint && arrivalPoint.iataCode === selectedAirport;
+					const matches =
+						arrivalPoint && arrivalPoint.iataCode === selectedAirport;
+
+					if (config.debugMode && matches) {
+						console.log(
+							`[FR24-PROXY] ✈️ Ankunft gefunden: ${
+								flight.flightDesignator.fullFlightNumber
+							} → ${selectedAirport} um ${getTimeStringFromFlightPoint(
+								arrivalPoint
+							)}`
+						);
+					}
+
+					return matches;
 				})
 				.sort((a, b) => {
 					const timeA = getTimeFromFlightPoint(
@@ -515,14 +573,28 @@ const Flightradar24API = (() => {
 					return timeB - timeA; // Späteste zuerst
 				});
 
+			if (config.debugMode) {
+				console.log(
+					`[FR24-PROXY] ${currentDayFlightsToAirport.length} Ankünfte an ${selectedAirport} am ${currentDate}`
+				);
+			}
+
 			let overnightArrival = null;
 			let overnightDeparture = null;
 
 			if (currentDayFlightsToAirport.length > 0) {
 				const lastArrivalFlight = currentDayFlightsToAirport[0];
-				const arrivalTime = getTimeFromFlightPoint(
-					lastArrivalFlight.flightPoints.find((p) => p.arrivalPoint)
+				const lastArrivalPoint = lastArrivalFlight.flightPoints.find(
+					(p) => p.arrivalPoint
 				);
+				const arrivalTime = getTimeFromFlightPoint(lastArrivalPoint);
+				const arrivalTimeStr = getTimeStringFromFlightPoint(lastArrivalPoint);
+
+				if (config.debugMode) {
+					console.log(
+						`[FR24-PROXY] 🕐 Letzte Ankunft: ${lastArrivalFlight.flightDesignator.fullFlightNumber} um ${arrivalTimeStr}`
+					);
+				}
 
 				// Prüfe: Gibt es weitere Abflüge am gleichen Tag NACH dieser Ankunft?
 				const sameDayDeparturesAfterArrival = currentDayFlights.filter(
@@ -534,9 +606,27 @@ const Flightradar24API = (() => {
 							return false;
 
 						const departureTime = getTimeFromFlightPoint(departurePoint);
-						return departureTime > arrivalTime;
+						const isAfter = departureTime > arrivalTime;
+
+						if (
+							config.debugMode &&
+							departurePoint.iataCode === selectedAirport
+						) {
+							const depTimeStr = getTimeStringFromFlightPoint(departurePoint);
+							console.log(
+								`[FR24-PROXY] 🛫 Abflug: ${flight.flightDesignator.fullFlightNumber} um ${depTimeStr} (nach ${arrivalTimeStr}? ${isAfter})`
+							);
+						}
+
+						return isAfter;
 					}
 				);
+
+				if (config.debugMode) {
+					console.log(
+						`[FR24-PROXY] ${sameDayDeparturesAfterArrival.length} weitere Abflüge nach letzter Ankunft`
+					);
+				}
 
 				if (sameDayDeparturesAfterArrival.length === 0) {
 					overnightArrival = lastArrivalFlight;
@@ -548,9 +638,20 @@ const Flightradar24API = (() => {
 							const departurePoint = flight.flightPoints?.find(
 								(p) => p.departurePoint
 							);
-							return (
-								departurePoint && departurePoint.iataCode === selectedAirport
-							);
+							const matches =
+								departurePoint && departurePoint.iataCode === selectedAirport;
+
+							if (config.debugMode && matches) {
+								console.log(
+									`[FR24-PROXY] ✈️ Abflug am ${nextDate}: ${
+										flight.flightDesignator.fullFlightNumber
+									} von ${selectedAirport} um ${getTimeStringFromFlightPoint(
+										departurePoint
+									)}`
+								);
+							}
+
+							return matches;
 						})
 						.sort((a, b) => {
 							const timeA = getTimeFromFlightPoint(
@@ -564,8 +665,17 @@ const Flightradar24API = (() => {
 
 					if (nextDayDeparturesFromAirport.length > 0) {
 						overnightDeparture = nextDayDeparturesFromAirport[0];
+						const firstDepPoint = overnightDeparture.flightPoints.find(
+							(p) => p.departurePoint
+						);
+						const firstDepTimeStr = getTimeStringFromFlightPoint(firstDepPoint);
+
 						console.log(
-							`[FR24-PROXY] ✅ Erster Abflug am ${nextDate} gefunden`
+							`[FR24-PROXY] ✅ Erster Abflug am ${nextDate} gefunden: ${overnightDeparture.flightDesignator.fullFlightNumber} um ${firstDepTimeStr}`
+						);
+					} else {
+						console.log(
+							`[FR24-PROXY] ❌ Kein Abflug am ${nextDate} von ${selectedAirport}`
 						);
 					}
 				} else {

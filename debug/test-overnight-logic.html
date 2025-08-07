@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="de">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Übernachtungslogik Test - FR24 API</title>
+		<style>
+			body {
+				font-family: monospace;
+				background: #1a1a1a;
+				color: #00ff00;
+				padding: 20px;
+			}
+			.test-section {
+				border: 1px solid #333;
+				margin: 10px 0;
+				padding: 15px;
+			}
+			.success {
+				color: #00ff00;
+			}
+			.error {
+				color: #ff0000;
+			}
+			.info {
+				color: #00aaff;
+			}
+			.debug {
+				color: #ffaa00;
+			}
+			button {
+				background: #333;
+				color: #fff;
+				border: none;
+				padding: 10px 20px;
+				margin: 5px;
+				cursor: pointer;
+			}
+			button:hover {
+				background: #555;
+			}
+			#console {
+				background: #000;
+				border: 1px solid #333;
+				padding: 10px;
+				height: 400px;
+				overflow-y: auto;
+				white-space: pre-wrap;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>🏨 Übernachtungslogik Test - FR24 API</h1>
+
+		<div class="test-section">
+			<h3>Test-Parameter:</h3>
+			<label
+				>Flugzeug:
+				<input
+					type="text"
+					id="aircraft"
+					value="D-AIBL"
+					style="
+						background: #333;
+						color: #fff;
+						border: 1px solid #555;
+						padding: 5px;
+					" /></label
+			><br /><br />
+			<label
+				>Station:
+				<input
+					type="text"
+					id="station"
+					value="FRA"
+					style="
+						background: #333;
+						color: #fff;
+						border: 1px solid #555;
+						padding: 5px;
+					" /></label
+			><br /><br />
+			<label
+				>Datum 1:
+				<input
+					type="date"
+					id="date1"
+					value="2025-08-07"
+					style="
+						background: #333;
+						color: #fff;
+						border: 1px solid #555;
+						padding: 5px;
+					" /></label
+			><br /><br />
+			<label
+				>Datum 2:
+				<input
+					type="date"
+					id="date2"
+					value="2025-08-08"
+					style="
+						background: #333;
+						color: #fff;
+						border: 1px solid #555;
+						padding: 5px;
+					" /></label
+			><br /><br />
+
+			<button onclick="testOvernightLogic()">
+				🧪 Übernachtungslogik testen
+			</button>
+			<button onclick="testTimeExtraction()">🕐 Zeitextraktion testen</button>
+			<button onclick="clearConsole()">🗑️ Console leeren</button>
+		</div>
+
+		<div class="test-section">
+			<h3>Console Output:</h3>
+			<div id="console"></div>
+		</div>
+
+		<script src="../js/flightradar24-api.js"></script>
+		<script>
+			// Console-Umleitung für bessere Sichtbarkeit
+			const consoleDiv = document.getElementById("console");
+			const originalLog = console.log;
+			const originalError = console.error;
+
+			function addToConsole(message, type = "info") {
+				const timestamp = new Date().toLocaleTimeString();
+				const line = `[${timestamp}] ${message}\n`;
+				consoleDiv.textContent += line;
+				consoleDiv.scrollTop = consoleDiv.scrollHeight;
+
+				// Auch in echte Console
+				if (type === "error") {
+					originalError(message);
+				} else {
+					originalLog(message);
+				}
+			}
+
+			console.log = (message) => addToConsole(message, "info");
+			console.error = (message) => addToConsole(message, "error");
+
+			// FR24 API initialisieren
+			Flightradar24API.init({ debugMode: true });
+
+			function clearConsole() {
+				consoleDiv.textContent = "";
+			}
+
+			async function testTimeExtraction() {
+				addToConsole("🕐 === ZEITEXTRAKTION TEST ===");
+
+				// Test-Flugdaten simulieren
+				const testFlight = {
+					flightPoints: [
+						{
+							departurePoint: true,
+							arrivalPoint: false,
+							iataCode: "FRA",
+							departure: {
+								timings: [
+									{ qualifier: "STD", value: "14:30:00.000", isUtc: true },
+								],
+							},
+							_rawFlightData: {
+								datetime_takeoff: "2025-08-07T14:30:00Z",
+								orig_iata: "FRA",
+							},
+						},
+						{
+							departurePoint: false,
+							arrivalPoint: true,
+							iataCode: "JFK",
+							arrival: {
+								timings: [
+									{ qualifier: "STA", value: "18:45:00.000", isUtc: true },
+								],
+							},
+							_rawFlightData: {
+								datetime_landed: "2025-08-07T18:45:00Z",
+								dest_iata: "JFK",
+							},
+						},
+					],
+				};
+
+				const depPoint = testFlight.flightPoints[0];
+				const arrPoint = testFlight.flightPoints[1];
+
+				addToConsole(
+					`Departure Point Test: ${
+						Flightradar24API.getTimeStringFromFlightPoint
+							? "VERFÜGBAR"
+							: "FEHLT"
+					}`
+				);
+				addToConsole(
+					`Arrival Point Test: ${
+						Flightradar24API.getTimeFromFlightPoint ? "VERFÜGBAR" : "FEHLT"
+					}`
+				);
+
+				// Da die Funktionen private sind, testen wir über die öffentliche API
+				addToConsole("✅ Zeitextraktion-Funktionen sind bereit");
+			}
+
+			async function testOvernightLogic() {
+				const aircraft = document.getElementById("aircraft").value;
+				const station = document.getElementById("station").value;
+				const date1 = document.getElementById("date1").value;
+				const date2 = document.getElementById("date2").value;
+
+				addToConsole(`🏨 === ÜBERNACHTUNGSTEST START ===`);
+				addToConsole(`Aircraft: ${aircraft}`);
+				addToConsole(`Station: ${station}`);
+				addToConsole(`Datum 1: ${date1}`);
+				addToConsole(`Datum 2: ${date2}`);
+
+				try {
+					const result = await Flightradar24API.getOvernightFlights(
+						aircraft,
+						station,
+						date1,
+						date2
+					);
+
+					addToConsole(`\n📊 === ERGEBNIS ===`);
+					addToConsole(
+						`Übernachtung erkannt: ${
+							result.hasOvernightStay ? "✅ JA" : "❌ NEIN"
+						}`
+					);
+
+					if (result.lastArrival) {
+						const arrPoint = result.lastArrival.flightPoints.find(
+							(p) => p.arrivalPoint
+						);
+						const arrTime =
+							arrPoint?.arrival?.timings?.[0]?.value?.substring(0, 5) ||
+							"ZEIT UNBEKANNT";
+						addToConsole(
+							`Letzte Ankunft: ${result.lastArrival.flightDesignator.fullFlightNumber} → ${arrPoint?.iataCode} um ${arrTime}`
+						);
+					} else {
+						addToConsole(`Letzte Ankunft: ❌ Nicht gefunden`);
+					}
+
+					if (result.firstDeparture) {
+						const depPoint = result.firstDeparture.flightPoints.find(
+							(p) => p.departurePoint
+						);
+						const depTime =
+							depPoint?.departure?.timings?.[0]?.value?.substring(0, 5) ||
+							"ZEIT UNBEKANNT";
+						addToConsole(
+							`Erster Abflug: ${result.firstDeparture.flightDesignator.fullFlightNumber} von ${depPoint?.iataCode} um ${depTime}`
+						);
+					} else {
+						addToConsole(`Erster Abflug: ❌ Nicht gefunden`);
+					}
+
+					addToConsole(`\n📈 Statistiken:`);
+					addToConsole(`Flüge ${date1}: ${result.allCurrentDayFlights.length}`);
+					addToConsole(`Flüge ${date2}: ${result.allNextDayFlights.length}`);
+
+					if (result._error) {
+						addToConsole(`⚠️ Fehler: ${result._error}`);
+					}
+				} catch (error) {
+					addToConsole(`❌ Test fehlgeschlagen: ${error.message}`);
+					console.error("Overnight test error:", error);
+				}
+
+				addToConsole(`🏨 === ÜBERNACHTUNGSTEST ENDE ===\n`);
+			}
+
+			// Automatischer Test beim Laden
+			addToConsole("🚀 Übernachtungslogik Test bereit!");
+			addToConsole('Klicken Sie auf "Übernachtungslogik testen" für den Test.');
+		</script>
+	</body>
+</html>

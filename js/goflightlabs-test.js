@@ -360,7 +360,7 @@ window.testGoFlightLabsProxy = async () => {
 		console.log("Testing direct proxy connection...");
 
 		const proxyUrl =
-			"sync/goflightlabs-proxy.php?endpoint=schedules&aircraft_reg=D-AIBP&debug=true";
+			"sync/goflightlabs-proxy.php?endpoint=flights&aircraft_reg=D-AIBP&debug=true";
 		console.log("🔗 Proxy URL:", proxyUrl);
 
 		const response = await fetch(proxyUrl);

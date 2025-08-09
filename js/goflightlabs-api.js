@@ -1,5 +1,12 @@
 /**
- * GoFlightLabs API Integration
+ * GoFli		baseUrl: "https://www.goflightlabs.com",
+		apiKey:
+			"eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiI0IiwianRpIjoiYmRlMmNiYmIxMDMzNzAzMjFkYjIzNzdiNmExNzc0Y2QyMTFiMGY5Zjk3ZWRjMGRkYmNlM2U4YWRjM2UwNGE4ZWM1YTRlY2RmMTQ5M2IxNzMiLCJpYXQiOjE3NTQ3MjgwMzgsIm5iZiI6MTc1NDcyODAzOCwiZXhwIjoxNzg2MjY0MDM4LCJzdWIiOiIyNTYyNCIsInNjb3BlcyI6W119.nR5qYTMV-A9oZferXED_WNpcl8XSl82YMZa9ufaxWGQo_7-1tS6ZH8bUpMZgmxqWbsrHEBIExgHGyb-zZiLEIA",
+		endpoints: {
+			flights: "flights", // Real-time flights mit regNum parameter
+			schedules: "advanced-flights-schedules", // Airport-basierte Schedules (kein aircraft support)
+			historical: "historical", // Airport-basierte Historical (kein aircraft support)
+		},I Integration
  * Spezialisiert auf das Abrufen von Flugdaten nach Flugzeugregistrierungen
  * Dokumentation: https://docs.goflightlabs.com/
  * Optimiert für Aircraft-spezifische Abfragen mit direkter Registrierungs-Suche
@@ -334,13 +341,13 @@ const GoFlightLabsAPI = (() => {
 			);
 
 			return await rateLimiter(async () => {
-				// Verwende Schedule-Endpoint mit Aircraft Registration Parameter
+				// Verwende Real-Time Flights-Endpoint mit regNum Parameter
 				const params = {
-					aircraft_reg: registration,
-					date: formattedDate,
+					regNum: registration, // Korrekter Parameter-Name!
+					limit: 100, // Limit hinzufügen um Performance zu verbessern
 				};
 
-				const response = await makeRequest(config.endpoints.schedules, params);
+				const response = await makeRequest(config.endpoints.flights, params);
 
 				updateFetchStatus(
 					`GoFlightLabs: ${

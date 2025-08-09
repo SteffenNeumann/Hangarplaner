@@ -31,15 +31,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 
 // GoFlightLabs API-Konfiguration
 $GOFLIGHTLABS_API_KEY = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiI0IiwianRpIjoiYmRlMmNiYmIxMDMzNzAzMjFkYjIzNzdiNmExNzc0Y2QyMTFiMGY5Zjk3ZWRjMGRkYmNlM2U4YWRjM2UwNGE4ZWM1YTRlY2RmMTQ5M2IxNzMiLCJpYXQiOjE3NTQ3MjgwMzgsIm5iZiI6MTc1NDcyODAzOCwiZXhwIjoxNzg2MjY0MDM4LCJzdWIiOiIyNTYyNCIsInNjb3BlcyI6W119.nR5qYTMV-A9oZferXED_WNpcl8XSl82YMZa9ufaxWGQo_7-1tS6ZH8bUpMZgmxqWbsrHEBIExgHGyb-zZiLEIA';
-$GOFLIGHTLABS_BASE_URL = 'https://api.goflightlabs.com';
+$GOFLIGHTLABS_BASE_URL = 'https://www.goflightlabs.com';
 
 // Erlaubte Endpoints
 $ALLOWED_ENDPOINTS = [
-    'schedules',
-    'live',
-    'historical',
-    'routes',
-    'airports'
+    'flights',
+    'advanced-flights-schedules',
+    'historical'
 ];
 
 // Input-Parameter validieren
@@ -80,36 +78,37 @@ $api_params = [
 
 // Endpoint-spezifische Parameter hinzufügen
 switch ($endpoint) {
-    case 'schedules':
+    case 'flights':
+        // Real-time flights endpoint - unterstützt regNum für Aircraft Registration
         if (!empty($aircraft_reg)) {
-            $api_params['aircraft_reg'] = $aircraft_reg;
+            $api_params['regNum'] = $aircraft_reg;
         }
         if (!empty($date)) {
-            $api_params['date'] = $date;
-        }
-        if (!empty($date_from)) {
-            $api_params['date_from'] = $date_from;
-        }
-        if (!empty($date_to)) {
-            $api_params['date_to'] = $date_to;
-        }
-        if (!empty($dep_iata)) {
-            $api_params['dep_iata'] = $dep_iata;
-        }
-        if (!empty($arr_iata)) {
-            $api_params['arr_iata'] = $arr_iata;
+            // Flights endpoint hat keinen date parameter - ignorieren
         }
         break;
         
-    case 'live':
-        if (!empty($aircraft_reg)) {
-            $api_params['aircraft_reg'] = $aircraft_reg;
+    case 'advanced-flights-schedules':
+        // Schedule endpoint - NUR Airport-basiert, kein Aircraft Registration Support
+        if (!empty($dep_iata)) {
+            $api_params['iataCode'] = $dep_iata;
+            $api_params['type'] = 'departure';
+        }
+        if (!empty($arr_iata)) {
+            $api_params['iataCode'] = $arr_iata;
+            $api_params['type'] = 'arrival';
         }
         break;
         
     case 'historical':
-        if (!empty($aircraft_reg)) {
-            $api_params['aircraft_reg'] = $aircraft_reg;
+        // Historical endpoint - NUR Airport-basiert, kein Aircraft Registration Support
+        if (!empty($dep_iata)) {
+            $api_params['code'] = $dep_iata;
+            $api_params['type'] = 'departure';
+        }
+        if (!empty($arr_iata)) {
+            $api_params['code'] = $arr_iata;
+            $api_params['type'] = 'arrival';
         }
         if (!empty($date_from)) {
             $api_params['date_from'] = $date_from;

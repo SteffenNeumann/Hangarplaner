@@ -6,9 +6,9 @@
 
 // Selbst ausführende Funktion für Kapselung
 const FlightDataAPI = (function () {
-	// Erweiterte Konfiguration - AeroDataBox, Aviationstack und API Market als Provider
+	// Erweiterte Konfiguration - AeroDataBox, Aviationstack, GoFlightLabs und API Market als Provider
 	const config = {
-		providers: ["aerodatabox", "aviationstack", "apimarket"],
+		providers: ["aerodatabox", "aviationstack", "goflightlabs", "apimarket"],
 		activeProvider: "aerodatabox", // Standard: AeroDataBox
 	};
 
@@ -64,6 +64,12 @@ const FlightDataAPI = (function () {
 			// Provider-spezifische API-Aufrufe
 			if (config.activeProvider === "aviationstack") {
 				return await handleAviationstackRequest(
+					aircraftId,
+					currentDate,
+					nextDate
+				);
+			} else if (config.activeProvider === "goflightlabs") {
+				return await handleGoFlightLabsRequest(
 					aircraftId,
 					currentDate,
 					nextDate
@@ -248,6 +254,68 @@ const FlightDataAPI = (function () {
 	};
 
 	/**
+	 * Behandelt GoFlightLabs API-Anfragen
+	 */
+	const handleGoFlightLabsRequest = async function (
+		aircraftId,
+		currentDate,
+		nextDate
+	) {
+		// Sicherstellen, dass GoFlightLabsAPI verfügbar ist
+		if (!window.GoFlightLabsAPI) {
+			throw new Error(
+				"GoFlightLabsAPI ist nicht verfügbar. Bitte laden Sie die goflightlabs-api.js Datei."
+			);
+		}
+
+		console.log(`[API-FASSADE] Verwende GoFlightLabs API für ${aircraftId}`);
+
+		try {
+			// Verwende die GoFlightLabs Übernachtungslogik
+			const result = await window.GoFlightLabsAPI.updateAircraftData(
+				aircraftId,
+				currentDate,
+				nextDate
+			);
+
+			console.log(`[API-FASSADE] GoFlightLabs Ergebnis:`, result);
+
+			// Sicherstellen, dass wir immer ein gültiges Ergebnisobjekt zurückgeben
+			if (!result) {
+				return {
+					originCode: "",
+					destCode: "",
+					departureTime: "",
+					arrivalTime: "",
+					positionText: "",
+					data: [],
+					_isUtc: true,
+					_source: "goflightlabs",
+					_noDataFound: true,
+				};
+			}
+
+			// Markiere das Ergebnis mit der Quelle (falls nicht bereits gesetzt)
+			result._source = result._source || "goflightlabs";
+			return result;
+		} catch (error) {
+			console.error(`[API-FASSADE] Fehler bei GoFlightLabs-Anfrage:`, error);
+			return {
+				originCode: "",
+				destCode: "",
+				departureTime: "",
+				arrivalTime: "",
+				positionText: "Fehler beim Laden der GoFlightLabs Daten",
+				data: [],
+				_isUtc: true,
+				_source: "goflightlabs",
+				_error: error.message,
+				_clearFields: true,
+			};
+		}
+	};
+
+	/**
 	 * Behandelt API Market Anfragen - Placeholder für zukünftige Integration
 	 */
 	const handleAPIMarketRequest = async function (
@@ -364,6 +432,14 @@ const FlightDataAPI = (function () {
 					);
 					return { data: flights };
 				}
+			} else if (config.activeProvider === "goflightlabs") {
+				if (!window.GoFlightLabsAPI) {
+					throw new Error("GoFlightLabsAPI ist nicht verfügbar");
+				}
+				return await window.GoFlightLabsAPI.getAircraftFlights(
+					aircraftId,
+					date
+				);
 			} else if (config.activeProvider === "apimarket") {
 				console.warn("[API-FASSADE] API Market noch nicht implementiert");
 				return { data: [], _notImplemented: true };

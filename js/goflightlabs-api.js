@@ -14,11 +14,11 @@ const GoFlightLabsAPI = (() => {
 		apiKey:
 			"eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiI0IiwianRpIjoiYmRlMmNiYmIxMDMzNzAzMjFkYjIzNzdiNmExNzc0Y2QyMTFiMGY5Zjk3ZWRjMGRkYmNlM2U4YWRjM2UwNGE4ZWM1YTRlY2RmMTQ5M2IxNzMiLCJpYXQiOjE3NTQ3MjgwMzgsIm5iZiI6MTc1NDcyODAzOCwiZXhwIjoxNzg2MjY0MDM4LCJzdWIiOiIyNTYyNCIsInNjb3BlcyI6W119.nR5qYTMV-A9oZferXED_WNpcl8XSl82YMZa9ufaxWGQo_7-1tS6ZH8bUpMZgmxqWbsrHEBIExgHGyb-zZiLEIA",
 		endpoints: {
-			schedules: "/schedules",
-			live: "/live",
-			historical: "/historical",
-			routes: "/routes",
-			airports: "/airports",
+			schedules: "schedules",
+			live: "live",
+			historical: "historical",
+			routes: "routes",
+			airports: "airports",
 		},
 		debugMode: true,
 		rateLimitDelay: 1000, // 1 Sekunde zwischen Anfragen
@@ -128,10 +128,34 @@ const GoFlightLabsAPI = (() => {
 
 			if (!response.ok) {
 				const errorText = await response.text();
+				console.error(
+					`🚫 GoFlightLabs Proxy Error (${response.status}):`,
+					errorText
+				);
 				throw new Error(`HTTP ${response.status}: ${errorText}`);
 			}
 
-			const data = await response.json();
+			// Antwort als Text lesen und prüfen
+			const responseText = await response.text();
+
+			if (config.debugMode) {
+				console.log(
+					`📥 GoFlightLabs Raw Response:`,
+					responseText.substring(0, 200) + "..."
+				);
+			}
+
+			// Prüfen ob es gültiges JSON ist
+			let data;
+			try {
+				data = JSON.parse(responseText);
+			} catch (jsonError) {
+				console.error(`🚫 GoFlightLabs JSON Parse Error:`, jsonError);
+				console.error(`📄 Response Text:`, responseText.substring(0, 500));
+				throw new Error(
+					`Invalid JSON response from proxy: ${jsonError.message}`
+				);
+			}
 
 			// Prüfe auf API-Fehler
 			if (data.error) {

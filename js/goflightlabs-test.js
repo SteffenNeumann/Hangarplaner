@@ -360,14 +360,32 @@ window.testGoFlightLabsProxy = async () => {
 		console.log("Testing direct proxy connection...");
 
 		const proxyUrl =
-			"sync/goflightlabs-proxy.php?endpoint=schedules&aircraft_reg=D-ACNK&debug=true";
+			"sync/goflightlabs-proxy.php?endpoint=schedules&aircraft_reg=D-AIBP&debug=true";
+		console.log("🔗 Proxy URL:", proxyUrl);
+
 		const response = await fetch(proxyUrl);
+		console.log("📡 Response Status:", response.status, response.statusText);
+		console.log("📋 Response Headers:", [...response.headers.entries()]);
+
+		const responseText = await response.text();
+		console.log(
+			"📄 Raw Response:",
+			responseText.substring(0, 500) + (responseText.length > 500 ? "..." : "")
+		);
 
 		if (!response.ok) {
-			throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+			console.error("❌ HTTP Error:", response.status, response.statusText);
+			return false;
 		}
 
-		const data = await response.json();
+		let data;
+		try {
+			data = JSON.parse(responseText);
+		} catch (jsonError) {
+			console.error("❌ JSON Parse Error:", jsonError.message);
+			console.error("📄 Full Response Text:", responseText);
+			return false;
+		}
 
 		if (data.error) {
 			console.error("❌ Proxy returned error:", data.error);

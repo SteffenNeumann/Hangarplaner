@@ -17,15 +17,13 @@ const GoFlightLabsAPI = (() => {
 	const config = {
 		name: "GoFlightLabs API",
 		version: "1.0.0",
-		baseUrl: "https://api.goflightlabs.com",
+		baseUrl: "https://www.goflightlabs.com",
 		apiKey:
 			"eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiI0IiwianRpIjoiYmRlMmNiYmIxMDMzNzAzMjFkYjIzNzdiNmExNzc0Y2QyMTFiMGY5Zjk3ZWRjMGRkYmNlM2U4YWRjM2UwNGE4ZWM1YTRlY2RmMTQ5M2IxNzMiLCJpYXQiOjE3NTQ3MjgwMzgsIm5iZiI6MTc1NDcyODAzOCwiZXhwIjoxNzg2MjY0MDM4LCJzdWIiOiIyNTYyNCIsInNjb3BlcyI6W119.nR5qYTMV-A9oZferXED_WNpcl8XSl82YMZa9ufaxWGQo_7-1tS6ZH8bUpMZgmxqWbsrHEBIExgHGyb-zZiLEIA",
 		endpoints: {
-			schedules: "schedules",
-			live: "live",
-			historical: "historical",
-			routes: "routes",
-			airports: "airports",
+			flights: "flights", // Real-time flights mit regNum parameter
+			schedules: "advanced-flights-schedules", // Airport-basierte Schedules
+			historical: "historical", // Airport-basierte Historical
 		},
 		debugMode: true,
 		rateLimitDelay: 1000, // 1 Sekunde zwischen Anfragen

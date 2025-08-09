@@ -98,31 +98,30 @@ const GoFlightLabsAPI = (() => {
 	};
 
 	/**
-	 * HTTP-Request mit Retry-Logik
+	 * HTTP-Request mit Retry-Logik über lokalen Proxy
 	 */
 	const makeRequest = async (endpoint, params = {}, retryCount = 0) => {
 		try {
-			// URL mit Parametern aufbauen
-			const url = new URL(`${config.baseUrl}${endpoint}`);
+			// Proxy-URL verwenden statt direktem API-Aufruf
+			const proxyUrl = "sync/goflightlabs-proxy.php";
 
-			// API Key hinzufügen
-			url.searchParams.append("access_key", config.apiKey);
-
-			// Parameter hinzufügen
-			Object.keys(params).forEach((key) => {
-				if (params[key] !== null && params[key] !== undefined) {
-					url.searchParams.append(key, params[key]);
-				}
+			// Parameter für Proxy-Aufruf vorbereiten
+			const queryParams = new URLSearchParams({
+				endpoint: endpoint,
+				...params,
 			});
 
+			const url = `${proxyUrl}?${queryParams}`;
+
 			if (config.debugMode) {
-				console.log(`🌐 GoFlightLabs Request: ${url.toString()}`);
+				console.log(`🌐 GoFlightLabs Proxy Request: ${url}`);
 			}
 
-			const response = await fetch(url.toString(), {
+			const response = await fetch(url, {
 				method: "GET",
 				headers: {
 					Accept: "application/json",
+					"Content-Type": "application/json",
 					"User-Agent": "HangarPlanner/1.0",
 				},
 			});

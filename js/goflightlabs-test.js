@@ -351,6 +351,51 @@ window.switchToGoFlightLabs = () =>
 	window.GoFlightLabsTest.switchToGoFlightLabs();
 window.runGoFlightLabsFullTest = () => window.GoFlightLabsTest.runFullTest();
 
+// Neue Proxy-Test Funktion
+window.testGoFlightLabsProxy = async () => {
+	console.log("\n🌐 === GOFLIGHTLABS PROXY TEST ===");
+	console.log("=================================");
+
+	try {
+		console.log("Testing direct proxy connection...");
+
+		const proxyUrl =
+			"sync/goflightlabs-proxy.php?endpoint=schedules&aircraft_reg=D-ACNK&debug=true";
+		const response = await fetch(proxyUrl);
+
+		if (!response.ok) {
+			throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+		}
+
+		const data = await response.json();
+
+		if (data.error) {
+			console.error("❌ Proxy returned error:", data.error);
+			return false;
+		}
+
+		console.log("✅ Proxy connection successful");
+		console.log("   Data items:", data.data ? data.data.length : 0);
+
+		if (data._proxy_debug) {
+			console.log("   Debug Info:", data._proxy_debug);
+		}
+
+		if (data.data && data.data.length > 0) {
+			console.log("   Sample flight:", {
+				flight_number: data.data[0].flight_number,
+				departure: data.data[0].departure,
+				arrival: data.data[0].arrival,
+			});
+		}
+
+		return true;
+	} catch (error) {
+		console.error("❌ Proxy test failed:", error);
+		return false;
+	}
+};
+
 // Auto-Check bei Entwicklung
 if (window.GoFlightLabsAPI?.getAPIInfo()?.name) {
 	console.log("🧪 GoFlightLabs Test-Suite geladen");
@@ -361,4 +406,5 @@ if (window.GoFlightLabsAPI?.getAPIInfo()?.name) {
 	console.log("   - testGoFlightLabsOvernightLogic(registration)");
 	console.log("   - switchToGoFlightLabs()");
 	console.log("   - runGoFlightLabsFullTest()");
+	console.log("   - testGoFlightLabsProxy() 🆕");
 }

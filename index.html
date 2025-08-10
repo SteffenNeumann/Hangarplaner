@@ -2025,13 +2025,10 @@
 			<script src="js/hangar-data.js"></script>
 			<script src="js/dynamic-api-loader.js"></script>
 			<script src="js/aerodatabox-api.js"></script>
-			<script src="js/goflightlabs-api.js"></script>
-			<script src="js/goflightlabs-test.js"></script>
-			<script src="js/flightradar24-api.js"></script>
 			<script src="js/aviationstack-api.js"></script>
+			<script src="js/goflightlabs-api.js"></script>
 			<script src="js/aviationstack-test.js"></script>
 			<script src="js/aviationstack-debug.js"></script>
-			<script src="js/fr24-test.js"></script>
 			<script src="js/airport-flights.js"></script>
 			<script src="js/api-facade.js"></script>
 			<script src="js/hangar-events.js"></script>
@@ -2055,18 +2052,7 @@
 							? "✅ Verfügbar"
 							: "❌ Nicht verfügbar"
 					);
-					console.log(
-						"Flightradar24API:",
-						typeof window.Flightradar24API !== "undefined"
-							? "✅ Verfügbar"
-							: "❌ Nicht verfügbar"
-					);
-					console.log(
-						"FR24Test:",
-						typeof window.FR24Test !== "undefined"
-							? "✅ Verfügbar"
-							: "❌ Nicht verfügbar"
-					);
+
 					console.log(
 						"FlightDataAPI:",
 						typeof window.FlightDataAPI !== "undefined"
@@ -2074,43 +2060,11 @@
 							: "❌ Nicht verfügbar"
 					);
 
-					if (typeof window.Flightradar24API !== "undefined") {
-						console.log(
-							"Flightradar24API Methoden:",
-							Object.keys(window.Flightradar24API)
-						);
-					}
-
-					if (typeof window.FR24Test !== "undefined") {
-						console.log("FR24Test Methoden:", Object.keys(window.FR24Test));
-					}
-
 					return {
 						aerodatabox: typeof window.AeroDataBoxAPI !== "undefined",
-						flightradar24: typeof window.Flightradar24API !== "undefined",
-						fr24test: typeof window.FR24Test !== "undefined",
+						aviationstack: typeof window.AviationstackAPI !== "undefined",
 						facade: typeof window.FlightDataAPI !== "undefined",
 					};
-				};
-
-				// Test-Funktion für Flightradar24
-				window.testFR24 = async function (
-					registration = "D-AIBL",
-					date = "2025-08-05"
-				) {
-					if (typeof window.Flightradar24API === "undefined") {
-						console.error("❌ Flightradar24API ist nicht verfügbar!");
-						console.log("🔧 Versuche Test-API...");
-						if (typeof window.FR24Test !== "undefined") {
-							return await window.FR24Test.getFlights(registration);
-						}
-						return null;
-					}
-
-					console.log(
-						`🧪 Teste Flightradar24 API für ${registration} am ${date}`
-					);
-					return await window.Flightradar24API.testAPI(registration, date);
 				};
 
 				// Auto-Check nach dem Laden

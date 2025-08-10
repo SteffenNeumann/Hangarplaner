@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="de">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>GoFlightLabs Integration Test</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				max-width: 1200px;
+				margin: 0 auto;
+				padding: 20px;
+				background-color: #f5f5f5;
+			}
+			.test-container {
+				background: white;
+				padding: 20px;
+				border-radius: 8px;
+				margin-bottom: 20px;
+				box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+			}
+			.test-button {
+				background: #007bff;
+				color: white;
+				border: none;
+				padding: 10px 20px;
+				border-radius: 4px;
+				cursor: pointer;
+				margin: 5px;
+			}
+			.test-button:hover {
+				background: #0056b3;
+			}
+			.result {
+				background: #f8f9fa;
+				border: 1px solid #dee2e6;
+				padding: 15px;
+				border-radius: 4px;
+				margin-top: 10px;
+				white-space: pre-wrap;
+				font-family: monospace;
+				max-height: 400px;
+				overflow-y: auto;
+			}
+			.success {
+				background: #d4edda;
+				border-color: #c3e6cb;
+				color: #155724;
+			}
+			.error {
+				background: #f8d7da;
+				border-color: #f5c6cb;
+				color: #721c24;
+			}
+			.input-group {
+				margin: 10px 0;
+			}
+			.input-group label {
+				display: block;
+				margin-bottom: 5px;
+				font-weight: bold;
+			}
+			.input-group input {
+				width: 100%;
+				padding: 8px;
+				border: 1px solid #ddd;
+				border-radius: 4px;
+				box-sizing: border-box;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>🧪 GoFlightLabs API Integration Test</h1>
+
+		<div class="test-container">
+			<h2>🔧 Konfiguration</h2>
+			<div class="input-group">
+				<label for="testAircraft">Aircraft Registration:</label>
+				<input
+					type="text"
+					id="testAircraft"
+					value="D-AIBL"
+					placeholder="z.B. D-AIBL, N12345" />
+			</div>
+			<div class="input-group">
+				<label for="testDateFrom">Datum Von (YYYY-MM-DD):</label>
+				<input type="date" id="testDateFrom" value="2025-08-10" />
+			</div>
+			<div class="input-group">
+				<label for="testDateTo">Datum Bis (YYYY-MM-DD):</label>
+				<input type="date" id="testDateTo" value="2025-08-11" />
+			</div>
+		</div>
+
+		<div class="test-container">
+			<h2>🚀 API Tests</h2>
+			<button class="test-button" onclick="testAPIConnection()">
+				1. Verbindung testen
+			</button>
+			<button class="test-button" onclick="testProxyConnection()">
+				2. Proxy testen
+			</button>
+			<button class="test-button" onclick="testFlightDataByDate()">
+				3. Flight Data by Date API
+			</button>
+			<button class="test-button" onclick="testAPIFacadeIntegration()">
+				4. API-Facade Integration
+			</button>
+			<button class="test-button" onclick="testOvernightLogic()">
+				5. Übernachtungslogik
+			</button>
+			<button class="test-button" onclick="clearResults()">
+				🗑️ Ergebnisse löschen
+			</button>
+		</div>
+
+		<div class="test-container">
+			<h2>📊 Test-Ergebnisse</h2>
+			<div id="testResults" class="result">
+				Bereit für Tests... 🔍 Verfügbare Tests: 1. Verbindung testen - Prüft ob
+				GoFlightLabs API erreichbar ist 2. Proxy testen - Testet den PHP-Proxy
+				für CORS 3. Flight Data by Date API - Testet die neue aircraft
+				registration search 4. API-Facade Integration - Prüft die Integration in
+				HangarPlanner 5. Übernachtungslogik - Testet die overnight stay
+				detection Geben Sie eine Aircraft Registration ein und starten Sie die
+				Tests.
+			</div>
+		</div>
+
+		<!-- Lade die benötigten APIs -->
+		<script src="js/goflightlabs-api.js"></script>
+		<script src="js/api-facade.js"></script>
+
+		<script>
+			let testResults = [];
+
+			function log(message, type = "info") {
+				const timestamp = new Date().toLocaleTimeString();
+				const logEntry = `[${timestamp}] ${message}`;
+				testResults.push(logEntry);
+				updateResults(type);
+			}
+
+			function updateResults(type = "info") {
+				const resultsDiv = document.getElementById("testResults");
+				resultsDiv.textContent = testResults.join("\n");
+
+				// CSS-Klasse basierend auf letztem Test setzen
+				resultsDiv.className = "result";
+				if (type === "success") {
+					resultsDiv.classList.add("success");
+				} else if (type === "error") {
+					resultsDiv.classList.add("error");
+				}
+			}
+
+			function clearResults() {
+				testResults = [];
+				document.getElementById("testResults").textContent =
+					"Ergebnisse gelöscht. Bereit für neue Tests...";
+				document.getElementById("testResults").className = "result";
+			}
+
+			async function testAPIConnection() {
+				log("🔍 Test 1: API-Verbindung wird geprüft...");
+
+				try {
+					if (!window.GoFlightLabsAPI) {
+						throw new Error("GoFlightLabsAPI nicht verfügbar");
+					}
+
+					log("✅ GoFlightLabsAPI erfolgreich geladen");
+
+					const apiInfo = window.GoFlightLabsAPI.getAPIInfo();
+					log(`📋 API Info: ${JSON.stringify(apiInfo, null, 2)}`);
+
+					// Teste Verbindung
+					const connectionTest = await window.GoFlightLabsAPI.testConnection();
+
+					if (connectionTest.success) {
+						log("✅ API-Verbindung erfolgreich!", "success");
+					} else {
+						log(
+							`❌ API-Verbindung fehlgeschlagen: ${connectionTest.error}`,
+							"error"
+						);
+					}
+				} catch (error) {
+					log(`❌ Fehler bei API-Verbindungstest: ${error.message}`, "error");
+				}
+			}
+
+			async function testProxyConnection() {
+				log("🔍 Test 2: PHP-Proxy wird getestet...");
+
+				try {
+					const proxyUrl =
+						"sync/goflightlabs-proxy.php?endpoint=flight_by_date&reg=TEST&date_from=2025-08-10&date_to=2025-08-11";
+
+					log(`📡 Teste Proxy: ${proxyUrl}`);
+
+					const response = await fetch(proxyUrl);
+					const responseText = await response.text();
+
+					log(`📥 Proxy Response Status: ${response.status}`);
+					log(
+						`📄 Proxy Response (first 500 chars): ${responseText.substring(
+							0,
+							500
+						)}`
+					);
+
+					if (response.ok) {
+						try {
+							const data = JSON.parse(responseText);
+							log("✅ Proxy gibt gültiges JSON zurück", "success");
+
+							if (data.error) {
+								log(`⚠️ API-Fehler: ${JSON.stringify(data.error)}`);
+							} else {
+								log(
+									`📊 Daten empfangen: ${
+										data.data ? data.data.length : 0
+									} Einträge`
+								);
+							}
+						} catch (jsonError) {
+							log(`❌ JSON Parse Error: ${jsonError.message}`, "error");
+						}
+					} else {
+						log(`❌ Proxy-Fehler: HTTP ${response.status}`, "error");
+					}
+				} catch (error) {
+					log(`❌ Fehler bei Proxy-Test: ${error.message}`, "error");
+				}
+			}
+
+			async function testFlightDataByDate() {
+				log("🔍 Test 3: Flight Data by Date API wird getestet...");
+
+				try {
+					const aircraft = document.getElementById("testAircraft").value;
+					const dateFrom = document.getElementById("testDateFrom").value;
+					const dateTo = document.getElementById("testDateTo").value;
+
+					if (!aircraft) {
+						throw new Error("Bitte Aircraft Registration eingeben");
+					}
+
+					log(`✈️ Teste Aircraft: ${aircraft} von ${dateFrom} bis ${dateTo}`);
+
+					if (!window.GoFlightLabsAPI) {
+						throw new Error("GoFlightLabsAPI nicht verfügbar");
+					}
+
+					const flightData = await window.GoFlightLabsAPI.getAircraftFlights(
+						aircraft,
+						dateFrom
+					);
+
+					log(`📊 Flugdaten erhalten:`);
+					log(
+						`   - Anzahl Flüge: ${flightData.data ? flightData.data.length : 0}`
+					);
+					log(`   - Rohdaten: ${JSON.stringify(flightData, null, 2)}`);
+
+					if (flightData.data && flightData.data.length > 0) {
+						log("✅ Flight Data by Date API funktioniert!", "success");
+
+						// Ersten Flug analysieren
+						const firstFlight = flightData.data[0];
+						log(`📋 Erster Flug:`);
+						log(
+							`   - Flugnummer: ${
+								firstFlight.flightDesignator?.flightNumber || "N/A"
+							}`
+						);
+						log(
+							`   - Route: ${
+								firstFlight.flightPoints?.[0]?.iataCode || "?"
+							} → ${firstFlight.flightPoints?.[1]?.iataCode || "?"}`
+						);
+						log(
+							`   - Aircraft: ${
+								firstFlight.legs?.[0]?.aircraftRegistration || aircraft
+							}`
+						);
+					} else {
+						log(
+							"⚠️ Keine Flugdaten gefunden - möglicherweise keine Flüge für dieses Aircraft/Datum"
+						);
+					}
+				} catch (error) {
+					log(
+						`❌ Fehler bei Flight Data by Date Test: ${error.message}`,
+						"error"
+					);
+				}
+			}
+
+			async function testAPIFacadeIntegration() {
+				log("🔍 Test 4: API-Facade Integration wird getestet...");
+
+				try {
+					const aircraft = document.getElementById("testAircraft").value;
+					const dateFrom = document.getElementById("testDateFrom").value;
+					const dateTo = document.getElementById("testDateTo").value;
+
+					if (!aircraft) {
+						throw new Error("Bitte Aircraft Registration eingeben");
+					}
+
+					if (!window.FlightDataAPI) {
+						throw new Error("FlightDataAPI (API-Facade) nicht verfügbar");
+					}
+
+					log(`🔄 Setze Provider auf GoFlightLabs...`);
+					const providerSet = window.FlightDataAPI.setProvider("goflightlabs");
+
+					if (!providerSet) {
+						throw new Error("Konnte Provider nicht auf GoFlightLabs setzen");
+					}
+
+					log(
+						`✅ Provider gesetzt: ${window.FlightDataAPI.getActiveProvider()}`
+					);
+
+					log(`🛩️ Teste Aircraft Data Update für ${aircraft}...`);
+					const result = await window.FlightDataAPI.updateAircraftData(
+						aircraft,
+						dateFrom,
+						dateTo
+					);
+
+					log(`📊 API-Facade Ergebnis:`);
+					log(`   - Origin: ${result.originCode}`);
+					log(`   - Destination: ${result.destCode}`);
+					log(`   - Arrival: ${result.arrivalTime}`);
+					log(`   - Departure: ${result.departureTime}`);
+					log(`   - Position: ${result.positionText}`);
+					log(`   - Data Count: ${result.data ? result.data.length : 0}`);
+					log(`   - Source: ${result._source}`);
+
+					if (result._hasOvernightStay) {
+						log("🏨 Übernachtung erkannt!", "success");
+					} else if (result._noDataFound) {
+						log("⚠️ Keine Daten gefunden oder keine Übernachtung");
+					} else {
+						log("ℹ️ Ergebnis interpretiert");
+					}
+
+					log("✅ API-Facade Integration funktioniert!", "success");
+				} catch (error) {
+					log(`❌ Fehler bei API-Facade Test: ${error.message}`, "error");
+				}
+			}
+
+			async function testOvernightLogic() {
+				log("🔍 Test 5: Übernachtungslogik wird getestet...");
+
+				try {
+					const aircraft = document.getElementById("testAircraft").value;
+
+					if (!aircraft) {
+						throw new Error("Bitte Aircraft Registration eingeben");
+					}
+
+					if (!window.GoFlightLabsAPI) {
+						throw new Error("GoFlightLabsAPI nicht verfügbar");
+					}
+
+					const today = new Date().toISOString().split("T")[0];
+					const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000)
+						.toISOString()
+						.split("T")[0];
+
+					log(`🏨 Teste Übernachtungslogik für ${aircraft}...`);
+					log(`📅 Heute: ${today}, Morgen: ${tomorrow}`);
+
+					const overnightResult =
+						await window.GoFlightLabsAPI.updateAircraftData(
+							aircraft,
+							today,
+							tomorrow
+						);
+
+					log(`🔍 Übernachtungsanalyse:`);
+					log(
+						`   - Übernachtung: ${
+							overnightResult._hasOvernightStay ? "JA" : "NEIN"
+						}`
+					);
+					log(`   - Ankunft: ${overnightResult.arrivalTime}`);
+					log(`   - Abflug: ${overnightResult.departureTime}`);
+					log(`   - Position: ${overnightResult.positionText}`);
+					log(
+						`   - Flugdaten: ${
+							overnightResult.data ? overnightResult.data.length : 0
+						} Flüge`
+					);
+
+					if (overnightResult._hasOvernightStay) {
+						log(
+							"✅ Übernachtungslogik erkennt korrekt eine Übernachtung!",
+							"success"
+						);
+					} else if (overnightResult._clearFields) {
+						log("ℹ️ Keine Übernachtung - Felder werden geleert (korrekt)");
+					} else {
+						log("⚠️ Unklares Ergebnis der Übernachtungslogik");
+					}
+
+					// Debug: Rohdaten anzeigen
+					log(
+						`🔧 Debug - Rohergebnis: ${JSON.stringify(
+							overnightResult,
+							null,
+							2
+						)}`
+					);
+				} catch (error) {
+					log(`❌ Fehler bei Übernachtungstest: ${error.message}`, "error");
+				}
+			}
+
+			// Initial log
+			log("🚀 GoFlightLabs Integration Test bereit");
+			log("📋 Verfügbare APIs prüfen...");
+
+			setTimeout(() => {
+				if (window.GoFlightLabsAPI) {
+					log("✅ GoFlightLabsAPI geladen");
+				} else {
+					log("❌ GoFlightLabsAPI NICHT geladen");
+				}
+
+				if (window.FlightDataAPI) {
+					log("✅ FlightDataAPI (API-Facade) geladen");
+				} else {
+					log("❌ FlightDataAPI (API-Facade) NICHT geladen");
+				}
+			}, 1000);
+		</script>
+	</body>
+</html>

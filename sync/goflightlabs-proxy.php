@@ -1,204 +1,250 @@
 <?php
 /**
- * GoFlightLabs API Proxy Server
- * Löst CORS-Probleme für GoFlightLabs API-Aufrufe
- * Proxy für: https://api.goflightlabs.com/
+ * GoFlightLabs API Proxy für CORS-freien Zugriff
+ * Optimiert für Flight Data by Date API (v2/flight)
+ * Unterstützt aircraft registration search und date ranges
  */
 
-// CORS-Header setzen
+header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-header("Content-Type: application/json; charset=UTF-8");
+header("Access-Control-Allow-Headers: Content-Type, Accept, Authorization");
 
-// Preflight OPTIONS-Request behandeln
+// Handle preflight OPTIONS request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
-    exit();
+    exit;
 }
 
-// Nur GET-Requests erlauben
-if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
-    http_response_code(405);
-    echo json_encode([
-        'error' => [
-            'code' => 'METHOD_NOT_ALLOWED',
-            'message' => 'Only GET requests are allowed'
-        ]
-    ]);
-    exit();
-}
+// GoFlightLabs API Configuration
+$API_BASE_URL = "https://www.goflightlabs.com";
+$API_KEY = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiI0IiwianRpIjoiMzJmMjI2MzQxMzBmMTIxNzAyOTg4Y2NlZmM1ZjJkZWE1MWVjOTIzZTk4MDYxNGY5MmUyMGJiMTA1YjAxNDg5ODVmNjMwYTI5MzIzMWIxMmQiLCJpYXQiOjE3NTQ4MDkwOTcsIm5iZiI6MTc1NDgwOTA5NywiZXhwIjoxNzg2MzQ1MDk3LCJzdWIiOiIyNTYyNCIsInNjb3BlcyI6W119.DzMYvJa5nnJ7qVsb0iRerfjQHhscmalgKcAnn6zCbWuwel-xmjGC_uvkQOdtI2mFi3wn3j_ovXXQ8iEvxu14cg";
 
-// GoFlightLabs API-Konfiguration
-$GOFLIGHTLABS_API_KEY = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiI0IiwianRpIjoiYmRlMmNiYmIxMDMzNzAzMjFkYjIzNzdiNmExNzc0Y2QyMTFiMGY5Zjk3ZWRjMGRkYmNlM2U4YWRjM2UwNGE4ZWM1YTRlY2RmMTQ5M2IxNzMiLCJpYXQiOjE3NTQ3MjgwMzgsIm5iZiI6MTc1NDcyODAzOCwiZXhwIjoxNzg2MjY0MDM4LCJzdWIiOiIyNTYyNCIsInNjb3BlcyI6W119.nR5qYTMV-A9oZferXED_WNpcl8XSl82YMZa9ufaxWGQo_7-1tS6ZH8bUpMZgmxqWbsrHEBIExgHGyb-zZiLEIA';
-$GOFLIGHTLABS_BASE_URL = 'https://www.goflightlabs.com';
-
-// Erlaubte Endpoints
-$ALLOWED_ENDPOINTS = [
-    'flights',
-    'advanced-flights-schedules',
-    'historical'
+// Available endpoints mapping
+$ENDPOINTS = [
+    'flights' => 'flights',                           // Real-time flights
+    'schedules' => 'advanced-flights-schedules',     // Flight schedules
+    'historical' => 'historical',                    // Historical flights
+    'flight_by_date' => 'v2/flight',                // Flight Data by Date (EMPFOHLEN)
+    'callsign' => 'flights-with-call-sign',         // Flights with callsign
+    'future' => 'advanced-future-flights'           // Future flights prediction
 ];
 
-// Input-Parameter validieren
-$endpoint = $_GET['endpoint'] ?? '';
-$aircraft_reg = $_GET['aircraft_reg'] ?? '';
-$date = $_GET['date'] ?? '';
-$date_from = $_GET['date_from'] ?? '';
-$date_to = $_GET['date_to'] ?? '';
-$dep_iata = $_GET['dep_iata'] ?? '';
-$arr_iata = $_GET['arr_iata'] ?? '';
-
-// Debug-Parameter
-$debug = isset($_GET['debug']) && $_GET['debug'] === 'true';
-
-// Logging-Funktion
-function logMessage($message, $debug = false) {
-    if ($debug) {
-        error_log("[GoFlightLabs Proxy] " . $message);
+/**
+ * Log function for debugging
+ */
+function logMessage($message, $data = null) {
+    $timestamp = date('Y-m-d H:i:s');
+    $logEntry = "[$timestamp] $message";
+    if ($data) {
+        $logEntry .= " | Data: " . json_encode($data);
     }
+    error_log($logEntry);
 }
 
-// Endpoint validieren
-if (empty($endpoint) || !in_array($endpoint, $ALLOWED_ENDPOINTS)) {
-    http_response_code(400);
-    echo json_encode([
-        'error' => [
-            'code' => 'INVALID_ENDPOINT',
-            'message' => 'Invalid or missing endpoint. Allowed: ' . implode(', ', $ALLOWED_ENDPOINTS)
-        ]
-    ]);
-    exit();
-}
-
-// Parameter für GoFlightLabs API aufbauen
-$api_params = [
-    'access_key' => $GOFLIGHTLABS_API_KEY
-];
-
-// Endpoint-spezifische Parameter hinzufügen
-switch ($endpoint) {
-    case 'flights':
-        // Real-time flights endpoint - unterstützt regNum für Aircraft Registration
-        if (!empty($aircraft_reg)) {
-            $api_params['regNum'] = $aircraft_reg;
-        }
-        if (!empty($date)) {
-            // Flights endpoint hat keinen date parameter - ignorieren
-        }
-        break;
-        
-    case 'advanced-flights-schedules':
-        // Schedule endpoint - NUR Airport-basiert, kein Aircraft Registration Support
-        if (!empty($dep_iata)) {
-            $api_params['iataCode'] = $dep_iata;
-            $api_params['type'] = 'departure';
-        }
-        if (!empty($arr_iata)) {
-            $api_params['iataCode'] = $arr_iata;
-            $api_params['type'] = 'arrival';
-        }
-        break;
-        
-    case 'historical':
-        // Historical endpoint - NUR Airport-basiert, kein Aircraft Registration Support
-        if (!empty($dep_iata)) {
-            $api_params['code'] = $dep_iata;
-            $api_params['type'] = 'departure';
-        }
-        if (!empty($arr_iata)) {
-            $api_params['code'] = $arr_iata;
-            $api_params['type'] = 'arrival';
-        }
-        if (!empty($date_from)) {
-            $api_params['date_from'] = $date_from;
-        }
-        if (!empty($date_to)) {
-            $api_params['date_to'] = $date_to;
-        }
-        break;
-}
-
-// API-URL aufbauen
-$api_url = $GOFLIGHTLABS_BASE_URL . '/' . $endpoint . '?' . http_build_query($api_params);
-
-logMessage("API Request: " . $api_url, $debug);
-
-// API-Anfrage durchführen
-$context = stream_context_create([
-    'http' => [
-        'method' => 'GET',
-        'header' => [
-            'Accept: application/json',
-            'User-Agent: HangarPlanner-GoFlightLabs-Proxy/1.0'
-        ],
-        'timeout' => 30
-    ]
-]);
-
-$response = @file_get_contents($api_url, false, $context);
-$http_response_header_status = $http_response_header[0] ?? '';
-
-// Response-Status prüfen
-if ($response === false) {
-    logMessage("API Request failed: " . error_get_last()['message'], true);
-    http_response_code(502);
-    echo json_encode([
-        'error' => [
-            'code' => 'API_REQUEST_FAILED',
-            'message' => 'Failed to fetch data from GoFlightLabs API'
-        ]
-    ]);
-    exit();
-}
-
-// HTTP-Status prüfen
-if (strpos($http_response_header_status, '200') === false) {
-    logMessage("API returned non-200 status: " . $http_response_header_status, true);
-    http_response_code(502);
-    echo json_encode([
-        'error' => [
-            'code' => 'API_ERROR',
-            'message' => 'GoFlightLabs API returned error: ' . $http_response_header_status
-        ]
-    ]);
-    exit();
-}
-
-// JSON validieren
-$data = json_decode($response, true);
-if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
-    logMessage("Invalid JSON response: " . json_last_error_msg(), true);
-    http_response_code(502);
-    echo json_encode([
-        'error' => [
-            'code' => 'INVALID_JSON',
-            'message' => 'Invalid JSON response from GoFlightLabs API'
-        ]
-    ]);
-    exit();
-}
-
-// API-Fehler prüfen
-if (isset($data['error'])) {
-    logMessage("GoFlightLabs API Error: " . json_encode($data['error']), true);
-    http_response_code(400);
-    echo json_encode($data);
-    exit();
-}
-
-// Debug-Informationen hinzufügen
-if ($debug) {
-    $data['_proxy_debug'] = [
+/**
+ * Main proxy handler
+ */
+function handleRequest() {
+    global $API_BASE_URL, $API_KEY, $ENDPOINTS;
+    
+    // Get endpoint from request
+    $endpoint = $_GET['endpoint'] ?? 'flight_by_date';
+    
+    // Validate endpoint
+    if (!isset($ENDPOINTS[$endpoint])) {
+        http_response_code(400);
+        echo json_encode([
+            'error' => 'Invalid endpoint',
+            'available_endpoints' => array_keys($ENDPOINTS),
+            'requested' => $endpoint
+        ]);
+        return;
+    }
+    
+    $api_endpoint = $ENDPOINTS[$endpoint];
+    
+    // Build API URL
+    $api_url = $API_BASE_URL . '/' . $api_endpoint;
+    
+    // Prepare query parameters
+    $params = $_GET;
+    unset($params['endpoint']); // Remove our endpoint parameter
+    
+    // Add API key
+    $params['access_key'] = $API_KEY;
+    
+    // Handle specific endpoint logic
+    switch ($endpoint) {
+        case 'flight_by_date':
+            // Flight Data by Date API - EMPFOHLENE LÖSUNG
+            if (!isset($params['search_by'])) {
+                $params['search_by'] = 'reg'; // Default to registration search
+            }
+            
+            // Validate registration parameter
+            if ($params['search_by'] === 'reg' && !isset($params['reg'])) {
+                http_response_code(400);
+                echo json_encode([
+                    'error' => 'Missing aircraft registration parameter',
+                    'required_params' => ['reg'],
+                    'example' => 'reg=D-AINY'
+                ]);
+                return;
+            }
+            
+            // Default date range if not provided
+            if (!isset($params['date_from'])) {
+                $params['date_from'] = date('Y-m-d');
+            }
+            if (!isset($params['date_to'])) {
+                $params['date_to'] = date('Y-m-d', strtotime('+1 day'));
+            }
+            
+            logMessage("Flight by Date API", [
+                'registration' => $params['reg'] ?? 'N/A',
+                'date_from' => $params['date_from'],
+                'date_to' => $params['date_to']
+            ]);
+            break;
+            
+        case 'flights':
+            // Real-time flights
+            if (isset($params['regNum'])) {
+                logMessage("Real-time flights by registration", ['regNum' => $params['regNum']]);
+            }
+            break;
+            
+        case 'schedules':
+            // Airport schedules
+            if (!isset($params['iataCode'])) {
+                http_response_code(400);
+                echo json_encode([
+                    'error' => 'Missing airport IATA code',
+                    'required_params' => ['iataCode'],
+                    'example' => 'iataCode=MUC'
+                ]);
+                return;
+            }
+            break;
+            
+        case 'historical':
+            // Historical flights
+            if (!isset($params['code'])) {
+                http_response_code(400);
+                echo json_encode([
+                    'error' => 'Missing airport code for historical flights',
+                    'required_params' => ['code'],
+                    'example' => 'code=MUC'
+                ]);
+                return;
+            }
+            break;
+    }
+    
+    // Build final URL with parameters
+    $query_string = http_build_query($params);
+    $final_url = $api_url . '?' . $query_string;
+    
+    logMessage("GoFlightLabs API Request", [
         'endpoint' => $endpoint,
-        'api_url' => $api_url,
-        'response_length' => strlen($response),
-        'timestamp' => date('Y-m-d H:i:s'),
-        'data_count' => isset($data['data']) ? count($data['data']) : 0
+        'url' => $final_url,
+        'params_count' => count($params)
+    ]);
+    
+    // Make the API request
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'GET',
+            'header' => [
+                'User-Agent: HangarPlanner/1.0 (GoFlightLabs Integration)',
+                'Accept: application/json',
+                'Content-Type: application/json'
+            ],
+            'timeout' => 30
+        ]
+    ]);
+    
+    $response = @file_get_contents($final_url, false, $context);
+    
+    if ($response === FALSE) {
+        $error = error_get_last();
+        logMessage("GoFlightLabs API Error", ['error' => $error['message']]);
+        
+        http_response_code(500);
+        echo json_encode([
+            'error' => 'Failed to fetch data from GoFlightLabs API',
+            'details' => $error['message'] ?? 'Unknown error',
+            'endpoint' => $endpoint,
+            'timestamp' => date('c')
+        ]);
+        return;
+    }
+    
+    // Parse and validate response
+    $data = json_decode($response, true);
+    
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        logMessage("GoFlightLabs JSON Error", ['error' => json_last_error_msg()]);
+        
+        http_response_code(500);
+        echo json_encode([
+            'error' => 'Invalid JSON response from GoFlightLabs',
+            'json_error' => json_last_error_msg(),
+            'raw_response' => substr($response, 0, 500)
+        ]);
+        return;
+    }
+    
+    // Check for API errors
+    if (isset($data['error'])) {
+        logMessage("GoFlightLabs API returned error", $data);
+        
+        http_response_code(400);
+        echo json_encode([
+            'error' => 'GoFlightLabs API Error',
+            'api_error' => $data['error'],
+            'endpoint' => $endpoint
+        ]);
+        return;
+    }
+    
+    // Log successful response
+    $dataCount = 0;
+    if (isset($data['data'])) {
+        $dataCount = is_array($data['data']) ? count($data['data']) : 1;
+    }
+    
+    logMessage("GoFlightLabs Success", [
+        'endpoint' => $endpoint,
+        'data_count' => $dataCount,
+        'has_success_flag' => isset($data['success']) ? $data['success'] : 'unknown'
+    ]);
+    
+    // Add metadata to response
+    $data['_proxy_info'] = [
+        'endpoint' => $endpoint,
+        'api_endpoint' => $api_endpoint,
+        'timestamp' => date('c'),
+        'data_count' => $dataCount
     ];
+    
+    // Return successful response
+    http_response_code(200);
+    echo json_encode($data);
 }
 
-// Erfolgreiche Antwort zurückgeben
-logMessage("Successful response, data count: " . (isset($data['data']) ? count($data['data']) : 0), $debug);
-echo json_encode($data);
+// Handle the request
+try {
+    handleRequest();
+} catch (Exception $e) {
+    logMessage("Proxy Exception", ['exception' => $e->getMessage()]);
+    
+    http_response_code(500);
+    echo json_encode([
+        'error' => 'Proxy server error',
+        'message' => $e->getMessage(),
+        'timestamp' => date('c')
+    ]);
+}
 ?>

@@ -1,29 +1,25 @@
 /**
- * GoFli		baseUrl: "https://www.goflightlabs.com",
-		apiKey:
-			"eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiI0IiwianRpIjoiYmRlMmNiYmIxMDMzNzAzMjFkYjIzNzdiNmExNzc0Y2QyMTFiMGY5Zjk3ZWRjMGRkYmNlM2U4YWRjM2UwNGE4ZWM1YTRlY2RmMTQ5M2IxNzMiLCJpYXQiOjE3NTQ3MjgwMzgsIm5iZiI6MTc1NDcyODAzOCwiZXhwIjoxNzg2MjY0MDM4LCJzdWIiOiIyNTYyNCIsInNjb3BlcyI6W119.nR5qYTMV-A9oZferXED_WNpcl8XSl82YMZa9ufaxWGQo_7-1tS6ZH8bUpMZgmxqWbsrHEBIExgHGyb-zZiLEIA",
-		endpoints: {
-			flights: "flights", // Real-time flights mit regNum parameter
-			schedules: "advanced-flights-schedules", // Airport-basierte Schedules (kein aircraft support)
-			historical: "historical", // Airport-basierte Historical (kein aircraft support)
-		},I Integration
+ * GoFlightLabs API Integration - OPTIMIERT für Flight Data by Date
  * Spezialisiert auf das Abrufen von Flugdaten nach Flugzeugregistrierungen
  * Dokumentation: https://docs.goflightlabs.com/
- * Optimiert für Aircraft-spezifische Abfragen mit direkter Registrierungs-Suche
+ * SCHWERPUNKT: Flight Data by Date API (v2/flight) für Aircraft Registration Search
  */
 
 const GoFlightLabsAPI = (() => {
 	// API-Konfiguration
 	const config = {
 		name: "GoFlightLabs API",
-		version: "1.0.0",
+		version: "2.0.0",
 		baseUrl: "https://www.goflightlabs.com",
 		apiKey:
-			"eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiI0IiwianRpIjoiYmRlMmNiYmIxMDMzNzAzMjFkYjIzNzdiNmExNzc0Y2QyMTFiMGY5Zjk3ZWRjMGRkYmNlM2U4YWRjM2UwNGE4ZWM1YTRlY2RmMTQ5M2IxNzMiLCJpYXQiOjE3NTQ3MjgwMzgsIm5iZiI6MTc1NDcyODAzOCwiZXhwIjoxNzg2MjY0MDM4LCJzdWIiOiIyNTYyNCIsInNjb3BlcyI6W119.nR5qYTMV-A9oZferXED_WNpcl8XSl82YMZa9ufaxWGQo_7-1tS6ZH8bUpMZgmxqWbsrHEBIExgHGyb-zZiLEIA",
+			"eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiI0IiwianRpIjoiMzJmMjI2MzQxMzBmMTIxNzAyOTg4Y2NlZmM1ZjJkZWE1MWVjOTIzZTk4MDYxNGY5MmUyMGJiMTA1YjAxNDg5ODVmNjMwYTI5MzIzMWIxMmQiLCJpYXQiOjE3NTQ4MDkwOTcsIm5iZiI6MTc1NDgwOTA5NywiZXhwIjoxNzg2MzQ1MDk3LCJzdWIiOiIyNTYyNCIsInNjb3BlcyI6W119.DzMYvJa5nnJ7qVsb0iRerfjQHhscmalgKcAnn6zCbWuwel-xmjGC_uvkQOdtI2mFi3wn3j_ovXXQ8iEvxu14cg",
 		endpoints: {
-			flights: "flights", // Real-time flights mit regNum parameter
-			schedules: "advanced-flights-schedules", // Airport-basierte Schedules
-			historical: "historical", // Airport-basierte Historical
+			flight_by_date: "v2/flight", // PRIMÄR: Flight Data by Date (aircraft reg search)
+			flights: "flights", // Real-time flights
+			schedules: "advanced-flights-schedules", // Airport schedules
+			historical: "historical", // Historical flights (airport-based)
+			callsign: "flights-with-call-sign", // Flights with callsign
+			future: "advanced-future-flights", // Future flights prediction
 		},
 		debugMode: true,
 		rateLimitDelay: 1000, // 1 Sekunde zwischen Anfragen
@@ -103,11 +99,11 @@ const GoFlightLabsAPI = (() => {
 	};
 
 	/**
-	 * HTTP-Request mit Retry-Logik über lokalen Proxy
+	 * HTTP-Request mit Retry-Logik über lokalen Proxy (OPTIMIERT)
 	 */
 	const makeRequest = async (endpoint, params = {}, retryCount = 0) => {
 		try {
-			// Proxy-URL verwenden statt direktem API-Aufruf
+			// Verwende den optimierten Proxy
 			const proxyUrl = "sync/goflightlabs-proxy.php";
 
 			// Parameter für Proxy-Aufruf vorbereiten
@@ -120,6 +116,7 @@ const GoFlightLabsAPI = (() => {
 
 			if (config.debugMode) {
 				console.log(`🌐 GoFlightLabs Proxy Request: ${url}`);
+				console.log(`📋 Endpoint: ${endpoint}, Params:`, params);
 			}
 
 			const response = await fetch(url, {
@@ -127,8 +124,9 @@ const GoFlightLabsAPI = (() => {
 				headers: {
 					Accept: "application/json",
 					"Content-Type": "application/json",
-					"User-Agent": "HangarPlanner/1.0",
+					"User-Agent": "HangarPlanner/2.0 (GoFlightLabs Integration)",
 				},
+				cache: "no-cache",
 			});
 
 			if (!response.ok) {
@@ -140,50 +138,34 @@ const GoFlightLabsAPI = (() => {
 				throw new Error(`HTTP ${response.status}: ${errorText}`);
 			}
 
-			// Antwort als Text lesen und prüfen
-			const responseText = await response.text();
+			// Response als JSON parsen
+			const data = await response.json();
 
 			if (config.debugMode) {
-				console.log(
-					`📥 GoFlightLabs Raw Response:`,
-					responseText.substring(0, 200) + "..."
-				);
-			}
-
-			// Prüfen ob es gültiges JSON ist
-			let data;
-			try {
-				data = JSON.parse(responseText);
-			} catch (jsonError) {
-				console.error(`🚫 GoFlightLabs JSON Parse Error:`, jsonError);
-				console.error(`📄 Response Text:`, responseText.substring(0, 500));
-				throw new Error(
-					`Invalid JSON response from proxy: ${jsonError.message}`
-				);
+				console.log(`📥 GoFlightLabs Response:`, data);
 			}
 
 			// Prüfe auf API-Fehler
 			if (data.error) {
-				throw new Error(`API Error: ${data.error.message || data.error}`);
-			}
-
-			if (config.debugMode) {
-				console.log(`✅ GoFlightLabs Response:`, data);
+				throw new Error(
+					`GoFlightLabs API Error: ${data.error.message || data.error}`
+				);
 			}
 
 			return data;
 		} catch (error) {
 			console.error(
-				`❌ GoFlightLabs Request failed (Attempt ${retryCount + 1}):`,
+				`❌ GoFlightLabs Request failed (Attempt ${retryCount + 1}/${
+					config.maxRetries + 1
+				}):`,
 				error
 			);
 
 			// Retry-Logik
 			if (retryCount < config.maxRetries) {
-				console.log(`🔄 Retrying in ${(retryCount + 1) * 1000}ms...`);
-				await new Promise((resolve) =>
-					setTimeout(resolve, (retryCount + 1) * 1000)
-				);
+				const waitTime = (retryCount + 1) * 1000;
+				console.log(`🔄 Retrying in ${waitTime}ms...`);
+				await new Promise((resolve) => setTimeout(resolve, waitTime));
 				return makeRequest(endpoint, params, retryCount + 1);
 			}
 
@@ -213,7 +195,7 @@ const GoFlightLabsAPI = (() => {
 	};
 
 	/**
-	 * GoFlightLabs Daten zu einheitlichem Format konvertieren
+	 * GoFlightLabs Daten zu einheitlichem Format konvertieren (OPTIMIERT für v2/flight)
 	 */
 	const convertToUnifiedFormat = (
 		goFlightLabsData,
@@ -231,13 +213,18 @@ const GoFlightLabsAPI = (() => {
 		const formattedData = flightsArray
 			.map((flight) => {
 				try {
-					// Flughafen-Codes
-					const departureIata = flight.departure?.iata || "???";
-					const arrivalIata = flight.arrival?.iata || "???";
+					// Flight Data by Date API Format (v2/flight)
+					// Die API gibt vollständige Flugdaten mit departure/arrival Objekten zurück
 
-					// Zeiten formatieren
-					const departureTime = formatTime(flight.departure?.scheduled);
-					const arrivalTime = formatTime(flight.arrival?.scheduled);
+					// Flughafen-Codes aus departure/arrival Objekten
+					const departureIata = flight.departure?.airport?.iata || "???";
+					const arrivalIata = flight.arrival?.airport?.iata || "???";
+
+					// Zeiten formatieren (API gibt bereits lokale Zeiten)
+					const departureTime = formatTime(
+						flight.departure?.scheduledTime?.local
+					);
+					const arrivalTime = formatTime(flight.arrival?.scheduledTime?.local);
 
 					// Airline-Informationen
 					const airlineData = flight.airline || {};
@@ -246,16 +233,15 @@ const GoFlightLabsAPI = (() => {
 					const airlineIcao = airlineData.icao || "";
 
 					// Flugnummer
-					const flightNumber = flight.flight?.number || flight.number || "";
+					const flightNumber = flight.number || "";
 
-					// Aircraft-Informationen
-					const aircraftType = flight.aircraft?.type || "Unknown";
-					const registration =
-						flight.aircraft?.registration || aircraftRegistration;
+					// Aircraft-Informationen (v2/flight gibt diese direkt zurück)
+					const aircraftType = flight.aircraft?.model || "Unknown";
+					const registration = flight.aircraft?.reg || aircraftRegistration;
 
-					// Datum
-					const scheduledDepartureDate = flight.departure?.scheduled
-						? new Date(flight.departure.scheduled)
+					// Datum aus scheduled time extrahieren oder fallback verwenden
+					const scheduledDepartureDate = flight.departure?.scheduledTime?.local
+						? new Date(flight.departure.scheduledTime.local)
 								.toISOString()
 								.substring(0, 10)
 						: date;
@@ -280,7 +266,7 @@ const GoFlightLabsAPI = (() => {
 										{
 											qualifier: "STD",
 											value: departureTime + ":00.000",
-											isUtc: true,
+											isUtc: false, // GoFlightLabs gibt lokale Zeiten
 										},
 									],
 								},
@@ -294,7 +280,7 @@ const GoFlightLabsAPI = (() => {
 										{
 											qualifier: "STA",
 											value: arrivalTime + ":00.000",
-											isUtc: true,
+											isUtc: false, // GoFlightLabs gibt lokale Zeiten
 										},
 									],
 								},
@@ -309,12 +295,13 @@ const GoFlightLabsAPI = (() => {
 							},
 						],
 						_source: "goflightlabs",
+						_apiVersion: "v2/flight",
 						_rawFlightData: flight,
-						_isUtc: true,
+						_isUtc: false, // GoFlightLabs gibt lokale Zeiten
 					};
 				} catch (error) {
 					console.error(
-						"Fehler bei GoFlightLabs Konvertierung:",
+						"Fehler bei GoFlightLabs v2/flight Konvertierung:",
 						error,
 						flight
 					);
@@ -323,11 +310,17 @@ const GoFlightLabsAPI = (() => {
 			})
 			.filter(Boolean);
 
-		return { data: formattedData };
+		return {
+			data: formattedData,
+			_source: "goflightlabs",
+			_apiVersion: "v2/flight",
+			_totalFlights: formattedData.length,
+		};
 	};
 
 	/**
-	 * Flugdaten für eine Aircraft Registration abrufen
+	 * Flugdaten für eine Aircraft Registration abrufen (OPTIMIERT)
+	 * Verwendet primär die Flight Data by Date API (v2/flight)
 	 */
 	const getAircraftFlights = async (aircraftRegistration, date) => {
 		try {
@@ -339,18 +332,22 @@ const GoFlightLabsAPI = (() => {
 			);
 
 			return await rateLimiter(async () => {
-				// Verwende Real-Time Flights-Endpoint mit regNum Parameter
+				// Verwende Flight Data by Date API - EMPFOHLENE LÖSUNG
 				const params = {
-					regNum: registration, // Korrekter Parameter-Name!
-					limit: 100, // Limit hinzufügen um Performance zu verbessern
+					search_by: "reg", // Suche nach Registrierung
+					reg: registration, // Aircraft Registration
+					date_from: formattedDate, // Start-Datum
+					date_to: formattedDate, // End-Datum (gleicher Tag)
 				};
 
-				const response = await makeRequest(config.endpoints.flights, params);
+				const response = await makeRequest(
+					config.endpoints.flight_by_date,
+					params
+				);
 
+				const flightCount = response.data?.length || 0;
 				updateFetchStatus(
-					`GoFlightLabs: ${
-						response.data?.length || 0
-					} Flüge für ${registration} gefunden`
+					`GoFlightLabs: ${flightCount} Flüge für ${registration} am ${formattedDate} gefunden`
 				);
 
 				return convertToUnifiedFormat(response, registration, formattedDate);
@@ -419,7 +416,8 @@ const GoFlightLabsAPI = (() => {
 	};
 
 	/**
-	 * Aircraft-Daten für zwei Tage abrufen (Übernachtungslogik)
+	 * Aircraft-Daten für zwei Tage abrufen (Übernachtungslogik OPTIMIERT)
+	 * Verwendet Flight Data by Date API für präzise Registrierungs-Suche
 	 */
 	const updateAircraftData = async (aircraftId, currentDate, nextDate) => {
 		// Prüfung auf leere Aircraft ID
@@ -432,7 +430,7 @@ const GoFlightLabsAPI = (() => {
 				arrivalTime: "",
 				positionText: "",
 				data: [],
-				_isUtc: true,
+				_isUtc: false,
 				_noDataFound: true,
 				_clearFields: true,
 				_emptyAircraftId: true,
@@ -454,21 +452,21 @@ const GoFlightLabsAPI = (() => {
 			`🛩️ GoFlightLabs: Suche Übernachtungsdaten für ${registration} - ${currentDate} zu ${nextDate}`
 		);
 		updateFetchStatus(
-			`GoFlightLabs: Verarbeite ${registration} - Übernachtungslogik...`
+			`GoFlightLabs: Verarbeite ${registration} - Übernachtungslogik (v2/flight)...`
 		);
 
 		try {
-			// Hole Flugdaten für beide Tage
+			// Hole Flugdaten für beide Tage mit der optimierten API
 			const [currentDayData, nextDayData] = await Promise.all([
-				getAircraftFlights(registration, currentDate),
-				getAircraftFlights(registration, nextDate),
+				getAircraftFlightsByDate(registration, currentDate),
+				getAircraftFlightsByDate(registration, nextDate),
 			]);
 
 			const currentDayFlights = currentDayData?.data || [];
 			const nextDayFlights = nextDayData?.data || [];
 
 			console.log(
-				`📊 GoFlightLabs: ${currentDayFlights.length} Flüge am ${currentDate}, ${nextDayFlights.length} Flüge am ${nextDate}`
+				`📊 GoFlightLabs v2/flight: ${currentDayFlights.length} Flüge am ${currentDate}, ${nextDayFlights.length} Flüge am ${nextDate}`
 			);
 
 			// Hole aktuell gewählten Flughafen
@@ -476,7 +474,7 @@ const GoFlightLabsAPI = (() => {
 				document.getElementById("airportCodeInput")?.value || "MUC";
 
 			console.log(
-				`🏨 === GOFLIGHTLABS ÜBERNACHTUNGS-PRÜFUNG FÜR ${registration} ===`
+				`🏨 === GOFLIGHTLABS v2/flight ÜBERNACHTUNGS-PRÜFUNG FÜR ${registration} ===`
 			);
 			console.log(`🏢 Gewählter Flughafen: ${selectedAirport}`);
 
@@ -543,7 +541,9 @@ const GoFlightLabsAPI = (() => {
 				);
 			}
 
-			console.log(`🏨 === ENDE GOFLIGHTLABS ÜBERNACHTUNGS-PRÜFUNG ===`);
+			console.log(
+				`🏨 === ENDE GOFLIGHTLABS v2/flight ÜBERNACHTUNGS-PRÜFUNG ===`
+			);
 
 			// Wenn keine Übernachtung stattfindet
 			if (!lastArrivalToday || !firstDepartureTomorrow) {
@@ -571,6 +571,7 @@ const GoFlightLabsAPI = (() => {
 					_noDataFound: true,
 					_clearFields: true,
 					_source: "goflightlabs",
+					_apiVersion: "v2/flight",
 				};
 			}
 
@@ -582,8 +583,9 @@ const GoFlightLabsAPI = (() => {
 				arrivalTime: "--:--",
 				positionText: "---",
 				data: [lastArrivalToday, firstDepartureTomorrow],
-				_isUtc: true,
+				_isUtc: false, // GoFlightLabs v2/flight gibt lokale Zeiten
 				_source: "goflightlabs",
+				_apiVersion: "v2/flight",
 				_hasOvernightStay: true,
 			};
 
@@ -629,14 +631,20 @@ const GoFlightLabsAPI = (() => {
 			}
 
 			updateFetchStatus(
-				`${registration} übernachtet in ${selectedAirport}: ${result.positionText}`,
+				`${registration} übernachtet in ${selectedAirport}: ${result.positionText} (v2/flight)`,
 				false
 			);
 
 			return result;
 		} catch (error) {
-			console.error("GoFlightLabs: Fehler bei Übernachtungslogik:", error);
-			updateFetchStatus(`GoFlightLabs Fehler: ${error.message}`, true);
+			console.error(
+				"GoFlightLabs v2/flight: Fehler bei Übernachtungslogik:",
+				error
+			);
+			updateFetchStatus(
+				`GoFlightLabs v2/flight Fehler: ${error.message}`,
+				true
+			);
 
 			return {
 				originCode: "",
@@ -648,8 +656,37 @@ const GoFlightLabsAPI = (() => {
 				_noDataFound: true,
 				_clearFields: true,
 				_source: "goflightlabs",
+				_apiVersion: "v2/flight",
 				_error: error.message,
 			};
+		}
+	};
+
+	/**
+	 * Hilfsfunktion: Flugdaten für spezifisches Datum abrufen
+	 */
+	const getAircraftFlightsByDate = async (registration, date) => {
+		try {
+			return await rateLimiter(async () => {
+				const params = {
+					search_by: "reg",
+					reg: registration,
+					date_from: date,
+					date_to: date,
+				};
+
+				const response = await makeRequest(
+					config.endpoints.flight_by_date,
+					params
+				);
+				return convertToUnifiedFormat(response, registration, date);
+			});
+		} catch (error) {
+			console.error(
+				`Fehler beim Abrufen von Flugdaten für ${registration} am ${date}:`,
+				error
+			);
+			return { data: [] };
 		}
 	};
 

@@ -268,10 +268,12 @@ const FlightDataAPI = (function () {
 			);
 		}
 
-		console.log(`[API-FASSADE] Verwende GoFlightLabs API für ${aircraftId}`);
+		console.log(
+			`[API-FASSADE] Verwende GoFlightLabs API für ${aircraftId} - Flight Data by Date API`
+		);
 
 		try {
-			// Verwende die GoFlightLabs Übernachtungslogik
+			// Verwende die spezialisierte Übernachtungslogik der GoFlightLabs API
 			const result = await window.GoFlightLabsAPI.updateAircraftData(
 				aircraftId,
 				currentDate,
@@ -295,8 +297,8 @@ const FlightDataAPI = (function () {
 				};
 			}
 
-			// Markiere das Ergebnis mit der Quelle (falls nicht bereits gesetzt)
-			result._source = result._source || "goflightlabs";
+			// Markiere das Ergebnis mit der Quelle
+			result._source = "goflightlabs";
 			return result;
 		} catch (error) {
 			console.error(`[API-FASSADE] Fehler bei GoFlightLabs-Anfrage:`, error);
@@ -305,7 +307,7 @@ const FlightDataAPI = (function () {
 				destCode: "",
 				departureTime: "",
 				arrivalTime: "",
-				positionText: "Fehler beim Laden der GoFlightLabs Daten",
+				positionText: `GoFlightLabs Fehler: ${error.message}`,
 				data: [],
 				_isUtc: true,
 				_source: "goflightlabs",
@@ -436,6 +438,7 @@ const FlightDataAPI = (function () {
 				if (!window.GoFlightLabsAPI) {
 					throw new Error("GoFlightLabsAPI ist nicht verfügbar");
 				}
+				// GoFlightLabs getAircraftFlights verwenden
 				return await window.GoFlightLabsAPI.getAircraftFlights(
 					aircraftId,
 					date

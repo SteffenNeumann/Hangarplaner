@@ -340,10 +340,7 @@ const GoFlightLabsAPI = (() => {
 					date_to: formattedDate, // End-Datum (gleicher Tag)
 				};
 
-				const response = await makeRequest(
-					config.endpoints.flight_by_date,
-					params
-				);
+				const response = await makeRequest("flight_by_date", params);
 
 				const flightCount = response.data?.length || 0;
 				updateFetchStatus(
@@ -371,7 +368,7 @@ const GoFlightLabsAPI = (() => {
 					aircraft_reg: registration,
 				};
 
-				const response = await makeRequest(config.endpoints.live, params);
+				const response = await makeRequest("flights", params);
 				return convertToUnifiedFormat(
 					response,
 					registration,
@@ -402,7 +399,7 @@ const GoFlightLabsAPI = (() => {
 					date_to: formatDate(dateTo),
 				};
 
-				const response = await makeRequest(config.endpoints.historical, params);
+				const response = await makeRequest("historical", params);
 				return convertToUnifiedFormat(
 					response,
 					registration,
@@ -675,10 +672,7 @@ const GoFlightLabsAPI = (() => {
 					date_to: date,
 				};
 
-				const response = await makeRequest(
-					config.endpoints.flight_by_date,
-					params
-				);
+				const response = await makeRequest("flight_by_date", params);
 				return convertToUnifiedFormat(response, registration, date);
 			});
 		} catch (error) {
@@ -704,7 +698,7 @@ const GoFlightLabsAPI = (() => {
 					date_to: endDateTime.split("T")[0],
 				};
 
-				const response = await makeRequest(config.endpoints.schedules, params);
+				const response = await makeRequest("schedules", params);
 				return response;
 			});
 		} catch (error) {
@@ -750,10 +744,7 @@ const GoFlightLabsAPI = (() => {
 				date: formatDate(new Date()),
 			};
 
-			const response = await makeRequest(
-				config.endpoints.schedules,
-				testParams
-			);
+			const response = await makeRequest("schedules", testParams);
 
 			const success = response && !response.error;
 			updateFetchStatus(

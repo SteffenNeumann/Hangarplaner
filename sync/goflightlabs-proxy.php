@@ -142,8 +142,12 @@ function handleRequest() {
             break;
     }
     
-    // Build final URL with parameters
-    $query_string = http_build_query($params);
+    // Build final URL with parameters (use rawurlencode to prevent &amp; issues)
+    $query_parts = [];
+    foreach ($params as $key => $value) {
+        $query_parts[] = rawurlencode($key) . '=' . rawurlencode($value);
+    }
+    $query_string = implode('&', $query_parts);
     $final_url = $api_url . '?' . $query_string;
     
     logMessage("GoFlightLabs API Request", [
@@ -152,29 +156,52 @@ function handleRequest() {
         'params_count' => count($params)
     ]);
     
-    // Make the API request
+    // Make the API request with improved headers and error handling
     $context = stream_context_create([
         'http' => [
             'method' => 'GET',
             'header' => [
                 'User-Agent: HangarPlanner/1.0 (GoFlightLabs Integration)',
                 'Accept: application/json',
-                'Content-Type: application/json'
+                'Connection: close'
             ],
-            'timeout' => 30
+            'timeout' => 30,
+            'ignore_errors' => true  // Important: Don't fail on HTTP error codes
         ]
     ]);
     
     $response = @file_get_contents($final_url, false, $context);
     
-    if ($response === FALSE) {
+    // Get HTTP response code
+    $http_code = 200;
+    if (isset($http_response_header)) {
+        $status_line = $http_response_header[0];
+        preg_match('/\d{3}/', $status_line, $matches);
+        if (!empty($matches)) {
+            $http_code = intval($matches[0]);
+        }
+    }
+    
+    if ($response === FALSE || $http_code >= 400) {
         $error = error_get_last();
-        logMessage("GoFlightLabs API Error", ['error' => $error['message']]);
+        $error_details = $error['message'] ?? 'Unknown error';
+        
+        // Try to get more details if we have a response but with error code
+        if ($response !== FALSE && $http_code >= 400) {
+            $error_details = "HTTP $http_code: " . substr($response, 0, 500);
+        }
+        
+        logMessage("GoFlightLabs API Error", [
+            'error' => $error_details,
+            'http_code' => $http_code,
+            'url' => $final_url
+        ]);
         
         http_response_code(500);
         echo json_encode([
             'error' => 'Failed to fetch data from GoFlightLabs API',
-            'details' => $error['message'] ?? 'Unknown error',
+            'details' => $error_details,
+            'http_code' => $http_code,
             'endpoint' => $endpoint,
             'timestamp' => date('c')
         ]);
@@ -185,18 +212,23 @@ function handleRequest() {
     $data = json_decode($response, true);
     
     if (json_last_error() !== JSON_ERROR_NONE) {
-        logMessage("GoFlightLabs JSON Error", ['error' => json_last_error_msg()]);
+        logMessage("GoFlightLabs JSON Error", [
+            'error' => json_last_error_msg(),
+            'raw_response' => substr($response, 0, 500),
+            'http_code' => $http_code
+        ]);
         
         http_response_code(500);
         echo json_encode([
             'error' => 'Invalid JSON response from GoFlightLabs',
             'json_error' => json_last_error_msg(),
-            'raw_response' => substr($response, 0, 500)
+            'raw_response' => substr($response, 0, 500),
+            'http_code' => $http_code
         ]);
         return;
     }
     
-    // Check for API errors
+    // Check for API errors (but allow empty data arrays)
     if (isset($data['error'])) {
         logMessage("GoFlightLabs API returned error", $data);
         
@@ -221,12 +253,15 @@ function handleRequest() {
         'has_success_flag' => isset($data['success']) ? $data['success'] : 'unknown'
     ]);
     
-    // Add metadata to response
+    // Add metadata to response for debugging
     $data['_proxy_info'] = [
         'endpoint' => $endpoint,
         'api_endpoint' => $api_endpoint,
         'timestamp' => date('c'),
-        'data_count' => $dataCount
+        'data_count' => $dataCount,
+        'http_code' => $http_code,
+        'request_url' => $final_url,
+        'success' => isset($data['success']) ? $data['success'] : 'unknown'
     ];
     
     // Return successful response

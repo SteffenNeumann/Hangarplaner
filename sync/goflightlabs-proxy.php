@@ -27,7 +27,8 @@ $ENDPOINTS = [
     'historical' => 'historical',                    // Historical flights
     'flight_by_date' => 'v2/flight',                // Flight Data by Date (EMPFOHLEN)
     'callsign' => 'flights-with-call-sign',         // Flights with callsign
-    'future' => 'advanced-future-flights'           // Future flights prediction
+    'future' => 'advanced-future-flights',          // Future flights prediction
+    'flight_info' => 'flight'                       // Flight Info by Flight Number - NEW!
 ];
 
 /**

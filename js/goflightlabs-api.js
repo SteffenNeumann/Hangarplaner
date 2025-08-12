@@ -20,6 +20,7 @@ const GoFlightLabsAPI = (() => {
 			historical: "historical", // Historical flights (airport-based)
 			callsign: "flights-with-call-sign", // Flights with callsign
 			future: "advanced-future-flights", // Future flights prediction
+			flight_info: "flight", // Flight Info by Flight Number - NEW TEST!
 		},
 		debugMode: true,
 		rateLimitDelay: 1000, // 1 Sekunde zwischen Anfragen

@@ -674,6 +674,186 @@ function setupFlightDataEventHandlers() {
 	} else {
 		console.error("❌ Update Data Button nicht gefunden!");
 	}
+
+	// Event-Handler für den neuen Overnight Flights Button
+	const processOvernightFlightsBtn = document.getElementById(
+		"processOvernightFlightsBtn"
+	);
+	if (processOvernightFlightsBtn) {
+		console.log(
+			"✅ Process Overnight Flights Button gefunden, installiere Event-Handler"
+		);
+
+		// Event-Handler für Overnight Flight Processing
+		processOvernightFlightsBtn.onclick = async function (event) {
+			// Standardverhalten verhindern
+			event.preventDefault();
+
+			console.log("*** PROCESS OVERNIGHT FLIGHTS BUTTON WURDE GEKLICKT ***");
+
+			// Button temporär deaktivieren und Text ändern
+			processOvernightFlightsBtn.disabled = true;
+			const originalText = processOvernightFlightsBtn.textContent;
+			processOvernightFlightsBtn.textContent = "Processing...";
+
+			// Status-Panel anzeigen und aktualisieren
+			const statusPanel = document.getElementById("overnightFlightsStatus");
+			const statusMessage = document.getElementById("overnightFlightsMessage");
+			if (statusPanel) {
+				statusPanel.style.display = "block";
+				if (statusMessage) {
+					statusMessage.textContent = "Starting overnight flights analysis...";
+				}
+			}
+
+			try {
+				// Hole Flughafen-Code
+				const airportCodeInput = document.getElementById("airportCodeInput");
+				const airportCode =
+					airportCodeInput?.value.trim().toUpperCase() || "MUC";
+
+				// Hole Datum
+				const currentDateInput = document.getElementById("currentDateInput");
+				const nextDateInput = document.getElementById("nextDateInput");
+				const currentDate =
+					currentDateInput?.value || new Date().toISOString().split("T")[0];
+				const nextDate =
+					nextDateInput?.value ||
+					new Date(Date.now() + 24 * 60 * 60 * 1000)
+						.toISOString()
+						.split("T")[0];
+
+				console.log(
+					`Starte Overnight Flights Processing für ${airportCode} vom ${currentDate} bis ${nextDate}`
+				);
+
+				// Status aktualisieren
+				if (statusMessage) {
+					statusMessage.textContent = `Analyzing flights for ${airportCode} from ${currentDate} to ${nextDate}`;
+				}
+				// Prüfe ob FlightRegistrationLookup verfügbar ist
+				if (
+					window.FlightRegistrationLookup &&
+					window.FlightRegistrationLookup.processOvernightFlightsForHangarplaner
+				) {
+					// Rufe die Overnight Flights Processing Funktion auf
+					const result =
+						await window.FlightRegistrationLookup.processOvernightFlightsForHangarplaner(
+							airportCode,
+							currentDate,
+							nextDate
+						);
+
+					if (result && result.success) {
+						console.log(
+							"✅ Overnight Flights Processing erfolgreich abgeschlossen"
+						);
+
+						// Status aktualisieren
+						if (statusMessage) {
+							statusMessage.textContent = `✅ Processing completed: ${
+								result.processedCount || 0
+							} aircraft analyzed`;
+						}
+
+						// Zeige Benachrichtigung
+						if (window.showNotification) {
+							window.showNotification(
+								`Overnight Flight Processing completed: ${result.processedCount} aircraft processed`,
+								"success"
+							);
+						}
+					} else {
+						console.error("❌ Overnight Flights Processing fehlgeschlagen");
+
+						// Status aktualisieren
+						if (statusMessage) {
+							statusMessage.textContent =
+								"❌ Processing failed - check console for details";
+						}
+
+						if (window.showNotification) {
+							window.showNotification(
+								"Overnight Flight Processing failed. Check console for details.",
+								"error"
+							);
+						}
+					}
+				} else {
+					console.error(
+						"❌ FlightRegistrationLookup oder processOvernightFlightsForHangarplaner nicht verfügbar!"
+					);
+
+					// Status aktualisieren
+					if (statusMessage) {
+						statusMessage.textContent =
+							"❌ Flight Registration Lookup service not available";
+					}
+
+					if (window.showNotification) {
+						window.showNotification(
+							"Overnight Flight Processing not available. Please check if flight-registration-lookup.js is loaded.",
+							"error"
+						);
+					}
+				}
+			} catch (error) {
+				console.error("❌ Fehler beim Overnight Flights Processing:", error);
+
+				// Status aktualisieren
+				if (statusMessage) {
+					statusMessage.textContent = `❌ Error: ${error.message}`;
+				}
+
+				if (window.showNotification) {
+					window.showNotification(
+						`Overnight Flight Processing error: ${error.message}`,
+						"error"
+					);
+				}
+			} finally {
+				// Button wieder aktivieren
+				processOvernightFlightsBtn.disabled = false;
+				processOvernightFlightsBtn.textContent = originalText;
+
+				// Status-Panel nach 5 Sekunden ausblenden
+				setTimeout(() => {
+					if (statusPanel) {
+						statusPanel.style.display = "none";
+					}
+				}, 5000);
+			}
+		};
+
+		console.log(
+			"✅ Event-Handler für Process Overnight Flights Button erfolgreich registriert"
+		);
+	} else {
+		console.error("❌ Process Overnight Flights Button nicht gefunden!");
+	}
+
+	// Event-Handler für API-Provider Dropdown zur Anzeige von Hilfetexten
+	const apiProviderSelect = document.getElementById("apiProviderSelect");
+	if (apiProviderSelect) {
+		apiProviderSelect.addEventListener("change", function () {
+			const statusPanel = document.getElementById("overnightFlightsStatus");
+			const statusMessage = document.getElementById("overnightFlightsMessage");
+
+			if (this.value === "overnight-flights") {
+				// Zeige Hilfetext für Overnight Flights Processing
+				if (statusPanel && statusMessage) {
+					statusPanel.style.display = "block";
+					statusMessage.textContent =
+						"💡 Use 'Process Overnight Flights' button to analyze aircraft staying overnight";
+				}
+			} else {
+				// Verstecke Panel bei anderen API-Optionen
+				if (statusPanel) {
+					statusPanel.style.display = "none";
+				}
+			}
+		});
+	}
 }
 
 /**

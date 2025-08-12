@@ -965,10 +965,578 @@ const FlightRegistrationLookup = (() => {
 		return widget;
 	};
 
+	/**
+	 * HAUPTFUNKTION: Automatische Übernachtungs-Flugdaten für Hangarplaner
+	 *
+	 * ARBEITSSCHRITTE:
+	 * 1. AeroDataBox API: Alle ankommenden Flüge am ausgewählten Flughafen laden
+	 * 2. Sammeln der Flüge ohne weiteren Abflug (latest income/Übernachtung)
+	 * 3. Aircraft ID oder Flugnummer zwischenspeichern
+	 * 4. Abgleich mit Tiles und Eintragen der Daten
+	 * 5. Aircraft Registration Lookup falls nur Flugnummer vorhanden
+	 * 6. Gleichen Prozess für Folgetag (Abflüge) wiederholen
+	 *
+	 * @param {string} airportCode - IATA-Code des Flughafens (z.B. "MUC")
+	 * @param {string} currentDate - Aktuelles Datum (YYYY-MM-DD)
+	 * @param {string} nextDate - Folgedatum (YYYY-MM-DD)
+	 * @returns {Promise<Object>} Ergebnis der Verarbeitung
+	 */
+	const processOvernightFlightsForHangarplaner = async (
+		airportCode,
+		currentDate,
+		nextDate
+	) => {
+		console.log(`\n🏨 === ÜBERNACHTUNGS-FLUGDATEN VERARBEITUNG GESTARTET ===`);
+		console.log(`Flughafen: ${airportCode}`);
+		console.log(`Aktueller Tag: ${currentDate}`);
+		console.log(`Folgetag: ${nextDate}`);
+
+		if (!window.AeroDataBoxAPI) {
+			const error = "AeroDataBoxAPI nicht verfügbar";
+			console.error(error);
+			return { success: false, error };
+		}
+
+		try {
+			// **SCHRITT 1: Ankommende Flüge des aktuellen Tages laden**
+			console.log(`\n📥 === SCHRITT 1: ANKOMMENDE FLÜGE ${currentDate} ===`);
+			const currentDayArrivals = await loadArrivingFlights(
+				airportCode,
+				currentDate
+			);
+
+			console.log(
+				`📊 ${currentDayArrivals.length} ankommende Flüge am ${currentDate} gefunden`
+			);
+
+			// **SCHRITT 2: Flüge ohne weiteren Abflug identifizieren (Übernachtung)**
+			console.log(`\n🌙 === SCHRITT 2: ÜBERNACHTUNGS-FLÜGE IDENTIFIZIEREN ===`);
+			const overnightFlights = await identifyOvernightFlights(
+				airportCode,
+				currentDayArrivals,
+				currentDate
+			);
+
+			console.log(
+				`🏨 ${overnightFlights.length} Übernachtungs-Flüge identifiziert`
+			);
+
+			// **SCHRITT 3: Aircraft IDs sammeln und zwischenspeichern**
+			console.log(`\n📋 === SCHRITT 3: AIRCRAFT IDs SAMMELN ===`);
+			const aircraftData = extractAircraftData(overnightFlights);
+
+			console.log(`✈️ ${aircraftData.length} Aircraft-Datensätze extrahiert`);
+
+			// **SCHRITT 4: Abgleich mit Tiles (Ankunftsdaten)**
+			console.log(`\n🎯 === SCHRITT 4: TILES-ABGLEICH FÜR ANKÜNFTE ===`);
+			const arrivalMatches = await matchWithTiles(aircraftData, "arrival");
+
+			console.log(
+				`✅ ${arrivalMatches.matched} von ${aircraftData.length} Ankunftsdaten in Tiles eingetragen`
+			);
+
+			// **SCHRITT 5: Abflüge des Folgetages laden**
+			console.log(`\n📤 === SCHRITT 5: ABFLÜGE ${nextDate} LADEN ===`);
+			const nextDayDepartures = await loadDepartingFlights(
+				airportCode,
+				nextDate
+			);
+
+			console.log(
+				`📊 ${nextDayDepartures.length} abfliegende Flüge am ${nextDate} gefunden`
+			);
+
+			// **SCHRITT 6: Abflüge für übernachtende Aircraft identifizieren**
+			console.log(
+				`\n🛫 === SCHRITT 6: ÜBERNACHTUNGS-ABFLÜGE IDENTIFIZIEREN ===`
+			);
+			const overnightDepartures = filterOvernightDepartures(
+				nextDayDepartures,
+				aircraftData
+			);
+
+			console.log(
+				`🏨 ${overnightDepartures.length} Übernachtungs-Abflüge identifiziert`
+			);
+
+			// **SCHRITT 7: Abgleich mit Tiles (Abflugdaten)**
+			console.log(`\n🎯 === SCHRITT 7: TILES-ABGLEICH FÜR ABFLÜGE ===`);
+			const departureMatches = await matchWithTiles(
+				overnightDepartures,
+				"departure"
+			);
+
+			console.log(
+				`✅ ${departureMatches.matched} von ${overnightDepartures.length} Abflugdaten in Tiles eingetragen`
+			);
+
+			// **SCHRITT 8: Zusammenfassung und Ergebnis**
+			const summary = {
+				success: true,
+				airport: airportCode,
+				currentDate,
+				nextDate,
+				statistics: {
+					totalArrivals: currentDayArrivals.length,
+					overnightFlights: overnightFlights.length,
+					totalDepartures: nextDayDepartures.length,
+					overnightDepartures: overnightDepartures.length,
+					arrivalMatches: arrivalMatches.matched,
+					departureMatches: departureMatches.matched,
+					registrationLookups:
+						arrivalMatches.lookupCount + departureMatches.lookupCount,
+				},
+				details: {
+					arrivals: arrivalMatches,
+					departures: departureMatches,
+				},
+			};
+
+			console.log(`\n🏆 === VERARBEITUNG ABGESCHLOSSEN ===`);
+			console.log(`📊 Statistiken:`, summary.statistics);
+
+			return summary;
+		} catch (error) {
+			console.error("❌ Fehler bei der Übernachtungs-Verarbeitung:", error);
+			return {
+				success: false,
+				error: error.message,
+				airport: airportCode,
+				currentDate,
+				nextDate,
+			};
+		}
+	};
+
+	/**
+	 * Lädt alle ankommenden Flüge für einen Tag
+	 */
+	const loadArrivingFlights = async (airportCode, date) => {
+		try {
+			const startDateTime = `${date}T00:00`;
+			const endDateTime = `${date}T23:59`;
+
+			console.log(
+				`📥 Lade Ankünfte für ${airportCode}: ${startDateTime} bis ${endDateTime}`
+			);
+
+			const airportData = await window.AeroDataBoxAPI.getAirportFlights(
+				airportCode,
+				startDateTime,
+				endDateTime
+			);
+
+			// Nur Ankünfte extrahieren
+			let arrivals = [];
+			if (airportData.arrivals) {
+				arrivals = airportData.arrivals;
+			} else if (Array.isArray(airportData)) {
+				// Filtere nur Ankünfte (arrival airport = unser Flughafen)
+				arrivals = airportData.filter(
+					(flight) => flight.arrival?.airport?.iata === airportCode
+				);
+			}
+
+			console.log(`📊 ${arrivals.length} Ankünfte gefunden`);
+			return arrivals;
+		} catch (error) {
+			console.error(`❌ Fehler beim Laden der Ankünfte für ${date}:`, error);
+			return [];
+		}
+	};
+
+	/**
+	 * Lädt alle abfliegenden Flüge für einen Tag
+	 */
+	const loadDepartingFlights = async (airportCode, date) => {
+		try {
+			const startDateTime = `${date}T00:00`;
+			const endDateTime = `${date}T23:59`;
+
+			console.log(
+				`📤 Lade Abflüge für ${airportCode}: ${startDateTime} bis ${endDateTime}`
+			);
+
+			const airportData = await window.AeroDataBoxAPI.getAirportFlights(
+				airportCode,
+				startDateTime,
+				endDateTime
+			);
+
+			// Nur Abflüge extrahieren
+			let departures = [];
+			if (airportData.departures) {
+				departures = airportData.departures;
+			} else if (Array.isArray(airportData)) {
+				// Filtere nur Abflüge (departure airport = unser Flughafen)
+				departures = airportData.filter(
+					(flight) => flight.departure?.airport?.iata === airportCode
+				);
+			}
+
+			console.log(`📊 ${departures.length} Abflüge gefunden`);
+			return departures;
+		} catch (error) {
+			console.error(`❌ Fehler beim Laden der Abflüge für ${date}:`, error);
+			return [];
+		}
+	};
+
+	/**
+	 * Identifiziert Flüge ohne weiteren Abflug (Übernachtung)
+	 */
+	const identifyOvernightFlights = async (airportCode, arrivals, date) => {
+		console.log(`🔍 Prüfe ${arrivals.length} Ankünfte auf Übernachtung...`);
+
+		const overnightFlights = [];
+
+		for (const arrival of arrivals) {
+			const aircraftReg = extractRegistrationFromFlight(arrival);
+
+			if (!aircraftReg) {
+				console.log(
+					`⚠️ Keine Aircraft Registration für Ankunftsflug gefunden:`,
+					arrival.number
+				);
+				continue;
+			}
+
+			// Prüfe ob das Aircraft am gleichen Tag noch abfliegt
+			const hasLaterDeparture = await checkForLaterDeparture(
+				aircraftReg,
+				airportCode,
+				date,
+				arrival
+			);
+
+			if (!hasLaterDeparture) {
+				console.log(
+					`🌙 Übernachtung identifiziert: ${aircraftReg} (Flug ${arrival.number})`
+				);
+				overnightFlights.push({
+					...arrival,
+					aircraftRegistration: aircraftReg,
+					overnightConfirmed: true,
+				});
+			} else {
+				console.log(
+					`🔄 Kein Übernachtung: ${aircraftReg} fliegt am gleichen Tag weiter`
+				);
+			}
+		}
+
+		return overnightFlights;
+	};
+
+	/**
+	 * Prüft ob ein Aircraft am gleichen Tag noch abfliegt
+	 */
+	const checkForLaterDeparture = async (
+		aircraftReg,
+		airportCode,
+		date,
+		arrivalFlight
+	) => {
+		try {
+			// Lade alle Abflüge des Tages für diese Aircraft Registration
+			const aircraftFlights = await window.AeroDataBoxAPI.getAircraftFlights(
+				aircraftReg,
+				date
+			);
+
+			if (!aircraftFlights || !aircraftFlights.data) {
+				return false;
+			}
+
+			// Ankunftszeit des Fluges
+			const arrivalTime = new Date(
+				arrivalFlight.arrival?.scheduledTime?.utc ||
+					arrivalFlight.arrival?.scheduledTime?.local
+			);
+
+			// Prüfe ob es spätere Abflüge gibt
+			const laterDepartures = aircraftFlights.data.filter((flight) => {
+				// Muss ein Abflug vom gleichen Flughafen sein
+				const depAirport = flight.flightPoints?.find(
+					(p) => p.departurePoint
+				)?.iataCode;
+				if (depAirport !== airportCode) return false;
+
+				// Muss nach der Ankunft stattfinden
+				const depTimeStr = flight.flightPoints?.find((p) => p.departurePoint)
+					?.departure?.timings?.[0]?.value;
+				if (!depTimeStr) return false;
+
+				const depTime = new Date(`${date}T${depTimeStr}`);
+				return depTime > arrivalTime;
+			});
+
+			return laterDepartures.length > 0;
+		} catch (error) {
+			console.error(`❌ Fehler bei Abflug-Prüfung für ${aircraftReg}:`, error);
+			return false; // Bei Fehlern annehmen, dass übernachtet wird
+		}
+	};
+
+	/**
+	 * Extrahiert Aircraft-Daten aus Flügen
+	 */
+	const extractAircraftData = (flights) => {
+		return flights
+			.map((flight) => {
+				const aircraftId = extractRegistrationFromFlight(flight);
+				const flightNumber = flight.number;
+
+				return {
+					aircraftId: aircraftId,
+					flightNumber: flightNumber,
+					flightData: flight,
+					dataSource: aircraftId ? "registration" : "flightNumber",
+					arrivalTime:
+						flight.arrival?.scheduledTime?.utc?.substring(11, 16) ||
+						flight.arrival?.scheduledTime?.local?.substring(11, 16),
+					originAirport: flight.departure?.airport?.iata,
+					destinationAirport: flight.arrival?.airport?.iata,
+				};
+			})
+			.filter((data) => data.aircraftId || data.flightNumber);
+	};
+
+	/**
+	 * Filtert Abflüge für übernachtende Aircraft
+	 */
+	const filterOvernightDepartures = (departures, overnightAircraftData) => {
+		const overnightRegistrations = overnightAircraftData
+			.filter((data) => data.aircraftId)
+			.map((data) => data.aircraftId);
+
+		const overnightFlightNumbers = overnightAircraftData
+			.filter((data) => !data.aircraftId && data.flightNumber)
+			.map((data) => data.flightNumber);
+
+		return departures
+			.filter((departure) => {
+				const departureReg = extractRegistrationFromFlight(departure);
+				const departureFlightNum = departure.number;
+
+				// Match über Aircraft Registration
+				if (departureReg && overnightRegistrations.includes(departureReg)) {
+					return true;
+				}
+
+				// Match über Flugnummer (für gleiche Aircraft ohne Registration)
+				if (
+					departureFlightNum &&
+					overnightFlightNumbers.includes(departureFlightNum)
+				) {
+					return true;
+				}
+
+				return false;
+			})
+			.map((departure) => ({
+				...departure,
+				aircraftRegistration: extractRegistrationFromFlight(departure),
+				departureTime:
+					departure.departure?.scheduledTime?.utc?.substring(11, 16) ||
+					departure.departure?.scheduledTime?.local?.substring(11, 16),
+				originAirport: departure.departure?.airport?.iata,
+				destinationAirport: departure.arrival?.airport?.iata,
+			}));
+	};
+
+	/**
+	 * Gleicht Aircraft-Daten mit Tiles ab und trägt Daten ein
+	 */
+	const matchWithTiles = async (aircraftDataList, type) => {
+		console.log(
+			`🎯 Starte Tiles-Abgleich für ${type} (${aircraftDataList.length} Datensätze)`
+		);
+
+		let matched = 0;
+		let lookupCount = 0;
+		const results = [];
+
+		// Alle Aircraft-Input-Felder in Tiles sammeln
+		const aircraftInputs = document.querySelectorAll('input[id^="aircraft-"]');
+		const tileAircraftIds = Array.from(aircraftInputs)
+			.map((input) => ({
+				element: input,
+				aircraftId: input.value.trim().toUpperCase(),
+				cellNumber: input.id.split("-")[1],
+			}))
+			.filter((tile) => tile.aircraftId !== "");
+
+		console.log(`📋 ${tileAircraftIds.length} Tiles mit Aircraft IDs gefunden`);
+
+		for (const aircraftData of aircraftDataList) {
+			let processedAircraftId = aircraftData.aircraftId;
+
+			// **AIRCRAFT REGISTRATION LOOKUP falls nur Flugnummer vorhanden**
+			if (!processedAircraftId && aircraftData.flightNumber) {
+				console.log(`🔍 Lookup für Flugnummer: ${aircraftData.flightNumber}`);
+
+				const flightDate =
+					type === "arrival" ? getCurrentDateFromUI() : getNextDateFromUI();
+
+				try {
+					processedAircraftId = await lookupRegistration(
+						aircraftData.flightNumber,
+						flightDate
+					);
+					lookupCount++;
+
+					if (processedAircraftId) {
+						console.log(
+							`✅ Registration gefunden: ${aircraftData.flightNumber} → ${processedAircraftId}`
+						);
+					} else {
+						console.log(
+							`❌ Keine Registration für ${aircraftData.flightNumber} gefunden`
+						);
+					}
+				} catch (error) {
+					console.error(
+						`❌ Lookup Fehler für ${aircraftData.flightNumber}:`,
+						error
+					);
+				}
+			}
+
+			// **ABGLEICH MIT TILES**
+			if (processedAircraftId) {
+				const matchingTile = tileAircraftIds.find(
+					(tile) => tile.aircraftId === processedAircraftId.toUpperCase()
+				);
+
+				if (matchingTile) {
+					console.log(
+						`🎯 MATCH: ${processedAircraftId} → Tile ${matchingTile.cellNumber}`
+					);
+
+					// Daten in Tile eintragen
+					const success = updateTileWithFlightData(
+						matchingTile.cellNumber,
+						aircraftData,
+						type
+					);
+					if (success) {
+						matched++;
+						results.push({
+							aircraftId: processedAircraftId,
+							cellNumber: matchingTile.cellNumber,
+							flightNumber: aircraftData.flightNumber,
+							type: type,
+							success: true,
+						});
+					}
+				} else {
+					console.log(
+						`❌ Kein Tile für Aircraft ${processedAircraftId} gefunden`
+					);
+					results.push({
+						aircraftId: processedAircraftId,
+						flightNumber: aircraftData.flightNumber,
+						type: type,
+						success: false,
+						reason: "No matching tile found",
+					});
+				}
+			} else {
+				console.log(
+					`❌ Keine Aircraft ID für Flug ${aircraftData.flightNumber} verfügbar`
+				);
+				results.push({
+					flightNumber: aircraftData.flightNumber,
+					type: type,
+					success: false,
+					reason: "No aircraft ID available",
+				});
+			}
+		}
+
+		return {
+			matched,
+			lookupCount,
+			total: aircraftDataList.length,
+			results,
+		};
+	};
+
+	/**
+	 * Aktualisiert ein Tile mit Flugdaten
+	 */
+	const updateTileWithFlightData = (cellNumber, aircraftData, type) => {
+		try {
+			if (type === "arrival") {
+				// Ankunftsdaten eintragen
+				const arrivalTimeElement = document.getElementById(
+					`arrival-time-${cellNumber}`
+				);
+				const positionElement = document.getElementById(
+					`position-${cellNumber}`
+				);
+
+				if (arrivalTimeElement && aircraftData.arrivalTime) {
+					arrivalTimeElement.value = aircraftData.arrivalTime;
+					console.log(
+						`📝 Tile ${cellNumber}: Ankunftszeit ${aircraftData.arrivalTime} eingetragen`
+					);
+				}
+
+				if (positionElement && aircraftData.originAirport) {
+					positionElement.value = aircraftData.originAirport;
+					console.log(
+						`📝 Tile ${cellNumber}: Position ${aircraftData.originAirport} eingetragen`
+					);
+				}
+			} else if (type === "departure") {
+				// Abflugdaten eintragen
+				const departureTimeElement = document.getElementById(
+					`departure-time-${cellNumber}`
+				);
+
+				if (departureTimeElement && aircraftData.departureTime) {
+					departureTimeElement.value = aircraftData.departureTime;
+					console.log(
+						`📝 Tile ${cellNumber}: Abflugzeit ${aircraftData.departureTime} eingetragen`
+					);
+				}
+			}
+
+			return true;
+		} catch (error) {
+			console.error(
+				`❌ Fehler beim Aktualisieren von Tile ${cellNumber}:`,
+				error
+			);
+			return false;
+		}
+	};
+
+	/**
+	 * Hilfsfunktionen für UI-Datums-Zugriff
+	 */
+	const getCurrentDateFromUI = () => {
+		const dateInput = document.getElementById("currentDateInput");
+		return dateInput ? dateInput.value : new Date().toISOString().split("T")[0];
+	};
+
+	const getNextDateFromUI = () => {
+		const dateInput = document.getElementById("nextDateInput");
+		if (dateInput) return dateInput.value;
+
+		// Fallback: Aktuelles Datum + 1 Tag
+		const tomorrow = new Date();
+		tomorrow.setDate(tomorrow.getDate() + 1);
+		return tomorrow.toISOString().split("T")[0];
+	};
+
 	// Public API
 	return {
 		lookupRegistration,
 		lookupForHangarplaner, // NEUE Hauptfunktion für Hangarplaner
+		processOvernightFlightsForHangarplaner, // **NEUE HAUPTFUNKTION**
 		lookupMultiple,
 		testLookup,
 		getCacheStats,
@@ -987,6 +1555,12 @@ const FlightRegistrationLookup = (() => {
 		lookupViaOpenSky,
 		lookupViaFAA,
 		lookupViaWebScraping,
+		// Hilfsfunktionen für Debug/Test
+		loadArrivingFlights,
+		loadDepartingFlights,
+		identifyOvernightFlights,
+		extractAircraftData,
+		matchWithTiles,
 	};
 })();
 

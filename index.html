@@ -1771,10 +1771,14 @@
 									<option value="aviationstack">Aviationstack API</option>
 									<option value="goflightlabs">GoFlightLabs API</option>
 									<option value="apimarket">API Market</option>
+									<option value="overnight-flights">
+										Overnight Flights Processing
+									</option>
 								</select>
 								<p class="mt-1 text-xs text-gray-400">
-									Wählen Sie zwischen AeroDataBox, Aviationstack, GoFlightLabs
-									oder API Market.
+									Wählen Sie zwischen AeroDataBox, Aviationstack, GoFlightLabs,
+									API Market oder Overnight Flights Processing für automatische
+									Übernachtungsanalyse.
 								</p>
 							</div>
 
@@ -1782,6 +1786,15 @@
 								id="fetchFlightData"
 								class="sidebar-btn sidebar-btn-primary w-full">
 								Update Data
+							</button>
+
+							<!-- Neuer Button für Overnight Flights Processing -->
+							<button
+								id="processOvernightFlightsBtn"
+								class="sidebar-btn sidebar-btn-primary w-full mt-2"
+								style="background-color: #10b981; border-color: #10b981"
+								title="Identifiziert Flugzeuge, die über Nacht am Flughafen verbleiben">
+								Process Overnight Flights
 							</button>
 
 							<!-- Neuer Button für Airport Flights -->
@@ -1801,6 +1814,22 @@
 
 							<div id="fetchStatus" class="text-sm text-center"></div>
 							Ready to retrieve flight data
+
+							<!-- Status für Overnight Flights Processing -->
+							<div
+								id="overnightFlightsStatus"
+								class="text-sm text-center mt-2 p-2 rounded"
+								style="
+									background-color: #f0f9ff;
+									border: 1px solid #0ea5e9;
+									color: #0369a1;
+									display: none;
+								">
+								<div class="font-semibold">Overnight Flights Processing</div>
+								<div id="overnightFlightsMessage">
+									Ready for overnight flight analysis
+								</div>
+							</div>
 						</div>
 					</div>
 

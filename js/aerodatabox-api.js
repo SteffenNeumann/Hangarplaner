@@ -1439,11 +1439,85 @@ const AeroDataBoxAPI = (() => {
 				);
 			}
 
+			// NEUER CODE: Fallback zu Flugnummer-Lookup wenn keine Aircraft Registration gefunden
 			if (matchingFlights.length === 0) {
-				if (config.debugMode) {
-					console.log(`❌ Keine Flüge für Aircraft ${aircraft.id} gefunden`);
+				console.log(
+					`❌ Keine direkte Aircraft Registration für ${aircraft.id} gefunden`
+				);
+				console.log(`🔍 Starte Flugnummer-basierte Suche...`);
+
+				// Sammle alle Flugnummern aus den Flughafendaten
+				const flightNumbers = allFlights
+					.map((flight) => flight.number)
+					.filter((number) => number && number.trim() !== "");
+
+				console.log(
+					`📋 ${flightNumbers.length} Flugnummern gefunden, starte Registration Lookup...`
+				);
+
+				// Verwende FlightRegistrationLookup für jede Flugnummer
+				for (const flightNumber of flightNumbers) {
+					try {
+						if (
+							window.FlightRegistrationLookup &&
+							window.FlightRegistrationLookup.lookupRegistration
+						) {
+							// Datum extrahieren (verwende aktuelles Datum aus startDateTime)
+							const searchDate = startDateTime.split("T")[0];
+
+							console.log(`🔍 Lookup: ${flightNumber} am ${searchDate}`);
+							const foundRegistration =
+								await window.FlightRegistrationLookup.lookupRegistration(
+									flightNumber,
+									searchDate
+								);
+
+							if (
+								foundRegistration &&
+								foundRegistration.toUpperCase() === aircraft.id
+							) {
+								console.log(
+									`✅ MATCH GEFUNDEN: ${flightNumber} → ${foundRegistration} = ${aircraft.id}`
+								);
+
+								// Finde den entsprechenden Flug in allFlights
+								const matchedFlight = allFlights.find(
+									(flight) => flight.number === flightNumber
+								);
+								if (matchedFlight) {
+									console.log(
+										`🎯 Flug ${flightNumber} wird für ${aircraft.id} verwendet`
+									);
+
+									// Füge die gefundene Registration zum Flug hinzu
+									matchedFlight.aircraftRegistration = foundRegistration;
+									matchingFlights.push(matchedFlight);
+
+									// Beende die Suche nach dem ersten Match
+									break;
+								}
+							}
+						}
+					} catch (lookupError) {
+						console.log(
+							`⚠️ Lookup Fehler für ${flightNumber}:`,
+							lookupError.message
+						);
+						// Fortsetzung mit nächster Flugnummer
+					}
 				}
-				return false;
+
+				// Prüfe erneut nach dem Lookup
+				if (matchingFlights.length === 0) {
+					console.log(
+						`❌ Auch nach Flugnummer-Lookup keine Matches für ${aircraft.id} gefunden`
+					);
+					return false;
+				} else {
+					console.log(
+						`✅ Nach Flugnummer-Lookup ${matchingFlights.length} Matches für ${aircraft.id} gefunden`
+					);
+				}
 			}
 
 			// Zeitfenster parsen

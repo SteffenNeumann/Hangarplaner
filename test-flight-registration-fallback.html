@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="de">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Test: Flight Registration Fallback</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				margin: 20px;
+				background-color: #f5f5f5;
+			}
+			.container {
+				max-width: 1200px;
+				margin: 0 auto;
+				background: white;
+				padding: 20px;
+				border-radius: 8px;
+				box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+			}
+			.test-section {
+				margin: 20px 0;
+				padding: 15px;
+				border: 1px solid #ddd;
+				border-radius: 5px;
+				background: #f9f9f9;
+			}
+			.test-controls {
+				display: flex;
+				gap: 10px;
+				align-items: center;
+				margin: 10px 0;
+			}
+			.test-controls input,
+			.test-controls select {
+				padding: 8px;
+				border: 1px solid #ccc;
+				border-radius: 4px;
+			}
+			.test-controls button {
+				padding: 8px 16px;
+				background: #007cba;
+				color: white;
+				border: none;
+				border-radius: 4px;
+				cursor: pointer;
+			}
+			.test-controls button:hover {
+				background: #005a8a;
+			}
+			.test-results {
+				margin-top: 15px;
+				padding: 10px;
+				background: white;
+				border: 1px solid #ccc;
+				border-radius: 4px;
+				font-family: monospace;
+				white-space: pre-wrap;
+				min-height: 100px;
+				max-height: 300px;
+				overflow-y: auto;
+			}
+			.status {
+				padding: 8px;
+				margin: 5px 0;
+				border-radius: 4px;
+			}
+			.status.success {
+				background: #d4edda;
+				color: #155724;
+			}
+			.status.error {
+				background: #f8d7da;
+				color: #721c24;
+			}
+			.status.info {
+				background: #d1ecf1;
+				color: #0c5460;
+			}
+			.aircraft-tiles {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+				gap: 10px;
+				margin: 20px 0;
+			}
+			.aircraft-tile {
+				border: 1px solid #ccc;
+				border-radius: 5px;
+				padding: 10px;
+				background: white;
+			}
+			.aircraft-tile input {
+				width: 100%;
+				padding: 5px;
+				margin: 2px 0;
+				border: 1px solid #ddd;
+				border-radius: 3px;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<h1>🧪 Test: Flight Registration Fallback Integration</h1>
+
+			<div class="status info">
+				<strong>Test-Zweck:</strong> Überprüfung, ob die Flugnummer-basierte
+				Suche korrekt funktioniert, wenn keine direkte Aircraft Registration in
+				den API-Daten gefunden wird.
+			</div>
+
+			<!-- Test-Eingaben (simuliert die Hangarplaner UI) -->
+			<div class="test-section">
+				<h3>🎛️ Simulierte Hangarplaner-Eingaben</h3>
+
+				<div class="test-controls">
+					<label>Flughafen:</label>
+					<select id="airportCodeInput">
+						<option value="MUC">MUC - München</option>
+						<option value="FRA">FRA - Frankfurt</option>
+						<option value="DUS">DUS - Düsseldorf</option>
+						<option value="LHR">LHR - London Heathrow</option>
+					</select>
+
+					<label>Aktuelles Datum:</label>
+					<input type="date" id="currentDateInput" value="2025-08-15" />
+
+					<label>Nächstes Datum:</label>
+					<input type="date" id="nextDateInput" value="2025-08-16" />
+				</div>
+
+				<!-- Simulierte Aircraft Tiles -->
+				<div class="aircraft-tiles">
+					<div class="aircraft-tile">
+						<h4>Kachel 1</h4>
+						<input
+							type="text"
+							id="aircraft-1"
+							placeholder="Aircraft ID (z.B. D-AIBL)"
+							value="" />
+						<input
+							type="text"
+							id="arrival-time-1"
+							placeholder="Ankunft"
+							readonly />
+						<input
+							type="text"
+							id="departure-time-1"
+							placeholder="Abflug"
+							readonly />
+						<input
+							type="text"
+							id="position-1"
+							placeholder="Position"
+							readonly />
+					</div>
+
+					<div class="aircraft-tile">
+						<h4>Kachel 2</h4>
+						<input
+							type="text"
+							id="aircraft-2"
+							placeholder="Aircraft ID (z.B. D-AIBM)"
+							value="" />
+						<input
+							type="text"
+							id="arrival-time-2"
+							placeholder="Ankunft"
+							readonly />
+						<input
+							type="text"
+							id="departure-time-2"
+							placeholder="Abflug"
+							readonly />
+						<input
+							type="text"
+							id="position-2"
+							placeholder="Position"
+							readonly />
+					</div>
+
+					<div class="aircraft-tile">
+						<h4>Kachel 3</h4>
+						<input
+							type="text"
+							id="aircraft-3"
+							placeholder="Aircraft ID (z.B. TEST123)"
+							value="" />
+						<input
+							type="text"
+							id="arrival-time-3"
+							placeholder="Ankunft"
+							readonly />
+						<input
+							type="text"
+							id="departure-time-3"
+							placeholder="Abflug"
+							readonly />
+						<input
+							type="text"
+							id="position-3"
+							placeholder="Position"
+							readonly />
+					</div>
+				</div>
+			</div>
+
+			<!-- Test-Aktionen -->
+			<div class="test-section">
+				<h3>🧪 Test-Aktionen</h3>
+
+				<div class="test-controls">
+					<button onclick="testDirectLookup()">
+						1. Test Direct Registration Lookup
+					</button>
+					<button onclick="testFlightNumberFallback()">
+						2. Test Flight Number Fallback
+					</button>
+					<button onclick="testFullIntegration()">
+						3. Test Full Integration
+					</button>
+					<button onclick="clearResults()">Clear Results</button>
+				</div>
+			</div>
+
+			<!-- Ergebnisse -->
+			<div class="test-section">
+				<h3>📊 Test-Ergebnisse & Console Log</h3>
+				<div id="testResults" class="test-results">
+					Bereit für Tests. Konsole ist geöffnet für detaillierte Logs.
+					TESTSZENARIEN: 1. Direct Registration Lookup: Testet ob normale
+					Aircraft Registration Suche funktioniert 2. Flight Number Fallback:
+					Testet speziell die neue Flugnummer-basierte Suche 3. Full
+					Integration: Simuliert den kompletten Update Data Button Workflow
+					Stellen Sie sicher, dass: - Browser-Konsole geöffnet ist (F12) -
+					Internet-Verbindung verfügbar ist - AeroDataBox API verfügbar ist
+				</div>
+			</div>
+		</div>
+
+		<!-- Hangarplaner JavaScript Dependencies -->
+		<script src="js/aerodatabox-api.js"></script>
+		<script src="js/flight-registration-lookup.js"></script>
+
+		<script>
+			// Test-Funktionen
+			let testOutput = document.getElementById("testResults");
+
+			function log(message, type = "info") {
+				const timestamp = new Date().toLocaleTimeString();
+				let prefix = "";
+				switch (type) {
+					case "success":
+						prefix = "✅";
+						break;
+					case "error":
+						prefix = "❌";
+						break;
+					case "warning":
+						prefix = "⚠️";
+						break;
+					default:
+						prefix = "ℹ️";
+						break;
+				}
+
+				testOutput.textContent += `[${timestamp}] ${prefix} ${message}\n`;
+				testOutput.scrollTop = testOutput.scrollHeight;
+
+				// Auch in Browser-Konsole loggen
+				console.log(`[TEST] ${message}`);
+			}
+
+			function clearResults() {
+				testOutput.textContent = "Results cleared.\n";
+			}
+
+			// Test 1: Direct Registration Lookup
+			async function testDirectLookup() {
+				log("=== TEST 1: DIRECT REGISTRATION LOOKUP ===");
+
+				try {
+					// Prüfe ob APIs verfügbar sind
+					if (!window.AeroDataBoxAPI) {
+						log("AeroDataBoxAPI nicht verfügbar!", "error");
+						return;
+					}
+
+					if (!window.FlightRegistrationLookup) {
+						log("FlightRegistrationLookup nicht verfügbar!", "error");
+						return;
+					}
+
+					log("APIs sind verfügbar", "success");
+
+					// Test mit bekannter Aircraft Registration
+					const testAircraftId = "D-AIBL";
+					const currentDate = document.getElementById("currentDateInput").value;
+					const nextDate = document.getElementById("nextDateInput").value;
+
+					log(`Teste direkte Suche für Aircraft ID: ${testAircraftId}`);
+					log(`Datum: ${currentDate} bis ${nextDate}`);
+
+					// Simuliere getAirportFlights Aufruf
+					const airportCode = document.getElementById("airportCodeInput").value;
+					const startDateTime = `${currentDate}T20:00`;
+					const endDateTime = `${nextDate}T08:00`;
+
+					log(`Lade Flughafendaten für ${airportCode}...`);
+					const flightData = await window.AeroDataBoxAPI.getAirportFlights(
+						airportCode,
+						startDateTime,
+						endDateTime
+					);
+
+					log(
+						`Flughafendaten erhalten: ${JSON.stringify(
+							flightData,
+							null,
+							2
+						).substring(0, 200)}...`
+					);
+
+					// Simuliere processAircraftFlights
+					let allFlights = [];
+					if (Array.isArray(flightData)) {
+						allFlights = flightData;
+					} else {
+						if (flightData.departures)
+							allFlights = allFlights.concat(flightData.departures);
+						if (flightData.arrivals)
+							allFlights = allFlights.concat(flightData.arrivals);
+					}
+
+					log(`Insgesamt ${allFlights.length} Flüge gefunden`);
+
+					// Suche nach Aircraft Registration
+					const matchingFlights = allFlights.filter((flight) => {
+						const aircraftReg =
+							flight.aircraft?.reg ||
+							flight.aircraft?.registration ||
+							flight.aircraft?.tail ||
+							flight.aircraftRegistration ||
+							flight.registration;
+						return aircraftReg && aircraftReg.toUpperCase() === testAircraftId;
+					});
+
+					log(
+						`Direkte Matches für ${testAircraftId}: ${matchingFlights.length}`,
+						matchingFlights.length > 0 ? "success" : "warning"
+					);
+
+					if (matchingFlights.length > 0) {
+						log("Direct Registration Lookup erfolgreich!", "success");
+					} else {
+						log(
+							"Keine direkte Aircraft Registration gefunden - Fallback wird benötigt",
+							"warning"
+						);
+					}
+				} catch (error) {
+					log(`Fehler beim Direct Lookup Test: ${error.message}`, "error");
+				}
+
+				log("=== ENDE TEST 1 ===\n");
+			}
+
+			// Test 2: Flight Number Fallback
+			async function testFlightNumberFallback() {
+				log("=== TEST 2: FLIGHT NUMBER FALLBACK ===");
+
+				try {
+					if (!window.FlightRegistrationLookup) {
+						log("FlightRegistrationLookup nicht verfügbar!", "error");
+						return;
+					}
+
+					// Test mit bekannter Flugnummer → Registration Zuordnung
+					const testFlightNumber = "LH441";
+					const testDate = document.getElementById("currentDateInput").value;
+
+					log(`Teste Flugnummer-Lookup: ${testFlightNumber} am ${testDate}`);
+
+					const result =
+						await window.FlightRegistrationLookup.lookupRegistration(
+							testFlightNumber,
+							testDate
+						);
+
+					if (result) {
+						log(
+							`Flugnummer-Lookup erfolgreich: ${testFlightNumber} → ${result}`,
+							"success"
+						);
+
+						// Teste nun ob diese Registration in einer Aircraft ID Kachel steht
+						const aircraftInputs = document.querySelectorAll(
+							'input[id^="aircraft-"]'
+						);
+						let foundInTile = false;
+
+						aircraftInputs.forEach((input) => {
+							if (input.value.toUpperCase() === result.toUpperCase()) {
+								foundInTile = true;
+								log(
+									`Registration ${result} gefunden in Kachel ${input.id}`,
+									"success"
+								);
+							}
+						});
+
+						if (!foundInTile) {
+							log(
+								`Registration ${result} NICHT in Kacheln gefunden - füge zu Kachel 1 hinzu`,
+								"info"
+							);
+							document.getElementById("aircraft-1").value = result;
+						}
+					} else {
+						log(
+							`Keine Registration für ${testFlightNumber} gefunden`,
+							"warning"
+						);
+					}
+				} catch (error) {
+					log(
+						`Fehler beim Flight Number Fallback Test: ${error.message}`,
+						"error"
+					);
+				}
+
+				log("=== ENDE TEST 2 ===\n");
+			}
+
+			// Test 3: Full Integration
+			async function testFullIntegration() {
+				log("=== TEST 3: FULL INTEGRATION TEST ===");
+
+				try {
+					// Setze Test-Aircraft ID, die wahrscheinlich nicht direkt gefunden wird
+					const testAircraftId = "TEST123"; // Unwahrscheinliche Registration
+					document.getElementById("aircraft-3").value = testAircraftId;
+
+					log(
+						`Teste kompletten Workflow mit unbekannter Aircraft ID: ${testAircraftId}`
+					);
+					log("Dies sollte den Flugnummer-Fallback auslösen...");
+
+					const airportCode = document.getElementById("airportCodeInput").value;
+					const currentDate = document.getElementById("currentDateInput").value;
+					const nextDate = document.getElementById("nextDateInput").value;
+					const startDateTime = `${currentDate}T20:00`;
+					const endDateTime = `${nextDate}T08:00`;
+
+					// Simuliere updateFlightDataForAllAircraft
+					log("Sammle Aircraft IDs aus Kacheln...");
+					const aircraftInputs = document.querySelectorAll(
+						'input[id^="aircraft-"]'
+					);
+					const aircraftIds = [];
+
+					aircraftInputs.forEach((input) => {
+						const aircraftId = input.value.trim().toUpperCase();
+						if (aircraftId && aircraftId !== "") {
+							aircraftIds.push({
+								id: aircraftId,
+								cellNumber: input.id.split("-")[1],
+							});
+						}
+					});
+
+					log(
+						`Gefundene Aircraft IDs: ${aircraftIds.map((a) => a.id).join(", ")}`
+					);
+
+					// Lade Flughafendaten
+					log(`Lade Flughafendaten für ${airportCode}...`);
+					const flightData = await window.AeroDataBoxAPI.getAirportFlights(
+						airportCode,
+						startDateTime,
+						endDateTime
+					);
+
+					// Sammle alle Flüge
+					let allFlights = [];
+					if (Array.isArray(flightData)) {
+						allFlights = flightData;
+					} else {
+						if (flightData.departures)
+							allFlights = allFlights.concat(flightData.departures);
+						if (flightData.arrivals)
+							allFlights = allFlights.concat(flightData.arrivals);
+					}
+
+					log(`${allFlights.length} Flüge vom Flughafen geladen`);
+
+					// Für jede Aircraft ID die neue processAircraftFlights Logik testen
+					for (const aircraft of aircraftIds) {
+						log(`\n--- Verarbeite ${aircraft.id} ---`);
+
+						// Suche direkte Matches
+						const matchingFlights = allFlights.filter((flight) => {
+							const aircraftReg =
+								flight.aircraft?.reg ||
+								flight.aircraft?.registration ||
+								flight.aircraft?.tail ||
+								flight.aircraftRegistration ||
+								flight.registration;
+							return aircraftReg && aircraftReg.toUpperCase() === aircraft.id;
+						});
+
+						log(
+							`Direkte Matches für ${aircraft.id}: ${matchingFlights.length}`
+						);
+
+						if (matchingFlights.length === 0) {
+							log(`Keine direkte Registration - starte Flugnummer-Fallback...`);
+
+							// Sammle Flugnummern
+							const flightNumbers = allFlights
+								.map((flight) => flight.number)
+								.filter((number) => number && number.trim() !== "");
+
+							log(`${flightNumbers.length} Flugnummern gefunden`);
+
+							// Teste für die ersten 5 Flugnummern
+							for (let i = 0; i < Math.min(5, flightNumbers.length); i++) {
+								const flightNumber = flightNumbers[i];
+								log(`Teste Flugnummer: ${flightNumber}`);
+
+								try {
+									const foundRegistration =
+										await window.FlightRegistrationLookup.lookupRegistration(
+											flightNumber,
+											currentDate
+										);
+
+									if (
+										foundRegistration &&
+										foundRegistration.toUpperCase() === aircraft.id
+									) {
+										log(
+											`MATCH GEFUNDEN: ${flightNumber} → ${foundRegistration} = ${aircraft.id}`,
+											"success"
+										);
+
+										// Simuliere Kachel-Update
+										document.getElementById(
+											`arrival-time-${aircraft.cellNumber}`
+										).value = "20:15";
+										document.getElementById(
+											`departure-time-${aircraft.cellNumber}`
+										).value = "06:30";
+										document.getElementById(
+											`position-${aircraft.cellNumber}`
+										).value = airportCode;
+
+										log(
+											`Kachel ${aircraft.cellNumber} aktualisiert`,
+											"success"
+										);
+										break;
+									} else if (foundRegistration) {
+										log(
+											`Registration ${foundRegistration} passt nicht zu ${aircraft.id}`
+										);
+									}
+								} catch (lookupError) {
+									log(
+										`Lookup Fehler für ${flightNumber}: ${lookupError.message}`,
+										"warning"
+									);
+								}
+							}
+						} else {
+							log(`Direkte Matches gefunden - normale Verarbeitung`, "success");
+						}
+					}
+
+					log("\n=== INTEGRATION TEST ABGESCHLOSSEN ===", "success");
+				} catch (error) {
+					log(`Fehler beim Full Integration Test: ${error.message}`, "error");
+				}
+
+				log("=== ENDE TEST 3 ===\n");
+			}
+
+			// Initialisierung
+			document.addEventListener("DOMContentLoaded", () => {
+				log("Test-Seite geladen. APIs werden initialisiert...");
+
+				// Prüfe API-Verfügbarkeit
+				setTimeout(() => {
+					const apis = {
+						AeroDataBoxAPI: !!window.AeroDataBoxAPI,
+						FlightRegistrationLookup: !!window.FlightRegistrationLookup,
+					};
+
+					log("API-Verfügbarkeit:");
+					Object.entries(apis).forEach(([name, available]) => {
+						log(
+							`  ${name}: ${available ? "Verfügbar" : "NICHT verfügbar"}`,
+							available ? "success" : "error"
+						);
+					});
+
+					if (apis.AeroDataBoxAPI && apis.FlightRegistrationLookup) {
+						log("\n✅ Alle APIs verfügbar - bereit für Tests!", "success");
+					} else {
+						log(
+							"\n❌ Nicht alle APIs verfügbar - Tests möglicherweise nicht vollständig",
+							"error"
+						);
+					}
+				}, 1000);
+			});
+		</script>
+	</body>
+</html>

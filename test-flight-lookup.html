@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Registration Lookup Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-flight {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .warning { background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
+        .info { background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+        
+        button {
+            background-color: #007cba;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #6c757d; cursor: not-allowed; }
+        
+        input[type="text"], input[type="date"] {
+            padding: 6px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            margin: 5px;
+        }
+        
+        .manual-check {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        
+        .comparison-table th, .comparison-table td {
+            border: 1px solid #dee2e6;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        .comparison-table th {
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Flight Registration Lookup Accuracy Test</h1>
+        <p>Diese Seite testet die Genauigkeit der Flugzeugregistrierungs-Lookups gegen echte Daten.</p>
+        
+        <div class="manual-check">
+            <h3>📋 Manuelle Verifikation gegen FlightRadar24</h3>
+            <p><strong>So funktioniert der Test:</strong></p>
+            <ol>
+                <li>Klicken Sie auf "Test Flights" um unsere Lookup-Ergebnisse zu laden</li>
+                <li>Öffnen Sie <a href="https://www.flightradar24.com" target="_blank">FlightRadar24.com</a> in einem neuen Tab</li>
+                <li>Suchen Sie dort nach der gleichen Flugnummer für das gleiche Datum</li>
+                <li>Vergleichen Sie die Aircraft Registration (Kennzeichen)</li>
+                <li>Dokumentieren Sie Unterschiede in der Tabelle unten</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>🧪 Automatische Tests</h2>
+        <button onclick="runAllTests()" id="testBtn">Test All Flights</button>
+        <button onclick="clearResults()">Clear Results</button>
+        <div id="testResults"></div>
+    </div>
+
+    <div class="container">
+        <h2>🔍 Manual Flight Lookup</h2>
+        <div>
+            <input type="text" id="manualFlight" placeholder="Flight Number (e.g., LH441)" />
+            <input type="date" id="manualDate" />
+            <button onclick="lookupManualFlight()">Lookup</button>
+        </div>
+        <div id="manualResult"></div>
+    </div>
+
+    <div class="container">
+        <h2>📊 Vergleichstabelle (Manual Documentation)</h2>
+        <p>Tragen Sie hier die Ergebnisse Ihrer manuellen FlightRadar24-Vergleiche ein:</p>
+        
+        <table class="comparison-table" id="comparisonTable">
+            <thead>
+                <tr>
+                    <th>Flight Number</th>
+                    <th>Date</th>
+                    <th>Our Result</th>
+                    <th>FlightRadar24 Result</th>
+                    <th>Match?</th>
+                    <th>Notes</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="comparisonBody">
+                <!-- Rows will be added dynamically -->
+            </tbody>
+        </table>
+        
+        <button onclick="addComparisonRow()">Add Comparison Row</button>
+        <button onclick="exportComparison()">Export Results</button>
+    </div>
+
+    <!-- Include the API dependencies -->
+    <script src="js/aerodatabox-api.js"></script>
+    <script src="js/flight-registration-lookup.js"></script>
+    
+    <script>
+        // Set default date to today
+        document.getElementById('manualDate').value = new Date().toISOString().split('T')[0];
+        
+        // Test flights for accuracy verification
+        const testFlights = [
+            { number: "LH441", date: "2025-08-16", expected: "D-AIBL" },
+            { number: "LH442", date: "2025-08-16", expected: "D-AIBM" },
+            { number: "BA117", date: "2025-08-16", expected: "G-STBA" },
+            { number: "AF1234", date: "2025-08-16", expected: "F-GKXA" },
+            { number: "EK43", date: "2025-08-16", expected: "A6-EDY" },
+            { number: "UA900", date: "2025-08-16", expected: "N76502" }
+        ];
+        
+        async function runAllTests() {
+            const testBtn = document.getElementById('testBtn');
+            const resultsDiv = document.getElementById('testResults');
+            
+            testBtn.disabled = true;
+            testBtn.textContent = 'Testing...';
+            resultsDiv.innerHTML = '<div class="info">Running tests...</div>';
+            
+            let results = '';
+            
+            for (const flight of testFlights) {
+                results += `<div class="test-flight">`;
+                results += `<h4>Testing: ${flight.number} on ${flight.date}</h4>`;
+                
+                try {
+                    // Use our lookup function
+                    const lookupResult = await window.FlightRegistrationLookup.lookupForHangarplaner(
+                        flight.number, 
+                        flight.date
+                    );
+                    
+                    if (lookupResult.success) {
+                        const match = lookupResult.registration === flight.expected;
+                        const resultClass = match ? 'success' : 'warning';
+                        
+                        results += `<div class="result ${resultClass}">`;
+                        results += `<strong>Our Result:</strong> ${lookupResult.registration}<br>`;
+                        results += `<strong>Source:</strong> ${lookupResult.source}<br>`;
+                        results += `<strong>Confidence:</strong> ${lookupResult.confidence}%<br>`;
+                        results += `<strong>Expected:</strong> ${flight.expected}<br>`;
+                        results += `<strong>Match:</strong> ${match ? '✅ YES' : '⚠️ DIFFERENT'}`;
+                        results += `</div>`;
+                        
+                        // Auto-add to comparison table
+                        addToComparisonTable(flight.number, flight.date, lookupResult.registration, '', match ? 'Unknown' : 'Different');
+                        
+                    } else {
+                        results += `<div class="result error">`;
+                        results += `<strong>Error:</strong> ${lookupResult.error}`;
+                        results += `</div>`;
+                        
+                        addToComparisonTable(flight.number, flight.date, 'LOOKUP FAILED', '', 'Failed');
+                    }
+                    
+                } catch (error) {
+                    results += `<div class="result error">`;
+                    results += `<strong>Exception:</strong> ${error.message}`;
+                    results += `</div>`;
+                }
+                
+                results += `</div>`;
+            }
+            
+            resultsDiv.innerHTML = results;
+            testBtn.disabled = false;
+            testBtn.textContent = 'Test All Flights';
+        }
+        
+        async function lookupManualFlight() {
+            const flightNumber = document.getElementById('manualFlight').value.trim().toUpperCase();
+            const flightDate = document.getElementById('manualDate').value;
+            const resultDiv = document.getElementById('manualResult');
+            
+            if (!flightNumber || !flightDate) {
+                resultDiv.innerHTML = '<div class="error">Please enter both flight number and date</div>';
+                return;
+            }
+            
+            resultDiv.innerHTML = '<div class="info">Looking up flight...</div>';
+            
+            try {
+                const result = await window.FlightRegistrationLookup.lookupForHangarplaner(flightNumber, flightDate);
+                
+                if (result.success) {
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            <h4>Lookup Result for ${flightNumber}</h4>
+                            <strong>Aircraft Registration:</strong> ${result.registration}<br>
+                            <strong>Source:</strong> ${result.source}<br>
+                            <strong>Confidence:</strong> ${result.confidence}%<br>
+                            <strong>Timestamp:</strong> ${result.timestamp}<br><br>
+                            <div class="manual-check">
+                                <strong>Next Step:</strong> Verify this result on 
+                                <a href="https://www.flightradar24.com/data/flights/${flightNumber.toLowerCase()}" target="_blank">
+                                    FlightRadar24 for ${flightNumber}
+                                </a>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Pre-fill comparison table
+                    addToComparisonTable(flightNumber, flightDate, result.registration, '', 'Pending');
+                    
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="result error">
+                            <strong>Lookup Failed:</strong> ${result.error}
+                            ${result.suggestions && result.suggestions.length > 0 ? 
+                                '<br><strong>Suggestions:</strong> ' + result.suggestions.map(s => `${s.flightNumber} → ${s.registration}`).join(', ') 
+                                : ''
+                            }
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error"><strong>Error:</strong> ${error.message}</div>`;
+            }
+        }
+        
+        function clearResults() {
+            document.getElementById('testResults').innerHTML = '';
+            document.getElementById('manualResult').innerHTML = '';
+        }
+        
+        function addToComparisonTable(flightNumber, date, ourResult, fr24Result, match) {
+            const tbody = document.getElementById('comparisonBody');
+            const row = tbody.insertRow();
+            
+            row.innerHTML = `
+                <td>${flightNumber}</td>
+                <td>${date}</td>
+                <td>${ourResult}</td>
+                <td><input type="text" value="${fr24Result}" placeholder="Enter FR24 result"></td>
+                <td>
+                    <select>
+                        <option value="Pending" ${match === 'Pending' ? 'selected' : ''}>Pending</option>
+                        <option value="Match" ${match === 'Match' ? 'selected' : ''}>✅ Match</option>
+                        <option value="Different" ${match === 'Different' ? 'selected' : ''}>❌ Different</option>
+                        <option value="Failed" ${match === 'Failed' ? 'selected' : ''}>⚠️ Failed</option>
+                    </select>
+                </td>
+                <td><input type="text" placeholder="Notes"></td>
+                <td><button onclick="this.closest('tr').remove()">Remove</button></td>
+            `;
+        }
+        
+        function addComparisonRow() {
+            addToComparisonTable('', new Date().toISOString().split('T')[0], '', '', 'Pending');
+        }
+        
+        function exportComparison() {
+            const table = document.getElementById('comparisonTable');
+            const rows = Array.from(table.querySelectorAll('tr'));
+            
+            let csv = 'Flight Number,Date,Our Result,FlightRadar24 Result,Match,Notes\n';
+            
+            rows.slice(1).forEach(row => { // Skip header
+                const cells = Array.from(row.querySelectorAll('td'));
+                if (cells.length > 0) {
+                    const values = [
+                        cells[0].textContent,
+                        cells[1].textContent,
+                        cells[2].textContent,
+                        cells[3].querySelector('input').value,
+                        cells[4].querySelector('select').value,
+                        cells[5].querySelector('input').value
+                    ];
+                    csv += values.map(v => `"${v}"`).join(',') + '\n';
+                }
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `flight-lookup-comparison-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+        
+        // Auto-populate some test data
+        window.addEventListener('load', () => {
+            console.log('Flight Registration Lookup Test Page Loaded');
+            
+            // Check FlightRegistrationLookup service
+            if (window.FlightRegistrationLookup) {
+                console.log('✅ FlightRegistrationLookup service available');
+            } else {
+                console.error('❌ FlightRegistrationLookup service not found');
+                document.getElementById('testResults').innerHTML = 
+                    '<div class="error">FlightRegistrationLookup service not loaded. Make sure flight-registration-lookup.js is included.</div>';
+            }
+            
+            // Check AeroDataBox API service
+            if (window.AeroDataBoxAPI) {
+                console.log('✅ AeroDataBoxAPI service available');
+            } else {
+                console.error('❌ AeroDataBoxAPI service not found');
+                if (!document.getElementById('testResults').innerHTML) {
+                    document.getElementById('testResults').innerHTML = 
+                        '<div class="error">AeroDataBoxAPI service not loaded. Make sure aerodatabox-api.js is included.</div>';
+                }
+            }
+        });
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && (e.target.id === 'manualFlight' || e.target.id === 'manualDate')) {
+                lookupManualFlight();
+            }
+        });
+    </script>
+</body>
+</html>

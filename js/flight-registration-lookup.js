@@ -180,149 +180,252 @@ const FlightRegistrationLookup = (() => {
 	 * @returns {Promise<string|null>} Aircraft Registration oder null
 	 */
 	const lookupViaAeroDataBox = async (flightNumber, flightDate) => {
+		console.group(`🔍 === AeroDataBox Lookup: ${flightNumber} am ${flightDate} ===`);
 		try {
 			// Prüfen ob AeroDataBoxAPI verfügbar ist
 			if (!window.AeroDataBoxAPI) {
-				console.error("AeroDataBoxAPI nicht verfügbar");
+				console.error("❌ AeroDataBoxAPI nicht verfügbar");
+				console.groupEnd();
 				return null;
 			}
 
 			// AeroDataBox API für Flugnummer-Lookup verwenden
 			// Verschiedene Strategien versuchen:
 
-			// 1. STRATEGIE: Flugstatus direkt über Flugnummer abfragen
+			// 1. STRATEGIE: Direkte Flugnummer-Abfrage über /flights/number/ Endpoint
+			console.group("📡 Strategie 1: getFlightByNumber");
 			try {
-				console.log(
-					`🔍 AeroDataBox: Versuche Flugstatus für ${flightNumber}...`
-				);
+				console.log(`🎯 Versuche getFlightByNumber für ${flightNumber} am ${flightDate}`);
 
-				// Verwende getFlightStatus aus AeroDataBoxAPI wenn verfügbar
-				if (window.AeroDataBoxAPI.getFlightStatus) {
-					const flightStatusData = await window.AeroDataBoxAPI.getFlightStatus(
+				// Verwende getFlightByNumber aus AeroDataBoxAPI (funktionierender Endpoint)
+				if (window.AeroDataBoxAPI.getFlightByNumber) {
+					console.log("✅ getFlightByNumber Funktion ist verfügbar");
+					const flightData = await window.AeroDataBoxAPI.getFlightByNumber(
 						flightNumber,
 						flightDate
 					);
 
-					if (flightStatusData && flightStatusData.aircraft) {
-						const registration =
-							flightStatusData.aircraft.reg ||
-							flightStatusData.aircraft.registration ||
-							flightStatusData.aircraft.tail;
+					console.log("📥 getFlightByNumber RAW Response:", flightData);
 
-						if (registration) {
-							console.log(
-								`✅ AeroDataBox Flugstatus: ${flightNumber} → ${registration}`
-							);
-							return registration.toUpperCase();
-						}
+					if (flightData && flightData.registration) {
+						console.log("✈️ Aircraft Registration gefunden:", flightData.registration);
+						console.log(`✅ Registration extrahiert: ${flightData.registration}`);
+						console.groupEnd();
+						return flightData.registration.toUpperCase();
+					} else if (flightData && !flightData.error) {
+						console.warn("⚠️ Flugdaten gefunden, aber keine Registration", flightData);
+					} else if (flightData && flightData.error) {
+						console.warn("⚠️ API Fehler:", flightData.error);
+					} else {
+						console.warn("⚠️ Keine Flugdaten erhalten", flightData);
 					}
+				} else {
+					console.warn("❌ getFlightByNumber Funktion nicht verfügbar");
 				}
-			} catch (statusError) {
-				console.log(
-					`⚠️ AeroDataBox Flugstatus-Abfrage fehlgeschlagen:`,
-					statusError.message
+			} catch (flightNumberError) {
+				console.error(
+					`❌ getFlightByNumber Fehler:`,
+					flightNumberError
 				);
+				console.log("Error details:", {
+					message: flightNumberError.message,
+					stack: flightNumberError.stack,
+					name: flightNumberError.name
+				});
 			}
+			console.groupEnd();
 
 			// 2. STRATEGIE: Flughafen-Abfrage mit Flugnummer-Filter
+			console.group("🏢 Strategie 2: Airport Search");
 			try {
-				console.log(
-					`🔍 AeroDataBox: Versuche Flughafen-Suche für ${flightNumber}...`
-				);
-
 				// Extrahiere Airline-Code aus Flugnummer für Flughafen-Guess
 				const airlineCode = flightNumber.match(/^([A-Z]{2})/)?.[1];
+				console.log(`📝 Airline Code extrahiert: ${airlineCode || 'NICHT GEFUNDEN'}`);
 
 				if (airlineCode && window.AeroDataBoxAPI.getAirportFlights) {
+					console.log("✅ getAirportFlights Funktion ist verfügbar");
+					
 					// Häufige Flughäfen für verschiedene Airlines
 					const airportGuess = getAirportForAirline(airlineCode);
+					console.log(`🏢 Geschätzter Hub-Airport für ${airlineCode}: ${airportGuess}`);
 
-					if (airportGuess) {
-						// Zeitfenster für den Tag definieren
-						const startDateTime = `${flightDate}T00:00`;
-						const endDateTime = `${flightDate}T23:59`;
+				if (airportGuess) {
+					// KORRIGIERT: Zeitfenster auf 12 Stunden begrenzen (AeroDataBox Limit)
+					// Verwende nur die erste Tageshälfte für bessere Ergebnisse
+					const startDateTime = `${flightDate}T06:00`;
+					const endDateTime = `${flightDate}T18:00`;
+					console.log(`📅 Zeitfenster (12h Limit): ${startDateTime} bis ${endDateTime}`);
 
-						const airportData = await window.AeroDataBoxAPI.getAirportFlights(
-							airportGuess,
-							startDateTime,
-							endDateTime
-						);
+					console.log(`📡 Rufe getAirportFlights(${airportGuess}) auf...`);
+					const airportData = await window.AeroDataBoxAPI.getAirportFlights(
+						airportGuess,
+						startDateTime,
+						endDateTime
+					);
+
+						console.log("📥 getAirportFlights RAW Response:", airportData);
+
+						// Analyze the structure of airportData
+						if (airportData) {
+							console.log("🔍 Analysiere Response-Struktur:");
+							console.log("  - Type:", typeof airportData);
+							console.log("  - Is Array:", Array.isArray(airportData));
+							if (typeof airportData === 'object' && !Array.isArray(airportData)) {
+								console.log("  - Keys:", Object.keys(airportData));
+								if (airportData.arrivals) console.log(`  - Arrivals count: ${airportData.arrivals.length}`);
+								if (airportData.departures) console.log(`  - Departures count: ${airportData.departures.length}`);
+							} else if (Array.isArray(airportData)) {
+								console.log("  - Array Length:", airportData.length);
+								if (airportData.length > 0) {
+									console.log("  - First Item Keys:", Object.keys(airportData[0]));
+								}
+							}
+						}
 
 						// Suche nach der spezifischen Flugnummer in den Ergebnissen
+						console.log(`🔍 Suche nach Flugnummer ${flightNumber} in Airport-Daten...`);
 						const matchingFlight = findFlightInAirportData(
 							airportData,
 							flightNumber
 						);
 
 						if (matchingFlight) {
-							const registration =
-								extractRegistrationFromFlight(matchingFlight);
+							console.log("✅ Matching Flight gefunden:", matchingFlight);
+							const registration = extractRegistrationFromFlight(matchingFlight);
+							console.log(`🔍 Registration Extraktion Ergebnis: ${registration || 'NICHT GEFUNDEN'}`);
+							
 							if (registration) {
-								console.log(
-									`✅ AeroDataBox Flughafen-Suche: ${flightNumber} → ${registration}`
-								);
+								console.log(`✅ Registration erfolgreich extrahiert: ${registration}`);
+								console.groupEnd();
 								return registration.toUpperCase();
+							} else {
+								console.warn("⚠️ Matching Flight gefunden, aber keine Registration extrahierbar", matchingFlight);
 							}
+						} else {
+							console.warn(`❌ Keine Flights mit Nummer ${flightNumber} in Airport-Daten gefunden`);
 						}
+					} else {
+						console.warn("❌ Kein Hub-Airport für Airline gefunden");
 					}
+				} else if (!airlineCode) {
+					console.warn("❌ Airline Code konnte nicht extrahiert werden");
+				} else {
+					console.warn("❌ getAirportFlights Funktion nicht verfügbar");
 				}
 			} catch (airportError) {
-				console.log(
-					`⚠️ AeroDataBox Flughafen-Abfrage fehlgeschlagen:`,
-					airportError.message
+				console.error(
+					`❌ Airport Search Fehler:`,
+					airportError
 				);
+				console.log("Error details:", {
+					message: airportError.message,
+					stack: airportError.stack,
+					name: airportError.name
+				});
 			}
+			console.groupEnd();
 
 			// 3. STRATEGIE: Bekannte Registration reverse lookup (wenn wir Flotte kennen)
+			console.group("✈️ Strategie 3: Fleet Search");
 			try {
-				console.log(
-					`🔍 AeroDataBox: Versuche Flotten-basierte Suche für ${flightNumber}...`
-				);
+				console.log(`🔍 Versuche Flotten-basierte Suche für ${flightNumber}...`);
 
-				const possibleRegistrations =
-					generatePossibleRegistrations(flightNumber);
+				const possibleRegistrations = generatePossibleRegistrations(flightNumber);
+				console.log(`📝 Generierte ${possibleRegistrations.length} mögliche Registrations:`, possibleRegistrations);
+
+				if (possibleRegistrations.length === 0) {
+					console.warn("❌ Keine möglichen Registrations für diese Airline generiert");
+					console.groupEnd();
+					return;
+				}
+
+				if (!window.AeroDataBoxAPI.getAircraftFlights) {
+					console.warn("❌ getAircraftFlights Funktion nicht verfügbar");
+					console.groupEnd();
+					return;
+				}
 
 				for (const regGuess of possibleRegistrations) {
+					console.group(`🔍 Teste Registration: ${regGuess}`);
 					try {
-						if (window.AeroDataBoxAPI.getAircraftFlights) {
-							const aircraftData =
-								await window.AeroDataBoxAPI.getAircraftFlights(
-									regGuess,
-									flightDate
-								);
+						console.log(`📡 Rufe getAircraftFlights(${regGuess}, ${flightDate}) auf...`);
+						const aircraftData = await window.AeroDataBoxAPI.getAircraftFlights(
+							regGuess,
+							flightDate
+						);
 
-							if (
-								aircraftData &&
-								aircraftData.data &&
-								aircraftData.data.length > 0
-							) {
-								// Prüfe ob diese Registration tatsächlich den gesuchten Flug hat
-								const hasMatchingFlight = aircraftData.data.some((flight) => {
-									const flightNum =
-										flight.flightDesignator?.fullFlightNumber ||
-										flight._rawFlightData?.number;
-									return flightNum === flightNumber;
+						console.log(`📥 getAircraftFlights RAW Response für ${regGuess}:`, aircraftData);
+
+						if (aircraftData && aircraftData.data && aircraftData.data.length > 0) {
+							console.log(`✅ ${aircraftData.data.length} Flüge für ${regGuess} gefunden`);
+							
+							// Analysiere die Struktur der Flugdaten
+							console.log("🔍 Analysiere Flight Data Struktur:");
+							aircraftData.data.forEach((flight, index) => {
+								const flightNum = flight.flightDesignator?.fullFlightNumber || 
+								                  flight._rawFlightData?.number || 
+								                  flight.number || 
+								                  'UNBEKANNT';
+								console.log(`  Flight ${index + 1}: ${flightNum}`, {
+									flightDesignator: flight.flightDesignator,
+									_rawFlightData: flight._rawFlightData,
+									number: flight.number,
+									keys: Object.keys(flight)
 								});
+							});
 
-								if (hasMatchingFlight) {
-									console.log(
-										`✅ AeroDataBox Flotten-Suche: ${flightNumber} → ${regGuess}`
-									);
-									return regGuess.toUpperCase();
-								}
+							// Prüfe ob diese Registration tatsächlich den gesuchten Flug hat
+							console.log(`🔍 Suche nach Flug ${flightNumber} in den Daten...`);
+							const matchingFlight = aircraftData.data.find((flight) => {
+								const flightNum = flight.flightDesignator?.fullFlightNumber ||
+								                  flight._rawFlightData?.number ||
+								                  flight.number;
+								return flightNum === flightNumber;
+							});
+
+							if (matchingFlight) {
+								console.log("✅ Matching Flight gefunden:", matchingFlight);
+								console.log(`✅ ERFOLGREICH: ${flightNumber} → ${regGuess}`);
+								console.groupEnd(); // Close individual registration group
+								console.groupEnd(); // Close strategy group
+								return regGuess.toUpperCase();
+							} else {
+								console.warn(`❌ Flug ${flightNumber} nicht in den Daten für ${regGuess} gefunden`);
+							}
+						} else {
+							console.warn(`❌ Keine Flugdaten für Registration ${regGuess} gefunden`);
+							if (aircraftData) {
+								console.log("Empty response structure:", {
+									type: typeof aircraftData,
+									keys: Object.keys(aircraftData),
+									dataExists: !!aircraftData.data,
+									dataLength: aircraftData.data ? aircraftData.data.length : 'N/A'
+								});
 							}
 						}
 					} catch (regError) {
-						// Ignoriere Fehler für einzelne Registrierungen
-						continue;
+						console.error(`❌ Fehler bei Registration ${regGuess}:`, regError);
+						console.log("Error details:", {
+							message: regError.message,
+							stack: regError.stack,
+							name: regError.name
+						});
 					}
+					console.groupEnd(); // Close individual registration group
 				}
+				console.warn(`❌ Keine passende Registration in Fleet Search gefunden`);
 			} catch (fleetError) {
-				console.log(
-					`⚠️ AeroDataBox Flotten-Suche fehlgeschlagen:`,
-					fleetError.message
+				console.error(
+					`❌ Fleet Search Fehler:`,
+					fleetError
 				);
+				console.log("Error details:", {
+					message: fleetError.message,
+					stack: fleetError.stack,
+					name: fleetError.name
+				});
 			}
+			console.groupEnd();
 
 			console.log(
 				`❌ AeroDataBox: Keine Registration für ${flightNumber} gefunden`
@@ -340,6 +443,7 @@ const FlightRegistrationLookup = (() => {
 	const getAirportForAirline = (airlineCode) => {
 		const airlineToAirport = {
 			LH: "MUC", // Lufthansa -> München
+			VL: "MUC", // Lufthansa City -> München (gleiche Basis wie LH)
 			BA: "LHR", // British Airways -> London Heathrow
 			AF: "CDG", // Air France -> Paris CDG
 			KL: "AMS", // KLM -> Amsterdam
@@ -358,38 +462,65 @@ const FlightRegistrationLookup = (() => {
 	};
 
 	/**
+	 * Hilfsfunktion: Normalisiert Flugnummern für konsistenten Vergleich
+	 * Entfernt Leerzeichen, Bindestiche und stellt in Großbuchstaben
+	 */
+	const normalizeFlightNumber = (flightNumber) => {
+		if (!flightNumber) return "";
+		// Entferne Leerzeichen und Bindestriche, konvertiere zu Großbuchstaben
+		return flightNumber.toString().replace(/[\s-]/g, "").toUpperCase();
+	};
+
+	/**
 	 * Hilfsfunktion: Sucht einen Flug in Flughafen-Daten
+	 * VERBESSERT: Normalisiert Flugnummern für konsistenten Vergleich
 	 */
 	const findFlightInAirportData = (airportData, flightNumber) => {
 		if (!airportData) return null;
 
+		// Flugnummer normalisieren
+		const normalizedSearchNumber = normalizeFlightNumber(flightNumber);
+		console.log(`🔄 Normalisierte Suchanfrage: '${flightNumber}' → '${normalizedSearchNumber}'`);
+		
+		// Hilfsfunktion für Flugnummernvergleich mit Normalisierung
+		const matchesFlightNumber = (flight) => {
+			// Verschiedene mögliche Orte für Flugnummern in der API-Antwort
+			const possibleNumbers = [
+				flight.number,
+				flight.flight?.number,
+				flight.flightDesignator?.fullFlightNumber,
+				flight._rawFlightData?.number,
+				flight.flightIdentifier,
+			];
+			
+			// Normalisiere jede Flugnummer und vergleiche
+			for (const num of possibleNumbers) {
+				if (!num) continue;
+				
+				const normalizedNum = normalizeFlightNumber(num);
+				if (normalizedNum === normalizedSearchNumber) {
+					console.log(`✓ Match gefunden: '${num}' (normalisiert: '${normalizedNum}')`);
+					return true;
+				}
+			}
+			return false;
+		};
+
 		// Suche in departures
 		if (airportData.departures) {
-			const depFlight = airportData.departures.find(
-				(flight) =>
-					flight.number === flightNumber ||
-					flight.flight?.number === flightNumber
-			);
+			const depFlight = airportData.departures.find(matchesFlightNumber);
 			if (depFlight) return depFlight;
 		}
 
 		// Suche in arrivals
 		if (airportData.arrivals) {
-			const arrFlight = airportData.arrivals.find(
-				(flight) =>
-					flight.number === flightNumber ||
-					flight.flight?.number === flightNumber
-			);
+			const arrFlight = airportData.arrivals.find(matchesFlightNumber);
 			if (arrFlight) return arrFlight;
 		}
 
 		// Suche in Array-Format
 		if (Array.isArray(airportData)) {
-			const arrayFlight = airportData.find(
-				(flight) =>
-					flight.number === flightNumber ||
-					flight.flight?.number === flightNumber
-			);
+			const arrayFlight = airportData.find(matchesFlightNumber);
 			if (arrayFlight) return arrayFlight;
 		}
 
@@ -398,16 +529,117 @@ const FlightRegistrationLookup = (() => {
 
 	/**
 	 * Hilfsfunktion: Extrahiert Registration aus Flug-Objekt
+	 * VERBESSERT: Behandelt mehr Datenstruktur-Variationen und loggt Debug-Info
 	 */
 	const extractRegistrationFromFlight = (flight) => {
-		return (
-			flight.aircraft?.reg ||
-			flight.aircraft?.registration ||
-			flight.aircraft?.tail ||
-			flight.registration ||
-			flight.aircraftRegistration ||
-			null
-		);
+		if (!flight) {
+			console.warn("🔍 extractRegistrationFromFlight: flight object is null/undefined");
+			return null;
+		}
+
+		// Alle möglichen Pfade für Aircraft Registration durchprobieren
+		const possiblePaths = [
+			// Standard-Pfade
+			flight.aircraft?.reg,
+			flight.aircraft?.registration,
+			flight.aircraft?.tail,
+			flight.registration,
+			flight.aircraftRegistration,
+			
+			// Erweiterte Pfade basierend auf API-Struktur
+			flight.aircraft?.aircraftRegistration,
+			flight.aircraft?.tailNumber,
+			flight.aircraftInfo?.registration,
+			flight.aircraftInfo?.reg,
+			flight.vehicle?.registration,
+			flight.vehicle?.reg,
+			flight.plane?.registration,
+			flight.plane?.reg,
+			
+			// Nested structures
+			flight.flightInfo?.aircraft?.registration,
+			flight.flightInfo?.aircraft?.reg,
+			flight.flightData?.aircraft?.registration,
+			flight.flightData?.aircraft?.reg,
+			
+			// Raw data fallbacks
+			flight._rawFlightData?.aircraft?.registration,
+			flight._rawFlightData?.aircraft?.reg,
+			flight.rawData?.aircraft?.registration,
+			flight.rawData?.aircraft?.reg,
+			
+			// AeroDataBox specific paths
+			flight.leg?.aircraft?.registration,
+			flight.leg?.aircraft?.reg,
+			flight.movement?.aircraft?.registration,
+			flight.movement?.aircraft?.reg,
+		];
+		
+		// Debug: Logge verfügbare Struktur
+		const availableKeys = Object.keys(flight);
+		console.log(`🔍 extractRegistrationFromFlight Debug:`);
+		console.log(`  - Available top-level keys: ${availableKeys.join(', ')}`);
+		if (flight.aircraft) {
+			console.log(`  - Aircraft keys: ${Object.keys(flight.aircraft).join(', ')}`);
+		}
+
+		// Durchlaufe alle möglichen Pfade
+		for (let i = 0; i < possiblePaths.length; i++) {
+			const registration = possiblePaths[i];
+			if (registration && typeof registration === 'string' && registration.trim().length > 0) {
+				const cleanReg = registration.trim().toUpperCase();
+				// Validiere das Format einer typischen Aircraft Registration
+				if (cleanReg.match(/^[A-Z0-9-]{4,10}$/)) {
+					console.log(`✓ Registration gefunden (Pfad ${i}): '${cleanReg}'`);
+					return cleanReg;
+				} else {
+					console.log(`⚠️ Invalid registration format (Pfad ${i}): '${cleanReg}'`);
+				}
+			}
+		}
+
+		// Fallback: Durchsuche das gesamte Objekt nach registration-ähnlichen Properties
+		console.log(`🔍 Fallback: Durchsuche alle Properties nach 'registration' pattern...`);
+		const deepSearchResult = deepSearchForRegistration(flight);
+		if (deepSearchResult) {
+			console.log(`✓ Deep search Registration gefunden: '${deepSearchResult}'`);
+			return deepSearchResult;
+		}
+
+		console.log(`❌ Keine Aircraft Registration in Flight-Objekt gefunden`);
+		return null;
+	};
+	
+	/**
+	 * Hilfsfunktion: Tiefe Suche nach Registration in einem Objekt
+	 */
+	const deepSearchForRegistration = (obj, visited = new Set()) => {
+		if (!obj || typeof obj !== 'object' || visited.has(obj)) {
+			return null;
+		}
+		
+		visited.add(obj);
+		
+		// Durchsuche alle Keys nach registration-ähnlichen Namen
+		for (const [key, value] of Object.entries(obj)) {
+			// Keys die "reg" oder "registration" enthalten
+			if (key.toLowerCase().includes('reg') && typeof value === 'string' && value.trim()) {
+				const candidate = value.trim().toUpperCase();
+				// Prüfe ob es wie eine Aircraft Registration aussieht
+				if (candidate.match(/^[A-Z0-9-]{4,10}$/)) {
+					console.log(`🔍 Deep search found potential registration in '${key}': '${candidate}'`);
+					return candidate;
+				}
+			}
+			
+			// Rekursiv in verschachtelte Objekte schauen
+			if (typeof value === 'object' && value !== null) {
+				const result = deepSearchForRegistration(value, visited);
+				if (result) return result;
+			}
+		}
+		
+		return null;
 	};
 
 	/**

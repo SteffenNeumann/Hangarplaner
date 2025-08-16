@@ -20,7 +20,7 @@ const FlightRegistrationLookup = (() => {
 			opensky: true,
 			faa: true,
 			webScraping: true,
-			localDatabase: true,
+			localDatabase: false, // DEAKTIVIERT: Flight numbers können verschiedene Aircraft an verschiedenen Daten verwenden
 		},
 	};
 

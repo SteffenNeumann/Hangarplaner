@@ -1184,6 +1184,7 @@ const FlightRegistrationLookup = (() => {
 
 	/**
 	 * Identifiziert Flüge ohne weiteren Abflug (Übernachtung)
+	 * KORRIGIERT: Behandelt sowohl Flüge mit Aircraft Registration als auch nur mit Flugnummer
 	 */
 	const identifyOvernightFlights = async (airportCode, arrivals, date) => {
 		console.log(`🔍 Prüfe ${arrivals.length} Ankünfte auf Übernachtung...`);
@@ -1192,38 +1193,66 @@ const FlightRegistrationLookup = (() => {
 
 		for (const arrival of arrivals) {
 			const aircraftReg = extractRegistrationFromFlight(arrival);
+			const flightNumber = arrival.number;
 
-			if (!aircraftReg) {
-				console.log(
-					`⚠️ Keine Aircraft Registration für Ankunftsflug gefunden:`,
-					arrival.number
+			// **FALL 1: Aircraft Registration verfügbar - normale Übernachtungsprüfung**
+			if (aircraftReg) {
+				console.log(`🔍 Prüfe Übernachtung für Aircraft ${aircraftReg} (Flug ${flightNumber})`);
+				
+				// Prüfe ob das Aircraft am gleichen Tag noch abfliegt
+				const hasLaterDeparture = await checkForLaterDeparture(
+					aircraftReg,
+					airportCode,
+					date,
+					arrival
 				);
-				continue;
-			}
 
-			// Prüfe ob das Aircraft am gleichen Tag noch abfliegt
-			const hasLaterDeparture = await checkForLaterDeparture(
-				aircraftReg,
-				airportCode,
-				date,
-				arrival
-			);
-
-			if (!hasLaterDeparture) {
+				if (!hasLaterDeparture) {
+					console.log(
+						`🌙 Übernachtung identifiziert: ${aircraftReg} (Flug ${flightNumber})`
+					);
+					overnightFlights.push({
+						...arrival,
+						aircraftRegistration: aircraftReg,
+						overnightConfirmed: true,
+					});
+				} else {
+					console.log(
+						`🔄 Keine Übernachtung: ${aircraftReg} fliegt am gleichen Tag weiter`
+					);
+				}
+			} 
+			// **FALL 2: Nur Flugnummer verfügbar - vorsichtige Übernachtungs-Annahme**
+			else if (flightNumber) {
 				console.log(
-					`🌙 Übernachtung identifiziert: ${aircraftReg} (Flug ${arrival.number})`
+					`⚠️ Keine Aircraft Registration für Ankunftsflug ${flightNumber} gefunden - behandle als potenzielle Übernachtung`
 				);
+				
+				// **STRATEGIE: Flights ohne Aircraft Registration als potenzielle Übernachtungen behandeln**
+				// Grund: Später kann über Flugnummer eine Registration-Lookup erfolgen
+				// Falls das nicht klappt, werden sie in matchWithTiles herausgefiltert
 				overnightFlights.push({
 					...arrival,
-					aircraftRegistration: aircraftReg,
-					overnightConfirmed: true,
+					aircraftRegistration: null, // Explizit null setzen
+					overnightConfirmed: false, // Unbestätigt, da keine Registration verfügbar
+					requiresLookup: true, // Flag für spätere Registration-Lookup
 				});
-			} else {
-				console.log(
-					`🔄 Kein Übernachtung: ${aircraftReg} fliegt am gleichen Tag weiter`
-				);
+			}
+			// **FALL 3: Weder Aircraft Registration noch Flugnummer - überspringen**
+			else {
+				console.log(`❌ Weder Aircraft Registration noch Flugnummer für Ankunft verfügbar - überspringe`);
+				continue;
 			}
 		}
+
+		console.log(`🏨 ${overnightFlights.length} potenzielle Übernachtungs-Flüge identifiziert`);
+		
+		// Aufschlüsselung für bessere Diagnostik
+		const confirmedOvernight = overnightFlights.filter(f => f.overnightConfirmed).length;
+		const requiresLookup = overnightFlights.filter(f => f.requiresLookup).length;
+		
+		console.log(`   - ${confirmedOvernight} bestätigte Übernachtungen (mit Aircraft Registration)`);
+		console.log(`   - ${requiresLookup} potenzielle Übernachtungen (nur Flugnummer, brauchen Lookup)`);
 
 		return overnightFlights;
 	};

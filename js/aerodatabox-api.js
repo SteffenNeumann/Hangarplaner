@@ -278,12 +278,32 @@ const AeroDataBoxAPI = (() => {
 
 				const response = await fetch(apiUrl, options);
 
-				if (!response.ok) {
-					const errorText = await response.text();
-					throw new Error(
-						`API-Anfrage fehlgeschlagen: ${response.status} ${response.statusText}. Details: ${errorText}`
-					);
+			if (!response.ok) {
+				const errorText = await response.text();
+				let errorMessage = `API-Anfrage fehlgeschlagen: ${response.status} ${response.statusText}`;
+				
+				// Versuche JSON Error Message zu extrahieren
+				try {
+					const errorData = JSON.parse(errorText);
+					if (errorData.message) {
+						errorMessage += `. Error: ${errorData.message}`;
+					}
+				} catch {
+					// Falls kein JSON, verwende direkten Text
+					if (errorText) {
+						errorMessage += `. Details: ${errorText}`;
+					}
 				}
+				
+				console.error(`AeroDataBox API Error for ${registration}:`, {
+					status: response.status,
+					statusText: response.statusText,
+					errorText: errorText,
+					url: apiUrl
+				});
+				
+				throw new Error(errorMessage);
+			}
 
 				// Prüfe, ob die Antwort Inhalt hat, bevor JSON-Parsing versucht wird
 				const responseText = await response.text();
@@ -3209,6 +3229,333 @@ const AeroDataBoxAPI = (() => {
 					error
 				);
 				return [];
+			}
+		},
+
+		/**
+		 * CORRECTED IMPLEMENTATION: Airport-First Overnight Processing
+		 * This is the correct approach that starts with airport-wide flight collection
+		 * instead of individual aircraft queries from tiles
+		 */
+		processOvernightFlightsCorrectly: async (
+			airportCode = null,
+			currentDate = null,
+			nextDate = null
+		) => {
+			try {
+				console.log(`🏢 === CORRECT AIRPORT-FIRST OVERNIGHT PROCESSING ===`);
+
+				// Get parameters from UI if not provided
+				const selectedAirport = airportCode ||
+					document.getElementById("airportCodeInput")?.value?.trim()?.toUpperCase() || "MUC";
+
+				const today = formatDate(new Date());
+				const tomorrow = formatDate(new Date(new Date().setDate(new Date().getDate() + 1)));
+
+				const startDate = currentDate || today;
+				const endDate = nextDate || tomorrow;
+
+				console.log(`🏢 Airport: ${selectedAirport}`);
+				console.log(`📅 Date range: ${startDate} → ${endDate}`);
+
+				updateFetchStatus(`🏢 Starting airport-wide overnight processing for ${selectedAirport}...`, false);
+
+				// STEP 1: Get ALL flights from airport (4 time periods for complete coverage)
+				console.log(`📡 === STEP 1: COLLECTING ALL AIRPORT FLIGHTS ===`);
+				const timeWindows = [
+					{ start: `${startDate}T06:00`, end: `${startDate}T18:00`, desc: "Day 1 Morning-Afternoon" },
+					{ start: `${startDate}T18:00`, end: `${startDate}T23:59`, desc: "Day 1 Evening-Night" },
+					{ start: `${endDate}T05:00`, end: `${endDate}T15:00`, desc: "Day 2 Morning-Afternoon" },
+					{ start: `${endDate}T15:00`, end: `${endDate}T23:59`, desc: "Day 2 Afternoon-Night" }
+				];
+
+				console.log(`🕐 Collecting flights for ${timeWindows.length} time windows...`);
+				timeWindows.forEach((window, index) => {
+					console.log(`   ${index + 1}. ${window.desc}: ${window.start} to ${window.end}`);
+				});
+
+				// Parallel API calls for all time windows
+				const flightPromises = timeWindows.map(window =>
+					getAirportFlights(selectedAirport, window.start, window.end)
+				);
+
+				const allFlightData = await Promise.all(flightPromises);
+				console.log(`✅ All ${timeWindows.length} API calls completed`);
+
+				// Flatten and collect all flights
+				let allFlights = [];
+				allFlightData.forEach((data, index) => {
+					if (data) {
+						let flightCount = 0;
+						if (Array.isArray(data)) {
+							allFlights = allFlights.concat(data);
+							flightCount = data.length;
+						} else {
+							if (data.departures) {
+								allFlights = allFlights.concat(data.departures);
+								flightCount += data.departures.length;
+							}
+							if (data.arrivals) {
+								allFlights = allFlights.concat(data.arrivals);
+								flightCount += data.arrivals.length;
+							}
+						}
+						console.log(`   ${timeWindows[index].desc}: ${flightCount} flights`);
+					}
+				});
+
+				console.log(`📊 Total flights collected: ${allFlights.length}`);
+
+				if (allFlights.length === 0) {
+					console.log(`❌ No flights found at ${selectedAirport} for the specified time range`);
+					updateFetchStatus(`No flights found at ${selectedAirport}`, true);
+					return { success: false, message: "No flights found" };
+				}
+
+				// STEP 2: Extract aircraft registrations AND flight numbers
+				console.log(`🔍 === STEP 2: EXTRACTING AIRCRAFT IDs AND FLIGHT NUMBERS ===`);
+				const aircraftRegistry = new Map();
+				const unknownFlights = [];
+				let directRegistrations = 0;
+
+				allFlights.forEach(flight => {
+					const registration = flight.aircraft?.reg || 
+										 flight.aircraft?.registration || 
+										 flight.aircraft?.tail ||
+										 flight.aircraftRegistration ||
+										 flight.registration;
+					const flightNumber = flight.number;
+
+					if (registration) {
+						// Direct registration available
+						const regUpper = registration.toUpperCase();
+						if (!aircraftRegistry.has(regUpper)) {
+							aircraftRegistry.set(regUpper, []);
+						}
+						aircraftRegistry.get(regUpper).push(flight);
+						directRegistrations++;
+					} else if (flightNumber) {
+						// Need lookup for this flight
+						unknownFlights.push({ flightNumber, flight });
+					}
+				});
+
+				console.log(`✅ Direct registrations found: ${directRegistrations}`);
+				console.log(`🔍 Flights needing registration lookup: ${unknownFlights.length}`);
+				console.log(`📊 Unique aircraft with direct registrations: ${aircraftRegistry.size}`);
+
+				// STEP 3: Lookup registrations for flight numbers
+				console.log(`🔎 === STEP 3: FLIGHT NUMBER TO REGISTRATION LOOKUP ===`);
+				let lookupSuccesses = 0;
+				let lookupFailures = 0;
+
+				for (const { flightNumber, flight } of unknownFlights) {
+					try {
+						updateFetchStatus(`Looking up registration for flight ${flightNumber}...`, false);
+						const lookupResult = await getFlightByNumber(flightNumber, startDate);
+						
+						if (lookupResult.registration) {
+							const regUpper = lookupResult.registration.toUpperCase();
+							if (!aircraftRegistry.has(regUpper)) {
+								aircraftRegistry.set(regUpper, []);
+							}
+							aircraftRegistry.get(regUpper).push(flight);
+							console.log(`✅ Found registration ${regUpper} for flight ${flightNumber}`);
+							lookupSuccesses++;
+						} else {
+							lookupFailures++;
+						}
+					} catch (error) {
+						console.log(`⚠️ Could not find registration for flight ${flightNumber}: ${error.message}`);
+						lookupFailures++;
+					}
+				}
+
+				console.log(`📈 Registration lookup results:`);
+				console.log(`   ✅ Successful lookups: ${lookupSuccesses}`);
+				console.log(`   ❌ Failed lookups: ${lookupFailures}`);
+				console.log(`   📊 Total unique aircraft discovered: ${aircraftRegistry.size}`);
+
+				// STEP 4: Apply overnight logic to all discovered aircraft
+				console.log(`🏨 === STEP 4: OVERNIGHT LOGIC FOR ALL DISCOVERED AIRCRAFT ===`);
+				const overnightResults = [];
+
+				for (const [registration, flights] of aircraftRegistry) {
+					console.log(`\n🔍 Analyzing overnight pattern for ${registration}...`);
+					
+					// Separate flights by day and direction
+					const day1Arrivals = flights.filter(flight => {
+						const flightDate = flight.arrival?.scheduledTime?.utc?.substring(0, 10);
+						const arrivalAirport = flight.arrival?.airport?.iata || flight.arrival?.airport?.icao;
+						return flightDate === startDate && arrivalAirport === selectedAirport;
+					});
+
+					const day2Departures = flights.filter(flight => {
+						const flightDate = flight.departure?.scheduledTime?.utc?.substring(0, 10);
+						const departureAirport = flight.departure?.airport?.iata || flight.departure?.airport?.icao;
+						return flightDate === endDate && departureAirport === selectedAirport;
+					});
+
+					console.log(`   📥 Day 1 arrivals at ${selectedAirport}: ${day1Arrivals.length}`);
+					console.log(`   📤 Day 2 departures from ${selectedAirport}: ${day2Departures.length}`);
+
+					if (day1Arrivals.length === 0) {
+						console.log(`   ❌ No arrivals at ${selectedAirport} on day 1 - no overnight possible`);
+						continue;
+					}
+
+					// Find last arrival on day 1
+					const lastArrival = day1Arrivals.sort((a, b) => {
+						const timeA = new Date(a.arrival?.scheduledTime?.utc || 0);
+						const timeB = new Date(b.arrival?.scheduledTime?.utc || 0);
+						return timeB - timeA; // Latest first
+					})[0];
+
+					// Check for subsequent departures on day 1 AFTER the last arrival
+					const arrivalTime = new Date(lastArrival.arrival?.scheduledTime?.utc);
+					const sameDayDepartures = flights.filter(flight => {
+						const flightDate = flight.departure?.scheduledTime?.utc?.substring(0, 10);
+						const departureAirport = flight.departure?.airport?.iata || flight.departure?.airport?.icao;
+						const departureTime = new Date(flight.departure?.scheduledTime?.utc);
+						
+						return flightDate === startDate && 
+							   departureAirport === selectedAirport && 
+							   departureTime > arrivalTime;
+					});
+
+					console.log(`   ⏰ Last arrival: ${lastArrival.arrival?.scheduledTime?.utc?.substring(11, 16)} (${lastArrival.number})`);
+					console.log(`   🔄 Subsequent departures on day 1: ${sameDayDepartures.length}`);
+
+					if (sameDayDepartures.length > 0) {
+						console.log(`   ❌ Aircraft continues same day - no overnight`);
+						continue;
+					}
+
+					if (day2Departures.length === 0) {
+						console.log(`   ❌ No departures from ${selectedAirport} on day 2 - incomplete overnight`);
+						continue;
+					}
+
+					// Find first departure on day 2
+					const firstDeparture = day2Departures.sort((a, b) => {
+						const timeA = new Date(a.departure?.scheduledTime?.utc || 0);
+						const timeB = new Date(b.departure?.scheduledTime?.utc || 0);
+						return timeA - timeB; // Earliest first
+					})[0];
+
+					console.log(`   ⏰ First departure: ${firstDeparture.departure?.scheduledTime?.utc?.substring(11, 16)} (${firstDeparture.number})`);
+					console.log(`   🏨 ✅ OVERNIGHT CONFIRMED for ${registration}!`);
+
+					// Calculate overnight duration
+					const duration = calculateOvernightDuration(
+						lastArrival.arrival?.scheduledTime?.utc,
+						firstDeparture.departure?.scheduledTime?.utc
+					);
+
+					overnightResults.push({
+						registration,
+						aircraftType: lastArrival.aircraft?.model || firstDeparture.aircraft?.model || "Unknown",
+						arrival: {
+							from: lastArrival.departure?.airport?.iata || "",
+							to: selectedAirport,
+							time: lastArrival.arrival?.scheduledTime?.utc?.substring(11, 16) || "--:--",
+							date: startDate,
+							flightNumber: lastArrival.number || ""
+						},
+						departure: {
+							from: selectedAirport,
+							to: firstDeparture.arrival?.airport?.iata || "",
+							time: firstDeparture.departure?.scheduledTime?.utc?.substring(11, 16) || "--:--",
+							date: endDate,
+							flightNumber: firstDeparture.number || ""
+						},
+						route: `${lastArrival.departure?.airport?.iata || ""} → ${firstDeparture.arrival?.airport?.iata || ""}`,
+						overnightDuration: duration,
+						position: "--" // Will be determined later or via other logic
+					});
+				}
+
+				console.log(`🏨 Overnight analysis complete: ${overnightResults.length} confirmed overnight aircraft`);
+
+				// STEP 5: Match with tiles and populate/clear
+				console.log(`🎯 === STEP 5: TILE MATCHING AND POPULATION ===`);
+				const tiles = document.querySelectorAll('input[id^="aircraft-"]');
+				let matched = 0;
+				let cleared = 0;
+				let empty = 0;
+
+				tiles.forEach(tile => {
+					const tileAircraftId = tile.value.trim().toUpperCase();
+					const tileNumber = tile.id.split('-')[1];
+
+					if (!tileAircraftId) {
+						empty++;
+						return;
+					}
+
+					const overnightMatch = overnightResults.find(aircraft => 
+						aircraft.registration === tileAircraftId
+					);
+
+					if (overnightMatch) {
+						console.log(`✅ Match found: Tile ${tileNumber} (${tileAircraftId}) has overnight data`);
+						
+						// Populate tile with overnight data
+						const arrTimeInput = document.getElementById(`arr-time-${tileNumber}`);
+						const depTimeInput = document.getElementById(`dep-time-${tileNumber}`);
+						const positionInput = document.getElementById(`pos-${tileNumber}`);
+
+						if (arrTimeInput) arrTimeInput.value = overnightMatch.arrival.time;
+						if (depTimeInput) depTimeInput.value = overnightMatch.departure.time;
+						if (positionInput) positionInput.value = `🏨 ${overnightMatch.route}`;
+
+						matched++;
+					} else {
+						console.log(`❌ No overnight data: Tile ${tileNumber} (${tileAircraftId}) - clearing fields`);
+						
+						// Clear tile fields
+						const arrTimeInput = document.getElementById(`arr-time-${tileNumber}`);
+						const depTimeInput = document.getElementById(`dep-time-${tileNumber}`);
+						const positionInput = document.getElementById(`pos-${tileNumber}`);
+
+						if (arrTimeInput) arrTimeInput.value = "";
+						if (depTimeInput) depTimeInput.value = "";
+						if (positionInput) positionInput.value = "";
+
+						cleared++;
+					}
+				});
+
+				console.log(`🎯 Tile matching results:`);
+				console.log(`   ✅ Tiles with overnight data: ${matched}`);
+				console.log(`   ❌ Tiles cleared (no overnight): ${cleared}`);
+				console.log(`   ⭕ Empty tiles: ${empty}`);
+
+				// Final summary
+				const successMessage = `✅ Airport-first processing complete: ${overnightResults.length} overnight aircraft discovered, ${matched} tiles updated`;
+				updateFetchStatus(successMessage, false);
+				console.log(`🏆 === PROCESSING COMPLETE ===`);
+				console.log(successMessage);
+
+				return {
+					success: true,
+					airport: selectedAirport,
+					timeframe: `${startDate} → ${endDate}`,
+					totalFlights: allFlights.length,
+					discoveredAircraft: aircraftRegistry.size,
+					overnightAircraft: overnightResults.length,
+					tilesMatched: matched,
+					tilesCleared: cleared,
+					details: overnightResults
+				};
+
+			} catch (error) {
+				console.error(`❌ Error in airport-first overnight processing:`, error);
+				updateFetchStatus(`❌ Processing failed: ${error.message}`, true);
+				return {
+					success: false,
+					error: error.message
+				};
 			}
 		},
 

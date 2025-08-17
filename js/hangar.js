@@ -731,68 +731,83 @@ function setupFlightDataEventHandlers() {
 				if (statusMessage) {
 					statusMessage.textContent = `Analyzing flights for ${airportCode} from ${currentDate} to ${nextDate}`;
 				}
-				// Prüfe ob FlightRegistrationLookup verfügbar ist
+				// Use the new correct airport-first approach from AeroDataBoxAPI
 				if (
-					window.FlightRegistrationLookup &&
-					window.FlightRegistrationLookup.processOvernightFlightsForHangarplaner
+					window.AeroDataBoxAPI &&
+					window.AeroDataBoxAPI.processOvernightFlightsCorrectly
 				) {
-					// Rufe die Overnight Flights Processing Funktion auf
-					const result =
-						await window.FlightRegistrationLookup.processOvernightFlightsForHangarplaner(
-							airportCode,
-							currentDate,
-							nextDate
-						);
+					console.log("🏢 Using correct airport-first overnight processing approach");
+					
+					// Call the new correct overnight processing function
+					const result = await window.AeroDataBoxAPI.processOvernightFlightsCorrectly(
+						airportCode,
+						currentDate,
+						nextDate
+					);
 
 					if (result && result.success) {
 						console.log(
-							"✅ Overnight Flights Processing erfolgreich abgeschlossen"
+							"✅ Airport-first Overnight Flights Processing completed successfully"
 						);
 
-						// Status aktualisieren
+						// Status aktualisieren with detailed results
 						if (statusMessage) {
-							statusMessage.textContent = `✅ Processing completed: ${
-								result.processedCount || 0
-							} aircraft analyzed`;
+							statusMessage.textContent = `✅ Processing completed: ${result.overnightAircraft} overnight aircraft found, ${result.tilesMatched} tiles updated`;
 						}
 
-						// Zeige Benachrichtigung
+						// Show success notification with details
 						if (window.showNotification) {
 							window.showNotification(
-								`Overnight Flight Processing completed: ${result.processedCount} aircraft processed`,
+								`✅ Airport-first processing complete: ${result.overnightAircraft} overnight aircraft discovered from ${result.totalFlights} total flights at ${result.airport}`,
 								"success"
 							);
 						}
+
+						// Log detailed results for debugging
+						console.log("📊 Processing Results:", {
+							airport: result.airport,
+							timeframe: result.timeframe,
+							totalFlights: result.totalFlights,
+							discoveredAircraft: result.discoveredAircraft,
+							overnightAircraft: result.overnightAircraft,
+							tilesMatched: result.tilesMatched,
+							tilesCleared: result.tilesCleared
+						});
+
 					} else {
-						console.error("❌ Overnight Flights Processing fehlgeschlagen");
+						console.error("❌ Airport-first Overnight Flights Processing failed");
+						if (result && result.error) {
+							console.error("Error details:", result.error);
+						}
 
 						// Status aktualisieren
 						if (statusMessage) {
-							statusMessage.textContent =
-								"❌ Processing failed - check console for details";
+							statusMessage.textContent = result && result.error 
+								? `❌ Processing failed: ${result.error}`
+								: "❌ Processing failed - check console for details";
 						}
 
 						if (window.showNotification) {
-							window.showNotification(
-								"Overnight Flight Processing failed. Check console for details.",
-								"error"
-							);
+							const errorMsg = result && result.error 
+								? `Airport-first processing failed: ${result.error}`
+								: "Airport-first processing failed. Check console for details.";
+							window.showNotification(errorMsg, "error");
 						}
 					}
 				} else {
 					console.error(
-						"❌ FlightRegistrationLookup oder processOvernightFlightsForHangarplaner nicht verfügbar!"
+						"❌ AeroDataBoxAPI or processOvernightFlightsCorrectly function not available!"
 					);
 
 					// Status aktualisieren
 					if (statusMessage) {
 						statusMessage.textContent =
-							"❌ Flight Registration Lookup service not available";
+							"❌ AeroDataBox API overnight processing not available";
 					}
 
 					if (window.showNotification) {
 						window.showNotification(
-							"Overnight Flight Processing not available. Please check if flight-registration-lookup.js is loaded.",
+							"Overnight Flight Processing not available. Please check if aerodatabox-api.js is loaded correctly.",
 							"error"
 						);
 					}

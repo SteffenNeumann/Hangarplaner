@@ -355,12 +355,13 @@ const AeroDataBoxAPI = (() => {
 							);
 						}
 
-						// Falls keine passenden Flüge nach Datumsfilterung, verwende alle
+						// Falls keine passenden Flüge nach Datumsfilterung, gib leeres Ergebnis zurück
 						if (!filteredFlights.length && Array.isArray(fallbackData)) {
 							console.log(
-								`[FALLBACK] Keine Flüge für das Datum ${date} gefunden, verwende alle verfügbaren Flüge`
+								`[FALLBACK] Keine Flüge für das Datum ${date} gefunden - verwende KEINE Flüge (strikte Datumsfilterung)`
 							);
-							filteredFlights = fallbackData;
+							// Gib leeres Ergebnis zurück statt alle Flüge zu verwenden
+							return { data: [] };
 						}
 
 						updateFetchStatus(
@@ -458,12 +459,13 @@ const AeroDataBoxAPI = (() => {
 							);
 						}
 
-						// Falls keine passenden Flüge nach Datumsfilterung, verwende alle
+						// Falls keine passenden Flüge nach Datumsfilterung, gib leeres Ergebnis zurück
 						if (!filteredFlights.length && Array.isArray(fallbackData)) {
 							console.log(
-								`[FALLBACK] Keine Flüge für das Datum ${date} gefunden, verwende alle verfügbaren Flüge`
+								`[FALLBACK] Keine Flüge für das Datum ${date} gefunden - verwende KEINE Flüge (strikte Datumsfilterung)`
 							);
-							filteredFlights = fallbackData;
+							// Gib leeres Ergebnis zurück statt alle Flüge zu verwenden
+							return { data: [] };
 						}
 
 						updateFetchStatus(
@@ -674,8 +676,33 @@ const AeroDataBoxAPI = (() => {
 			// NEUE ÜBERNACHTUNGS-LOGIK: Prüfe ob das Flugzeug über Nacht am Flughafen verbleibt
 			console.log(`\n🏨 === ÜBERNACHTUNGS-PRÜFUNG FÜR ${aircraftId} ===`);
 
-			// Schritt 1: Finde alle Flüge für beide Tage und sortiere sie chronologisch
-			const allFlights = [...currentDayFlights, ...nextDayFlights];
+			// Schritt 1: Strikte Datumsfilterung - nur Flüge im gewählten Datumsbereich verwenden
+			console.log(`📅 Filtere Flüge strikt nach Datum: ${currentDate} und ${nextDate}`);
+			
+			// Filtere currentDayFlights nach dem tatsächlichen currentDate
+			const filteredCurrentDayFlights = currentDayFlights.filter((flight) => {
+				const flightDate = flight.scheduledDepartureDate || currentDate;
+				const isValidDate = flightDate === currentDate;
+				if (!isValidDate && config.debugMode) {
+					console.log(`❌ Flug vom ${flightDate} ausgeschlossen (erwartet: ${currentDate})`);
+				}
+				return isValidDate;
+			});
+			
+			// Filtere nextDayFlights nach dem tatsächlichen nextDate
+			const filteredNextDayFlights = nextDayFlights.filter((flight) => {
+				const flightDate = flight.scheduledDepartureDate || nextDate;
+				const isValidDate = flightDate === nextDate;
+				if (!isValidDate && config.debugMode) {
+					console.log(`❌ Flug vom ${flightDate} ausgeschlossen (erwartet: ${nextDate})`);
+				}
+				return isValidDate;
+			});
+			
+			console.log(`📊 Nach Datumsfilterung: ${filteredCurrentDayFlights.length} Flüge am ${currentDate}, ${filteredNextDayFlights.length} Flüge am ${nextDate}`);
+
+			// Schritt 2: Alle gefilterten Flüge kombinieren und sortieren
+			const allFlights = [...filteredCurrentDayFlights, ...filteredNextDayFlights];
 
 			// Sortiere alle Flüge nach Datum und Zeit
 			allFlights.sort((a, b) => {

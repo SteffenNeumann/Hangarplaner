@@ -3600,7 +3600,7 @@ const AeroDataBoxAPI = (() => {
 					airport: selectedAirport,
 					timeframe: `${startDate} → ${endDate}`,
 					totalFlights: allFlights.length,
-					discoveredAircraft: aircraftRegistry.size,
+					discoveredAircraft: potentialOvernightFlights.size,
 					overnightAircraft: overnightResults.length,
 					tilesMatched: matched,
 					tilesCleared: cleared,

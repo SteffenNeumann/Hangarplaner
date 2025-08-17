@@ -541,7 +541,8 @@ function setupFlightDataEventHandlers() {
 
 			// Route to appropriate processing based on provider selection
 			if (selectedProvider === "overnight-flights") {
-				console.log("🏨 Routing to Overnight Flights Processing...");
+				console.log("🏨 *** OVERNIGHT FLIGHTS PROCESSING MODE SELECTED ***");
+				console.log("🔄 Bypassing API facade and using direct AeroDataBox overnight processing...");
 				
 				// Get airport and date parameters
 				const airportCodeInput = document.getElementById("airportCodeInput");
@@ -552,10 +553,11 @@ function setupFlightDataEventHandlers() {
 				const currentDate = currentDateInput?.value || new Date().toISOString().split("T")[0];
 				const nextDate = nextDateInput?.value || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
-				console.log(`Calling overnight processing for ${airportCode} from ${currentDate} to ${nextDate}`);
+				console.log(`🏨 Parameters: Airport=${airportCode}, StartDate=${currentDate}, EndDate=${nextDate}`);
 
-				// Call the new correct overnight processing function
+				// Call the new correct overnight processing function DIRECTLY
 				if (window.AeroDataBoxAPI && window.AeroDataBoxAPI.processOvernightFlightsCorrectly) {
+					console.log("✅ AeroDataBoxAPI.processOvernightFlightsCorrectly found, calling...");
 					try {
 						const result = await window.AeroDataBoxAPI.processOvernightFlightsCorrectly(
 							airportCode,
@@ -563,21 +565,23 @@ function setupFlightDataEventHandlers() {
 							nextDate
 						);
 
+						console.log("📋 Overnight processing result:", result);
+
 						if (result && result.success) {
-							console.log("✅ Overnight processing completed successfully");
+							console.log("✅ Overnight processing completed successfully!");
 							if (window.showNotification) {
 								window.showNotification(
-									`✅ Overnight processing complete: ${result.overnightAircraft} aircraft found`,
+									`✅ Overnight processing complete: ${result.overnightAircraft} aircraft found, ${result.tilesMatched} tiles updated`,
 									"success"
 								);
 							}
 						} else {
-							console.error("❌ Overnight processing failed");
+							console.error("❌ Overnight processing failed, result:", result);
 							if (window.showNotification) {
-								window.showNotification(
-									"❌ Overnight processing failed. Check console for details.",
-									"error"
-								);
+								const errorMsg = result && result.error 
+									? `Overnight processing failed: ${result.error}`
+									: "Overnight processing failed. Check console for details.";
+								window.showNotification(errorMsg, "error");
 							}
 						}
 					} catch (error) {
@@ -590,14 +594,16 @@ function setupFlightDataEventHandlers() {
 						}
 					}
 				} else {
-					console.error("❌ AeroDataBoxAPI.processOvernightFlightsCorrectly not available");
+					console.error("❌ AeroDataBoxAPI.processOvernightFlightsCorrectly not available!");
+					console.log("Available AeroDataBoxAPI methods:", window.AeroDataBoxAPI ? Object.keys(window.AeroDataBoxAPI) : "AeroDataBoxAPI not found");
 					if (window.showNotification) {
 						window.showNotification(
-							"❌ Overnight processing function not available",
+							"❌ Overnight processing function not available. Check console for details.",
 							"error"
 						);
 					}
 				}
+				console.log("🏨 *** OVERNIGHT PROCESSING COMPLETE - EXITING EARLY ***");
 				return; // Exit early for overnight processing
 			}
 

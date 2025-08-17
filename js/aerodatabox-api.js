@@ -3349,10 +3349,18 @@ const AeroDataBoxAPI = (() => {
 				let lookupSuccesses = 0;
 				let lookupFailures = 0;
 
-				for (const { flightNumber, flight } of unknownFlights) {
-					try {
-						updateFetchStatus(`Looking up registration for flight ${flightNumber}...`, false);
-						const lookupResult = await getFlightByNumber(flightNumber, startDate);
+					for (const { flightNumber, flight } of unknownFlights) {
+						try {
+							updateFetchStatus(`Looking up registration for flight ${flightNumber}...`, false);
+							
+							// Use the correct scope reference for getFlightByNumber
+							if (!window.AeroDataBoxAPI || typeof window.AeroDataBoxAPI.getFlightByNumber !== 'function') {
+								console.warn(`⚠️ AeroDataBoxAPI.getFlightByNumber function not available for ${flightNumber}`);
+								lookupFailures++;
+								continue;
+							}
+							
+							const lookupResult = await window.AeroDataBoxAPI.getFlightByNumber(flightNumber, startDate);
 						
 						if (lookupResult.registration) {
 							const regUpper = lookupResult.registration.toUpperCase();

@@ -534,6 +534,76 @@ function setupFlightDataEventHandlers() {
 			// Debug-Log
 			console.log("*** UPDATE DATA BUTTON WURDE GEKLICKT ***");
 
+			// Check API provider selection to determine behavior
+			const apiProviderSelect = document.getElementById("apiProviderSelect");
+			const selectedProvider = apiProviderSelect?.value || "aerodatabox";
+			console.log(`🔍 Selected API Provider: ${selectedProvider}`);
+
+			// Route to appropriate processing based on provider selection
+			if (selectedProvider === "overnight-flights") {
+				console.log("🏨 Routing to Overnight Flights Processing...");
+				
+				// Get airport and date parameters
+				const airportCodeInput = document.getElementById("airportCodeInput");
+				const currentDateInput = document.getElementById("currentDateInput");
+				const nextDateInput = document.getElementById("nextDateInput");
+				
+				const airportCode = airportCodeInput?.value.trim().toUpperCase() || "MUC";
+				const currentDate = currentDateInput?.value || new Date().toISOString().split("T")[0];
+				const nextDate = nextDateInput?.value || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+				console.log(`Calling overnight processing for ${airportCode} from ${currentDate} to ${nextDate}`);
+
+				// Call the new correct overnight processing function
+				if (window.AeroDataBoxAPI && window.AeroDataBoxAPI.processOvernightFlightsCorrectly) {
+					try {
+						const result = await window.AeroDataBoxAPI.processOvernightFlightsCorrectly(
+							airportCode,
+							currentDate,
+							nextDate
+						);
+
+						if (result && result.success) {
+							console.log("✅ Overnight processing completed successfully");
+							if (window.showNotification) {
+								window.showNotification(
+									`✅ Overnight processing complete: ${result.overnightAircraft} aircraft found`,
+									"success"
+								);
+							}
+						} else {
+							console.error("❌ Overnight processing failed");
+							if (window.showNotification) {
+								window.showNotification(
+									"❌ Overnight processing failed. Check console for details.",
+									"error"
+								);
+							}
+						}
+					} catch (error) {
+						console.error("❌ Error during overnight processing:", error);
+						if (window.showNotification) {
+							window.showNotification(
+								`❌ Overnight processing error: ${error.message}`,
+								"error"
+							);
+						}
+					}
+				} else {
+					console.error("❌ AeroDataBoxAPI.processOvernightFlightsCorrectly not available");
+					if (window.showNotification) {
+						window.showNotification(
+							"❌ Overnight processing function not available",
+							"error"
+						);
+					}
+				}
+				return; // Exit early for overnight processing
+			}
+
+			// DEFAULT BEHAVIOR: Individual aircraft processing (aerodatabox)
+			console.log("🛫 Using standard individual aircraft processing...");
+
 			// Sammle alle Aircraft IDs aus den Kacheln (primäre und sekundäre)
 			const primaryTiles = document.querySelectorAll(
 				'#hangarGrid .hangar-cell input[id^="aircraft-"]'

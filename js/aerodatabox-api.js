@@ -3426,53 +3426,73 @@ const AeroDataBoxAPI = (() => {
 					console.log(`   ⏰ Last arrival: ${lastArrival.arrival?.scheduledTime?.utc?.substring(11, 16)} (${lastArrival.number})`);
 					console.log(`   🔄 Subsequent departures on day 1: ${sameDayDepartures.length}`);
 
-					if (sameDayDepartures.length > 0) {
-						console.log(`   ❌ Aircraft continues same day - no overnight`);
-						continue;
-					}
+				if (sameDayDepartures.length > 0) {
+					console.log(`   ❌ Aircraft continues same day - no overnight`);
+					continue;
+				}
 
-					if (day2Departures.length === 0) {
-						console.log(`   ❌ No departures from ${selectedAirport} on day 2 - incomplete overnight`);
-						continue;
-					}
+				// UPDATED LOGIC: Aircraft stays overnight if no same-day departures
+				// Whether it has a next-day departure or not (parked vs continuing)
+				let firstDeparture = null;
+				let overnightType = "";
+				let route = "";
+				let duration = "";
 
-					// Find first departure on day 2
-					const firstDeparture = day2Departures.sort((a, b) => {
+				if (day2Departures.length > 0) {
+					// Has departure on day 2 - normal overnight with continuation
+					firstDeparture = day2Departures.sort((a, b) => {
 						const timeA = new Date(a.departure?.scheduledTime?.utc || 0);
 						const timeB = new Date(b.departure?.scheduledTime?.utc || 0);
 						return timeA - timeB; // Earliest first
 					})[0];
-
-					console.log(`   ⏰ First departure: ${firstDeparture.departure?.scheduledTime?.utc?.substring(11, 16)} (${firstDeparture.number})`);
-					console.log(`   🏨 ✅ OVERNIGHT CONFIRMED for ${registration}!`);
-
-					// Calculate overnight duration
-					const duration = calculateOvernightDuration(
+					
+					overnightType = "continues";
+					route = `${lastArrival.departure?.airport?.iata || ""} → ${firstDeparture.arrival?.airport?.iata || ""}`;
+					duration = calculateOvernightDuration(
 						lastArrival.arrival?.scheduledTime?.utc,
 						firstDeparture.departure?.scheduledTime?.utc
 					);
+					
+					console.log(`   ⏰ First departure: ${firstDeparture.departure?.scheduledTime?.utc?.substring(11, 16)} (${firstDeparture.number})`);
+					console.log(`   🏨 ✅ OVERNIGHT CONFIRMED for ${registration} - continues next day!`);
+				} else {
+					// No departure on day 2 - aircraft is PARKED overnight
+					overnightType = "parked";
+					route = `${lastArrival.departure?.airport?.iata || ""} → PARKED`;
+					duration = "∞ (parked)";
+					
+					console.log(`   🏨 ✅ OVERNIGHT CONFIRMED for ${registration} - PARKED (no departure scheduled)!`);
+				}
 
-					overnightResults.push({
-						registration,
-						aircraftType: lastArrival.aircraft?.model || firstDeparture.aircraft?.model || "Unknown",
-						arrival: {
-							from: lastArrival.departure?.airport?.iata || "",
-							to: selectedAirport,
-							time: lastArrival.arrival?.scheduledTime?.utc?.substring(11, 16) || "--:--",
-							date: startDate,
-							flightNumber: lastArrival.number || ""
-						},
-						departure: {
-							from: selectedAirport,
-							to: firstDeparture.arrival?.airport?.iata || "",
-							time: firstDeparture.departure?.scheduledTime?.utc?.substring(11, 16) || "--:--",
-							date: endDate,
-							flightNumber: firstDeparture.number || ""
-						},
-						route: `${lastArrival.departure?.airport?.iata || ""} → ${firstDeparture.arrival?.airport?.iata || ""}`,
-						overnightDuration: duration,
-						position: "--" // Will be determined later or via other logic
-					});
+				overnightResults.push({
+					registration,
+					aircraftType: lastArrival.aircraft?.model || (firstDeparture?.aircraft?.model) || "Unknown",
+					overnightType, // "continues" or "parked"
+					arrival: {
+						from: lastArrival.departure?.airport?.iata || "",
+						to: selectedAirport,
+						time: lastArrival.arrival?.scheduledTime?.utc?.substring(11, 16) || "--:--",
+						date: startDate,
+						flightNumber: lastArrival.number || ""
+					},
+					departure: firstDeparture ? {
+						from: selectedAirport,
+						to: firstDeparture.arrival?.airport?.iata || "",
+						time: firstDeparture.departure?.scheduledTime?.utc?.substring(11, 16) || "--:--",
+						date: endDate,
+						flightNumber: firstDeparture.number || ""
+					} : {
+						// Aircraft is parked - no departure
+						from: selectedAirport,
+						to: "PARKED",
+						time: "--:--",
+						date: endDate,
+						flightNumber: "PARKED"
+					},
+					route,
+					overnightDuration: duration,
+					position: "--" // Will be determined later or via other logic
+				});
 				}
 
 				console.log(`🏨 Overnight analysis complete: ${overnightResults.length} confirmed overnight aircraft`);

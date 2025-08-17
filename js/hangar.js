@@ -117,8 +117,16 @@ function initializeApiProviderSelector() {
 	apiProviderSelect.addEventListener("change", function () {
 		if (window.FlightDataAPI) {
 			const newProvider = this.value;
+			
+			// Skip facade registration for overnight-flights since it's handled separately
+			if (newProvider === "overnight-flights") {
+				console.log(`🏨 [PROVIDER-SELECTOR] Overnight flights selected - bypassing API facade`);
+				return; // Don't register with the facade
+			}
+			
+			// For all other providers, register with the facade
 			window.FlightDataAPI.setProvider(newProvider);
-			// console.log(`API-Provider geändert auf: ${newProvider}`);
+			console.log(`✅ [PROVIDER-SELECTOR] API provider changed to: ${newProvider}`);
 		}
 	});
 

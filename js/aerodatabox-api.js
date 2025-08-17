@@ -3312,12 +3312,14 @@ const AeroDataBoxAPI = (() => {
 					return { success: false, message: "No flights found" };
 				}
 
-				// STEP 2: Extract aircraft registrations AND flight numbers
-				console.log(`🔍 === STEP 2: EXTRACTING AIRCRAFT IDs AND FLIGHT NUMBERS ===`);
-				const aircraftRegistry = new Map();
-				const unknownFlights = [];
+				// STEP 2: OPTIMIZED - Extract only minimal data for overnight detection
+				console.log(`🔍 === STEP 2: LIGHTWEIGHT OVERNIGHT CANDIDATE DETECTION ===`);
+				const potentialOvernightFlights = new Map();
+				const unknownFlightNumbers = new Set();
+				const unknownFlightData = new Map(); // Store flight data for lookup
 				let directRegistrations = 0;
 
+				// OPTIMIZED: Only extract essential data for overnight detection
 				allFlights.forEach(flight => {
 					const registration = flight.aircraft?.reg || 
 										 flight.aircraft?.registration || 
@@ -3325,52 +3327,89 @@ const AeroDataBoxAPI = (() => {
 										 flight.aircraftRegistration ||
 										 flight.registration;
 					const flightNumber = flight.number;
+					const flightDate = flight.departure?.scheduledTime?.utc?.substring(0, 10) || 
+									   flight.arrival?.scheduledTime?.utc?.substring(0, 10);
+					const arrivalAirport = flight.arrival?.airport?.iata || flight.arrival?.airport?.icao;
+					const departureAirport = flight.departure?.airport?.iata || flight.departure?.airport?.icao;
+					const arrivalTime = flight.arrival?.scheduledTime?.utc;
+					const departureTime = flight.departure?.scheduledTime?.utc;
 
-					if (registration) {
-						// Direct registration available
-						const regUpper = registration.toUpperCase();
-						if (!aircraftRegistry.has(regUpper)) {
-							aircraftRegistry.set(regUpper, []);
+					// FILTER: Only collect flights that could be overnight candidates
+					// 1. Arrivals to selected airport on day 1 (potential overnight start)
+					// 2. Departures from selected airport on day 2 (potential overnight end)
+					const isDay1Arrival = flightDate === startDate && arrivalAirport === selectedAirport && arrivalTime;
+					const isDay2Departure = flightDate === endDate && departureAirport === selectedAirport && departureTime;
+
+					if (isDay1Arrival || isDay2Departure) {
+						if (registration) {
+							// Direct registration available
+							const regUpper = registration.toUpperCase();
+							if (!potentialOvernightFlights.has(regUpper)) {
+								potentialOvernightFlights.set(regUpper, { 
+									registration: regUpper, 
+									arrivals: [], 
+									departures: [],
+									allFlights: []
+								});
+							}
+							const aircraftData = potentialOvernightFlights.get(regUpper);
+							if (isDay1Arrival) aircraftData.arrivals.push(flight);
+							if (isDay2Departure) aircraftData.departures.push(flight);
+							aircraftData.allFlights.push(flight);
+							directRegistrations++;
+						} else if (flightNumber) {
+							// Need lookup for this flight - but only for potential overnight flights
+							unknownFlightNumbers.add(flightNumber);
+							// Store flight data for later use after lookup
+							unknownFlightData.set(flightNumber, {
+								flight,
+								isDay1Arrival,
+								isDay2Departure,
+								flightDate
+							});
 						}
-						aircraftRegistry.get(regUpper).push(flight);
-						directRegistrations++;
-					} else if (flightNumber) {
-						// Need lookup for this flight
-						unknownFlights.push({ flightNumber, flight });
 					}
 				});
 
 				console.log(`✅ Direct registrations found: ${directRegistrations}`);
-				console.log(`🔍 Flights needing registration lookup: ${unknownFlights.length}`);
-				console.log(`📊 Unique aircraft with direct registrations: ${aircraftRegistry.size}`);
+				console.log(`🔍 Flights needing registration lookup: ${unknownFlightNumbers.size}`);
+				console.log(`📊 Unique aircraft with direct registrations: ${potentialOvernightFlights.size}`);
 
 				// STEP 3: Lookup registrations for flight numbers
 				console.log(`🔎 === STEP 3: FLIGHT NUMBER TO REGISTRATION LOOKUP ===`);
 				let lookupSuccesses = 0;
 				let lookupFailures = 0;
 
-					for (const { flightNumber, flight } of unknownFlights) {
-						try {
-							updateFetchStatus(`Looking up registration for flight ${flightNumber}...`, false);
-							
-							// Use the correct scope reference for getFlightByNumber
-							if (!window.AeroDataBoxAPI || typeof window.AeroDataBoxAPI.getFlightByNumber !== 'function') {
-								console.warn(`⚠️ AeroDataBoxAPI.getFlightByNumber function not available for ${flightNumber}`);
-								lookupFailures++;
-								continue;
-							}
-							
-							const lookupResult = await window.AeroDataBoxAPI.getFlightByNumber(flightNumber, startDate);
+				for (const flightNumber of unknownFlightNumbers) {
+					try {
+						updateFetchStatus(`Looking up registration for flight ${flightNumber}...`, false);
 						
+						// Use the getFlightByNumber function to lookup registration
+						const lookupResult = await this.getFlightByNumber(flightNumber, startDate);
+					
 						if (lookupResult.registration) {
 							const regUpper = lookupResult.registration.toUpperCase();
-							if (!aircraftRegistry.has(regUpper)) {
-								aircraftRegistry.set(regUpper, []);
+							const flightData = unknownFlightData.get(flightNumber);
+							
+							// Create or get aircraft entry
+							if (!potentialOvernightFlights.has(regUpper)) {
+								potentialOvernightFlights.set(regUpper, { 
+									registration: regUpper, 
+									arrivals: [], 
+									departures: [],
+									allFlights: []
+								});
 							}
-							aircraftRegistry.get(regUpper).push(flight);
+							
+							const aircraftData = potentialOvernightFlights.get(regUpper);
+							if (flightData.isDay1Arrival) aircraftData.arrivals.push(flightData.flight);
+							if (flightData.isDay2Departure) aircraftData.departures.push(flightData.flight);
+							aircraftData.allFlights.push(flightData.flight);
+							
 							console.log(`✅ Found registration ${regUpper} for flight ${flightNumber}`);
 							lookupSuccesses++;
 						} else {
+							console.log(`❌ No registration found for flight ${flightNumber}`);
 							lookupFailures++;
 						}
 					} catch (error) {
@@ -3382,27 +3421,18 @@ const AeroDataBoxAPI = (() => {
 				console.log(`📈 Registration lookup results:`);
 				console.log(`   ✅ Successful lookups: ${lookupSuccesses}`);
 				console.log(`   ❌ Failed lookups: ${lookupFailures}`);
-				console.log(`   📊 Total unique aircraft discovered: ${aircraftRegistry.size}`);
+				console.log(`   📊 Total unique aircraft discovered: ${potentialOvernightFlights.size}`);
 
 				// STEP 4: Apply overnight logic to all discovered aircraft
 				console.log(`🏨 === STEP 4: OVERNIGHT LOGIC FOR ALL DISCOVERED AIRCRAFT ===`);
 				const overnightResults = [];
 
-				for (const [registration, flights] of aircraftRegistry) {
+				for (const [registration, aircraftData] of potentialOvernightFlights) {
 					console.log(`\n🔍 Analyzing overnight pattern for ${registration}...`);
 					
-					// Separate flights by day and direction
-					const day1Arrivals = flights.filter(flight => {
-						const flightDate = flight.arrival?.scheduledTime?.utc?.substring(0, 10);
-						const arrivalAirport = flight.arrival?.airport?.iata || flight.arrival?.airport?.icao;
-						return flightDate === startDate && arrivalAirport === selectedAirport;
-					});
-
-					const day2Departures = flights.filter(flight => {
-						const flightDate = flight.departure?.scheduledTime?.utc?.substring(0, 10);
-						const departureAirport = flight.departure?.airport?.iata || flight.departure?.airport?.icao;
-						return flightDate === endDate && departureAirport === selectedAirport;
-					});
+					// Use the organized flight data
+					const day1Arrivals = aircraftData.arrivals;
+					const day2Departures = aircraftData.departures;
 
 					console.log(`   📥 Day 1 arrivals at ${selectedAirport}: ${day1Arrivals.length}`);
 					console.log(`   📤 Day 2 departures from ${selectedAirport}: ${day2Departures.length}`);

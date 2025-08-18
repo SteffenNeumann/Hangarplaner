@@ -1477,15 +1477,28 @@ window.hangarData.updateAircraftFromFlightData = async function (
 
 	// ✅ NEUE FUNKTION: Last Update Badge hinzufügen/aktualisieren
 	function updateLastUpdateBadge(cellId, source = "api") {
-		const primaryTile = document.querySelector(
-			`#hangarGrid .hangar-cell:nth-child(${cellId})`
-		);
-		const secondaryTile = document.querySelector(
-			`#secondaryHangarGrid .hangar-cell:nth-child(${cellId - 100})`
-		);
-		const tile = primaryTile || secondaryTile;
+		console.log(`🏷️ updateLastUpdateBadge called for cellId: ${cellId}, source: ${source}`);
+		
+		// KORREKTUR: Verbesserte Tile-Suche mit data-cell-id Attribut
+		let tile = document.querySelector(`[data-cell-id="${cellId}"]`);
+		
+		// Fallback: Suche über nth-child für primäre Kacheln (1-8)
+		if (!tile && cellId >= 1 && cellId <= 8) {
+			tile = document.querySelector(`#hangarGrid .hangar-cell:nth-child(${cellId})`);
+		}
+		
+		// Fallback: Suche über nth-child für sekundäre Kacheln (101+)
+		if (!tile && cellId >= 101) {
+			const secondaryIndex = cellId - 100;
+			tile = document.querySelector(`#secondaryHangarGrid .hangar-cell:nth-child(${secondaryIndex})`);
+		}
 
-		if (!tile) return;
+		if (!tile) {
+			console.warn(`❌ Tile mit cellId ${cellId} nicht gefunden`);
+			return;
+		}
+		
+		console.log(`✅ Tile gefunden für cellId ${cellId}:`, tile);
 
 		// Entferne vorhandenes Badge
 		const existingBadge = tile.querySelector(".last-update-badge");
@@ -2425,3 +2438,73 @@ setInterval(refreshAllUpdateBadges, 60000);
 
 // Globale Verfügbarkeit
 window.refreshAllUpdateBadges = refreshAllUpdateBadges;
+
+// ✅ TEST-FUNKTION: Manueller Badge-Test für Debugging
+window.testUpdateBadge = function(cellId = 1, source = "test") {
+	console.log(`🧪 Testing badge creation for cell ${cellId} with source: ${source}`);
+	
+	// Simuliere Flugdaten-Update für Test-Zwecke
+	const testFlightData = {
+		arrivalTime: "14:30",
+		departureTime: "16:45",
+		positionText: "Gate A1",
+		originCode: "FRA",
+		destCode: "MUC",
+		_clearFields: false,
+		_noDataFound: false
+	};
+	
+	// Rufe die interne updateLastUpdateBadge Funktion auf
+	// Da sie in updateAircraftFromFlightData definiert ist, simulieren wir einen API-Update
+	if (window.hangarData && window.hangarData.updateAircraftFromFlightData) {
+		// Setze zuerst eine Test Aircraft ID in die Kachel
+		const aircraftInput = document.getElementById(`aircraft-${cellId}`);
+		if (aircraftInput) {
+			const testAircraftId = `D-TEST${cellId}`;
+			aircraftInput.value = testAircraftId;
+			console.log(`✅ Test Aircraft ID gesetzt: ${testAircraftId} in cell ${cellId}`);
+			
+			// Simuliere API-Update
+			window.hangarData.updateAircraftFromFlightData(testAircraftId, testFlightData)
+				.then(() => {
+					console.log(`✅ Badge-Test für cell ${cellId} abgeschlossen`);
+					// Prüfe ob Badge erstellt wurde
+					const badge = document.querySelector(`[data-cell-id="${cellId}"] .last-update-badge`);
+					if (badge) {
+						console.log(`✅ Badge erfolgreich erstellt:`, badge);
+						console.log(`Badge content: "${badge.textContent}"`);
+						console.log(`Badge timestamp: ${badge.dataset.timestamp}`);
+					} else {
+						console.warn(`❌ Kein Badge gefunden für cell ${cellId}`);
+						// Prüfe alternative Selektoren
+						const altBadge1 = document.querySelector(`#hangarGrid .hangar-cell:nth-child(${cellId}) .last-update-badge`);
+						const altBadge2 = document.querySelector(`.last-update-badge`);
+						console.log(`Alternative badge search results:`, { altBadge1, altBadge2 });
+					}
+				})
+				.catch(error => {
+					console.error(`❌ Fehler beim Badge-Test:`, error);
+				});
+		} else {
+			console.warn(`❌ Aircraft input für cell ${cellId} nicht gefunden`);
+		}
+	} else {
+		console.error(`❌ hangarData.updateAircraftFromFlightData nicht verfügbar`);
+	}
+};
+
+// TEST-FUNKTION: Badge-Status prüfen
+window.checkAllBadges = function() {
+	const badges = document.querySelectorAll(".last-update-badge");
+	console.log(`🔍 Found ${badges.length} update badges:`);
+	badges.forEach((badge, index) => {
+		console.log(`Badge ${index + 1}:`, {
+			content: badge.textContent,
+			timestamp: badge.dataset.timestamp,
+			source: badge.dataset.source,
+			visible: badge.offsetParent !== null,
+			position: badge.getBoundingClientRect()
+		});
+	});
+	return badges.length;
+};

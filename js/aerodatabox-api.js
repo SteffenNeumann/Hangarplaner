@@ -3542,7 +3542,7 @@ const AeroDataBoxAPI = (() => {
 				let cleared = 0;
 				let empty = 0;
 
-				tiles.forEach(tile => {
+				tiles.forEach(async tile => {
 					const tileAircraftId = tile.value.trim().toUpperCase();
 					const tileNumber = tile.id.split('-')[1];
 
@@ -3558,27 +3558,64 @@ const AeroDataBoxAPI = (() => {
 					if (overnightMatch) {
 						console.log(`✅ Match found: Tile ${tileNumber} (${tileAircraftId}) has overnight data`);
 						
-						// Populate tile with overnight data
-						const arrTimeInput = document.getElementById(`arr-time-${tileNumber}`);
-						const depTimeInput = document.getElementById(`dep-time-${tileNumber}`);
-						const positionInput = document.getElementById(`pos-${tileNumber}`);
-
-						if (arrTimeInput) arrTimeInput.value = overnightMatch.arrival.time;
-						if (depTimeInput) depTimeInput.value = overnightMatch.departure.time;
-						if (positionInput) positionInput.value = `🏨 ${overnightMatch.route}`;
+						// FIXED: Use correct function to update tile and badge
+						if (window.HangarData && typeof window.HangarData.updateAircraftFromFlightData === "function") {
+							// Create flight data object in expected format
+							const flightData = {
+								arrivalTime: overnightMatch.arrival.time,
+								departureTime: overnightMatch.departure.time,
+								position: `🏨 ${overnightMatch.route}`,
+								originCode: overnightMatch.arrival.from,
+								destCode: overnightMatch.departure.to
+							};
+							
+							// Call the unified update function to update tile AND badge
+							try {
+								await window.HangarData.updateAircraftFromFlightData(tileAircraftId, flightData);
+								console.log(`✅ Tile ${tileNumber} updated with overnight data and badge refreshed`);
+							} catch (error) {
+								console.error(`❌ Error updating tile ${tileNumber}:`, error);
+							}
+						} else {
+							// Fallback: Direct DOM update (without badge update)
+							console.warn(`⚠️ HangarData.updateAircraftFromFlightData not available, using fallback`);
+							const arrTimeInput = document.getElementById(`arrival-time-${tileNumber}`);
+							const depTimeInput = document.getElementById(`departure-time-${tileNumber}`);
+							
+							if (arrTimeInput) arrTimeInput.value = overnightMatch.arrival.time;
+							if (depTimeInput) depTimeInput.value = overnightMatch.departure.time;
+						}
 
 						matched++;
 					} else {
 						console.log(`❌ No overnight data: Tile ${tileNumber} (${tileAircraftId}) - clearing fields`);
 						
-						// Clear tile fields
-						const arrTimeInput = document.getElementById(`arr-time-${tileNumber}`);
-						const depTimeInput = document.getElementById(`dep-time-${tileNumber}`);
-						const positionInput = document.getElementById(`pos-${tileNumber}`);
-
-						if (arrTimeInput) arrTimeInput.value = "";
-						if (depTimeInput) depTimeInput.value = "";
-						if (positionInput) positionInput.value = "";
+						// FIXED: Use correct function to clear tile and update badge
+						if (window.HangarData && typeof window.HangarData.updateAircraftFromFlightData === "function") {
+							// Create empty flight data to clear the tile
+							const emptyData = {
+								arrivalTime: "",
+								departureTime: "",
+								position: "",
+								originCode: "",
+								destCode: ""
+							};
+							
+							try {
+								await window.HangarData.updateAircraftFromFlightData(tileAircraftId, emptyData);
+								console.log(`✅ Tile ${tileNumber} cleared and badge refreshed`);
+							} catch (error) {
+								console.error(`❌ Error clearing tile ${tileNumber}:`, error);
+							}
+						} else {
+							// Fallback: Direct DOM clear (without badge update)
+							console.warn(`⚠️ HangarData.updateAircraftFromFlightData not available, using fallback`);
+							const arrTimeInput = document.getElementById(`arrival-time-${tileNumber}`);
+							const depTimeInput = document.getElementById(`departure-time-${tileNumber}`);
+							
+							if (arrTimeInput) arrTimeInput.value = "";
+							if (depTimeInput) depTimeInput.value = "";
+						}
 
 						cleared++;
 					}

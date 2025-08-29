@@ -117,19 +117,8 @@
 }
 
 /* Sidebar im Dark Mode */
-.dark-mode .sidebar-container {
-	background-color: var(--dark-header);
-	border-left: 1px solid var(--dark-border);
-}
 
-.dark-mode .sidebar-accordion-header {
-	background-color: var(--dark-secondary);
-	border-bottom: 1px solid var(--dark-border);
-}
 
-.dark-mode .sidebar-accordion-content {
-	background-color: var(--dark-card);
-}
 
 .dark-mode .sidebar-form-control,
 .dark-mode .sidebar-form-select {
@@ -190,7 +179,6 @@ body,
 input,
 textarea,
 select,
-button,
-.sidebar-container {
+button {
 	transition: background-color 0.3s, color 0.3s, border-color 0.3s;
 }

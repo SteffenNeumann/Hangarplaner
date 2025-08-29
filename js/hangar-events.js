@@ -79,8 +79,6 @@ async function initializeUI() {
 
 			// Status-Selektoren initialisieren
 			initializeStatusSelectors();
-			// Menu-Toggle initialisieren
-			initializeMenuToggle();
 
 			// Position-Werte und Flugzeit-Werte anwenden
 			setTimeout(() => {
@@ -125,8 +123,6 @@ async function initializeUI() {
 				// Status-Selektoren initialisieren
 				initializeStatusSelectors();
 
-				// Menu-Toggle initialisieren
-				initializeMenuToggle();
 
 				// Position-Werte und Flugzeit-Werte anwenden
 				setTimeout(() => {
@@ -288,44 +284,10 @@ function toggleEditMode() {
 	}
 }
 
-function toggleSidebar() {
-	const sidebar = document.getElementById("sidebarMenu");
-	const body = document.body;
-	const menuToggle = document.getElementById("menuToggle");
-
-	if (sidebar) {
-		body.classList.toggle("sidebar-collapsed");
-
-		// Toggle-Button Text aktualisieren
-		const isSidebarCollapsed = body.classList.contains("sidebar-collapsed");
-		if (menuToggle) {
-			menuToggle.textContent = isSidebarCollapsed ? "«" : "»";
-		}
-
-		console.log("Sidebar umgeschaltet");
-	}
-}
 
 /**
  * Menu-Toggle Initialisierung
  */
-function initializeMenuToggle() {
-	const menuToggle = document.getElementById("menuToggle");
-
-	if (menuToggle) {
-		// Event-Listener hinzufügen
-		menuToggle.addEventListener("click", toggleSidebar);
-
-		// Initialer Zustand setzen
-		const isSidebarCollapsed =
-			document.body.classList.contains("sidebar-collapsed");
-		menuToggle.textContent = isSidebarCollapsed ? "«" : "»";
-
-		console.log("Menu-Toggle initialisiert");
-	} else {
-		console.warn("Menu-Toggle Element nicht gefunden");
-	}
-}
 
 /**
  * Search-Funktionalität (Business Logic)
@@ -513,21 +475,6 @@ function applyFlightDataToUI(flightData) {
 	);
 }
 
-/**
- * Sidebar-Toggle Initialisierung (nur Business Logic)
- */
-function initializeSidebarToggle() {
-	const body = document.body;
-	const menuToggle = document.getElementById("menuToggle");
-
-	// Initialer Zustand
-	const isSidebarCollapsed = body.classList.contains("sidebar-collapsed");
-	if (menuToggle) {
-		menuToggle.textContent = isSidebarCollapsed ? "»" : "»";
-	}
-
-	console.log("Sidebar-Toggle initialisiert");
-}
 
 /**
  * NEUE FUNKTION: Prüft und löscht Flugdaten wenn Aircraft ID geleert wird
@@ -691,10 +638,7 @@ function handleAircraftIdChange(aircraftInputId, newValue) {
 window.hangarEvents = {
 	initializeUI,
 	initializeStatusSelectors,
-	initializeMenuToggle,
-	initializeSidebarToggle,
 	toggleEditMode,
-	toggleSidebar,
 	searchAircraft,
 	fetchAndUpdateFlightData,
 	saveFlightTimeValueToLocalStorage,

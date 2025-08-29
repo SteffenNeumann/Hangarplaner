@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Timetable - HangarPlanner</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Bestehende CSS-Dateien (wie Fleet Database) -->
+    <link rel="stylesheet" href="css/hangarplanner-ui.css" />
+    <link rel="stylesheet" href="css/info-widget.css" />
+    <link rel="stylesheet" href="css/weather-widget.css" />
+    <link rel="stylesheet" href="css/userinfo-widget.css" />
+    <link rel="stylesheet" href="css/dark-mode-zoom.css" />
+    <link rel="stylesheet" href="css/fleet-database.css" />
+
+    <!-- Tailwind Konfiguration (wie Fleet Database) -->
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              "industrial-dark": "#2d3748",
+              "industrial-medium": "#4a5568",
+              "industrial-light": "#718096",
+              "industrial-accent": "#ff7043",
+            },
+          },
+        },
+      };
+    </script>
+
+    <!-- Compact button overrides for small screens -->
+    <style>
+      @media (max-width: 768px) {
+        #showAirportFlightsBtn {
+          padding: 6px 10px !important;
+          font-size: 0.875rem !important;
+          line-height: 1.25rem !important;
+        }
+      }
+    </style>
+  </head>
+  <body class="bg-industrial-dark text-white font-sans">
+    <div class="flex h-screen">
+      <!-- Hauptbereich im gleichen Stil wie Fleet Database -->
+      <div class="flex-grow flex flex-col content-container">
+        <!-- Header mit Zurück-Button -->
+        <header class="bg-white p-4 shadow-md fleet-database-header">
+          <div class="flex items-center space-x-4">
+            <button id="backToMain" class="bg-industrial-accent text-white px-4 py-2 rounded hover:bg-industrial-medium transition-colors flex items-center">
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+              </svg>
+              Zurück zum HangarPlanner
+            </button>
+            <h1 class="text-2xl font-bold text-industrial-dark">Timetable</h1>
+          </div>
+        </header>
+
+        <!-- Inhalt in weißem Container mit Padding -->
+        <div class="flex-grow bg-white p-4 overflow-auto hangar-container">
+          <!-- Airport Flights Controls (im Fleet-Filter-Stil) -->
+          <div class="mb-6 bg-gray-50 p-4 rounded-lg fleet-filters-enhanced">
+            <h2 id="airportFlightsHeading" class="text-xl font-semibold text-industrial-dark mb-3">Flights on Station MUC</h2>
+            <div class="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
+              <!-- Airport -->
+              <div>
+                <label for="airportCodeInput" class="block text-sm font-medium text-gray-800 mb-1 whitespace-nowrap">Airport (IATA)</label>
+                <input id="airportCodeInput" type="text" maxlength="3" value="MUC" placeholder="z.B. MUC" class="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 uppercase focus:ring-2 focus:ring-industrial-accent focus:border-industrial-accent" style="text-transform: uppercase" />
+              </div>
+              <!-- Date -->
+              <div>
+                <label for="flightDateInput" class="block text-sm font-medium text-gray-800 mb-1 whitespace-nowrap">Datum</label>
+                <input id="flightDateInput" type="date" class="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 focus:ring-2 focus:ring-industrial-accent focus:border-industrial-accent" />
+              </div>
+              <!-- Registration filter -->
+              <div>
+                <label for="flightRegFilter" class="block text-sm font-medium text-gray-800 mb-1 whitespace-nowrap">Registrierung</label>
+                <input id="flightRegFilter" type="text" placeholder="z.B. D-AIZZ" class="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 placeholder-gray-600 focus:ring-2 focus:ring-industrial-accent focus:border-industrial-accent" />
+              </div>
+              <!-- Flight number filter -->
+              <div>
+                <label for="flightNumberFilter" class="block text-sm font-medium text-gray-800 mb-1 whitespace-nowrap">Flugnummer</label>
+                <input id="flightNumberFilter" type="text" placeholder="z.B. LH1234" class="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 placeholder-gray-600 focus:ring-2 focus:ring-industrial-accent focus:border-industrial-accent" />
+              </div>
+              <!-- Airline Code (optional) -->
+              <div id="operatorFilterContainer">
+                <label for="operatorCodeInput" class="block text-sm font-medium text-gray-800 mb-1 whitespace-nowrap">Airline Code (optional)</label>
+                <input id="operatorCodeInput" type="text" maxlength="3" placeholder="z.B. LH, DLH" class="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 uppercase placeholder-gray-600 focus:ring-2 focus:ring-industrial-accent focus:border-industrial-accent" style="text-transform: uppercase" />
+              </div>
+              <!-- Action -->
+              <div class="flex items-end justify-end">
+                <button id="showAirportFlightsBtn" class="fleet-action-btn-enhanced fleet-action-btn-primary self-end">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                  </svg>
+                  Reload
+                </button>
+              </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">Geben Sie einen ICAO/IATA-Code ein, um nach Fluggesellschaft zu filtern</p>
+            <div id="fetchStatus" class="text-sm text-gray-600 mt-2">Bereit zum Laden der Flugdaten…</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- JavaScript-Dateien (wie Fleet Database + Timetable spezifisch) -->
+    <script src="js/helpers.js"></script>
+    <script src="js/aerodatabox-api.js"></script>
+    <script src="js/fleet-database-manager.js"></script>
+    <script src="js/airport-flights.js"></script>
+    <script src="js/timetable-reload-adapter.js"></script>
+
+    <!-- Back Button und einfache Filterlogik -->
+    <script>
+      // Navigation zurück zur Hauptseite
+      document.getElementById('backToMain')?.addEventListener('click', function(){
+        window.location.href = 'index.html';
+      });
+
+      // Update Heading with selected station
+      function updateAirportFlightsHeading(){
+        const code = (document.getElementById('airportCodeInput')?.value || '---').toUpperCase();
+        const h = document.getElementById('airportFlightsHeading');
+        if (h) h.textContent = `Flights on Station ${code}`;
+      }
+      document.getElementById('airportCodeInput')?.addEventListener('input', updateAirportFlightsHeading);
+      // Default date today
+      const dateEl = document.getElementById('flightDateInput');
+      if (dateEl && !dateEl.value) {
+        dateEl.value = new Date().toISOString().split('T')[0];
+      }
+      updateAirportFlightsHeading();
+
+      // Einfache Client-Filter für Airport Flights Tabellen
+      function applyAirportFlightsFilters() {
+        const regFilter = (document.getElementById('flightRegFilter')?.value || '').trim().toUpperCase();
+        const fnFilter = (document.getElementById('flightNumberFilter')?.value || '').trim().toUpperCase();
+        const container = document.getElementById('airport-flights-container');
+        if (!container) return;
+        const rows = container.querySelectorAll('table tbody tr');
+        rows.forEach(row => {
+          const regCell = row.querySelector('.flight-reg');
+          const numCell = row.querySelector('.flight-number');
+          const regText = (regCell?.textContent || '').toUpperCase();
+          const numText = (numCell?.textContent || '').toUpperCase();
+          const matchesReg = !regFilter || regText.includes(regFilter);
+          const matchesNum = !fnFilter || numText.includes(fnFilter);
+          row.style.display = (matchesReg && matchesNum) ? '' : 'none';
+        });
+      }
+      ['flightRegFilter', 'flightNumberFilter'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', applyAirportFlightsFilters);
+      });
+      const flightsObserver = new MutationObserver(() => applyAirportFlightsFilters());
+      const observeTargetInit = () => {
+        const target = document.getElementById('airport-flights-container');
+        if (target) flightsObserver.observe(target, { childList: true, subtree: true });
+      };
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', observeTargetInit);
+      } else {
+        observeTargetInit();
+      }
+    </script>
+  </body>
+</html>
+

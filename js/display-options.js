@@ -278,6 +278,8 @@ window.displayOptions = {
 					);
 					// Aktualisiere die letzten gespeicherten Werte
 					this.lastSavedSettings = { ...this.current };
+					// Kleine Toast-Benachrichtigung
+					this.showNotification("Saved", "success");
 					return true;
 				} else {
 					console.warn(
@@ -334,7 +336,7 @@ window.displayOptions = {
 
 			if (result.success) {
 				// console.log("💾 Display Options erfolgreich gespeichert");
-				this.showNotification("Einstellungen gespeichert", "success");
+				this.showNotification("Saved", "success");
 
 				// Aktualisiere die letzten gespeicherten Werte
 				this.lastSavedSettings = { ...this.current };
@@ -345,10 +347,12 @@ window.displayOptions = {
 			}
 		} catch (error) {
 			console.error("❌ Fehler beim Speichern der Display Options:", error);
-			this.showNotification(`Fehler beim Speichern: ${error.message}`, "error");
 			// Fallback: nur lokal speichern
 			// console.log("📋 Fallback: Speichere nur lokal");
 			this.saveToLocalStorage();
+			// Nach lokalem Speichern: letzten Stand aktualisieren und Toast zeigen
+			this.lastSavedSettings = { ...this.current };
+			this.showNotification("Saved", "success");
 			return false;
 		} finally {
 			this.isSaving = false;
@@ -580,23 +584,18 @@ window.displayOptions = {
 	 * Event-Handler für alle Display Options Buttons und Controls einrichten
 	 */
 	setupEventHandlers() {
-		// Update-Buttons für Tiles
-		const updateTilesBtn = document.getElementById("updateTilesBtn");
-		if (updateTilesBtn) {
-			updateTilesBtn.removeEventListener("click", this.onUpdateTiles); // Entferne alte Handler
-			updateTilesBtn.addEventListener("click", this.onUpdateTiles.bind(this));
+		// Inputs for Tiles: auto-apply and auto-save on change
+		const tilesInput = document.getElementById("tilesCount");
+		if (tilesInput) {
+			tilesInput.removeEventListener("change", this.onUpdateTiles);
+			tilesInput.addEventListener("change", this.onUpdateTiles.bind(this));
 		}
 
-		const updateSecondaryTilesBtn = document.getElementById(
-			"updateSecondaryTilesBtn"
-		);
-		if (updateSecondaryTilesBtn) {
-			updateSecondaryTilesBtn.removeEventListener(
-				"click",
-				this.onUpdateSecondaryTiles
-			);
-			updateSecondaryTilesBtn.addEventListener(
-				"click",
+		const secondaryTilesInput = document.getElementById("secondaryTilesCount");
+		if (secondaryTilesInput) {
+			secondaryTilesInput.removeEventListener("change", this.onUpdateSecondaryTiles);
+			secondaryTilesInput.addEventListener(
+				"change",
 				this.onUpdateSecondaryTiles.bind(this)
 			);
 		}

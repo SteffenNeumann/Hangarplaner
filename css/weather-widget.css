@@ -7,11 +7,12 @@
 	background: rgba(255, 255, 255, 0.97);
 	padding: 8px 14px;
 	border-radius: 10px;
-	border: 1px solid rgba(93, 107, 137, 0.15);
+	/* removed border and shadow per request */
 	font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
 		sans-serif;
 	transition: all 0.3s ease;
-	box-shadow: 0 2px 8px rgba(93, 107, 137, 0.1);
+	box-shadow: none;
+	border: none;
 }
 
 /* Erste Zeile mit Airport und Temperatur */
@@ -20,7 +21,6 @@
 	justify-content: space-between;
 	align-items: center;
 	margin-bottom: 4px;
-	border-bottom: 1px solid rgba(93, 107, 137, 0.15);
 	padding-bottom: 4px;
 }
 

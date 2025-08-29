@@ -3,7 +3,7 @@
  * Ausgelagerte UI- und Layout-Styles aus index.html
  */
 
-:root {
+ :root {
 	--scale-factor: 1;
 	--inv-scale: 1;
 	--grid-gap: 16px;
@@ -17,6 +17,29 @@
 	--text-medium: #4b5563;
 	--border-light: #e5e7eb;
 	--highlight-light: #f0f9ff;
+	/* New navigation palette per design spec */
+	--menu-bg: #f9f9f9;
+	--menu-border: #e6e6e6;
+	--menu-accent: #f49e0c; /* yellow */
+	--menu-text: #6b6b6b; /* font & icon color */
+	--control-muted: #b1b5b1; /* sliders inactive */
+
+	/* Sync chip palette (adjust here to tune colors/weights) */
+	--sync-chip-fw: 600;
+	--sync-chip-border-w: 1.5px;
+	--sync-chip-radius: 9999px;
+	--sync-standalone-bg: #F2F4F7;
+	--sync-standalone-fg: #344054;
+	--sync-standalone-border: #D0D5DD;
+	--sync-read-bg: #FFF4EA;
+	--sync-read-fg: #B93815;
+	--sync-read-border: #F8DFC6;
+	--sync-write-bg: #FFEAD5;
+	--sync-write-fg: #C2410C;
+	--sync-write-border: #F2C69A;
+	--sync-master-bg: #FFE8CC;
+	--sync-master-fg: #9A3412;
+	--sync-master-border: #FDBA74;
 }
 
 body {
@@ -596,8 +619,8 @@ textarea.notes-textarea {
 }
 .mode-toggle-label {
 	margin-right: 8px;
-	font-size: 0.9rem;
-	color: var(--text-medium);
+	font-size: 12px;
+	color: var(--menu-text);
 }
 .toggle-switch {
 	position: relative;
@@ -706,104 +729,156 @@ input:checked + .toggle-slider:before {
 	margin-top: 0 !important;
 }
 
-/* Sidebar und Akkordeon Menü Style Updates */
-.sidebar-container {
-	width: 320px;
-	min-width: 320px;
-	flex-shrink: 0;
-	transition: width 0.3s ease, min-width 0.3s ease;
-	overflow-y: auto;
-	overflow-x: hidden;
-	border-left: 1px solid rgba(255, 255, 255, 0.1);
-	position: relative;
-	background-color: #3a4354; /* Dunkleres Blau für die Sidebar */
-}
-
-.sidebar-collapsed .sidebar-container {
-	width: 0 !important;
-	min-width: 0 !important;
-	max-width: 0 !important;
-	padding: 0 !important;
-	margin: 0 !important;
-	overflow: hidden !important;
-	opacity: 0 !important;
-	visibility: hidden !important;
-}
-
-.sidebar-content {
-	opacity: 1;
-	visibility: visible;
-	transition: opacity 0.2s ease, visibility 0s;
-	padding: 15px;
-	width: 100%;
-}
-
-/* Akkordeon-Header-Stil */
-.sidebar-accordion-header {
-	background-color: #2d3344; /* Dunklerer Blauton für Headers */
-	padding: 12px 16px;
-	cursor: pointer;
+/* Left main menu & submenu (new) */
+.left-menu {
+	width: 72px;
+	min-width: 72px;
+	height: 100vh;
+	position: sticky;
+	top: 0;
+	background: var(--menu-bg);
+	border-right: 1px solid var(--menu-border);
 	display: flex;
-	justify-content: space-between;
+	flex-direction: column;
 	align-items: center;
-	transition: background-color 0.2s ease;
-	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+	gap: 6px;
+	padding: 8px 0;
+	z-index: 30;
 }
-
-.sidebar-accordion-header:hover {
-	background-color: #3a4154; /* Etwas hellerer Blauton beim Hover */
-}
-
-/* Content-Bereich mit einheitlicher Definition */
-.sidebar-accordion-content {
-	background-color: #4b5975;
-	padding: 0;
+.left-menu .menu-item {
+	width: 56px;
+	height: 56px;
+	border-radius: 12px;
+	color: var(--menu-text);
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
-	overflow: hidden;
-	max-height: 0;
-	transition: max-height 0.3s ease, padding 0.3s ease, opacity 0.3s ease;
-	opacity: 0;
-	border-top: 1px solid rgba(255, 255, 255, 0.15);
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+	border: 1px solid transparent;
+	background: transparent;
+	cursor: pointer;
+	user-select: none;
+	text-decoration: none;
+	text-align: center;
+}
+.left-menu .menu-item:hover {
+	border-color: var(--menu-border);
+	background: #fff;
+}
+.left-menu .menu-item.active {
+	border-color: var(--menu-border);
+	background: #fff;
+}
+.left-menu .menu-icon {
+	width: 18px;
+	height: 18px;
+	display: block;
+	color: var(--menu-text);
+}
+.left-menu .menu-label {
+	font-size: 10px;
+	line-height: 1;
+	color: var(--menu-text);
+	white-space: nowrap;
 }
 
-/* Geöffneter Content-Bereich */
-.sidebar-accordion-content.open {
-	max-height: 500px;
-	opacity: 1;
-	padding: 16px;
+/* Submenu panels open beside the left rail */
+.submenu-panel {
+	position: fixed;
+	top: 0;
+	bottom: 0;
+	left: 72px; /* width of left-menu */
+	width: 360px;
+	max-width: 420px;
+	background: #ffffff;
+	border-right: 1px solid var(--menu-border);
+	padding: 16px 20px;
+	overflow-y: auto;
+	z-index: 40;
+	box-shadow: none; /* design says no shadows */
 }
-
-/* 2-Spalten-Layout für Info-Blöcke wie im Beispielbild */
-.info-block-grid {
-	display: grid;
-	grid-template-columns: 1fr 1fr;
-	gap: 8px 12px;
+.submenu-panel.hidden { display: none; }
+.submenu-title {
+	color: var(--menu-text);
+	font-weight: 700;
 	margin-bottom: 12px;
-	background-color: rgba(255, 255, 255, 0.05);
-	padding: 10px;
-	border-radius: 4px;
-}
-
-.info-block {
-	display: flex;
-	flex-direction: column;
-}
-
-.info-block-label {
-	font-size: 0.75rem;
-	color: rgba(255, 255, 255, 0.7);
+	padding-bottom: 6px;
+	border-bottom: 1px solid var(--menu-border);
+	letter-spacing: 0.04em;
 	text-transform: uppercase;
-	font-weight: 500;
-	margin-bottom: 2px;
+	font-size: 12px;
 }
 
-.info-block-value {
-	font-size: 0.9rem;
-	color: white;
-	font-weight: 500;
+/* Buttons in submenu to match palette */
+.submenu-panel .sidebar-btn-primary { background-color: var(--menu-text) !important; border-color: var(--menu-text) !important; }
+.submenu-panel .sidebar-btn-primary:hover { filter: brightness(0.9); }
+
+/* Slider inactive track */
+.submenu-panel input[type="range"] { accent-color: var(--menu-accent); }
+
+/* Submenu - new design alignment and controls */
+.submenu-panel .section-label {
+	font-weight: 600;
+	font-size: 13px;
+	color: var(--menu-text);
+	border-left: 3px solid var(--menu-accent);
+	padding-left: 8px;
+	margin: 10px 0 8px;
 }
+.submenu-panel .sidebar-form-group { margin-bottom: 16px; }
+.submenu-panel .sidebar-input-group {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	gap: 8px;
+	align-items: center;
+}
+	.submenu-panel .sidebar-form-row {
+		display: grid;
+		grid-template-columns: 160px auto; /* fixed title width, controls aligned right */
+		gap: 8px;
+		align-items: center;
+	}
+	.submenu-panel .sidebar-form-row .input-container { display: flex; justify-content: flex-end; width: 100%; }
+	.submenu-panel .sidebar-form-row > label { margin-bottom: 0; }
+.submenu-panel label { color: var(--menu-text); font-size: 15px; font-weight: 500; display: block; margin-bottom: 6px; }
+.submenu-panel .sidebar-form-control,
+.submenu-panel .sidebar-form-select {
+	border: 1px solid var(--menu-border);
+	color: var(--menu-text);
+	background: #f7f7f7;
+	border-radius: 8px;
+	height: 38px;
+	padding: 8px 12px;
+	line-height: 22px;
+}
+/* fixed width for inputs in right column (reduced by half) */
+.submenu-panel .input-container .sidebar-form-control,
+.submenu-panel .input-container .sidebar-form-select { width: 120px; }
+
+.submenu-panel .sidebar-form-control:focus,
+.submenu-panel .sidebar-form-select:focus {
+	background: #fff;
+	border-color: #d0d0d0;
+	outline: none;
+}
+.submenu-panel .sidebar-btn-secondary {
+	background: #fff !important;
+	border: 1px solid var(--menu-border) !important;
+	color: var(--menu-text) !important;
+}
+.submenu-panel .sidebar-btn-secondary:hover { background: #fdfdfd !important; }
+
+
+
+
+
+
+
+
+
+
+
 
 /* Formularelemente auf Weiß für besseren Kontrast */
 .sidebar-form-control {
@@ -826,15 +901,19 @@ input:checked + .toggle-slider:before {
 
 /* Optimierte Button-Margins und Layout */
 .sidebar-btn {
-	padding: 0.5rem 1rem;
-	border-radius: 4px;
+	padding: 0 14px;
+	min-height: 38px;
+	border-radius: 8px;
 	font-size: 14px;
-	font-weight: 500;
+	font-weight: 600;
 	cursor: pointer;
 	transition: all 0.2s ease;
 	border: none;
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-	margin: 0; /* Reset Margins */
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+	margin: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 }
 
 /* Primäre Buttons in Orange beibehalten */
@@ -858,17 +937,6 @@ input:checked + .toggle-slider:before {
 }
 
 /* Accent Button für Quick Export mit grünem Farbschema */
-.sidebar-btn-accent {
-	background-color: #10b981 !important; /* Grün für Export */
-	color: white !important;
-	font-weight: 600;
-}
-
-.sidebar-btn-accent:hover {
-	background-color: #059669 !important; /* Dunkleres Grün beim Hover */
-	transform: translateY(-1px);
-	box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
-}
 
 /* Verbesserte Button-Gruppen mit optimierten Abständen */
 .sidebar-input-group {
@@ -910,22 +978,8 @@ input:checked + .toggle-slider:before {
 }
 
 /* Layouts für Display Options spezifische Einträge */
-.display-option-group {
-	display: grid;
-	grid-template-columns: 1fr auto;
-	align-items: center;
-	gap: 8px;
-	margin-bottom: 12px;
-}
 
-.display-option-group .sidebar-form-control {
-	width: 100%;
-}
 
-.display-option-group .sidebar-btn {
-	min-width: 80px;
-	text-align: center;
-}
 
 /* Verbessertes Layout für die Sidebar-Form-Groups - weniger Abstand nach unten */
 .sidebar-form-group {
@@ -954,18 +1008,8 @@ input:checked + .toggle-slider:before {
 }
 
 /* Volle Breite für Buttons innerhalb von Accordion-Inhalten */
-.sidebar-accordion-content .sidebar-btn.w-full {
-	margin-top: 4px;
-	margin-bottom: 4px;
-}
 
 /* Verbesserte visuelle Hierarchie für info-blocks */
-.info-block-section {
-	background-color: rgba(255, 255, 255, 0.05);
-	border-radius: 6px;
-	padding: 10px;
-	margin-bottom: 12px;
-}
 
 /* Flugkarten Design */
 #airport-flights-container .card-header {
@@ -1191,21 +1235,8 @@ input:checked + .toggle-slider:before {
 }
 
 /* Verbesserte Sidebar-Styling im Dark Mode */
-.dark-mode .sidebar-container {
-	background-color: var(--bg-secondary);
-	color: var(--text-primary);
-	border-left-color: var(--border-color);
-}
 
-.dark-mode .sidebar-accordion-header {
-	background-color: var(--bg-tertiary);
-	color: var(--text-primary);
-	border-color: var(--border-color);
-}
 
-.dark-mode .sidebar-accordion-content {
-	background-color: var(--bg-secondary);
-}
 
 /* Form-Elemente im Dark Mode */
 .dark-mode input,
@@ -1440,14 +1471,14 @@ input:checked + .toggle-slider:before {
 	box-shadow: none;
 	filter: none;
 	text-shadow: none;
-	border: 1px solid rgba(0, 0, 0, 0.05);
+	border: none;
 	transition: all 0.2s ease;
 }
 
 #weather-widget:hover {
 	background: rgba(255, 255, 255, 1);
 	box-shadow: none;
-	border: 1px solid rgba(0, 0, 0, 0.08);
+	border: none;
 }
 
 .weather-airport {
@@ -1890,8 +1921,8 @@ input:checked + .toggle-slider:before {
 }
 
 .modern-toggle-switch input:checked + .modern-toggle-slider {
-	background-color: #10b981;
-	border-color: #059669;
+	background-color: var(--menu-accent);
+	border-color: #d48400;
 }
 
 .modern-toggle-switch input:checked + .modern-toggle-slider:before {
@@ -1925,38 +1956,65 @@ input:checked + .toggle-slider:before {
 
 .sync-mode-badge {
 	padding: 6px 14px;
-	border-radius: 16px;
+	border-radius: var(--sync-chip-radius);
 	font-size: 13px;
-	font-weight: 700;
-	text-transform: uppercase;
-	letter-spacing: 0.5px;
+	font-weight: var(--sync-chip-fw);
+	text-transform: none;
+	letter-spacing: 0.2px;
 	transition: all 0.2s ease;
-	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+	text-shadow: none;
+	border: var(--sync-chip-border-w) solid transparent;
 }
 
 .sync-mode-badge.standalone {
-	background: #f1f5f9;
-	color: #1e293b;
-	border: 1px solid #cbd5e1;
+	background: var(--sync-standalone-bg);
+	color: var(--sync-standalone-fg);
+	border-color: var(--sync-standalone-border);
 }
 
 .sync-mode-badge.mode-sync {
-	background: #fef3c7;
-	color: #92400e;
-	border: 1px solid #fbbf24;
+	background: var(--sync-read-bg);
+	color: var(--sync-read-fg);
+	border-color: var(--sync-read-border);
 }
 
 .sync-mode-badge.mode-write {
-	background: #dcfce7;
-	color: #166534;
-	border: 1px solid #22c55e;
+	background: var(--sync-write-bg);
+	color: var(--sync-write-fg);
+	border-color: var(--sync-write-border);
 }
 
 .sync-mode-badge.mode-master {
-	background: linear-gradient(135deg, #fef3c7 0%, #dcfce7 100%);
-	color: #059669;
-	border: 1px solid #10b981;
+	background: var(--sync-master-bg);
+	color: var(--sync-master-fg);
+	border-color: var(--sync-master-border);
 }
+
+/* Compact status area */
+.sync-status-compact {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 6px 4px 2px 4px;
+	margin-top: 8px;
+}
+.sync-status-compact .sync-status-label { font-size: 12px; color: #475569; font-weight: 600; }
+
+/* Compact chip variant for current mode */
+.sync-mode-badge.compact {
+	padding: 4px 10px;
+	border-radius: var(--sync-chip-radius);
+	font-size: 12px;
+	font-weight: var(--sync-chip-fw);
+	border: var(--sync-chip-border-w) solid transparent;
+	background: var(--sync-standalone-bg);
+	color: var(--sync-standalone-fg);
+	text-shadow: none;
+}
+.sync-mode-badge.compact.standalone { background: var(--sync-standalone-bg); color: var(--sync-standalone-fg); border-color: var(--sync-standalone-border); }
+.sync-mode-badge.compact.mode-sync { background: var(--sync-read-bg); color: var(--sync-read-fg); border-color: var(--sync-read-border); }
+.sync-mode-badge.compact.mode-write { background: var(--sync-write-bg); color: var(--sync-write-fg); border-color: var(--sync-write-border); }
+.sync-mode-badge.compact.mode-master { background: var(--sync-master-bg); color: var(--sync-master-fg); border-color: var(--sync-master-border); }
 
 /* Action Buttons */
 .sync-actions {
@@ -2065,100 +2123,112 @@ input:checked + .toggle-slider:before {
 	}
 }
 
-/* ==========================================================================
-   SIDEBAR SYNC OPTIONS STYLES (Konsistent mit Rest des Menüs)
-   ========================================================================== */
 
-/* Sidebar Option Label für Sync-Toggles - konsistent mit Menü-Farben */
-.sidebar-option-label {
+/* ==========================================================================
+   TOAST NOTIFICATIONS
+   ========================================================================== */
+.toast-container {
+	position: fixed;
+	bottom: 16px;
+	right: 16px;
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
-	flex: 1;
-	cursor: pointer;
+	gap: 8px;
+	z-index: 1000;
+	pointer-events: none; /* clicks pass through */
 }
 
-.sidebar-option-title {
-	font-size: 14px;
-	font-weight: 500;
-	color: #ffffff;
-	display: flex;
-	align-items: center;
-}
-
-.sidebar-option-desc {
-	font-size: 12px;
-	color: #b8c5d6;
-	margin-top: 2px;
-	line-height: 1.3;
-}
-
-/* Sync Status Display */
-.sync-status-display {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: 12px;
-	background: rgba(255, 255, 255, 0.05);
-	border-radius: 6px;
-	border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.sync-status-label {
-	font-size: 14px;
-	color: #ffffff;
-	font-weight: 500;
-}
-
-/* Sync Mode Badge - angepasst für Orange als Sekundärfarbe */
-.sync-mode-badge {
-	padding: 6px 14px;
-	border-radius: 16px;
-	font-size: 13px;
-	font-weight: 700;
-	text-transform: uppercase;
-	letter-spacing: 0.5px;
-	transition: all 0.2s ease;
-	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.sync-mode-badge.standalone {
-	background: #f8fafc;
-	color: #1e293b;
+.toast {
+	background: #ffffff;
 	border: 1px solid #e2e8f0;
-}
-
-.sync-mode-badge.mode-sync {
-	background: #fff7ed;
-	color: #c2410c;
-	border: 1px solid #fb923c;
-}
-
-.sync-mode-badge.mode-write {
-	background: #fff7ed;
-	color: #ea580c;
-	border: 1px solid #f97316;
-}
-
-.sync-mode-badge.mode-master {
-	background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
-	color: #c2410c;
-	border: 1px solid #fb923c;
-	font-weight: 800;
-}
-
-/* Sync Mode Description - konsistent mit Menü-Design */
-.sync-mode-description {
-	font-size: 13px;
-	color: #b8c5d6;
-	line-height: 1.4;
-	margin-bottom: 8px;
+	color: #334155;
+	border-radius: 8px;
 	padding: 8px 12px;
-	background: rgba(255, 255, 255, 0.03);
-	border-radius: 4px;
-	border-left: 3px solid #fb923c;
+	font-size: 13px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+	opacity: 0;
+	transform: translateY(6px);
+	transition: opacity 180ms ease, transform 180ms ease;
+	pointer-events: auto;
 }
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.hide { opacity: 0; transform: translateY(6px); }
 
-/* ==========================================================================
-   END SIDEBAR SYNC OPTIONS STYLES
-   ========================================================================== */
+.toast-success { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
+.toast-info { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+.toast-error { background: #fee2e2; border-color: #fecaca; color: #991b1b; }
+
+/* Dark mode adjustments */
+.dark-mode .toast { background: #1f2937; border-color: #374151; color: #e5e7eb; }
+.dark-mode .toast-success { background: #064e3b; border-color: #065f46; color: #d1fae5; }
+.dark-mode .toast-info { background: #1e293b; border-color: #334155; color: #93c5fd; }
+ .dark-mode .toast-error { background: #3f1d1d; border-color: #7f1d1d; color: #fecaca; }
+
+/* Penpot-style overrides for Sync submenu */
+#submenu-sync {
+  background: #f9f9f9;
+  border-right: 1px solid #e6e6e6;
+}
+#submenu-sync .submenu-title {
+  color: #6b6b6b;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 10px;
+  border: 0;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+#submenu-sync .sync-mode-description {
+  color: #6b6b6b;
+  font-size: 10px;
+  line-height: 1.2;
+  margin: 4px 16px 8px 16px;
+}
+#submenu-sync .sync-toggle-row {
+  background: transparent;
+  border: 0;
+  padding: 8px 16px;
+  margin-bottom: 12px;
+}
+#submenu-sync .sync-toggle-title {
+  color: #6b6b6b;
+  font-weight: 700;
+  font-size: 10px;
+}
+#submenu-sync .sync-toggle-desc {
+  color: #6b6b6b;
+  font-weight: 400;
+  font-size: 10px;
+}
+/* Compact orange toggle (35x20) per design */
+#submenu-sync .modern-toggle-switch { width: 35px; height: 20px; }
+#submenu-sync .modern-toggle-slider { background-color: #b1b5b1; border-radius: 50px; }
+#submenu-sync .modern-toggle-switch input:checked + .modern-toggle-slider { background-color: #f49e0c; border-color: #f49e0c; }
+#submenu-sync .modern-toggle-slider:before { width: 18px; height: 18px; left: -1px; top: 50%; transform: translateY(-50%); }
+#submenu-sync .modern-toggle-switch input:checked + .modern-toggle-slider:before { transform: translateX(15px) translateY(-50%); }
+
+/* Penpot-style overrides for Update submenu */
+#submenu-update { background: #f9f9f9; border-right: 1px solid #e6e6e6; }
+#submenu-update .update-description { color: #6b6b6b; font-size: 10px; line-height: 1.2; margin: 4px 16px 8px 16px; }
+/* Keep header as-is: do not override #submenu-update .submenu-title */
+/* Compact orange toggle (35x20) per design for Update submenu */
+#submenu-update .modern-toggle-switch { width: 35px; height: 20px; }
+#submenu-update .modern-toggle-slider { background-color: #b1b5b1; border-radius: 50px; }
+#submenu-update .modern-toggle-switch input:checked + .modern-toggle-slider { background-color: #f49e0c; border-color: #f49e0c; }
+#submenu-update .modern-toggle-slider:before { width: 18px; height: 18px; left: -1px; top: 50%; transform: translateY(-50%); }
+#submenu-update .modern-toggle-switch input:checked + .modern-toggle-slider:before { transform: translateX(15px) translateY(-50%); }
+
+/* Consistent widths for Update submenu inputs */
+#submenu-update { --update-input-width: 280px; }
+/* Allow the right input column to shrink so content never touches the panel border */
+#submenu-update .sidebar-form-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+#submenu-update .sidebar-form-row > label { flex: 1 1 auto; min-width: 140px; color: #6b6b6b; font-weight: 700; font-size: 10px; }
+/* Make input container shrinkable and cap it to the available width */
+#submenu-update .sidebar-form-row .input-container { flex: 0 1 var(--update-input-width); max-width: 100%; }
+#submenu-update .sidebar-form-row .sidebar-form-control { width: 100%; }
+
+/* Hide number input spin buttons for the interval field */
+#submenu-update input[type=number]::-webkit-outer-spin-button,
+#submenu-update input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+#submenu-update input[type=number] { -moz-appearance: textfield; }

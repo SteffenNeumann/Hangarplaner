@@ -7,13 +7,13 @@
 	background: rgba(255, 255, 255, 0.97);
 	padding: 8px 14px;
 	border-radius: 10px;
-	border: 1px solid rgba(93, 107, 137, 0.15);
+	border: none;
 	font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
 		sans-serif;
 	margin-left: 12px;
 	transition: all 0.3s ease;
 	height: auto;
-	box-shadow: 0 2px 8px rgba(93, 107, 137, 0.1);
+	box-shadow: none;
 }
 
 /* Responsive Anpassungen - einheitlich mit Weather-Widget */
@@ -80,7 +80,6 @@
 	width: 100%;
 	min-height: 1.2em;
 	height: auto;
-	border-top: 1px solid rgba(93, 107, 137, 0.15); /* Subtile Trennlinie */
 	padding-top: 4px; /* Abstand zur Trennlinie */
 }
 
@@ -117,7 +116,7 @@
 	width: max-content;
 	max-width: 300px;
 	z-index: 100;
-	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+	box-shadow: none;
 }
 
 /* Status-Styles */
@@ -140,7 +139,6 @@
 	justify-content: space-between;
 	align-items: center;
 	margin-bottom: 4px;
-	border-bottom: 1px solid rgba(93, 107, 137, 0.15);
 	padding-bottom: 4px;
 }
 
@@ -202,19 +200,16 @@
 .sync-mode-value.master {
 	background: #dcfce7;
 	color: #166534;
-	border: 1px solid #bbf7d0;
 }
 
 .sync-mode-value.slave {
 	background: #fef3c7;
 	color: #92400e;
-	border: 1px solid #fde68a;
 }
 
 .sync-mode-value.standalone {
 	background: #f1f5f9;
 	color: #475569;
-	border: 1px solid #e2e8f0;
 }
 
 /* Lade-Animation */

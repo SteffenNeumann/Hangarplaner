@@ -372,7 +372,7 @@ class SharingManager {
 	updateSyncStatusDisplayNew() {
 		const readToggle = document.getElementById("readDataToggle");
 		const writeToggle = document.getElementById("writeDataToggle");
-		const currentModeSpan = document.getElementById("currentSyncMode");
+		const modeSpans = document.querySelectorAll('#currentSyncMode, #currentSyncModeSidebar, .currentSyncMode');
 		const syncStatusBtn = document.getElementById("syncStatusBtn");
 
 		// Toggle-Zustände auslesen
@@ -382,7 +382,7 @@ class SharingManager {
 		// Aktuellen Modus bestimmen und anzeigen
 		let modeText = "Standalone";
 		let modeEmoji = "🏠";
-		let cssClass = "mode-standalone";
+		let cssClass = "standalone";
 
 		if (readEnabled && writeEnabled) {
 			modeText = "Master";
@@ -398,10 +398,13 @@ class SharingManager {
 			cssClass = "mode-write";
 		}
 
-		// Modus-Anzeige aktualisieren
-		if (currentModeSpan) {
-			currentModeSpan.textContent = modeText;
-			currentModeSpan.className = `sync-mode-badge ${cssClass}`;
+		// Modus-Anzeige aktualisieren (unterstützt mehrere Anzeigen)
+		if (modeSpans && modeSpans.length) {
+			modeSpans.forEach((el) => {
+				const isCompact = el.classList.contains('compact');
+				el.textContent = modeText;
+				el.className = `sync-mode-badge ${isCompact ? 'compact ' : ''}${cssClass}`;
+			});
 		}
 
 		// Sync Status Button aktualisieren

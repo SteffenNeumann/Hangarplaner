@@ -80,6 +80,284 @@
 	</head>
 	<body class="bg-industrial-dark text-white font-sans edit-mode">
 		<div class="flex h-screen">
+			<!-- Neue linke Hauptnavigation -->
+			<nav id="leftMenu" class="left-menu">
+				<a href="timetable.html" class="menu-item" title="Timetable">
+					<svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3M5 8h14M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+					</svg>
+					<span class="menu-label">Timetable</span>
+				</a>
+				<a href="fleet-database.html" class="menu-item" title="Database">
+					<svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M4 7l8-3 8 3-8 3-8-3z" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M4 12l8 3 8-3" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M4 17l8 3 8-3" />
+					</svg>
+					<span class="menu-label">Database</span>
+				</a>
+				<button class="menu-item" data-menu="update" title="Update">
+					<svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M4 4v6h6" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M20 20v-6h-6" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M5 20a9 9 0 0014-7" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M19 4a9 9 0 00-14 7" />
+					</svg>
+					<span class="menu-label">Update</span>
+				</button>
+				<button class="menu-item" data-menu="sync" title="Sync">
+					<svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M3 12h18" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M7 8l-4 4 4 4" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4-4-4" />
+					</svg>
+					<span class="menu-label">Sync</span>
+				</button>
+				<button class="menu-item" data-menu="display" title="Display">
+					<svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16v10H4z" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M12 16v4" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M8 20h8" />
+					</svg>
+					<span class="menu-label">Display</span>
+				</button>
+				<button class="menu-item" data-menu="export" title="Export">
+					<svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M8 11l4 4 4-4" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M4 21h16" />
+					</svg>
+					<span class="menu-label">Export</span>
+				</button>
+				<button class="menu-item" data-menu="project" title="Project">
+					<svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M3 6h14" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M17 4v4" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M3 12h18" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M13 10v4" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M3 18h10" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M9 16v4" />
+					</svg>
+					<span class="menu-label">Project</span>
+				</button>
+			</nav>
+
+			<!-- Platzhalter für Submenus (werden im nächsten Schritt befüllt) -->
+			<div id="submenu-update" class="submenu-panel hidden" data-for="update">
+				<div class="submenu-title">Update</div>
+				<div class="update-description">For scheduled update set time interval and activate</div>
+				<div class="sidebar-form-group">
+					<div class="sidebar-form-row">
+						<label for="airportCodeInput">Airport IATA Code</label>
+						<div class="input-container">
+							<input type="text" id="airportCodeInput" name="airportCode" maxlength="3" value="MUC" class="sidebar-form-control" style="text-transform: uppercase;" />
+						</div>
+					</div>
+				</div>
+				<div class="sidebar-form-group">
+					<div class="sidebar-form-row">
+						<label for="currentDateInput">Arrival Date</label>
+						<div class="input-container">
+							<input type="date" id="currentDateInput" class="sidebar-form-control" />
+						</div>
+					</div>
+				</div>
+				<div class="sidebar-form-group">
+					<div class="sidebar-form-row">
+						<label for="updateIntervalInput">Time interval</label>
+						<div class="input-container">
+							<input type="number" id="updateIntervalInput" class="sidebar-form-control" min="1" value="15" placeholder="minutes" title="Minutes" />
+						</div>
+					</div>
+				</div>
+				<div class="sidebar-form-group">
+					<div class="sidebar-form-row">
+						<label for="scheduledUpdateToggle">Set active</label>
+						<div class="input-container">
+							<label class="modern-toggle-switch" aria-label="Scheduled Update Active">
+								<input type="checkbox" id="scheduledUpdateToggle" />
+								<span class="modern-toggle-slider"></span>
+							</label>
+						</div>
+					</div>
+				</div>
+				<button id="fetchFlightData" class="sidebar-btn sidebar-btn-primary w-full">Update</button>
+				<div id="fetchStatus" class="text-sm text-center">Ready to update overnight flights</div>
+				<div id="overnightFlightsStatus" class="text-sm text-center mt-2 p-2 rounded" style="background-color: #f0f9ff; border: 1px solid #0ea5e9; color: #0369a1; display: none;">
+					<div class="font-semibold">Overnight Flights Processing</div>
+					<div id="overnightFlightsMessage">Ready for overnight flight analysis</div>
+				</div>
+			</div>
+
+			<div id="submenu-sync" class="submenu-panel hidden" data-for="sync">
+				<div class="submenu-title">Sync Settings</div>
+				<div class="sync-mode-description">Configure how your data syncs with the server</div>
+				<div class="sync-toggle-row">
+					<div class="sync-toggle-info">
+						<div class="sync-toggle-title">Read Data</div>
+						<div class="sync-toggle-desc">Receive updates from server</div>
+					</div>
+					<div class="sync-toggle-control">
+						<label class="modern-toggle-switch" aria-label="Read Data">
+							<input type="checkbox" id="readDataToggle" />
+							<span class="modern-toggle-slider"></span>
+						</label>
+					</div>
+				</div>
+				<div class="sync-toggle-row">
+					<div class="sync-toggle-info">
+						<div class="sync-toggle-title">Write Data</div>
+						<div class="sync-toggle-desc">Send changes to server (Master mode)</div>
+					</div>
+					<div class="sync-toggle-control">
+						<label class="modern-toggle-switch" aria-label="Write Data">
+							<input type="checkbox" id="writeDataToggle" />
+							<span class="modern-toggle-slider"></span>
+						</label>
+					</div>
+				</div>
+			</div>
+
+			<div id="submenu-display" class="submenu-panel hidden" data-for="display">
+				<div class="submenu-title">Display Settings</div>
+				<div class="sidebar-form-group">
+					<div class="sidebar-form-row">
+						<label for="darkModeToggle">Darkmode</label>
+						<div class="input-container">
+							<div class="mode-toggle">
+								<label class="toggle-switch">
+									<input type="checkbox" id="darkModeToggle" />
+									<span class="toggle-slider"></span>
+								</label>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="sidebar-form-group">
+					<div class="sidebar-form-row">
+						<label for="viewModeToggle">Board/Row</label>
+						<div class="input-container">
+							<div class="mode-toggle">
+								<label class="toggle-switch">
+									<input type="checkbox" id="viewModeToggle" />
+									<span class="toggle-slider"></span>
+								</label>
+							</div>
+						</div>
+					</div>
+				</div>
+					<div class="sidebar-form-group">
+						<div class="sidebar-form-row">
+							<label for="tilesCount">Primary Tiles</label>
+							<div class="input-container">
+								<input type="number" id="tilesCount" min="1" max="12" class="sidebar-form-control" />
+							</div>
+						</div>
+					</div>
+					<div class="sidebar-form-group">
+						<div class="sidebar-form-row">
+							<label for="secondaryTilesCount">Secondary Tiles</label>
+							<div class="input-container">
+								<input type="number" id="secondaryTilesCount" min="0" max="12" class="sidebar-form-control" />
+							</div>
+						</div>
+					</div>
+					<div class="sidebar-form-group">
+						<div class="sidebar-form-row">
+							<label for="layoutType">Layout</label>
+							<div class="input-container">
+								<select id="layoutType" class="sidebar-form-select">
+									<option value="1">1 Column</option>
+									<option value="2">2 Columns</option>
+									<option value="3">3 Columns</option>
+									<option value="4" selected>4 Columns</option>
+								</select>
+							</div>
+						</div>
+					</div>
+			</div>
+
+			<div id="submenu-export" class="submenu-panel hidden" data-for="export">
+				<div class="submenu-title">Export</div>
+				<div class="sidebar-form-group">
+					<label for="pdfFilename">File name:</label>
+					<input type="text" id="pdfFilename" value="Hangar_Plan" class="sidebar-form-control" />
+				</div>
+				<div class="sidebar-form-group">
+					<div class="flex items-center">
+						<input type="checkbox" id="landscapeMode" checked class="mr-2" />
+						<label for="landscapeMode">Landscape Mode</label>
+					</div>
+				</div>
+				<div class="sidebar-form-group">
+					<label class="sidebar-section-subtitle">Export Fields:</label>
+					<div style="margin-left: 10px">
+						<div class="flex items-center" style="margin-bottom: 5px">
+							<input type="checkbox" id="exportAircraft" checked class="mr-2" />
+							<label for="exportAircraft">Aircraft ID (AC-ID)</label>
+						</div>
+						<div class="flex items-center" style="margin-bottom: 5px">
+							<input type="checkbox" id="exportArrival" checked class="mr-2" />
+							<label for="exportArrival">Arrival Time (Arr)</label>
+						</div>
+						<div class="flex items-center" style="margin-bottom: 5px">
+							<input type="checkbox" id="exportDeparture" checked class="mr-2" />
+							<label for="exportDeparture">Departure Time (Dep)</label>
+						</div>
+						<div class="flex items-center" style="margin-bottom: 5px">
+							<input type="checkbox" id="exportPosition" checked class="mr-2" />
+							<label for="exportPosition">Position/Route (Pos)</label>
+						</div>
+						<div class="flex items-center" style="margin-bottom: 5px">
+							<input type="checkbox" id="exportHangarPosition" checked class="mr-2" />
+							<label for="exportHangarPosition">Hangar Position</label>
+						</div>
+						<div class="flex items-center" style="margin-bottom: 5px">
+							<input type="checkbox" id="exportStatus" checked class="mr-2" />
+							<label for="exportStatus">Status</label>
+						</div>
+						<div class="flex items-center" style="margin-bottom: 5px">
+							<input type="checkbox" id="exportTowStatus" checked class="mr-2" />
+							<label for="exportTowStatus">Tow Status</label>
+						</div>
+						<div class="flex items-center" style="margin-bottom: 5px">
+							<input type="checkbox" id="exportNotes" checked class="mr-2" />
+							<label for="exportNotes">Notes</label>
+						</div>
+					</div>
+				</div>
+				<button id="exportPdfBtn" class="sidebar-btn sidebar-btn-primary w-full">Export PDF</button>
+			</div>
+
+			<div id="submenu-project" class="submenu-panel hidden" data-for="project">
+				<div class="submenu-title">Project</div>
+				<div class="sidebar-form-group">
+					<label class="section-label">Project Settings</label>
+					<div class="sidebar-form-row">
+						<label for="modeToggle">View/Edit Mode:</label>
+						<div class="input-container">
+							<div class="mode-toggle">
+								<span class="mode-toggle-label text-xs">View</span>
+								<label class="toggle-switch">
+									<input type="checkbox" id="modeToggle" checked />
+									<span class="toggle-slider"></span>
+								</label>
+								<span class="mode-toggle-label text-xs">Edit</span>
+							</div>
+						</div>
+					</div>
+					<div class="sidebar-form-group">
+						<label for="projectName">Project Name:</label>
+						<input id="projectName" type="text" placeholder="Project Name" class="sidebar-form-control" />
+						<input type="hidden" id="projectId" value="" />
+					</div>
+					<div class="sidebar-input-group">
+						<button id="saveBtn" class="sidebar-btn sidebar-btn-primary flex-1">Save</button>
+						<button id="loadBtn" class="sidebar-btn sidebar-btn-secondary flex-1">Load</button>
+					</div>
+				</div>
+			</div>
+
 			<!-- Hauptbereich mit Hangar-Kacheln -->
 			<div class="flex-grow flex flex-col content-container">
 				<!-- Header mit Titel und Aktionen -->
@@ -138,15 +416,85 @@
 						</div>
 					</div>
 
-					<div class="flex-grow flex justify-end">
-						<!-- Vereinfachter Toggle-Button -->
-						<button
-							id="menuToggle"
-							class="menu-toggle focus:outline-none bg-white text-industrial-accent px-2 py-1 rounded hover:bg-gray-50 z-50">
-							»
-						</button>
-					</div>
-				</header>
+</header>
+
+				<!-- Enhanced submenu behavior for left rail (Step B) -->
+				<script>
+				(function(){
+					const leftMenu = document.getElementById('leftMenu');
+					if(!leftMenu) return;
+					const panelNodes = document.querySelectorAll('.submenu-panel');
+					const panels = {};
+					panelNodes.forEach(p => { const k = p.getAttribute('data-for'); if(k) panels[k] = p; });
+					const buttons = leftMenu.querySelectorAll('.menu-item[data-menu]');
+					let current = null; // current open key
+					let pinned = false;
+					let closeTimer = null;
+
+					function clearCloseTimer(){ if(closeTimer){ clearTimeout(closeTimer); closeTimer = null; } }
+					function hideAll(){
+						Object.values(panels).forEach(p=> p.classList.add('hidden'));
+						buttons.forEach(btn=> { btn.classList.remove('active'); btn.setAttribute('aria-expanded','false'); });
+					}
+					function show(key){
+						if(!panels[key]) return;
+						hideAll();
+						panels[key].classList.remove('hidden');
+						buttons.forEach(btn => { if(btn.getAttribute('data-menu')===key){ btn.classList.add('active'); btn.setAttribute('aria-expanded','true'); } });
+						current = key;
+					}
+					function closeIfNotPinned(){ if(!pinned){ hideAll(); current = null; } }
+
+					// Hover to preview (when not pinned)
+					buttons.forEach(btn => {
+						const key = btn.getAttribute('data-menu');
+						btn.addEventListener('mouseenter', () => { if(!pinned){ clearCloseTimer(); show(key); } });
+						btn.addEventListener('focus', () => { if(!pinned){ show(key); } });
+						btn.addEventListener('click', (e) => {
+							e.preventDefault();
+							if(!pinned){
+								pinned = true; show(key);
+							}else{
+								if(current === key){ // toggle off
+									pinned = false; hideAll(); current = null;
+								}else{ // switch pinned panel
+									pinned = true; show(key);
+								}
+							}
+						});
+					});
+
+					// Keep open while hovering panel
+					Object.entries(panels).forEach(([key,panel]) => {
+						panel.addEventListener('mouseenter', clearCloseTimer);
+						panel.addEventListener('mouseleave', () => { if(!pinned){ closeTimer = setTimeout(() => closeIfNotPinned(), 150); } });
+					});
+
+					// Leaving menu when not pinned -> close after short delay unless entering panel
+					leftMenu.addEventListener('mouseleave', () => { if(!pinned){ closeTimer = setTimeout(() => closeIfNotPinned(), 150); } });
+					leftMenu.addEventListener('mouseenter', clearCloseTimer);
+
+					// Click outside closes only when not pinned
+					document.addEventListener('click', (e) => {
+						if(pinned) return;
+						const inMenu = leftMenu.contains(e.target);
+						const inPanel = current && panels[current] && panels[current].contains(e.target);
+						if(!inMenu && !inPanel){ closeIfNotPinned(); }
+					});
+
+					// ESC always closes and unpins
+					document.addEventListener('keydown', (e) => {
+						if(e.key === 'Escape'){
+							pinned = false;
+							hideAll();
+							current = null;
+						}
+					});
+
+					// Initialize ARIA
+					buttons.forEach(btn => btn.setAttribute('aria-expanded','false'));
+				})();
+				</script>
 
 				<!-- Hangar-Kacheln Bereich - Padding weiter reduziert -->
 				<div class="flex-grow bg-white p-3 overflow-auto hangar-container">
@@ -1270,720 +1618,14 @@
 						</div>
 					</div>
 
-					<!-- Horizontale Trennlinie für Timetable -->
-					<div class="section-divider"></div>
-
-					<!-- Timetable Sektion -->
-					<div class="section-container">
-						<div class="timetable-header mb-4">
-							<h2 class="text-2xl font-bold text-white mb-2">
-								<svg
-									class="inline-block w-6 h-6 mr-2"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24">
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-								</svg>
-								Timetable
-							</h2>
-							<p class="text-gray-300 text-sm">
-								Chronologische Übersicht aller Flugzeuge mit Übernachtungen
-							</p>
-						</div>
-
-						<div
-							class="timetable-container bg-white rounded-lg shadow-lg overflow-hidden">
-							<!-- Timetable Toolbar -->
-							<div
-								class="timetable-toolbar bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
-								<div class="flex items-center space-x-4">
-									<div class="flex items-center space-x-2">
-										<svg
-											class="w-4 h-4 text-gray-500"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24">
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z"></path>
-										</svg>
-										<span class="text-sm text-gray-600">Filter:</span>
-										<select
-											id="timetableFilter"
-											class="text-sm border border-gray-300 rounded px-2 py-1">
-											<option value="all">Alle Flugzeuge</option>
-											<option value="overnight">Nur Übernachtungen</option>
-											<option value="active">Nur aktive</option>
-										</select>
-									</div>
-									<div class="flex items-center space-x-2">
-										<svg
-											class="w-4 h-4 text-gray-500"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24">
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M4 6h16M4 12h16M4 18h16"></path>
-										</svg>
-										<span class="text-sm text-gray-600">Sortierung:</span>
-										<select
-											id="timetableSort"
-											class="text-sm border border-gray-300 rounded px-2 py-1">
-											<option value="arrival">Ankunftszeit</option>
-											<option value="departure">Abflugzeit</option>
-											<option value="aircraft">Aircraft ID</option>
-											<option value="airline">Airline</option>
-											<option value="position">Position</option>
-										</select>
-									</div>
-								</div>
-								<div class="flex items-center space-x-2">
-									<span id="timetableCount" class="text-sm text-gray-600"
-										>0 Einträge</span
-									>
-									<button
-										id="refreshTimetable"
-										class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm flex items-center">
-										<svg
-											class="w-4 h-4 mr-1"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24">
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-										</svg>
-										Aktualisieren
-									</button>
-								</div>
-							</div>
-
-							<!-- Timetable Tabelle -->
-							<div
-								class="timetable-scroll-container"
-								style="max-height: 400px; overflow-y: auto">
-								<table id="timetableTable" class="w-full">
-									<thead class="bg-gray-100 sticky top-0">
-										<tr>
-											<th
-												class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
-												Position
-											</th>
-											<th
-												class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
-												Aircraft ID
-											</th>
-											<th
-												class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
-												Airline
-											</th>
-											<th
-												class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
-												Von
-											</th>
-											<th
-												class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
-												Nach
-											</th>
-											<th
-												class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
-												Ankunft
-											</th>
-											<th
-												class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
-												Abflug
-											</th>
-											<th
-												class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
-												Route
-											</th>
-											<th
-												class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
-												Notizen
-											</th>
-										</tr>
-									</thead>
-									<tbody
-										id="timetableBody"
-										class="bg-white divide-y divide-gray-200">
-										<!-- Timetable Einträge werden hier dynamisch eingefügt -->
-									</tbody>
-								</table>
-							</div>
-
-							<!-- Timetable Leer-Status -->
-							<div
-								id="timetableEmpty"
-								class="hidden p-8 text-center text-gray-500">
-								<svg
-									class="mx-auto h-12 w-12 text-gray-400 mb-4"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24">
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-								</svg>
-								<p class="text-lg font-medium mb-2">
-									Keine Flugdaten verfügbar
-								</p>
-								<p class="text-sm">
-									Laden Sie Flugdaten in die Kacheln, um die Timetable zu füllen
-								</p>
-							</div>
-						</div>
-					</div>
 				</div>
 			</div>
 
-			<!-- Einklappbares Rechtes Menü -->
-			<div
-				id="sidebarMenu"
-				class="sidebar-container bg-industrial-medium flex flex-col">
-				<!-- Hauptinhalt der Sidebar -->
-				<div class="sidebar-content">
-					<!-- Ansichtsverwaltung als eigene Sektion -->
-					<div class="sidebar-accordion-item">
-						<div
-							class="sidebar-accordion-header"
-							onclick="toggleAccordion(this)">
-							<div class="sidebar-header-content">
-								<i class="sidebar-icon">⚙️</i>
-								<h3 class="sidebar-section-title">Project Settings</h3>
-							</div>
-							<i class="dropdown-arrow">▼</i>
-						</div>
-						<div class="sidebar-accordion-content">
-							<!-- Mode Toggle Switch -->
-							<div class="sidebar-form-group">
-								<div class="sidebar-form-row">
-									<label for="modeToggle">View/Edit Mode:</label>
-									<div class="input-container">
-										<div class="mode-toggle">
-											<span class="mode-toggle-label text-xs">View</span>
-											<label class="toggle-switch">
-												<input type="checkbox" id="modeToggle" checked />
-												<span class="toggle-slider"></span>
-											</label>
-											<span class="mode-toggle-label text-xs">Edit</span>
-										</div>
-									</div>
-								</div>
-							</div>
 
-							<!-- Project Name -->
-							<div class="sidebar-form-group">
-								<label for="projectName">Project Name:</label>
-								<input
-									id="projectName"
-									type="text"
-									placeholder="Project Name"
-									class="sidebar-form-control" />
-								<input type="hidden" id="projectId" value="" />
-							</div>
 
-							<!-- Save/Load Buttons -->
-							<div class="sidebar-input-group">
-								<button
-									id="saveBtn"
-									class="sidebar-btn sidebar-btn-primary flex-1">
-									Save
-								</button>
-								<button
-									id="loadBtn"
-									class="sidebar-btn sidebar-btn-secondary flex-1">
-									Load
-								</button>
-							</div>
-						</div>
-					</div>
 
-					<!-- Synchronization Section -->
-					<div class="sidebar-accordion-item">
-						<div
-							class="sidebar-accordion-header"
-							onclick="toggleAccordion(this)">
-							<div class="sidebar-header-content">
-								<i class="sidebar-icon">🔄</i>
-								<h3 class="sidebar-section-title">Synchronisation</h3>
-							</div>
-							<i class="dropdown-arrow">▼</i>
-						</div>
-						<div class="sidebar-accordion-content">
-							<!-- Modern Sync Toggles Interface -->
-							<div class="sidebar-form-group">
-								<!-- Sync Description -->
-								<div class="sidebar-form-group">
-									<div class="sync-mode-description">
-										Configure how your data syncs with the server
-									</div>
-								</div>
 
-								<!-- Read Data Toggle -->
-								<div class="sidebar-form-group">
-									<div class="sidebar-form-row">
-										<label class="sidebar-option-label">
-											<span class="sidebar-option-title">Read Data</span>
-											<span class="sidebar-option-desc"
-												>Receive updates from server</span
-											>
-										</label>
-										<div class="input-container">
-											<label class="toggle-switch">
-												<input type="checkbox" id="readDataToggle" />
-												<span class="toggle-slider"></span>
-											</label>
-										</div>
-									</div>
-								</div>
 
-								<!-- Write Data Toggle -->
-								<div class="sidebar-form-group">
-									<div class="sidebar-form-row">
-										<label class="sidebar-option-label">
-											<span class="sidebar-option-title">Write Data</span>
-											<span class="sidebar-option-desc"
-												>Send changes to server (Master mode)</span
-											>
-										</label>
-										<div class="input-container">
-											<label class="toggle-switch">
-												<input type="checkbox" id="writeDataToggle" />
-												<span class="toggle-slider"></span>
-											</label>
-										</div>
-									</div>
-								</div>
-
-								<!-- Current Mode Display (einzige Status-Anzeige) -->
-								<div class="sidebar-form-group">
-									<div class="sync-status-display">
-										<span class="sync-status-label">Current Mode:</span>
-										<span
-											id="currentSyncMode"
-											class="sync-mode-badge standalone"
-											>Standalone</span
-										>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-
-					<!-- Display Options Sektion -->
-					<div class="sidebar-accordion-item">
-						<div
-							class="sidebar-accordion-header"
-							onclick="toggleAccordion(this)">
-							<div class="sidebar-header-content">
-								<i class="sidebar-icon">🔳</i>
-								<h3 class="sidebar-section-title">Display Options</h3>
-							</div>
-							<i class="dropdown-arrow">▼</i>
-						</div>
-						<div class="sidebar-accordion-content">
-							<div class="sidebar-form-group">
-								<label for="tilesCount">Primary Tiles:</label>
-								<div class="sidebar-input-group">
-									<input
-										type="number"
-										id="tilesCount"
-										min="1"
-										max="12"
-										value="8"
-										class="sidebar-form-control" />
-									<button
-										id="updateTilesBtn"
-										class="sidebar-btn sidebar-btn-primary">
-										Update
-									</button>
-								</div>
-							</div>
-
-							<div class="sidebar-form-group">
-								<label for="secondaryTilesCount">Secondary Tiles:</label>
-								<div class="sidebar-input-group">
-									<input
-										type="number"
-										id="secondaryTilesCount"
-										min="0"
-										max="12"
-										value="4"
-										class="sidebar-form-control" />
-									<button
-										id="updateSecondaryTilesBtn"
-										class="sidebar-btn sidebar-btn-primary">
-										Update
-									</button>
-								</div>
-							</div>
-
-							<div class="sidebar-form-group">
-								<label for="layoutType">Layout:</label>
-								<select id="layoutType" class="sidebar-form-select">
-									<option value="1">1 Column</option>
-									<option value="2">2 Columns</option>
-									<option value="3">3 Columns</option>
-									<option value="4" selected>4 Columns</option>
-								</select>
-							</div>
-
-							<!-- Dark Mode Toggle -->
-							<div class="sidebar-form-group">
-								<div class="sidebar-form-row">
-									<label for="darkModeToggle">Dark Mode:</label>
-									<div class="input-container">
-										<div class="mode-toggle">
-											<span class="mode-toggle-label text-xs">Light</span>
-											<label class="toggle-switch">
-												<input type="checkbox" id="darkModeToggle" />
-												<span class="toggle-slider"></span>
-											</label>
-											<span class="mode-toggle-label text-xs">Dark</span>
-										</div>
-									</div>
-								</div>
-							</div>
-
-							<!-- NEU: Ansichtsmodus Toggle (Kachel/Tabelle) -->
-							<div class="sidebar-form-group">
-								<div class="sidebar-form-row">
-									<label for="viewModeToggle">Ansicht:</label>
-									<div class="input-container">
-										<div class="mode-toggle">
-											<span class="mode-toggle-label text-xs">Kachel</span>
-											<label class="toggle-switch">
-												<input type="checkbox" id="viewModeToggle" />
-												<span class="toggle-slider"></span>
-											</label>
-											<span class="mode-toggle-label text-xs">Tabelle</span>
-										</div>
-									</div>
-								</div>
-							</div>
-
-							<!-- Display Zoom Slider -->
-							<div class="sidebar-form-group">
-								<label for="displayZoom"
-									>Display Zoom: <span id="zoomValue">100%</span></label
-								>
-								<input
-									type="range"
-									id="displayZoom"
-									min="75"
-									max="150"
-									step="5"
-									value="100"
-									class="sidebar-form-control w-full" />
-							</div>
-						</div>
-					</div>
-
-					<!-- Suche nach Flugzeugen -->
-					<div class="sidebar-accordion-item">
-						<div
-							class="sidebar-accordion-header"
-							onclick="toggleAccordion(this)">
-							<div class="sidebar-header-content">
-								<i class="sidebar-icon">🔍</i>
-								<h3 class="sidebar-section-title">Search Aircraft</h3>
-							</div>
-							<i class="dropdown-arrow">▼</i>
-						</div>
-						<div class="sidebar-accordion-content">
-							<div class="sidebar-input-group">
-								<input
-									type="text"
-									id="searchAircraft"
-									placeholder="Flugzeug-ID (z.B. D-AIZZ, N12345)"
-									class="sidebar-form-control"
-									title="Geben Sie eine gültige Flugzeugkennung ein, z.B. D-AIZZ oder N12345" />
-								<button id="btnSearch" class="sidebar-btn sidebar-btn-primary">
-									Search
-								</button>
-							</div>
-						</div>
-					</div>
-
-					<!-- Flugdaten abrufen -->
-					<div class="sidebar-accordion-item">
-						<div
-							class="sidebar-accordion-header"
-							onclick="toggleAccordion(this)">
-							<div class="sidebar-header-content">
-								<i class="sidebar-icon">✈️</i>
-								<h3 class="sidebar-section-title">Flight Data</h3>
-							</div>
-							<i class="dropdown-arrow">▼</i>
-						</div>
-						<div id="flightDataContent" class="sidebar-accordion-content">
-							<div class="sidebar-form-group">
-								<label for="currentDateInput">Tag (letzter Flug):</label>
-								<input
-									type="date"
-									id="currentDateInput"
-									class="sidebar-form-control" />
-							</div>
-							<div class="sidebar-form-group">
-								<label for="nextDateInput">Tag (erster Flug):</label>
-								<input
-									type="date"
-									id="nextDateInput"
-									class="sidebar-form-control" />
-							</div>
-
-							<!-- IATA-Code Eingabefeld -->
-							<div class="sidebar-form-group">
-								<label for="airportCodeInput">Flughafen (IATA-Code):</label>
-								<input
-									type="text"
-									id="airportCodeInput"
-									name="airportCode"
-									placeholder="z.B. FRA, MUC"
-									maxlength="3"
-									value="MUC"
-									style="text-transform: uppercase"
-									class="sidebar-form-control" />
-								<p class="mt-1 text-xs text-gray-400">
-									Geben Sie einen IATA-Flughafencode ein, um die Suche zu
-									verfeinern.
-								</p>
-							</div>
-
-							<!-- API-Provider Auswahl -->
-							<div class="sidebar-form-group">
-								<label for="apiProviderSelect">API-Provider:</label>
-								<select id="apiProviderSelect" class="sidebar-form-select">
-									<option value="aerodatabox">AeroDataBox API</option>
-									<option value="overnight-flights">
-										Overnight Flights Processing
-									</option>
-								</select>
-								<p class="mt-1 text-xs text-gray-400">
-									Wählen Sie zwischen AeroDataBox API oder Overnight Flights Processing für automatische
-									Übernachtungsanalyse.
-								</p>
-							</div>
-
-							<button
-								id="fetchFlightData"
-								class="sidebar-btn sidebar-btn-primary w-full">
-								Update Data
-							</button>
-
-							<!-- Neuer Button für Overnight Flights Processing -->
-							<button
-								id="processOvernightFlightsBtn"
-								class="sidebar-btn sidebar-btn-primary w-full mt-2"
-								style="background-color: #10b981; border-color: #10b981"
-								title="Identifiziert Flugzeuge, die über Nacht am Flughafen verbleiben">
-								Process Overnight Flights
-							</button>
-
-							<!-- Neuer Button für Airport Flights -->
-							<button
-								id="showAirportFlightsBtn"
-								class="sidebar-btn sidebar-btn-secondary w-full mt-2">
-								Show Airport Flights
-							</button>
-
-							<!-- Test Button für API-Tests -->
-							<button
-								id="testNotificationDisplay"
-								class="sidebar-btn sidebar-btn-secondary w-full mt-2"
-								onclick="if(window.testAviationstackAPI) { window.testAviationstackAPI('D-AIBL'); } else { console.log('Aviationstack Test nicht verfügbar'); }">
-								Test Aviationstack API
-							</button>
-
-							<div id="fetchStatus" class="text-sm text-center"></div>
-							Ready to retrieve flight data
-
-							<!-- Status für Overnight Flights Processing -->
-							<div
-								id="overnightFlightsStatus"
-								class="text-sm text-center mt-2 p-2 rounded"
-								style="
-									background-color: #f0f9ff;
-									border: 1px solid #0ea5e9;
-									color: #0369a1;
-									display: none;
-								">
-								<div class="font-semibold">Overnight Flights Processing</div>
-								<div id="overnightFlightsMessage">
-									Ready for overnight flight analysis
-								</div>
-							</div>
-						</div>
-					</div>
-
-					<!-- PDF Export Funktion -->
-					<div class="sidebar-accordion-item">
-						<div
-							class="sidebar-accordion-header"
-							onclick="toggleAccordion(this)">
-							<div class="sidebar-header-content">
-								<i class="sidebar-icon">📄</i>
-								<h3 class="sidebar-section-title">Export Plan</h3>
-							</div>
-							<i class="dropdown-arrow">▼</i>
-						</div>
-						<div class="sidebar-accordion-content">
-							<div class="sidebar-form-group">
-								<label for="pdfFilename">File name:</label>
-								<input
-									type="text"
-									id="pdfFilename"
-									value="Hangar_Plan"
-									class="sidebar-form-control" />
-							</div>
-
-							<div class="sidebar-form-group">
-								<div class="flex items-center">
-									<input
-										type="checkbox"
-										id="landscapeMode"
-										checked
-										class="mr-2" />
-									<label for="landscapeMode">Landscape Mode</label>
-								</div>
-							</div>
-
-							<!-- Field Selection Section -->
-							<div class="sidebar-form-group">
-								<label class="sidebar-section-subtitle">Export Fields:</label>
-								<div style="margin-left: 10px">
-									<div class="flex items-center" style="margin-bottom: 5px">
-										<input
-											type="checkbox"
-											id="exportAircraft"
-											checked
-											class="mr-2" />
-										<label for="exportAircraft">Aircraft ID (AC-ID)</label>
-									</div>
-									<div class="flex items-center" style="margin-bottom: 5px">
-										<input
-											type="checkbox"
-											id="exportArrival"
-											checked
-											class="mr-2" />
-										<label for="exportArrival">Arrival Time (Arr)</label>
-									</div>
-									<div class="flex items-center" style="margin-bottom: 5px">
-										<input
-											type="checkbox"
-											id="exportDeparture"
-											checked
-											class="mr-2" />
-										<label for="exportDeparture">Departure Time (Dep)</label>
-									</div>
-									<div class="flex items-center" style="margin-bottom: 5px">
-										<input
-											type="checkbox"
-											id="exportPosition"
-											checked
-											class="mr-2" />
-										<label for="exportPosition">Position/Route (Pos)</label>
-									</div>
-									<div class="flex items-center" style="margin-bottom: 5px">
-										<input
-											type="checkbox"
-											id="exportHangarPosition"
-											checked
-											class="mr-2" />
-										<label for="exportHangarPosition">Hangar Position</label>
-									</div>
-									<div class="flex items-center" style="margin-bottom: 5px">
-										<input
-											type="checkbox"
-											id="exportStatus"
-											checked
-											class="mr-2" />
-										<label for="exportStatus">Status</label>
-									</div>
-									<div class="flex items-center" style="margin-bottom: 5px">
-										<input
-											type="checkbox"
-											id="exportTowStatus"
-											checked
-											class="mr-2" />
-										<label for="exportTowStatus">Tow Status</label>
-									</div>
-									<div class="flex items-center" style="margin-bottom: 5px">
-										<input
-											type="checkbox"
-											id="exportNotes"
-											checked
-											class="mr-2" />
-										<label for="exportNotes">Notes</label>
-									</div>
-								</div>
-							</div>
-
-							<button
-								id="exportPdfBtn"
-								class="sidebar-btn sidebar-btn-primary w-full">
-								Export PDF
-							</button>
-						</div>
-					</div>
-
-					<!-- Fleet Database Navigation -->
-					<div class="sidebar-accordion-item">
-						<div
-							class="sidebar-accordion-header"
-							onclick="toggleAccordion(this)">
-							<div class="sidebar-header-content">
-								<i class="sidebar-icon">✈️</i>
-								<h3 class="sidebar-section-title">Fleet Database</h3>
-							</div>
-							<i class="dropdown-arrow">▼</i>
-						</div>
-						<div class="sidebar-accordion-content">
-							<div class="sidebar-form-group">
-								<div class="sidebar-form-description">
-									Browse and manage aircraft fleet data from CLH and LHX
-									airlines
-								</div>
-							</div>
-
-							<button
-								id="fleetDatabaseBtn"
-								onclick="window.location.href='fleet-database.html'"
-								class="sidebar-btn sidebar-btn-primary w-full flex items-center justify-center">
-								<svg
-									class="w-4 h-4 mr-2"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24">
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
-								</svg>
-								Open Fleet Database
-							</button>
-
-							<div class="sidebar-form-group">
-								<div class="text-xs text-gray-300 text-center">
-									Access CLH & LHX fleet information
-								</div>
-							</div>
-						</div>
-					</div>
 				</div>
 
 				<!-- Versteckte File-Input-Elemente -->
@@ -2099,28 +1741,6 @@
 				}, 1000);
 			</script>
 
-			<!-- Einfache Accordion-Funktion ohne Event-Listener -->
-			<script>
-				// Direkte Accordion-Toggle-Funktion (keep it simple)
-				function toggleAccordion(header) {
-					const content = header.nextElementSibling;
-					const arrow = header.querySelector(".dropdown-arrow");
-
-					if (
-						content &&
-						content.classList.contains("sidebar-accordion-content")
-					) {
-						// Toggle open/close
-						if (content.classList.contains("open")) {
-							content.classList.remove("open");
-							if (arrow) arrow.textContent = "▼";
-						} else {
-							content.classList.add("open");
-							if (arrow) arrow.textContent = "▲";
-						}
-					}
-				}
-			</script>
 
 			<!-- Event-Handler für den "Info anzeigen"-Button -->
 			<script>
@@ -2484,6 +2104,9 @@
 			<!-- Debug Script für Position-Klon-Problem -->
 			<!-- OPTIMIERT: debug-position-clone.js entfernt -->
 
+			<!-- Toast small utility -->
+			<script src="js/toast.js"></script>
+
 			<!-- Display Options Script -->
 			<script src="js/display-options.js"></script>
 
@@ -2611,6 +2234,9 @@
 		</div>
 
 		<!-- Flight Data Status Display -->
+		<!-- Toast container -->
+		<div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
 		<script src="js/flight-data-status.js"></script>
 	</body>
 </html>

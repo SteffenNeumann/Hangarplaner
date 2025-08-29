@@ -545,51 +545,76 @@ const AirportFlights = (() => {
 			);
 
 			if (showAirportFlightsBtn) {
-				// Füge das Operator-Eingabefeld vor dem Button ein
-				const operatorInputContainer = document.createElement("div");
-				operatorInputContainer.className = "sidebar-form-group mt-2";
+				// Wenn bereits vorhanden, nicht erneut einfügen
+				let operatorInput = document.getElementById("operatorCodeInput");
+				if (!operatorInput) {
+					// Label + Input im Stil der Fleet-Filter erzeugen
+					const operatorLabel = document.createElement("label");
+					operatorLabel.setAttribute("for", "operatorCodeInput");
+					operatorLabel.className = "block text-sm font-medium text-gray-900 mb-1";
+					operatorLabel.textContent = "Airline Code (optional)";
 
-				// Label für Operator-Eingabefeld
-				const operatorLabel = document.createElement("label");
-				operatorLabel.setAttribute("for", "operatorCodeInput");
-				operatorLabel.textContent = "Airline Code (optional):";
-				operatorInputContainer.appendChild(operatorLabel);
+					operatorInput = document.createElement("input");
+					operatorInput.type = "text";
+					operatorInput.id = "operatorCodeInput";
+					operatorInput.placeholder = "z.B. LH, DLH";
+					operatorInput.maxLength = "3";
+					operatorInput.style.textTransform = "uppercase";
+					operatorInput.className =
+						"w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 uppercase placeholder-gray-500 focus:ring-2 focus:ring-industrial-accent focus:border-industrial-accent";
 
-				// Eingabefeld für Operator
-				const operatorInput = document.createElement("input");
-				operatorInput.type = "text";
-				operatorInput.id = "operatorCodeInput";
-				operatorInput.className = "sidebar-form-control";
-				operatorInput.placeholder = "z.B. LH, DLH";
-				operatorInput.maxLength = "3";
-				operatorInput.style.textTransform = "uppercase";
-				operatorInputContainer.appendChild(operatorInput);
+					const operatorHint = document.createElement("p");
+					operatorHint.className = "text-xs text-gray-500 mt-1";
+					operatorHint.textContent =
+						"Geben Sie einen ICAO/IATA-Code ein, um nach Fluggesellschaft zu filtern";
 
-				// Hinweistext
-				const operatorHint = document.createElement("p");
-				operatorHint.className = "text-xs text-gray-400 mt-1";
-				operatorHint.textContent =
-					"Geben Sie einen ICAO/IATA-Code ein, um nach Fluggesellschaft zu filtern";
-				operatorInputContainer.appendChild(operatorHint);
-
-				// Füge das Element vor dem Button ein
-				showAirportFlightsBtn.parentNode.insertBefore(
-					operatorInputContainer,
-					showAirportFlightsBtn
-				);
+					// Falls ein Platzhalter-Container existiert, dort einfügen
+					const placeholder = document.getElementById("operatorFilterContainer");
+					if (placeholder) {
+						placeholder.appendChild(operatorLabel);
+						placeholder.appendChild(operatorInput);
+						placeholder.appendChild(operatorHint);
+					} else {
+						// Fallback: vor dem Button einfügen (mit eigener Box)
+						const operatorInputContainer = document.createElement("div");
+						operatorInputContainer.className = "w-full md:w-auto";
+						operatorInputContainer.appendChild(operatorLabel);
+						operatorInputContainer.appendChild(operatorInput);
+						operatorInputContainer.appendChild(operatorHint);
+						showAirportFlightsBtn.parentNode.insertBefore(
+							operatorInputContainer,
+							showAirportFlightsBtn
+						);
+					}
+				}
 
 				// Event-Handler für den Button aktualisieren
 				showAirportFlightsBtn.addEventListener("click", function () {
 					const airportCodeInput = document.getElementById("airportCodeInput");
 					const airportCode = airportCodeInput?.value || "MUC";
 
-					// Operator-Code aus dem neuen Eingabefeld auslesen
+					// Operator-Code aus dem Eingabefeld auslesen
 					const operatorCodeInput =
 						document.getElementById("operatorCodeInput");
 					const operatorCode = operatorCodeInput?.value || "";
 
-					// Funktionsaufruf mit Operator-Code
-					displayAirportFlights(airportCode, null, null, operatorCode);
+					// Datum lesen und Zeitfenster setzen (ganzer Tag)
+					const dateInput = document.getElementById("flightDateInput");
+					const selectedDate = dateInput?.value || null;
+					let startDateTime = null;
+					let endDateTime = null;
+					if (selectedDate) {
+						// Use the API-compliant 12h window: 20:00 on selected day to 08:00 next day
+						const d = new Date(selectedDate + 'T00:00:00');
+						const next = new Date(d);
+						next.setDate(d.getDate() + 1);
+						const toISODate = (dt) => dt.toISOString().split('T')[0];
+						startDateTime = `${toISODate(d)}T20:00`;
+						endDateTime = `${toISODate(next)}T08:00`;
+					}
+
+					// Call with computed 12h window + operator filter
+					displayAirportFlights(airportCode, startDateTime, endDateTime, operatorCode);
 				});
 			}
 		});

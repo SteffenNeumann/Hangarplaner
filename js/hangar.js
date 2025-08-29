@@ -31,14 +31,6 @@ function initializeApp() {
 			// 2. UI initialisieren
 			if (window.hangarUI) {
 				window.hangarUI.initSectionLayout();
-				// Statt der UI-Funktion die neue Events-Funktion verwenden
-				if (
-					window.hangarEvents &&
-					window.hangarEvents.initializeSidebarToggle
-				) {
-					window.hangarEvents.initializeSidebarToggle();
-				}
-				// Accordion wird jetzt direkt über onclick-Attribute gesteuert
 				window.moduleStatus.ui = true;
 				// console.log("UI-Modul initialisiert");
 			}
@@ -543,9 +535,10 @@ function setupFlightDataEventHandlers() {
 			console.log("*** UPDATE DATA BUTTON WURDE GEKLICKT ***");
 
 			// Check API provider selection to determine behavior
-			const apiProviderSelect = document.getElementById("apiProviderSelect");
-			const selectedProvider = apiProviderSelect?.value || "aerodatabox";
-			console.log(`🔍 Selected API Provider: ${selectedProvider}`);
+				const apiProviderSelect = document.getElementById("apiProviderSelect");
+				// Default to overnight processing when provider select is absent
+				const selectedProvider = apiProviderSelect?.value || "overnight-flights";
+				console.log(`🔍 Selected API Provider: ${selectedProvider}`);
 
 			// Route to appropriate processing based on provider selection
 			if (selectedProvider === "overnight-flights") {
@@ -559,7 +552,17 @@ function setupFlightDataEventHandlers() {
 				
 				const airportCode = airportCodeInput?.value.trim().toUpperCase() || "MUC";
 				const currentDate = currentDateInput?.value || new Date().toISOString().split("T")[0];
-				const nextDate = nextDateInput?.value || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+				// Compute next day strictly based on currentDate if provided; otherwise fallback to tomorrow from now
+				const nextDate = (function(){
+					if (nextDateInput?.value) return nextDateInput.value;
+					if (currentDate) {
+						const d = new Date(currentDate);
+						// Handle potential timezone offset by using UTC components when available
+						d.setUTCDate(d.getUTCDate() + 1);
+						return d.toISOString().split("T")[0];
+					}
+					return new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+				})();
 
 				console.log(`🏨 Parameters: Airport=${airportCode}, StartDate=${currentDate}, EndDate=${nextDate}`);
 
@@ -579,7 +582,7 @@ function setupFlightDataEventHandlers() {
 							console.log("✅ Overnight processing completed successfully!");
 							if (window.showNotification) {
 								window.showNotification(
-									`✅ Overnight processing complete: ${result.overnightAircraft} aircraft found, ${result.tilesMatched} tiles updated`,
+									`Overnight processing complete: ${result.overnightAircraft} aircraft found, ${result.tilesMatched} tiles updated`,
 									"success"
 								);
 							}
@@ -836,13 +839,13 @@ function setupFlightDataEventHandlers() {
 
 						// Status aktualisieren with detailed results
 						if (statusMessage) {
-							statusMessage.textContent = `✅ Processing completed: ${result.overnightAircraft} overnight aircraft found, ${result.tilesMatched} tiles updated`;
+							statusMessage.textContent = `Processing completed: ${result.overnightAircraft} overnight aircraft found, ${result.tilesMatched} tiles updated`;
 						}
 
 						// Show success notification with details
 						if (window.showNotification) {
 							window.showNotification(
-								`✅ Airport-first processing complete: ${result.overnightAircraft} overnight aircraft discovered from ${result.totalFlights} total flights at ${result.airport}`,
+								`Airport-first processing complete: ${result.overnightAircraft} overnight aircraft discovered from ${result.totalFlights} total flights at ${result.airport}`,
 								"success"
 							);
 						}
@@ -953,6 +956,63 @@ function setupFlightDataEventHandlers() {
 			}
 		});
 	}
+
+	// Scheduled update controls (Time interval + Set active)
+	const scheduledToggle = document.getElementById("scheduledUpdateToggle");
+	const intervalInput = document.getElementById("updateIntervalInput");
+
+	function getIntervalMs() {
+		const minutes = parseInt(intervalInput?.value || "15", 10);
+		if (isNaN(minutes) || minutes < 1) return 60 * 1000; // 1 min min
+		return minutes * 60 * 1000;
+	}
+
+	function triggerOvernightUpdate() {
+		const btn = document.getElementById("fetchFlightData");
+		if (btn) {
+			btn.click();
+		}
+	}
+
+	function startScheduledUpdate() {
+		stopScheduledUpdate();
+		const ms = getIntervalMs();
+		window.__overnightScheduleTimer = setInterval(triggerOvernightUpdate, ms);
+		// Fire once immediately
+		triggerOvernightUpdate();
+		const status = document.getElementById("fetchStatus");
+		if (status) {
+			status.textContent = `Scheduled update active (every ${Math.round(ms/60000)} min)`;
+		}
+	}
+
+	function stopScheduledUpdate() {
+		if (window.__overnightScheduleTimer) {
+			clearInterval(window.__overnightScheduleTimer);
+			window.__overnightScheduleTimer = null;
+		}
+		const status = document.getElementById("fetchStatus");
+		if (status) {
+			status.textContent = "Ready to update overnight flights";
+		}
+	}
+
+	if (scheduledToggle) {
+		scheduledToggle.addEventListener("change", function () {
+			if (this.checked) {
+				startScheduledUpdate();
+			} else {
+				stopScheduledUpdate();
+			}
+		});
+	}
+	if (intervalInput) {
+		intervalInput.addEventListener("change", function () {
+			if (scheduledToggle?.checked) {
+				startScheduledUpdate();
+			}
+		});
+	}
 }
 
 /**
@@ -1028,7 +1088,6 @@ function analyzeError(error) {
 		"hangarGrid",
 		"secondaryHangarGrid",
 		"modeToggle",
-		"menuToggle",
 	];
 
 	// console.log("Kritische DOM-Elemente:");

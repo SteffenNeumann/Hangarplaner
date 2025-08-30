@@ -330,31 +330,30 @@
 			</div>
 
 			<div id="submenu-project" class="submenu-panel hidden" data-for="project">
-				<div class="submenu-title">Project</div>
+				<div class="submenu-title">Projekt Settings</div>
 				<div class="sidebar-form-group">
-					<label class="section-label">Project Settings</label>
 					<div class="sidebar-form-row">
 						<label for="modeToggle">View/Edit Mode:</label>
 						<div class="input-container">
 							<div class="mode-toggle">
-								<span class="mode-toggle-label text-xs">View</span>
-								<label class="toggle-switch">
+								<span class="mode-toggle-label">View</span>
+								<label class="toggle-switch" aria-label="View/Edit Mode">
 									<input type="checkbox" id="modeToggle" checked />
 									<span class="toggle-slider"></span>
 								</label>
-								<span class="mode-toggle-label text-xs">Edit</span>
+								<span class="mode-toggle-label">Edit</span>
 							</div>
 						</div>
 					</div>
-					<div class="sidebar-form-group">
-						<label for="projectName">Project Name:</label>
-						<input id="projectName" type="text" placeholder="Project Name" class="sidebar-form-control" />
-						<input type="hidden" id="projectId" value="" />
-					</div>
-					<div class="sidebar-input-group">
-						<button id="saveBtn" class="sidebar-btn sidebar-btn-primary flex-1">Save</button>
-						<button id="loadBtn" class="sidebar-btn sidebar-btn-secondary flex-1">Load</button>
-					</div>
+				</div>
+				<div class="sidebar-form-group">
+					<label for="projectName">Project Name:</label>
+					<input id="projectName" type="text" placeholder="Project Name" class="sidebar-form-control" />
+					<input type="hidden" id="projectId" value="" />
+				</div>
+				<div class="sidebar-input-group">
+					<button id="saveBtn" class="sidebar-btn sidebar-btn-primary flex-1">Save</button>
+					<button id="loadBtn" class="sidebar-btn sidebar-btn-secondary flex-1">Load</button>
 				</div>
 			</div>
 

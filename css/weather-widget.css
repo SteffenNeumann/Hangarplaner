@@ -51,7 +51,7 @@
 .weather-airport {
 	font-weight: 700;
 	color: #3a4354;
-	font-size: 1rem;
+	font-size: 0.95rem; /* Kompakter: zuvor 1rem */
 	min-width: 40px;
 }
 
@@ -64,7 +64,7 @@
 
 #weather-temp {
 	font-weight: 600;
-	font-size: 1.125rem;
+	font-size: 1.05rem; /* Kompakter: zuvor 1.125rem */
 	min-width: 45px;
 	text-align: right;
 	margin-right: 8px;
@@ -95,7 +95,7 @@
 
 .weather-wind-icon {
 	display: inline-block;
-	font-size: 1.25rem;
+	font-size: 1.1rem; /* Kompakter: zuvor 1.25rem */
 	margin-right: 3px;
 	transform-origin: center;
 	transition: transform 0.3s ease;

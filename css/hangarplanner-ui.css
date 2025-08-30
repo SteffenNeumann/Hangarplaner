@@ -656,7 +656,7 @@ textarea.notes-textarea {
 	border-radius: 50%;
 }
 input:checked + .toggle-slider {
-	background-color: #ff7043;
+	background-color: var(--menu-accent);
 }
 input:checked + .toggle-slider:before {
 	transform: translateX(24px);
@@ -811,7 +811,7 @@ input:checked + .toggle-slider:before {
 }
 
 /* Buttons in submenu to match palette */
-.submenu-panel .sidebar-btn-primary { background-color: var(--menu-text) !important; border-color: var(--menu-text) !important; }
+.submenu-panel .sidebar-btn-primary { background-color: var(--menu-accent) !important; border-color: var(--menu-accent) !important; }
 .submenu-panel .sidebar-btn-primary:hover { filter: brightness(0.9); }
 
 /* Slider inactive track */
@@ -820,7 +820,7 @@ input:checked + .toggle-slider:before {
 /* Submenu - new design alignment and controls */
 .submenu-panel .section-label {
 	font-weight: 600;
-	font-size: 13px;
+	font-size: 10px;
 	color: var(--menu-text);
 	border-left: 3px solid var(--menu-accent);
 	padding-left: 8px;
@@ -841,7 +841,7 @@ input:checked + .toggle-slider:before {
 	}
 	.submenu-panel .sidebar-form-row .input-container { display: flex; justify-content: flex-end; width: 100%; }
 	.submenu-panel .sidebar-form-row > label { margin-bottom: 0; }
-.submenu-panel label { color: var(--menu-text); font-size: 15px; font-weight: 500; display: block; margin-bottom: 6px; }
+.submenu-panel label { color: var(--menu-text); font-size: 10px; font-weight: 700; display: block; margin-bottom: 6px; }
 .submenu-panel .sidebar-form-control,
 .submenu-panel .sidebar-form-select {
 	border: 1px solid var(--menu-border);
@@ -918,12 +918,12 @@ input:checked + .toggle-slider:before {
 
 /* Primäre Buttons in Orange beibehalten */
 .sidebar-btn-primary {
-	background-color: #ff7043 !important;
+	background-color: var(--menu-accent) !important;
 	color: white !important;
 }
 
 .sidebar-btn-primary:hover {
-	background-color: #f85d2c !important; /* Dunkleres Orange beim Hover */
+	background-color: #d48400 !important; /* Slightly darker accent on hover */
 }
 
 /* Sekundäre Buttons mit besserem Kontrast zum dunklen Hintergrund */
@@ -2169,16 +2169,6 @@ input:checked + .toggle-slider:before {
   background: #f9f9f9;
   border-right: 1px solid #e6e6e6;
 }
-#submenu-sync .submenu-title {
-  color: #6b6b6b;
-  font-weight: 700;
-  text-transform: none;
-  letter-spacing: 0;
-  font-size: 10px;
-  border: 0;
-  margin-bottom: 0;
-  padding-bottom: 0;
-}
 #submenu-sync .sync-mode-description {
   color: #6b6b6b;
   font-size: 10px;
@@ -2204,7 +2194,7 @@ input:checked + .toggle-slider:before {
 /* Compact orange toggle (35x20) per design */
 #submenu-sync .modern-toggle-switch { width: 35px; height: 20px; }
 #submenu-sync .modern-toggle-slider { background-color: #b1b5b1; border-radius: 50px; }
-#submenu-sync .modern-toggle-switch input:checked + .modern-toggle-slider { background-color: #f49e0c; border-color: #f49e0c; }
+#submenu-sync .modern-toggle-switch input:checked + .modern-toggle-slider { background-color: var(--menu-accent); border-color: var(--menu-accent); }
 #submenu-sync .modern-toggle-slider:before { width: 18px; height: 18px; left: -1px; top: 50%; transform: translateY(-50%); }
 #submenu-sync .modern-toggle-switch input:checked + .modern-toggle-slider:before { transform: translateX(15px) translateY(-50%); }
 
@@ -2215,7 +2205,7 @@ input:checked + .toggle-slider:before {
 /* Compact orange toggle (35x20) per design for Update submenu */
 #submenu-update .modern-toggle-switch { width: 35px; height: 20px; }
 #submenu-update .modern-toggle-slider { background-color: #b1b5b1; border-radius: 50px; }
-#submenu-update .modern-toggle-switch input:checked + .modern-toggle-slider { background-color: #f49e0c; border-color: #f49e0c; }
+#submenu-update .modern-toggle-switch input:checked + .modern-toggle-slider { background-color: var(--menu-accent); border-color: var(--menu-accent); }
 #submenu-update .modern-toggle-slider:before { width: 18px; height: 18px; left: -1px; top: 50%; transform: translateY(-50%); }
 #submenu-update .modern-toggle-switch input:checked + .modern-toggle-slider:before { transform: translateX(15px) translateY(-50%); }
 
@@ -2227,6 +2217,22 @@ input:checked + .toggle-slider:before {
 /* Make input container shrinkable and cap it to the available width */
 #submenu-update .sidebar-form-row .input-container { flex: 0 1 var(--update-input-width); max-width: 100%; }
 #submenu-update .sidebar-form-row .sidebar-form-control { width: 100%; }
+
+/* Apply Update label style to other submenus for consistency */
+#submenu-display .sidebar-form-row > label,
+#submenu-project .sidebar-form-row > label,
+#submenu-export label {
+  color: #6b6b6b;
+  font-weight: 700;
+  font-size: 10px;
+}
+
+/* Tweak the small labels beside the toggle in Project */
+#submenu-project .mode-toggle-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #6b6b6b;
+}
 
 /* Hide number input spin buttons for the interval field */
 #submenu-update input[type=number]::-webkit-outer-spin-button,

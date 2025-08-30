@@ -21,7 +21,7 @@ body.dark-mode #info-widget {
 	/* Use card background to match tiles */
 	background: var(--dark-card) !important;
 	color: #d1d5db;
-	border: 1px solid var(--border-color);
+	border: none !important;
 }
 body.dark-mode .time-display-row .time-label,
 body.dark-mode .time-display-row .time-value { color: var(--dark-text) !important; }

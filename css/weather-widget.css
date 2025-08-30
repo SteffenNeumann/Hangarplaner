@@ -195,7 +195,7 @@
 	/* Use card background to match tiles */
 	background: var(--dark-card) !important;
 	color: var(--dark-text) !important;
-	border: 1px solid var(--border-color);
+	border: none !important;
 }
 
 .dark-mode .weather-airport,

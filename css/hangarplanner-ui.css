@@ -731,7 +731,7 @@ input:checked + .toggle-slider:before {
 	top: -10px;
 	left: 50%;
 	transform: translateX(-50%);
-	background-color: var(--bg-color-light);
+	background-color: transparent;
 	padding: 0 12px;
 	font-size: 12px;
 	font-weight: 500;
@@ -1350,9 +1350,9 @@ body.dark-mode {
 }
 
 .dark-mode .aircraft-id {
-	background-color: var(--dark-bg) !important;
+	background-color: var(--dark-card) !important;
 	color: var(--text-primary);
-	border: 1px solid transparent;
+	border: none !important;
 	font-weight: 700;
 	font-size: 1.35rem;
 }
@@ -1376,6 +1376,7 @@ body.dark-mode {
 }
 
 /* Subtle hover/focus to keep usability without strong borders */
+.dark-mode .aircraft-id:hover,
 .dark-mode .info-input:hover,
 .dark-mode .position-input:hover,
 .dark-mode .notes-textarea:hover,
@@ -1484,6 +1485,12 @@ body.dark-mode {
 
 .dark-mode .section-divider {
 	border-color: var(--border-color);
+	background-color: var(--border-color);
+}
+
+.dark-mode .section-divider::after {
+	background-color: transparent;
+	color: var(--text-secondary);
 }
 
 /* Zoom-Slider Styling */

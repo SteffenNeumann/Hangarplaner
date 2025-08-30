@@ -2236,6 +2236,109 @@
 		<!-- Toast container -->
 		<div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
 
+		<!-- Persist Export submenu selections across sessions -->
+		<script>
+			(function () {
+				const KEY = "hangarPlanner.exportSettings.v1";
+
+				function readChecked(id) {
+					const el = document.getElementById(id);
+					return !!(el && el.checked);
+				}
+
+				function writeChecked(id, value) {
+					const el = document.getElementById(id);
+					if (el) el.checked = !!value;
+				}
+
+				function loadSettings() {
+					try {
+						const raw = localStorage.getItem(KEY);
+						if (!raw) return null;
+						const obj = JSON.parse(raw);
+						return obj && typeof obj === "object" ? obj : null;
+					} catch (e) {
+						console.warn("Export settings parse failed", e);
+						return null;
+					}
+				}
+
+				function saveSettings(settings) {
+					try {
+						localStorage.setItem(KEY, JSON.stringify(settings));
+					} catch (e) {
+						console.warn("Export settings save failed", e);
+					}
+				}
+
+				function collectSettings() {
+					return {
+						landscapeMode: readChecked("landscapeMode"),
+						exportAircraft: readChecked("exportAircraft"),
+						exportArrival: readChecked("exportArrival"),
+						exportDeparture: readChecked("exportDeparture"),
+						exportPosition: readChecked("exportPosition"),
+						exportHangarPosition: readChecked("exportHangarPosition"),
+						exportStatus: readChecked("exportStatus"),
+						exportTowStatus: readChecked("exportTowStatus"),
+						exportNotes: readChecked("exportNotes"),
+					};
+				}
+
+				function applySettings(s) {
+					if (!s) return;
+					writeChecked("landscapeMode", s.landscapeMode);
+					writeChecked("exportAircraft", s.exportAircraft);
+					writeChecked("exportArrival", s.exportArrival);
+					writeChecked("exportDeparture", s.exportDeparture);
+					writeChecked("exportPosition", s.exportPosition);
+					writeChecked("exportHangarPosition", s.exportHangarPosition);
+					writeChecked("exportStatus", s.exportStatus);
+					writeChecked("exportTowStatus", s.exportTowStatus);
+					writeChecked("exportNotes", s.exportNotes);
+				}
+
+				function attachChangeHandlers() {
+					const ids = [
+						"landscapeMode",
+						"exportAircraft",
+						"exportArrival",
+						"exportDeparture",
+						"exportPosition",
+						"exportHangarPosition",
+						"exportStatus",
+						"exportTowStatus",
+						"exportNotes",
+					];
+					ids.forEach((id) => {
+						const el = document.getElementById(id);
+						if (el && !el.dataset.exportSettingsListener) {
+							el.addEventListener("change", () => saveSettings(collectSettings()));
+							el.dataset.exportSettingsListener = "true";
+						}
+					});
+				}
+
+				// Use centralized initialization queue
+				window.hangarInitQueue = window.hangarInitQueue || [];
+				window.hangarInitQueue.push(function () {
+					const saved = loadSettings();
+					if (saved) {
+						applySettings(saved);
+					}
+					attachChangeHandlers();
+				});
+
+				// Optional: expose helpers for debugging
+				window.ExportSettings = {
+					load: loadSettings,
+					save: saveSettings,
+					collect: collectSettings,
+					apply: applySettings,
+				};
+			})();
+		</script>
+
 		<script src="js/flight-data-status.js"></script>
 	</body>
 </html>

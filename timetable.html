@@ -8,6 +8,22 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
+    <!-- Early apply saved dark mode to avoid flicker and ensure persistence on subpages -->
+    <script>
+      (function(){
+        try {
+          var raw = localStorage.getItem('displayOptions');
+          if (raw) {
+            var parsed = JSON.parse(raw);
+            if (parsed && parsed.darkMode) {
+              document.documentElement.classList.add('preload-dark');
+              document.addEventListener('DOMContentLoaded', function(){ document.body.classList.add('dark-mode'); });
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
+
     <!-- Bestehende CSS-Dateien (wie Fleet Database) -->
     <link rel="stylesheet" href="css/hangarplanner-ui.css" />
     <link rel="stylesheet" href="css/info-widget.css" />

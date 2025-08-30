@@ -2238,6 +2238,31 @@ body.dark-mode {
 #submenu-sync .modern-toggle-slider:before { width: 18px; height: 18px; left: -1px; top: 50%; transform: translateY(-50%); }
 #submenu-sync .modern-toggle-switch input:checked + .modern-toggle-slider:before { transform: translateX(15px) translateY(-50%); }
 
+/* Dark mode overrides for Sync submenu */
+.dark-mode #submenu-sync {
+  background: var(--bg-secondary);
+  border-right-color: var(--border-color);
+}
+.dark-mode #submenu-sync .sync-mode-description {
+  color: var(--text-secondary);
+}
+.dark-mode #submenu-sync .sync-toggle-row {
+  background: transparent;
+  border-color: var(--border-color);
+}
+.dark-mode #submenu-sync .sync-toggle-title,
+.dark-mode #submenu-sync .sync-toggle-desc {
+  color: var(--text-secondary);
+}
+.dark-mode #submenu-sync .modern-toggle-slider {
+  background-color: var(--border-color);
+  border-color: var(--border-color);
+}
+.dark-mode #submenu-sync .modern-toggle-switch input:checked + .modern-toggle-slider {
+  background-color: var(--menu-accent);
+  border-color: var(--menu-accent);
+}
+
 /* Penpot-style overrides for Update submenu */
 #submenu-update { background: #f9f9f9; border-right: 1px solid #e6e6e6; }
 #submenu-update .update-description { color: #6b6b6b; font-size: 10px; line-height: 1.2; margin: 4px 16px 8px 16px; }

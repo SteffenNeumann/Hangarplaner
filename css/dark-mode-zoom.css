@@ -182,3 +182,20 @@ select,
 button {
 	transition: background-color 0.3s, color 0.3s, border-color 0.3s;
 }
+
+/* Generic dark-mode overrides for common Tailwind utility classes on subpages */
+.dark-mode .bg-white { background-color: var(--dark-card) !important; }
+.dark-mode .bg-gray-50 { background-color: var(--dark-secondary) !important; }
+.dark-mode .text-gray-900,
+.dark-mode .text-gray-800,
+.dark-mode .text-gray-700,
+.dark-mode .text-gray-600 { color: var(--dark-text) !important; }
+.dark-mode .border-gray-300,
+.dark-mode .border-gray-200 { border-color: var(--dark-border) !important; }
+.dark-mode .divide-gray-200 > * { border-color: var(--dark-border) !important; }
+
+/* Tables on subpages */
+.dark-mode table thead { background-color: var(--dark-secondary) !important; }
+.dark-mode table tbody { background-color: var(--dark-card) !important; }
+.dark-mode table th,
+.dark-mode table td { color: var(--dark-text) !important; border-color: var(--dark-border) !important; }

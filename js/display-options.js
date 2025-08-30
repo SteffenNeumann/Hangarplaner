@@ -126,7 +126,7 @@ window.displayOptions = {
 	/**
 	 * Initialisiert die Display Options
 	 */
-	async init() {
+async init() {
 		// Verhindere Doppel-Initialisierung
 		if (this.isInitialized) {
 			console.log("⏸️ Display Options bereits initialisiert");
@@ -144,6 +144,21 @@ window.displayOptions = {
 			this.current = { ...this.defaults };
 			// console.log("📋 Standardwerte für Display Options geladen");
 		}
+
+		// Respect persisted theme or existing DOM class before applying
+		try {
+			const persistedTheme = (localStorage.getItem('hangar.theme') || '').toLowerCase();
+			if (persistedTheme === 'dark') {
+				this.current.darkMode = true;
+			} else if (persistedTheme === 'light') {
+				this.current.darkMode = false;
+			} else {
+				// Fallback: detect existing class
+				if (document.documentElement.classList.contains('dark-mode') || document.body.classList.contains('dark-mode')) {
+					this.current.darkMode = true;
+				}
+			}
+		} catch(e) { /* noop */ }
 
 		// UI aktualisieren
 		this.updateUI();
@@ -461,12 +476,17 @@ window.displayOptions = {
 	/**
 	 * Dark Mode anwenden
 	 */
-	applyDarkMode(enabled) {
+applyDarkMode(enabled) {
 		const body = document.body;
+		const html = document.documentElement;
 		if (enabled) {
-			body.classList.add("dark-mode");
+			if (html) html.classList.add("dark-mode");
+			if (body) body.classList.add("dark-mode");
+			try { localStorage.setItem('hangar.theme', 'dark'); } catch (e) {}
 		} else {
-			body.classList.remove("dark-mode");
+			if (body) body.classList.remove("dark-mode");
+			if (html) html.classList.remove("dark-mode");
+			try { localStorage.setItem('hangar.theme', 'light'); } catch (e) {}
 		}
 	},
 
@@ -643,7 +663,17 @@ window.displayOptions = {
 	/**
 	 * Event-Handler für View/Edit Mode Toggle (modeToggle) - NEU HINZUGEFÜGT
 	 */
-	onModeToggleChange() {
+onModeToggleChange() {
+		// Blurre fokussiertes Element beim Wechsel in den View-Modus, um Tastatureingaben zu stoppen
+		try {
+			const modeEl = document.getElementById("modeToggle");
+			if (modeEl && !modeEl.checked) {
+				if (document.activeElement && typeof document.activeElement.blur === "function") {
+					document.activeElement.blur();
+				}
+			}
+		} catch (e) { /* noop */ }
+
 		// Rufe die Business Logic Funktion auf
 		if (typeof toggleEditMode === "function") {
 			toggleEditMode();
@@ -674,11 +704,12 @@ window.displayOptions = {
 	/**
 	 * Event-Handler für Dark Mode Toggle (mit Debouncing)
 	 */
-	onDarkModeChange() {
+onDarkModeChange() {
 		this.collectFromUI();
 		this.applyDarkMode(this.current.darkMode);
 		// Save immediately for persistence across page navigation
 		try { this.saveToLocalStorage(); this.lastSavedSettings = { ...this.current }; } catch (e) {}
+		try { localStorage.setItem('hangar.theme', this.current.darkMode ? 'dark' : 'light'); } catch (e) {}
 		// Debounced Server Save - verhindert zu häufige Server-Anfragen
 		this.debouncedSave();
 	},

@@ -623,15 +623,19 @@ textarea.notes-textarea {
 .view-mode .edit-only {
 	display: none;
 }
-.view-mode input,
-.view-mode select,
-.view-mode textarea {
-	pointer-events: none;
-	border-color: transparent;
-	background-color: transparent;
+.view-mode #hangarGrid input,
+.view-mode #hangarGrid select,
+.view-mode #hangarGrid textarea,
+.view-mode #secondaryHangarGrid input,
+.view-mode #secondaryHangarGrid select,
+.view-mode #secondaryHangarGrid textarea {
+ pointer-events: none;
+ border-color: transparent;
+ background-color: transparent;
 }
-.view-mode .notes-textarea {
-	background-color: var(--bg-color-medium);
+.view-mode #hangarGrid .notes-textarea,
+.view-mode #secondaryHangarGrid .notes-textarea {
+ background-color: var(--bg-color-medium);
 }
 
 .mode-toggle {
@@ -1310,7 +1314,7 @@ body.dark-mode {
 		--card-bg
 	) !important; /* Forciere einheitlichen Hintergrund */
 	color: var(--text-primary);
-	border: 1px solid var(--border-color);
+	border: 1px solid rgba(255, 255, 255, 0.08); /* softer border to reduce distraction */
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
@@ -1346,9 +1350,9 @@ body.dark-mode {
 }
 
 .dark-mode .aircraft-id {
-	background-color: transparent; /* Kein separater Hintergrund */
+	background-color: var(--dark-bg) !important;
 	color: var(--text-primary);
-	border: none;
+	border: 1px solid transparent;
 	font-weight: 700;
 	font-size: 1.35rem;
 }
@@ -1360,12 +1364,35 @@ body.dark-mode {
 
 /* Alle Input-Elemente einheitlich */
 .dark-mode .info-input,
+.dark-mode .position-input,
 .dark-mode .notes-textarea,
 .dark-mode .status-selector,
+.dark-mode select.status-selector,
 .dark-mode .tow-status-selector {
-	background-color: var(--input-bg) !important;
-	color: var(--input-text) !important;
-	border: 1px solid var(--border-color) !important;
+	/* Blend inputs into the tile to reduce visual noise */
+	background-color: transparent !important;
+	color: var(--text-primary);
+	border: 1px solid transparent !important; /* minimal borders by default */
+}
+
+/* Subtle hover/focus to keep usability without strong borders */
+.dark-mode .info-input:hover,
+.dark-mode .position-input:hover,
+.dark-mode .notes-textarea:hover,
+.dark-mode .status-selector:hover,
+.dark-mode select.status-selector:hover,
+.dark-mode .tow-status-selector:hover {
+	background-color: rgba(255, 255, 255, 0.03) !important;
+}
+.dark-mode .info-input:focus,
+.dark-mode .position-input:focus,
+.dark-mode .notes-textarea:focus,
+.dark-mode .status-selector:focus,
+.dark-mode select.status-selector:focus,
+.dark-mode .tow-status-selector:focus {
+	background-color: rgba(255, 112, 67, 0.08) !important; /* soft accent */
+	border-color: rgba(255, 112, 67, 0.5) !important;
+	outline: none !important;
 }
 
 .dark-mode .info-input:focus,

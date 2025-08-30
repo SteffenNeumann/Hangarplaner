@@ -199,3 +199,44 @@ button {
 .dark-mode table tbody { background-color: var(--dark-card) !important; }
 .dark-mode table th,
 .dark-mode table td { color: var(--dark-text) !important; border-color: var(--dark-border) !important; }
+
+/* Dark mode fixes for filter sections on subpages (Fleet Database, Timetable) */
+.dark-mode .fleet-filters-enhanced {
+  background: linear-gradient(135deg, var(--dark-secondary) 0%, var(--dark-bg) 100%) !important;
+  border: 1px solid var(--dark-border) !important;
+  color: var(--dark-text) !important;
+  box-shadow: none !important;
+}
+.dark-mode .fleet-filters-enhanced label,
+.dark-mode .fleet-filters-enhanced .text-gray-900,
+.dark-mode .fleet-filters-enhanced .text-gray-800,
+.dark-mode .fleet-filters-enhanced .text-gray-700,
+.dark-mode .fleet-filters-enhanced .text-gray-600,
+.dark-mode .fleet-filters-enhanced .text-gray-500 {
+  color: var(--dark-text) !important;
+}
+/* Inputs/selects inside filter blocks */
+.dark-mode .fleet-filter-select,
+.dark-mode .fleet-filter-input,
+.dark-mode .fleet-filters-enhanced input,
+.dark-mode .fleet-filters-enhanced select {
+  background-color: var(--dark-input-bg) !important;
+  color: var(--dark-text) !important;
+  border-color: var(--dark-border) !important;
+}
+.dark-mode .fleet-filters-enhanced input::placeholder {
+  color: #9ca3af !important;
+}
+/* Page header and table container tweaks */
+.dark-mode .fleet-database-header {
+  background-color: var(--dark-header) !important;
+  color: var(--dark-text) !important;
+  border-bottom: 1px solid var(--dark-border) !important;
+}
+.dark-mode .fleet-table-container {
+  background-color: var(--dark-card) !important;
+  border-color: var(--dark-border) !important;
+}
+/* Tailwind custom color helpers used in subpages */
+.dark-mode .text-industrial-dark { color: var(--dark-text) !important; }
+.dark-mode .bg-gray-100 { background-color: var(--dark-secondary) !important; }

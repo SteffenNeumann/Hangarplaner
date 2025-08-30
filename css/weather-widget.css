@@ -192,15 +192,17 @@
 
 /* Dark Mode Unterstützung */
 .dark-mode #weather-widget {
-	background: rgba(58, 67, 84, 0.9);
-	color: #d1d5db;
+	/* Use card background to match tiles */
+	background: var(--dark-card) !important;
+	color: var(--dark-text) !important;
+	border: 1px solid var(--border-color);
 }
 
-.dark-mode .weather-airport {
-	color: #d1d5db;
-}
-
+.dark-mode .weather-airport,
+.dark-mode #weather-temp,
+.dark-mode #weather-visibility,
+.dark-mode .weather-description-text,
 .dark-mode .weather-secondary,
 .dark-mode #weather-icon {
-	color: #9ca3af;
+	color: var(--dark-text) !important;
 }

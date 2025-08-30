@@ -12,19 +12,22 @@
     <script>
       (function(){
         try {
-          var raw = localStorage.getItem('displayOptions');
-          if (raw) {
-            var parsed = JSON.parse(raw);
-            if (parsed && parsed.darkMode) {
-              // Apply dark-mode to <html> immediately so generic .dark-mode selectors take effect
-              document.documentElement.classList.add('dark-mode');
-              // Ensure body also has dark-mode when available
-              var applyBody = function(){ if (document.body) document.body.classList.add('dark-mode'); };
-              if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', applyBody);
-              } else {
-                applyBody();
-              }
+          var isDark = false;
+          try { var t = (localStorage.getItem('hangar.theme')||'').toLowerCase(); if (t==='dark') isDark = true; if (t==='light') isDark = false; } catch(e) {}
+          if (!isDark) {
+            var raw = localStorage.getItem('displayOptions');
+            if (raw) {
+              var parsed = JSON.parse(raw);
+              if (parsed && parsed.darkMode) { isDark = true; }
+            }
+          }
+          if (isDark) {
+            document.documentElement.classList.add('dark-mode');
+            var applyBody = function(){ if (document.body) document.body.classList.add('dark-mode'); };
+            if (document.readyState === 'loading') {
+              document.addEventListener('DOMContentLoaded', applyBody);
+            } else {
+              applyBody();
             }
           }
         } catch (e) {}

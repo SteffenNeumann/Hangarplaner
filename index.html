@@ -69,19 +69,24 @@
 		<script>
 			(function(){
 				try {
-					var raw = localStorage.getItem('displayOptions');
-					if (raw) {
-						var parsed = JSON.parse(raw);
-						if (parsed && parsed.darkMode) {
-							// Apply dark-mode to <html> immediately so generic .dark-mode selectors take effect
-							document.documentElement.classList.add('dark-mode');
-							// Ensure body also has dark-mode when available
-							var applyBody = function(){ if (document.body) document.body.classList.add('dark-mode'); };
-							if (document.readyState === 'loading') {
-								document.addEventListener('DOMContentLoaded', applyBody);
-							} else {
-								applyBody();
-							}
+					var isDark = false;
+					try { var t = (localStorage.getItem('hangar.theme')||'').toLowerCase(); if (t==='dark') isDark = true; if (t==='light') isDark = false; } catch(e) {}
+					if (!isDark) {
+						var raw = localStorage.getItem('displayOptions');
+						if (raw) {
+							var parsed = JSON.parse(raw);
+							if (parsed && parsed.darkMode) { isDark = true; }
+						}
+					}
+					if (isDark) {
+						// Apply dark-mode to <html> immediately so generic .dark-mode selectors take effect
+						document.documentElement.classList.add('dark-mode');
+						// Ensure body also has dark-mode when available
+						var applyBody = function(){ if (document.body) document.body.classList.add('dark-mode'); };
+						if (document.readyState === 'loading') {
+							document.addEventListener('DOMContentLoaded', applyBody);
+						} else {
+							applyBody();
 						}
 					}
 				} catch (e) {}
@@ -2440,8 +2445,15 @@
 				const darkToggle = document.getElementById('darkModeToggle');
 				if (darkToggle && !darkToggle.__wired){
 					darkToggle.addEventListener('change', function(){
-						if (this.checked) document.body.classList.add('dark-mode');
-						else document.body.classList.remove('dark-mode');
+						if (this.checked){
+							document.body.classList.add('dark-mode');
+							document.documentElement.classList.add('dark-mode');
+							try { localStorage.setItem('hangar.theme','dark'); } catch(e){}
+						} else {
+							document.body.classList.remove('dark-mode');
+							document.documentElement.classList.remove('dark-mode');
+							try { localStorage.setItem('hangar.theme','light'); } catch(e){}
+						}
 					});
 					darkToggle.__wired = true;
 				}

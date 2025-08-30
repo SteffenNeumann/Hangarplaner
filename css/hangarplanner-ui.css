@@ -2274,6 +2274,13 @@ body.dark-mode {
 #submenu-update .modern-toggle-slider:before { width: 18px; height: 18px; left: -1px; top: 50%; transform: translateY(-50%); }
 #submenu-update .modern-toggle-switch input:checked + .modern-toggle-slider:before { transform: translateX(15px) translateY(-50%); }
 
+/* Dark mode overrides for Update submenu */
+.dark-mode #submenu-update { background: var(--bg-secondary); border-right-color: var(--border-color); }
+.dark-mode #submenu-update .update-description { color: var(--text-secondary); }
+.dark-mode #submenu-update .sidebar-form-row > label { color: var(--text-secondary); }
+.dark-mode #submenu-update .modern-toggle-slider { background-color: var(--border-color); border-color: var(--border-color); }
+.dark-mode #submenu-update .modern-toggle-switch input:checked + .modern-toggle-slider { background-color: var(--menu-accent); border-color: var(--menu-accent); }
+
 /* Consistent widths for Update submenu inputs */
 #submenu-update { --update-input-width: 280px; }
 /* Allow the right input column to shrink so content never touches the panel border */

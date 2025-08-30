@@ -16,8 +16,15 @@
           if (raw) {
             var parsed = JSON.parse(raw);
             if (parsed && parsed.darkMode) {
-              document.documentElement.classList.add('preload-dark');
-              document.addEventListener('DOMContentLoaded', function(){ document.body.classList.add('dark-mode'); });
+              // Apply dark-mode to <html> immediately so generic .dark-mode selectors take effect
+              document.documentElement.classList.add('dark-mode');
+              // Ensure body also has dark-mode when available
+              var applyBody = function(){ if (document.body) document.body.classList.add('dark-mode'); };
+              if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', applyBody);
+              } else {
+                applyBody();
+              }
             }
           }
         } catch (e) {}

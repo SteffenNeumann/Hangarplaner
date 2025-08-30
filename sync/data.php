@@ -17,7 +17,7 @@ if ($debug_mode) {
 // CORS-Header für die Entwicklung (bei Bedarf anpassen)
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
+header("Access-Control-Allow-Headers: Content-Type, X-Sync-Role");
 header("Content-Type: application/json; charset=UTF-8");
 
 // Bei OPTIONS-Anfragen (CORS preflight) sofort beenden
@@ -87,6 +87,18 @@ else if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($contentLength === 0) {
             throw new Exception("Keine Daten empfangen");
+        }
+
+        // Require explicit master role header for writes
+        $role = isset($_SERVER['HTTP_X_SYNC_ROLE']) ? strtolower($_SERVER['HTTP_X_SYNC_ROLE']) : '';
+        if ($role !== 'master') {
+            http_response_code(403);
+            echo json_encode([
+                'error' => 'Write not allowed: client is not in master mode.',
+                'details' => 'Missing or invalid X-Sync-Role header',
+                'success' => false
+            ]);
+            exit;
         }
 
         // JSON-Daten aus dem Request-Body lesen

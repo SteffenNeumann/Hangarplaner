@@ -256,6 +256,18 @@ window.displayOptions = {
 			return false;
 		}
 
+		// NEU: Schreibschutz in Read-Only (Sync) Mode – nur lokal speichern und informieren
+		const isWriteEnabled =
+			(!!window.serverSync && window.serverSync.isMaster === true) ||
+			(!!window.sharingManager && window.sharingManager.isMasterMode === true);
+		if (!isWriteEnabled) {
+			this.collectFromUI();
+			this.saveToLocalStorage();
+			this.lastSavedSettings = { ...this.current };
+			this.showNotification("Saved locally (read-only mode)", "info");
+			return true;
+		}
+
 		this.isSaving = true;
 
 		try {
@@ -288,63 +300,11 @@ window.displayOptions = {
 				}
 			}
 
-			// Fallback: Direkte Server-Speicherung
-			console.log("⚠️ Verwende direktes Speichern für Display Options");
-
-			// Verwende collectAllHangarData um vollständige Datenstruktur zu erhalten
-			let serverData = {};
-			if (window.collectAllHangarData) {
-				serverData = window.collectAllHangarData();
-			} else {
-				// Minimale Fallback-Datenstruktur
-				serverData = {
-					id: Date.now().toString(),
-					metadata: { created: new Date().toISOString() },
-					settings: {},
-					primaryTiles: [],
-					secondaryTiles: [],
-				};
-			}
-
-			// Display Options in die Serverstruktur einbauen
-			if (!serverData.settings) {
-				serverData.settings = {};
-			}
-			serverData.settings.displayOptions = { ...this.current };
-
-			// Metadaten aktualisieren
-			if (!serverData.metadata) {
-				serverData.metadata = {};
-			}
-			serverData.metadata.lastSaved = new Date().toISOString();
-			serverData.metadata.lastModified = new Date().toLocaleString("de-DE");
-
-			// An Server senden
-			const response = await fetch("sync/data.php", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify(serverData),
-			});
-
-			if (!response.ok) {
-				throw new Error(`Server-Fehler: ${response.status}`);
-			}
-
-			const result = await response.json();
-
-			if (result.success) {
-				// console.log("💾 Display Options erfolgreich gespeichert");
-				this.showNotification("Saved", "success");
-
-				// Aktualisiere die letzten gespeicherten Werte
-				this.lastSavedSettings = { ...this.current };
-
-				return true;
-			} else {
-				throw new Error(result.error || "Unbekannter Serverfehler");
-			}
+// Fallback: Keine direkten Server-Schreibvorgänge mehr (zentralisiert über ServerSync)
+			console.warn("⚠️ Zentralisierte Speicherung aktiv – kein direkter Server-Write. Speichere lokal.");
+			this.lastSavedSettings = { ...this.current };
+			this.showNotification("Saved locally (offline or sync unavailable)", "info");
+			return false;
 		} catch (error) {
 			console.error("❌ Fehler beim Speichern der Display Options:", error);
 			// Fallback: nur lokal speichern
@@ -357,7 +317,7 @@ window.displayOptions = {
 		} finally {
 			this.isSaving = false;
 		}
-	},
+	}
 
 	/**
 	 * Speichert Display Options nur in localStorage (Fallback)
@@ -591,6 +551,12 @@ window.displayOptions = {
 			tilesInput.addEventListener("change", this.onUpdateTiles.bind(this));
 		}
 
+		// Ensure pending changes are flushed on navigation
+		window.removeEventListener("beforeunload", this.onBeforeUnload);
+		window.addEventListener("beforeunload", this.onBeforeUnload.bind(this));
+		window.removeEventListener("pagehide", this.onBeforeUnload);
+		window.addEventListener("pagehide", this.onBeforeUnload.bind(this));
+
 		const secondaryTilesInput = document.getElementById("secondaryTilesCount");
 		if (secondaryTilesInput) {
 			secondaryTilesInput.removeEventListener("change", this.onUpdateSecondaryTiles);
@@ -711,7 +677,9 @@ window.displayOptions = {
 	onDarkModeChange() {
 		this.collectFromUI();
 		this.applyDarkMode(this.current.darkMode);
-		// Debounced Save - verhindert zu häufige Server-Anfragen
+		// Save immediately for persistence across page navigation
+		try { this.saveToLocalStorage(); this.lastSavedSettings = { ...this.current }; } catch (e) {}
+		// Debounced Server Save - verhindert zu häufige Server-Anfragen
 		this.debouncedSave();
 	},
 
@@ -1112,6 +1080,24 @@ window.displayOptions = {
 			current: this.current,
 		};
 	},
+
+	/**
+	 * Flush pending changes immediately (used on navigation)
+	 */
+	flushSave() {
+		try {
+			this.collectFromUI();
+			this.saveToLocalStorage();
+			this.lastSavedSettings = { ...this.current };
+		} catch (e) { /* noop */ }
+	},
+
+	/**
+	 * Handler to flush before unload/pagehide
+	 */
+	onBeforeUnload() {
+		this.flushSave();
+	},
 };
 
 // Globale Notfall-Reparatur-Funktion
@@ -1257,3 +1243,4 @@ setTimeout(() => {
 		}
 	}
 }, 5000);
+

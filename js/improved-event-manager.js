@@ -170,7 +170,22 @@ class HangarEventManager {
 				return;
 			}
 
-			// Sammle alle aktuellen Daten für vollständige Server-Synchronisation
+			// NEU: Schreibschutz in Read-Only (Sync) Mode erzwingen
+			const isWriteEnabled =
+				(!!window.serverSync && window.serverSync.isMaster === true) ||
+				(!!window.sharingManager && window.sharingManager.isMasterMode === true);
+			if (!isWriteEnabled) {
+				console.info("📘 Read-only Modus aktiv – überspringe Server-Write für Feld:", fieldId);
+				return; // Keine Server-Schreibvorgänge im Read-Only Modus
+			}
+
+			// Bevor wir eine eigene POST-Anfrage bauen, bevorzugt über die zentrale ServerSync-Schicht schreiben
+			if (window.serverSync && typeof window.serverSync.syncWithServer === "function") {
+				await window.serverSync.syncWithServer();
+				return;
+			}
+
+			// Sammle alle aktuellen Daten für vollständige Server-Synchronisation (Fallback)
 			let allData = null;
 			if (
 				window.hangarData &&
@@ -214,7 +229,7 @@ class HangarEventManager {
 				};
 			}
 
-			// Server-Request mit allen Daten
+			// Server-Request mit allen Daten (Fallback, wenn zentrale Sync-Schicht nicht verfügbar ist)
 			const response = await fetch(window.storageBrowser.serverSyncUrl, {
 				method: "POST",
 				headers: {

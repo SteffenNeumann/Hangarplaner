@@ -65,6 +65,21 @@
 		<link rel="stylesheet" href="css/weather-widget.css" />
 		<link rel="stylesheet" href="css/info-widget.css" />
 		<link rel="stylesheet" href="css/flight-data-status.css" />
+		<!-- Early apply saved dark mode to avoid flicker and ensure persistence -->
+		<script>
+			(function(){
+				try {
+					var raw = localStorage.getItem('displayOptions');
+					if (raw) {
+						var parsed = JSON.parse(raw);
+						if (parsed && parsed.darkMode) {
+							document.documentElement.classList.add('preload-dark');
+							document.addEventListener('DOMContentLoaded', function(){ document.body.classList.add('dark-mode'); });
+						}
+					}
+				} catch (e) {}
+			})();
+		</script>
 		<!-- Neue separate CSS-Datei -->
 		<style>
 			.status-neutral {
@@ -495,7 +510,6 @@
 				})();
 				</script>
 
-				<!-- Hangar-Kacheln Bereich - Padding weiter reduziert -->
 				<div class="flex-grow bg-white p-3 overflow-auto hangar-container">
 					<!-- Abschnitt 1 Container -->
 					<div class="section-container">
@@ -2340,5 +2354,161 @@
 		</script>
 
 		<script src="js/flight-data-status.js"></script>
+
+		<!-- Minimal fallback: ensure Display Settings defaults and handlers work even if main init didn't run -->
+		<script>
+		(function(){
+			function log(){ try { console.log.apply(console, arguments);} catch(e){} }
+
+			function showPrimaryTiles(count){
+				const grid = document.getElementById('hangarGrid');
+				if (!grid) return;
+				const cells = grid.querySelectorAll('.hangar-cell');
+				cells.forEach((cell, idx) => {
+					cell.style.display = idx < count ? '' : 'none';
+					cell.style.visibility = idx < count ? 'visible' : 'hidden';
+				});
+			}
+
+			function ensureSecondaryTiles(count, layout){
+				const secGrid = document.getElementById('secondaryHangarGrid');
+				if (!secGrid) return;
+				const current = secGrid.querySelectorAll('.hangar-cell').length;
+				if (typeof window.updateSecondaryTiles === 'function'){
+					window.updateSecondaryTiles(count, layout || 4);
+					return;
+				}
+				if (window.hangarUI && typeof window.hangarUI.updateSecondaryTiles === 'function'){
+					window.hangarUI.updateSecondaryTiles(count, layout || 4);
+					return;
+				}
+				// Manual minimal clone fallback
+				if (current < count){
+					const template = document.querySelector('#hangarGrid .hangar-cell');
+					if (!template) return;
+					for (let i=current; i<count; i++){
+						const cellId = 101 + i;
+						const clone = template.cloneNode(true);
+						if (typeof window.updateCellAttributes === 'function'){
+							window.updateCellAttributes(clone, cellId);
+						}
+						clone.querySelectorAll('input, textarea, select').forEach(el => {
+							if (el.tagName === 'SELECT') el.selectedIndex = 0;
+							else el.value = '';
+						});
+						secGrid.appendChild(clone);
+					}
+				}
+				// Hide extras if more than count exist
+				const cells = secGrid.querySelectorAll('.hangar-cell');
+				cells.forEach((cell, idx) => {
+					cell.style.display = idx < count ? '' : 'none';
+					cell.style.visibility = idx < count ? 'visible' : 'hidden';
+				});
+			}
+
+			function applyLayoutColumns(layout){
+				const updateClasses = (el) => {
+					if (!el) return;
+					const cls = el.classList;
+					for (let i = 1; i <= 12; i++) { cls.remove(`grid-cols-${i}`); }
+					cls.add(`grid-cols-${layout}`);
+				};
+				const apply = (el) => {
+					if (!el) return;
+					el.style.display = 'grid';
+					try {
+						el.style.setProperty('grid-template-columns', `repeat(${layout}, minmax(240px, 1fr))`, 'important');
+					} catch (e) {
+						el.style.gridTemplateColumns = `repeat(${layout}, minmax(240px, 1fr))`;
+					}
+					updateClasses(el);
+				};
+				apply(document.getElementById('hangarGrid'));
+				apply(document.getElementById('secondaryHangarGrid'));
+				try { console.log(`📐 Layout set to ${layout} columns`); } catch(e){}
+			}
+
+			function wireControls(){
+				const darkToggle = document.getElementById('darkModeToggle');
+				if (darkToggle && !darkToggle.__wired){
+					darkToggle.addEventListener('change', function(){
+						if (this.checked) document.body.classList.add('dark-mode');
+						else document.body.classList.remove('dark-mode');
+					});
+					darkToggle.__wired = true;
+				}
+
+				const viewToggle = document.getElementById('viewModeToggle');
+				if (viewToggle && !viewToggle.__wired){
+					viewToggle.addEventListener('change', function(){
+						if (this.checked){
+							document.body.classList.add('table-view');
+							document.body.classList.remove('tile-view');
+						} else {
+							document.body.classList.add('tile-view');
+							document.body.classList.remove('table-view');
+						}
+					});
+					viewToggle.__wired = true;
+				}
+
+				const tilesInput = document.getElementById('tilesCount');
+				if (tilesInput && !tilesInput.__wired){
+					tilesInput.addEventListener('change', function(){
+						const v = parseInt(this.value) || 8;
+						showPrimaryTiles(v);
+					});
+					tilesInput.__wired = true;
+				}
+
+				const secTilesInput = document.getElementById('secondaryTilesCount');
+				if (secTilesInput && !secTilesInput.__wired){
+					secTilesInput.addEventListener('change', function(){
+						const v = parseInt(this.value) || 4;
+						ensureSecondaryTiles(v, parseInt(document.getElementById('layoutType')?.value||'4'));
+					});
+					secTilesInput.__wired = true;
+				}
+
+				const layoutSelect = document.getElementById('layoutType');
+				if (layoutSelect && !layoutSelect.__wired){
+					layoutSelect.addEventListener('change', function(){
+						const v = parseInt(this.value) || 4;
+						applyLayoutColumns(v);
+						// reflow secondary grid to match layout
+						const secCnt = parseInt(document.getElementById('secondaryTilesCount')?.value||'4');
+						ensureSecondaryTiles(secCnt, v);
+					});
+					layoutSelect.__wired = true;
+				}
+			}
+
+			function fallbackInit(){
+				const defaultPrimary = 8;
+				const defaultSecondary = 4;
+				// defaults in controls
+				const tilesInput = document.getElementById('tilesCount');
+				if (tilesInput) tilesInput.value = defaultPrimary;
+				const secTilesInput = document.getElementById('secondaryTilesCount');
+				if (secTilesInput) secTilesInput.value = defaultSecondary;
+				const layoutSelect = document.getElementById('layoutType');
+				if (layoutSelect) layoutSelect.value = '4';
+
+				// apply visuals
+				showPrimaryTiles(defaultPrimary);
+				ensureSecondaryTiles(defaultSecondary, 4);
+				applyLayoutColumns(4);
+				// default view mode
+				document.body.classList.add('tile-view');
+			}
+
+			// Run after DOM is ready (and also as a setTimeout safety)
+			document.addEventListener('DOMContentLoaded', function(){
+				try { fallbackInit(); wireControls(); log('✅ Fallback display init applied'); } catch(e){ log('Fallback init error', e); }
+			});
+			setTimeout(function(){ try { fallbackInit(); wireControls(); } catch(e){} }, 800);
+		})();
+		</script>
 	</body>
 </html>

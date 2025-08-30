@@ -16,6 +16,21 @@
 	box-shadow: none;
 }
 
+/* Dark mode for info widget */
+body.dark-mode #info-widget {
+	/* Match weather widget dark mode styling */
+	background: rgba(58, 67, 84, 0.9);
+	color: #d1d5db;
+	border: none;
+}
+body.dark-mode .time-display-row .time-label,
+body.dark-mode .time-display-row .time-value { color: #e5e7eb; }
+body.dark-mode .mode-display,
+body.dark-mode .mode-display > span { color: #cbd5e1; }
+body.dark-mode .sync-mode-value.standalone { background: #1f2937; color: #e5e7eb; }
+body.dark-mode .sync-mode-value.master { background: rgba(16,185,129,0.15); color: #86efac; }
+body.dark-mode .sync-mode-value.slave { background: rgba(245,158,11,0.15); color: #fcd34d; }
+
 /* Responsive Anpassungen - einheitlich mit Weather-Widget */
 @media (max-width: 640px) {
 	#info-widget {

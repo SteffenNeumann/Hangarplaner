@@ -19,49 +19,26 @@
     }
   }
 
-  async function runTimetableReloadUsingThisPageInputs() {
+  // Simple pass-through reload that ensures AirportFlights renders arrivals and departures for the station
+  function runTimetableReloadUsingThisPageInputs() {
     const airportEl = document.getElementById("airportCodeInput");
     const dateEl = document.getElementById("flightDateInput");
-    const fetchStatus =
-      typeof window.AeroDataBoxAPI?.updateFetchStatus === "function"
-        ? window.AeroDataBoxAPI.updateFetchStatus
-        : (msg) => console.log(`[Timetable-Adapter] ${msg}`);
+    const operatorEl = document.getElementById("operatorCodeInput");
 
     const airport = (airportEl?.value || "MUC").trim().toUpperCase();
-    const currentDate =
-      dateEl?.value || new Date().toISOString().split("T")[0];
-    const nextDate = nextDateStr(currentDate);
+    const selectedDate = dateEl?.value || toDateStr(new Date());
 
-    fetchStatus(
-      `Timetable: Starte Übernachtungs-Verarbeitung für ${airport} (${currentDate} → ${nextDate})...`
-    );
+    // 12h window: 20:00 selected day to 08:00 next day (matches AirportFlights defaults)
+    const startDateTime = `${selectedDate}T20:00`;
+    const nextDate = nextDateStr(selectedDate);
+    const endDateTime = `${nextDate}T08:00`;
 
-    if (
-      !window.AeroDataBoxAPI ||
-      typeof window.AeroDataBoxAPI.generateOvernightTimetable !== "function"
-    ) {
-      fetchStatus(
-        "Timetable: AeroDataBoxAPI.generateOvernightTimetable nicht verfügbar",
-        true
-      );
-      return;
-    }
+    const operatorCode = (operatorEl?.value || '').trim();
 
-    try {
-      const overnight = await window.AeroDataBoxAPI.generateOvernightTimetable(
-        airport,
-        currentDate,
-        nextDate
-      );
-
-      const count = Array.isArray(overnight) ? overnight.length : 0;
-      fetchStatus(
-        `Timetable: Verarbeitung abgeschlossen – ${count} übernachtende Flugzeuge gefunden`
-      );
-      console.log("[Timetable-Adapter] Overnight results:", overnight);
-    } catch (err) {
-      console.error("[Timetable-Adapter] Fehler bei Timetable-Reload:", err);
-      fetchStatus(`Timetable Fehler: ${err.message}`, true);
+    if (window.AirportFlights && typeof window.AirportFlights.displayAirportFlights === 'function') {
+      window.AirportFlights.displayAirportFlights(airport, startDateTime, endDateTime, operatorCode);
+    } else {
+      console.warn('[Timetable-Adapter] AirportFlights.displayAirportFlights nicht verfügbar');
     }
   }
 
@@ -69,17 +46,14 @@
     const btn = document.getElementById("showAirportFlightsBtn");
     if (!btn) return;
 
-    // Zusätzlicher Listener: neben der bestehenden Airport-Flights-Logik auch Timetable-Verarbeitung anstoßen
+    // Delegate to AirportFlights to render ALL flights (arrivals + departures)
     btn.addEventListener("click", () => {
-      // Leicht verzögern, um parallele UI-Updates nicht zu blockieren
-      setTimeout(() => {
-        runTimetableReloadUsingThisPageInputs();
-      }, 0);
+      // Short delay to avoid clashing with any other handlers
+      setTimeout(runTimetableReloadUsingThisPageInputs, 0);
     });
 
     // Optional global utility for manual triggering
-    window.reloadOvernightTimetableFromTimetablePage =
-      runTimetableReloadUsingThisPageInputs;
+    window.reloadTimetableAllFlights = runTimetableReloadUsingThisPageInputs;
   }
 
   if (document.readyState === "loading") {

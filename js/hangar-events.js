@@ -557,14 +557,35 @@ function handleAircraftIdChange(aircraftInputId, newValue) {
 			window.FlightDataAPI &&
 			typeof window.FlightDataAPI.updateAircraftData === "function"
 		) {
-			// Debounced call für Datenabfrage
-			setTimeout(() => {
-				const currentDate = document.getElementById("currentDateInput")?.value;
-				const nextDate = document.getElementById("nextDateInput")?.value;
+				// Debounced call für Datenabfrage
+				setTimeout(() => {
+					// Datum aus UI lesen, ansonsten intelligente Defaults setzen (heute und morgen)
+					let currentDate = document.getElementById("currentDateInput")?.value;
+					let nextDate = document.getElementById("nextDateInput")?.value;
 
-				if (currentDate && nextDate) {
+					if (!currentDate || currentDate.trim() === "") {
+						currentDate = new Date().toISOString().split("T")[0];
+					}
+					if (!nextDate || nextDate.trim() === "") {
+						try {
+							const base = new Date(currentDate);
+							if (!isNaN(base.getTime())) {
+								base.setDate(base.getDate() + 1);
+								nextDate = base.toISOString().split("T")[0];
+							} else {
+								nextDate = new Date(Date.now() + 24 * 60 * 60 * 1000)
+									.toISOString()
+									.split("T")[0];
+							}
+						} catch (e) {
+							nextDate = new Date(Date.now() + 24 * 60 * 60 * 1000)
+								.toISOString()
+								.split("T")[0];
+						}
+					}
+
 					console.log(
-						`📡 Starte API-Abfrage für Aircraft ID: ${newValue.trim()}`
+						`📡 Starte API-Abfrage für Aircraft ID: ${newValue.trim()} (Zeitraum ${currentDate} → ${nextDate})`
 					);
 					window.FlightDataAPI.updateAircraftData(
 						newValue.trim(),

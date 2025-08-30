@@ -169,8 +169,9 @@ class SharingManager {
 			this.isLiveSyncEnabled = false;
 			this.isMasterMode = false;
 
-			// UI aktualisieren
+// UI aktualisieren
 			this.updateAllSyncDisplays("Standalone", false);
+			this.applyReadOnlyUIState(false);
 			this.showNotification(
 				"Standalone-Modus aktiviert - Nur lokale Speicherung",
 				"info"
@@ -216,8 +217,9 @@ class SharingManager {
 				this.isLiveSyncEnabled = true;
 				this.isMasterMode = false;
 
-				// UI aktualisieren
+// UI aktualisieren
 				this.updateAllSyncDisplays("Sync", true);
+				this.applyReadOnlyUIState(true);
 				this.showNotification(
 					"Sync-Modus aktiviert - Empfange Server-Updates",
 					"info"
@@ -259,8 +261,9 @@ class SharingManager {
 				this.isLiveSyncEnabled = true;
 				this.isMasterMode = true;
 
-				// UI aktualisieren
+// UI aktualisieren
 				this.updateAllSyncDisplays("Master", true);
+				this.applyReadOnlyUIState(false);
 				this.showNotification(
 					"Master-Modus aktiviert - Sende Daten an Server",
 					"success"
@@ -505,7 +508,7 @@ class SharingManager {
 					syncModeElement.textContent = "Master";
 					syncModeElement.classList.add("master");
 				} else if (status === "Sync" || status === "Slave") {
-					syncModeElement.textContent = "Sync";
+					syncModeElement.textContent = "Sync Read only";
 					syncModeElement.classList.add("slave"); // Verwende slave-CSS für gelbe Farbe
 				} else {
 					// Fallback für unbekannte aktive Status
@@ -526,7 +529,42 @@ class SharingManager {
 		}
 	}
 
-	// *** OBSOLETE METHODEN - WERDEN NICHT MEHR VERWENDET ***
+	// UI-Zustand für Read-Only (Sync) Mode anwenden/aufheben
+	applyReadOnlyUIState(isReadOnly) {
+		try {
+			const ro = !!isReadOnly;
+			document.body.classList.toggle('read-only', ro);
+			const containers = [
+				document.getElementById('hangarGrid'),
+				document.getElementById('secondaryHangarGrid'),
+			];
+			containers.forEach((container) => {
+				if (!container) return;
+				const controls = container.querySelectorAll('input, textarea, select');
+				controls.forEach((el) => {
+					if (ro) {
+						// Nur temporär deaktivieren, Originalzustand merken
+						if (!el.disabled) {
+							el.setAttribute('data-readonly-disabled', 'true');
+							el.disabled = true;
+						}
+					} else {
+						if (el.hasAttribute('data-readonly-disabled')) {
+							el.disabled = false;
+							el.removeAttribute('data-readonly-disabled');
+						}
+					}
+				});
+			});
+
+
+			console.log(`🔒 Read-only UI ${ro ? 'aktiviert' : 'deaktiviert'}`);
+		} catch (e) {
+			console.warn('⚠️ applyReadOnlyUIState fehlgeschlagen:', e);
+		}
+	}
+
+// *** OBSOLETE METHODEN - WERDEN NICHT MEHR VERWENDET ***
 
 	/**
 	 * Generiert eine eindeutige Projekt-ID
@@ -874,10 +912,11 @@ class SharingManager {
 						writeToggle.checked = true;
 						setTimeout(() => this.enableMasterMode(), 100);
 						break;
-					default: // "standalone"
+default: // "standalone"
 						readToggle.checked = false;
 						writeToggle.checked = false;
 						this.updateAllSyncDisplays();
+						this.applyReadOnlyUIState(false);
 				}
 			}
 

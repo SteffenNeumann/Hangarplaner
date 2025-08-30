@@ -13,6 +13,37 @@ window.moduleStatus = {
 	pdf: false,
 };
 
+// Übernimmt ausgewählte Registrierung aus Query-Parametern (Fallback zu localStorage)
+(function adoptSelectedAircraftFromQuery() {
+	try {
+		const params = new URLSearchParams(window.location.search);
+		const reg = params.get("selectedAircraft");
+		if (reg) {
+			const trimmed = reg.trim();
+			if (trimmed) {
+				localStorage.setItem("selectedAircraft", trimmed);
+				// Zeiten übernehmen, falls vorhanden
+				const arr = params.get("arr");
+				const dep = params.get("dep");
+				if (arr) localStorage.setItem("selectedArrivalTime", arr);
+				if (dep) localStorage.setItem("selectedDepartureTime", dep);
+				// Optionaler Prompt-Flag
+				if (params.has("prompt")) {
+					localStorage.setItem("selectedAircraftPrompt", "true");
+				}
+				// URL bereinigen (auch bei file:// sicher)
+				if (window.history && window.history.replaceState) {
+					const cleanUrl = window.location.pathname + window.location.hash;
+					window.history.replaceState({}, document.title, cleanUrl);
+				}
+				console.log(`🔗 Übernommen aus URL: selectedAircraft=${trimmed}`);
+			}
+		}
+	} catch (e) {
+		console.warn("adoptSelectedAircraftFromQuery Fehler:", e);
+	}
+})();
+
 /**
  * Initialisiert die Anwendung in der richtigen Reihenfolge
  */
@@ -1283,52 +1314,211 @@ function checkForSelectedAircraft() {
 	const selectedAircraft = localStorage.getItem("selectedAircraft");
 
 	if (selectedAircraft) {
-		console.log(`🛩️ Flugzeug aus Fleet Database erkannt: ${selectedAircraft}`);
+		console.log(`🛩️ Flugzeug aus Auswahl erkannt: ${selectedAircraft}`);
+		const selectedArr = localStorage.getItem("selectedArrivalTime") || "";
+		const selectedDep = localStorage.getItem("selectedDepartureTime") || "";
 
-		// Erste freie Kachel finden
-		const firstEmptyTile = findFirstEmptyTile();
+		// Hilfsfunktion: alle freien (leeren) sichtbaren Kacheln sammeln
+		function getFreeTileIds() {
+			const ids = [];
+			// Sammle alle Aircraft-Inputs (primär und sekundär, falls vorhanden)
+			const inputs = document.querySelectorAll('#hangarGrid input[id^="aircraft-"], #secondaryHangarGrid input[id^="aircraft-"]');
+			inputs.forEach((inp) => {
+				const idMatch = inp.id.match(/aircraft-(\d+)/);
+				if (!idMatch) return;
+				const cellId = parseInt(idMatch[1], 10);
+				const cell = inp.closest('.hangar-cell');
+				const isHiddenByClass = cell?.classList?.contains('hidden');
+				const isStyleHidden = cell && (cell.style.display === 'none' || cell.style.visibility === 'hidden');
+				const isEmpty = !inp.value || inp.value.trim() === '';
+				if (!isHiddenByClass && !isStyleHidden && isEmpty) {
+					ids.push(cellId);
+				}
+			});
+			// Fallback: wenn nichts gefunden, versuche Standardbereich 1..12
+			if (ids.length === 0) {
+				for (let i = 1; i <= 12; i++) {
+					const el = document.getElementById(`aircraft-${i}`);
+					if (el && (!el.value || el.value.trim() === '')) ids.push(i);
+				}
+			}
+			return ids.sort((a,b)=>a-b);
+		}
 
-		if (firstEmptyTile) {
-			// Aircraft ID in die erste freie Kachel eintragen
-			const aircraftInput = document.getElementById(
-				`aircraft-${firstEmptyTile}`
-			);
+		function clearSelection() {
+			localStorage.removeItem("selectedAircraft");
+			localStorage.removeItem("selectedArrivalTime");
+			localStorage.removeItem("selectedDepartureTime");
+			localStorage.removeItem("selectedAircraftPrompt");
+		}
+
+		function finalizeInsert(tileId) {
+			const aircraftInput = document.getElementById(`aircraft-${tileId}`);
 			if (aircraftInput) {
 				aircraftInput.value = selectedAircraft;
-
-				// Benachrichtigung anzeigen
-				if (window.showNotification) {
-					window.showNotification(
-						`${selectedAircraft} wurde zu Kachel ${firstEmptyTile} hinzugefügt`,
-						"success"
-					);
+				// Zeiten setzen, falls vorhanden
+				if (selectedArr) {
+					const arrEl = document.getElementById(`arrival-time-${tileId}`);
+					if (arrEl) arrEl.value = selectedArr;
+				}
+				if (selectedDep) {
+					const depEl = document.getElementById(`departure-time-${tileId}`);
+					if (depEl) depEl.value = selectedDep;
 				}
 
 				// Event auslösen für weitere Verarbeitung (z.B. Flugdaten abrufen)
 				if (window.hangarEvents && window.hangarEvents.handleAircraftIdChange) {
 					window.hangarEvents.handleAircraftIdChange(
-						`aircraft-${firstEmptyTile}`,
+						`aircraft-${tileId}`,
 						selectedAircraft
 					);
 				}
 
-				console.log(
-					`✅ ${selectedAircraft} zu Kachel ${firstEmptyTile} hinzugefügt`
-				);
+				if (window.showNotification) {
+					const timeInfo = (selectedArr || selectedDep) ? ` (Arr: ${selectedArr || '--'} | Dep: ${selectedDep || '--'})` : '';
+					window.showNotification(`${selectedAircraft} → Kachel ${tileId}${timeInfo}`, 'success');
+				}
+				console.log(`✅ ${selectedAircraft} zu Kachel ${tileId} hinzugefügt (Arr: ${selectedArr}, Dep: ${selectedDep})`);
 			}
-		} else {
-			// Keine freie Kachel gefunden
-			if (window.showNotification) {
-				window.showNotification(
-					`${selectedAircraft} aus Fleet Database: Keine freie Kachel verfügbar`,
-					"warning"
-				);
-			}
-			console.warn(`⚠️ Keine freie Kachel für ${selectedAircraft} gefunden`);
+			clearSelection();
 		}
 
-		// selectedAircraft aus localStorage entfernen
-		localStorage.removeItem("selectedAircraft");
+		function showTileSelectionModal(freeTiles) {
+			// Overlay
+			const overlay = document.createElement('div');
+			overlay.id = 'tileSelectionOverlay';
+			overlay.className = 'fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50';
+
+			// Modal panel styled like submenu
+			const modal = document.createElement('div');
+			modal.className = 'bg-white rounded-lg p-5 w-full max-w-md border';
+			modal.style.border = '1px solid var(--menu-border)';
+			modal.style.color = 'var(--menu-text)';
+
+			// Header
+			const title = document.createElement('div');
+			title.className = 'submenu-title';
+			title.textContent = 'Kachel auswählen';
+
+			const subtitle = document.createElement('div');
+			subtitle.className = 'text-xs mb-4';
+			subtitle.style.color = '#6b6b6b';
+			subtitle.innerHTML = `<div><span class=\"font-semibold\">Reg:</span> ${selectedAircraft}</div>` +
+				(selectedArr || selectedDep ? `<div><span class=\"font-semibold\">Arr:</span> ${selectedArr || '--'} &nbsp;&nbsp; <span class=\"font-semibold\">Dep:</span> ${selectedDep || '--'}</div>` : '');
+
+			// Section label
+			const sectionLabel = document.createElement('div');
+			sectionLabel.className = 'section-label';
+			sectionLabel.style.marginBottom = '8px';
+			sectionLabel.textContent = freeTiles.length > 0 ? 'Freie Kacheln' : 'Keine freien Kacheln';
+
+			// Grid of free tiles
+			const grid = document.createElement('div');
+			grid.className = 'grid grid-cols-4 gap-2 mb-4';
+			if (freeTiles.length > 0) {
+				freeTiles.forEach(id => {
+					const btn = document.createElement('button');
+					btn.className = 'sidebar-btn sidebar-btn-primary';
+					btn.style.minHeight = '32px';
+					btn.style.padding = '0 10px';
+					btn.style.fontSize = '12px';
+					// Use the tile's position label if available
+					const posEl = document.getElementById(`hangar-position-${id}`);
+					const posLabel = (posEl?.value || '').trim();
+					btn.textContent = posLabel || `#${id}`;
+					btn.title = `Kachel #${id}${posLabel ? ` • Position: ${posLabel}` : ''}`;
+					btn.addEventListener('click', () => {
+						finalizeInsert(id);
+						document.body.removeChild(overlay);
+					});
+					grid.appendChild(btn);
+				});
+			} else {
+				const hint = document.createElement('div');
+				hint.className = 'text-xs';
+				hint.style.color = '#6b6b6b';
+				hint.textContent = 'Bitte geben Sie eine Kachelnummer ein (1–12), diese wird überschrieben.';
+				grid.appendChild(hint);
+			}
+
+			// Manual entry row
+			const manualRow = document.createElement('div');
+			manualRow.className = 'flex items-center gap-2 mb-4';
+			const manualLabel = document.createElement('label');
+			manualLabel.className = 'text-xs font-semibold';
+			manualLabel.setAttribute('for','tileManualInput');
+			manualLabel.textContent = 'Andere Kachel (1–12)';
+			const manualInput = document.createElement('input');
+			manualInput.id = 'tileManualInput';
+			manualInput.type = 'number';
+			manualInput.min = '1';
+			manualInput.max = '12';
+			manualInput.className = 'sidebar-form-control';
+			manualInput.style.width = '90px';
+			const manualBtn = document.createElement('button');
+			manualBtn.className = 'sidebar-btn sidebar-btn-primary';
+			manualBtn.style.minHeight = '32px';
+			manualBtn.style.fontSize = '12px';
+			manualBtn.textContent = 'Einfügen';
+			manualBtn.addEventListener('click', () => {
+				const v = parseInt((manualInput.value || '').trim(), 10);
+				if (!isNaN(v) && v >= 1 && v <= 12) {
+					finalizeInsert(v);
+					document.body.removeChild(overlay);
+				} else {
+					if (window.showNotification) {
+						window.showNotification('Bitte gültige Kachelnummer (1–12) eingeben', 'warning');
+					}
+				}
+			});
+			manualRow.appendChild(manualLabel);
+			manualRow.appendChild(manualInput);
+			manualRow.appendChild(manualBtn);
+
+			// Footer
+			const footer = document.createElement('div');
+			footer.className = 'flex justify-end gap-2';
+			const cancelBtn = document.createElement('button');
+			cancelBtn.className = 'sidebar-btn sidebar-btn-secondary';
+			cancelBtn.style.minHeight = '32px';
+			cancelBtn.style.fontSize = '12px';
+			cancelBtn.textContent = 'Abbrechen';
+			cancelBtn.addEventListener('click', () => {
+				document.body.removeChild(overlay);
+				clearSelection();
+			});
+			footer.appendChild(cancelBtn);
+
+			// Compose modal
+			modal.appendChild(title);
+			modal.appendChild(subtitle);
+			modal.appendChild(sectionLabel);
+			modal.appendChild(grid);
+			modal.appendChild(manualRow);
+			modal.appendChild(footer);
+
+			overlay.appendChild(modal);
+			document.body.appendChild(overlay);
+
+			// Close behaviors
+			overlay.addEventListener('click', (e) => {
+				if (e.target === overlay) {
+					document.body.removeChild(overlay);
+					clearSelection();
+				}
+			});
+			document.addEventListener('keydown', function escListener(ev){
+				if (ev.key === 'Escape') {
+					try { document.body.removeChild(overlay); } catch {}
+					clearSelection();
+					document.removeEventListener('keydown', escListener);
+				}
+			});
+		}
+
+		// Zeige modalen Dialog im Projektstil
+		const freeTiles = getFreeTileIds();
+		showTileSelectionModal(freeTiles);
 	}
 }
 
@@ -1361,3 +1551,66 @@ function findFirstEmptyTile() {
 
 	return null; // Keine freie Kachel gefunden
 }
+
+// Automatisches Auslösen der Auswahlverarbeitung nach Navigation von Timetable/Fleet
+// Führt checkForSelectedAircraft genau einmal aus, sobald die Kacheln bereit sind
+(function setupSelectedAircraftAutostart() {
+	// Nur aktiv werden, wenn es überhaupt eine Auswahl gibt
+	if (!localStorage.getItem("selectedAircraft")) return;
+
+	let ran = false;
+	let attempts = 0;
+	const maxAttempts = 25; // ~5s bei 200ms Intervall
+
+	function tilesReady() {
+		return document.querySelector(
+			'#hangarGrid input[id^="aircraft-"], #secondaryHangarGrid input[id^="aircraft-"]'
+		);
+	}
+
+	function runOnceWhenReady() {
+		if (ran) return;
+		if (!tilesReady()) {
+			attempts++;
+			if (attempts > maxAttempts) {
+				// Als letzte Option trotzdem ausführen
+				try {
+					if (typeof checkForSelectedAircraft === "function") {
+						checkForSelectedAircraft();
+					}
+				} catch (e) {
+					console.error("checkForSelectedAircraft fehlgeschlagen", e);
+				}
+				ran = true;
+				return;
+			}
+			setTimeout(runOnceWhenReady, 200);
+			return;
+		}
+		ran = true;
+		setTimeout(() => {
+			try {
+				if (typeof checkForSelectedAircraft === "function") {
+					checkForSelectedAircraft();
+				}
+			} catch (e) {
+				console.error("checkForSelectedAircraft fehlgeschlagen", e);
+			}
+		}, 50);
+	}
+
+	function schedule() {
+		setTimeout(runOnceWhenReady, 100);
+	}
+
+	if (document.readyState === "complete" || document.readyState === "interactive") {
+		schedule();
+	} else {
+		document.addEventListener("DOMContentLoaded", schedule, { once: true });
+	}
+
+	window.addEventListener("load", () => setTimeout(runOnceWhenReady, 150));
+	document.addEventListener("visibilitychange", () => {
+		if (document.visibilityState === "visible") runOnceWhenReady();
+	});
+})();

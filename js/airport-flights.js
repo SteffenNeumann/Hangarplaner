@@ -213,6 +213,7 @@ const AirportFlights = (() => {
 						<th>Ankunftszeit</th>
 						<th>Von</th>
 						<th>Status</th>
+						<th>Aktionen</th>
 					</tr>
 				`;
 				arrivalsTable.appendChild(tableHead);
@@ -265,6 +266,7 @@ const AirportFlights = (() => {
 						<th>Abflugszeit</th>
 						<th>Nach</th>
 						<th>Status</th>
+						<th>Aktionen</th>
 					</tr>
 				`;
 				departuresTable.appendChild(tableHead);
@@ -514,7 +516,29 @@ const AirportFlights = (() => {
 				? "status-delayed"
 				: "status-scheduled";
 
-		// Zelleninhalte erstellen - geänderte Reihenfolge (erst Registrierung, dann Flugnummer)
+		// Hat die Zeile eine gültige Registrierung?
+		const hasReg = registration && registration !== "-----";
+
+		// Beide Zeiten (Arr/Dep) extrahieren für Übergabe an den Hangar
+		const extractHHMM = (scheduledTime) => {
+			try {
+				if (scheduledTime && typeof scheduledTime === 'object' && scheduledTime.local) {
+					const m = scheduledTime.local.match(/\d{2}:\d{2}/);
+					return m ? m[0] : '';
+				}
+				if (typeof scheduledTime === 'string') {
+					const d = new Date(scheduledTime);
+					if (!isNaN(d.getTime())) {
+						return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+					}
+				}
+			} catch (e) {}
+			return '';
+		};
+		const arrHHMM = flight.arrival ? extractHHMM(flight.arrival.scheduledTime) : '';
+		const depHHMM = flight.departure ? extractHHMM(flight.departure.scheduledTime) : '';
+
+		// Zelleninhalte erstellen - geänderte Reihenfolge (erst Registrierung, dann Flugnummer) und Action-Spalte
 		row.innerHTML = `
 			<td>
 				<span class="flight-reg">${registration}</span>
@@ -529,9 +553,33 @@ const AirportFlights = (() => {
 			<td>
 				<span class="flight-status ${statusClass}">${status}</span>
 			</td>
+			<td>
+				${hasReg
+					? `<button class=\"text-green-600 hover:text-green-800\" onclick=\"AirportFlights.useInHangar('${registration}','${arrHHMM}','${depHHMM}')\" title=\"In HangarPlanner verwenden\">\n\t\t\t\t\t\t<svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">\n\t\t\t\t\t\t\t<path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 6v6m0 0v6m0-6h6m-6 0H6\"></path>\n\t\t\t\t\t\t</svg>\n\t\t\t\t\t</button>`
+					: `<span class=\"text-gray-400\" title=\"Keine Registrierung\">—</span>`}
+			</td>
 		`;
 
 		return row;
+	};
+
+	// Aktion: Flugzeug im HangarPlanner verwenden (wie Fleet Database)
+	const useInHangar = (registration) => {
+		const reg = (registration || "").trim();
+		if (!reg || reg === "-----") {
+			alert("Registration not available for this flight");
+			return;
+		}
+		// Mark that we should prompt for a target tile on the Hangar page
+		localStorage.setItem("selectedAircraft", reg);
+		localStorage.setItem("selectedAircraftPrompt", "true");
+		try {
+			const url = "index.html?selectedAircraft=" + encodeURIComponent(reg) + "&prompt=1";
+			window.location.href = url;
+		} catch (e) {
+			// Fallback redirect without params
+			window.location.href = "index.html";
+		}
 	};
 
 	/**
@@ -627,6 +675,7 @@ const AirportFlights = (() => {
 	return {
 		displayAirportFlights,
 		init,
+		useInHangar,
 	};
 })();
 

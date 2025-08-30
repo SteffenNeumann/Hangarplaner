@@ -278,7 +278,7 @@ class ServerSync {
 
 		// NEUE PRÜFUNG: Nur Master darf speichern
 		if (!this.isMaster) {
-			// console.log("⏸️ Slave-Modus: Speichern übersprungen");
+			console.log("⛔ Read-only mode: save skipped (client not master)");
 			return true; // Kein Fehler, nur keine Berechtigung
 		}
 
@@ -313,11 +313,16 @@ class ServerSync {
 			const serverUrl = this.getServerUrl();
 
 			// Daten an Server senden
+			// Header nur im Master-Modus setzen
+			const headers = {
+				"Content-Type": "application/json",
+			};
+			if (this.isMaster) {
+				headers["X-Sync-Role"] = "master";
+			}
 			const response = await fetch(serverUrl, {
 				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
+				headers,
 				body: JSON.stringify(currentData),
 				signal: controller.signal,
 			});

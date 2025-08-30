@@ -1,3 +1,28 @@
+
+### Server-side write enforcement (header contract)
+- Client must include the following header on write requests to sync/data.php:
+  - X-Sync-Role: master
+- The server rejects POSTs without this header (HTTP 403) with a JSON error. This guarantees that read-only clients cannot write even if a POST is attempted outside the central path.
+- Client implementation: storage-browser.js adds this header only when isMaster === true.
+
+Example (curl):
+```bash
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -H "X-Sync-Role: master" \
+  --data '{"metadata": {"timestamp": 0}}' \
+  http://localhost:8000/sync/data.php
+```
+
+### Debugging and verification
+- Browser console helpers:
+  - window.debugSync() → shows ServerSync flags and effective mode
+  - window.testReadMode() → toggles client into read-only polling mode
+- Network verification:
+  - Read-only: make a change; no POST should appear. If you intentionally force a POST, expect 403.
+  - Master: edits trigger POST with X-Sync-Role: master and succeed (200 OK).
+- Server CORS headers permit the X-Sync-Role header for dev preflight requests.
+
 # WARP.md
 
 This file provides guidance to WARP (warp.dev) when working with code in this repository.
@@ -165,3 +190,31 @@ Flight number lookups frequently fail due to API limitations and data mapping ch
 - Maintain debug guides in `debug/` directory for complex issues
 - Update user-facing documentation for feature changes
 - Provide clear troubleshooting steps for common problems
+
+### Sync policy and read-only enforcement
+- Modes
+  - Standalone: local only; no server reads or writes
+  - Sync (read-only): reads from server; client edits do not write to server
+  - Master (read-write): reads + writes to server
+- Client-side write gating
+  - All server writes are centralized through `window.serverSync.syncWithServer()`
+  - Field-level direct POSTs are blocked unless Write mode is enabled
+  - Display options in read-only mode save locally only and show “Saved locally (read-only mode)”
+- UI behavior in Sync (read-only)
+  - Editing controls within `#hangarGrid` and `#secondaryHangarGrid` are temporarily disabled
+  - A small banner “Read-Only: Changes are not saved to the server” is shown
+  - Mode toggles and navigation remain usable
+- Server endpoint
+  - `sync/data.php` accepts GET/POST; client-side gating prevents writes in read-only
+
+### Manual test checklist (Sync system)
+1) Read-only mode (Sync)
+   - Enable Read Data ON, Write Data OFF
+   - Edit a tile field; expect no POST to `sync/data.php`
+   - Server data not modified; UI shows read-only banner; inputs are disabled
+2) Master mode (Write)
+   - Enable Read Data ON, Write Data ON
+   - Edit a tile field; a write occurs via `serverSync.syncWithServer()`
+   - Changes persist and replicate to a read-only client
+3) Standalone
+   - Disable both toggles; edits only affect local state; no server traffic

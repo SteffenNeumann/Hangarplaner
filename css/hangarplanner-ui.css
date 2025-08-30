@@ -1,3 +1,25 @@
+
+/* ===== Read-Only Helper Styles ===== */
+
+/* Dim and lock inputs when in read-only mode */
+body.read-only #hangarGrid input[disabled],
+body.read-only #hangarGrid select[disabled],
+body.read-only #hangarGrid textarea[disabled],
+body.read-only #secondaryHangarGrid input[disabled],
+body.read-only #secondaryHangarGrid select[disabled],
+body.read-only #secondaryHangarGrid textarea[disabled] {
+  background-color: #f3f4f6; /* gray-100 */
+  border-color: #e5e7eb;     /* gray-200 */
+  color: #6b7280;            /* gray-500 */
+  cursor: not-allowed;
+}
+
+/* Optional subtle cue on container while read-only */
+body.read-only .hangar-container {
+  outline: 1px dashed rgba(107,114,128,0.3); /* gray-500 @ 30% */
+  outline-offset: -4px;
+}
+
 /*
  * hangarplanner-ui.css
  * Ausgelagerte UI- und Layout-Styles aus index.html
@@ -810,6 +832,24 @@ input:checked + .toggle-slider:before {
 	font-size: 12px;
 }
 
+/* Dark mode variants for left rail and submenu */
+.dark-mode .left-menu {
+	background: var(--bg-tertiary);
+	border-right-color: var(--border-color);
+}
+.dark-mode .left-menu .menu-item { color: var(--text-secondary); }
+.dark-mode .left-menu .menu-item:hover,
+.dark-mode .left-menu .menu-item.active { background: var(--bg-secondary); border-color: var(--border-color); }
+.dark-mode .left-menu .menu-icon,
+.dark-mode .left-menu .menu-label { color: var(--text-secondary); }
+
+.dark-mode .submenu-panel {
+	background: var(--bg-secondary);
+	border-right-color: var(--border-color);
+}
+.dark-mode .submenu-title { color: var(--text-secondary); border-bottom-color: var(--border-color); }
+.dark-mode .submenu-panel label { color: var(--text-secondary); }
+
 /* Buttons in submenu to match palette */
 .submenu-panel .sidebar-btn-primary { background-color: var(--menu-accent) !important; border-color: var(--menu-accent) !important; }
 .submenu-panel .sidebar-btn-primary:hover { filter: brightness(0.9); }
@@ -1225,7 +1265,7 @@ input:checked + .toggle-slider:before {
 }
 
 /* Background und Text Colors */
-.dark-mode body {
+body.dark-mode {
 	background-color: var(--bg-primary);
 	color: var(--text-primary);
 }

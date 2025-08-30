@@ -15,7 +15,7 @@
 }
 
 /* Body und Hauptcontainer */
-.dark-mode body {
+body.dark-mode {
 	background-color: var(--dark-bg);
 	color: var(--dark-text);
 }

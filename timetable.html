@@ -42,6 +42,20 @@
         }
       }
     </style>
+    <script>
+      // Apply saved dark mode on subpage load
+      document.addEventListener('DOMContentLoaded', function(){
+        try {
+          const raw = localStorage.getItem('displayOptions');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && parsed.darkMode) {
+              document.body.classList.add('dark-mode');
+            }
+          }
+        } catch (e) {}
+      });
+    </script>
   </head>
   <body class="bg-industrial-dark text-white font-sans">
     <div class="flex h-screen">

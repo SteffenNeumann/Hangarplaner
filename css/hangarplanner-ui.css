@@ -2228,10 +2228,14 @@ input:checked + .toggle-slider:before {
 }
 
 /* Tweak the small labels beside the toggle in Project */
+#submenu-project .mode-toggle { gap: 6px; margin-right: 0; }
 #submenu-project .mode-toggle-label {
   font-size: 10px;
   font-weight: 700;
   color: #6b6b6b;
+  margin: 0; /* override global margin-right */
+  padding: 0 4px; /* slight breathing room around text */
+  line-height: 1; /* tighter vertical alignment */
 }
 
 /* Hide number input spin buttons for the interval field */

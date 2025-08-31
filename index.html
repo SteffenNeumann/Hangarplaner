@@ -390,62 +390,217 @@
 			<!-- Hauptbereich mit Hangar-Kacheln -->
 			<div class="flex-grow flex flex-col content-container">
 				<!-- Header mit Titel und Aktionen -->
-				<header
-					class="bg-white p-4 shadow-md flex justify-between items-center">
-					<!-- Wetter-Widget mit verbessertem Layout -->
-					<div class="flex-grow"></div>
-					<div id="weather-widget">
-						<div class="weather-primary">
-							<div class="weather-airport">MUC</div>
-							<div class="weather-data">
-								<span id="weather-temp">12°C</span>
-								<div id="weather-icon">
-									<svg
-										class="w-5 h-5"
-										xmlns="http://www.w3.org/2000/svg"
-										fill="none"
-										viewBox="0 0 24 24"
-										stroke="currentColor">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
-									</svg>
+					<header
+						class="bg-white p-4 shadow-md flex justify-between items-center">
+						<!-- Wetter-Widget unverändert lassen -->
+						<div class="flex-grow"></div>
+						<div id="weather-widget">
+							<div class="weather-primary">
+								<div class="weather-airport">MUC</div>
+								<div class="weather-data">
+									<span id="weather-temp">12°C</span>
+									<div id="weather-icon">
+										<svg
+											class="w-5 h-5"
+											xmlns="http://www.w3.org/2000/svg"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke="currentColor">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+										</svg>
+									</div>
+								</div>
+							</div>
+							<div class="weather-secondary">
+								<span id="weather-wind" class="weather-wind-tooltip">
+									<span class="weather-wind-icon" style="transform: rotate(0deg)">→</span>
+									S 9 km/h
+								</span>
+								<span id="weather-description" class="weather-description-text">Clear</span>
+								<span id="weather-visibility">Vis: 9.7km</span>
+							</div>
+						</div>
+
+						<!-- Neuer Zeit-Widget: zwei Zeilen (UTC und LOC) -->
+						<div id="time-widget">
+							<div class="time-display-row">
+								<span class="time-label">UTC:</span>
+								<span id="utc-time" class="time-value">17:17</span>
+							</div>
+							<div class="time-display-row">
+								<span class="time-label">LOC:</span>
+								<span id="local-time" class="time-value">19:17</span>
+							</div>
+						</div>
+
+						<!-- Neuer Status-Widget: gebündelte Einstellungen -->
+						<div id="status-widget">
+							<!-- Row 1: Mode label only (no pill) -->
+							<div class="status-row" data-open-submenu="sync" title="Open Sync settings">
+								<span class="status-label">Mode:</span>
+								<div class="status-value-group">
+									<span id="sync-mode" class="status-label-value">Standalone</span>
+								</div>
+							</div>
+							<!-- Row 2: Update status label from submenu settings (no pill) -->
+							<div class="status-row" data-open-submenu="update" title="Open Update settings">
+								<span class="status-label">Update:</span>
+								<div class="status-value-group">
+									<span id="headerUpdateStatus" class="status-label-value" title="Scheduled Update">Inactive</span>
+									<span id="headerUpdateMeta" class="status-meta" title="Schedule details"></span>
 								</div>
 							</div>
 						</div>
-						<div class="weather-secondary">
-							<span id="weather-wind" class="weather-wind-tooltip">
-								<span class="weather-wind-icon" style="transform: rotate(0deg)"
-									>→</span
-								>
-								S 9 km/h
-							</span>
-							<span id="weather-description" class="weather-description-text"
-								>Clear</span
-							>
-							<span id="weather-visibility">Vis: 9.7km</span>
-						</div>
-					</div>
-
-					<!-- Info-Widget mit Zeit-Anzeigen -->
-					<div id="info-widget">
-						<!-- Erste Zeile: Zeiten in einer Zeile -->
-						<div class="time-display-row">
-							<span class="time-label">Local:</span>
-							<span id="local-time" class="time-value">19:17</span>
-							<span class="time-label">UTC:</span>
-							<span id="utc-time" class="time-value">17:17</span>
-						</div>
-						<!-- Zweite Zeile: Mode Display -->
-						<div class="mode-display">
-							<span class="mode-label">Mode:</span>
-							<span id="sync-mode" class="sync-mode-value">Standalone</span>
-						</div>
-					</div>
 
 </header>
+
+<!-- Header Status-Widget Initialisierung -->
+<script>
+(function(){
+	function initHeaderStatusWidget(){
+		const container = document.getElementById('status-widget');
+		if(!container) return;
+
+		// Öffne linke Submenüs bei Klick auf Status-Zeilen
+		container.querySelectorAll('.status-row[data-open-submenu]').forEach(row => {
+			row.addEventListener('click', () => {
+				const key = row.getAttribute('data-open-submenu');
+				const btn = document.querySelector(`#leftMenu .menu-item[data-menu="${key}"]`);
+				if (btn) btn.click();
+			});
+		});
+
+					// Update status label: open Update submenu on right-click
+					const updateLabel = container.querySelector('#headerUpdateStatus');
+					if (updateLabel) {
+						const openUpdate = (e) => {
+							if (e) { e.preventDefault(); e.stopPropagation(); }
+							const btn = document.querySelector('#leftMenu .menu-item[data-menu="update"]');
+							if (btn) btn.click();
+						};
+						updateLabel.addEventListener('contextmenu', openUpdate);
+						updateLabel.addEventListener('click', openUpdate);
+					}
+					const updateMeta = container.querySelector('#headerUpdateMeta');
+					if (updateMeta) {
+						updateMeta.addEventListener('click', (e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							const btn = document.querySelector('#leftMenu .menu-item[data-menu="update"]');
+							if (btn) btn.click();
+						});
+					}
+					const syncLabel = container.querySelector('#sync-mode');
+					if (syncLabel) {
+						syncLabel.addEventListener('click', (e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							const btn = document.querySelector('#leftMenu .menu-item[data-menu="sync"]');
+							if (btn) btn.click();
+						});
+					}
+
+		// Update status label mirrors sidebar toggle state (read-only label)
+		const updateStatusEl = document.getElementById('headerUpdateStatus');
+		const sideToggle = document.getElementById('scheduledUpdateToggle');
+		function updateHeaderUpdateStatus(){
+			if (!updateStatusEl) return;
+			const isActive = !!sideToggle?.checked;
+			updateStatusEl.textContent = isActive ? 'Active' : 'Inactive';
+			updateStatusEl.className = `status-label-value ${isActive ? 'active' : 'inactive'}`;
+		}
+		if (sideToggle) {
+			updateHeaderUpdateStatus();
+			sideToggle.addEventListener('change', updateHeaderUpdateStatus);
+		}
+		// Also reflect interval
+		const intervalInput = document.getElementById('updateIntervalInput');
+		function updateHeaderUpdateMeta(){
+			const meta = document.getElementById('headerUpdateMeta');
+			if (!meta) return;
+			const minutes = parseInt(intervalInput?.value || '15', 10);
+			meta.textContent = minutes ? `every ${minutes} min` : '';
+		}
+		if (intervalInput) {
+			updateHeaderUpdateMeta();
+			intervalInput.addEventListener('change', updateHeaderUpdateMeta);
+		}
+
+		// Optional coupling retained (no project label to update); guard for missing elements.
+		let couplingInProgress = false;
+		function updateProjectFromSync(){
+			if (couplingInProgress) return;
+			const readToggle = document.getElementById('readDataToggle');
+			const writeToggle = document.getElementById('writeDataToggle');
+			const read = !!(readToggle && readToggle.checked);
+			const write = !!(writeToggle && writeToggle.checked);
+			const isReadOnly = read && !write;
+			const modeToggle = document.getElementById('modeToggle');
+			if (modeToggle) {
+				if (isReadOnly && modeToggle.checked) {
+					couplingInProgress = true;
+					modeToggle.checked = false; // View
+					modeToggle.dispatchEvent(new Event('change', { bubbles: true }));
+					couplingInProgress = false;
+				} else if (!isReadOnly && !modeToggle.checked) {
+					couplingInProgress = true;
+					modeToggle.checked = true; // Edit
+					modeToggle.dispatchEvent(new Event('change', { bubbles: true }));
+					couplingInProgress = false;
+				}
+			}
+		}
+		function updateSyncFromProject(){
+			if (couplingInProgress) return;
+			const modeToggle = document.getElementById('modeToggle');
+			if (!modeToggle) return;
+			const wantEdit = !!modeToggle.checked;
+			try {
+				couplingInProgress = true;
+				const readToggle = document.getElementById('readDataToggle');
+				const writeToggle = document.getElementById('writeDataToggle');
+				if (readToggle && writeToggle) {
+					if (!wantEdit) {
+						// View -> force read-only (read ON, write OFF)
+						readToggle.checked = true;
+						writeToggle.checked = false;
+					} else {
+						// Edit -> standalone (both OFF)
+						readToggle.checked = false;
+						writeToggle.checked = false;
+					}
+					// Dispatch change so sharing-manager updates state/UI
+					readToggle.dispatchEvent(new Event('change', { bubbles: true }));
+					writeToggle.dispatchEvent(new Event('change', { bubbles: true }));
+				} else if (window.sharingManager && typeof window.sharingManager.enableSyncMode === 'function') {
+					// Fallback if toggles not present: call manager directly
+					if (!wantEdit) {
+						window.sharingManager.enableSyncMode();
+					} else if (typeof window.sharingManager.enableStandaloneMode === 'function') {
+						window.sharingManager.enableStandaloneMode();
+					}
+				}
+			} finally {
+				couplingInProgress = false;
+			}
+		}
+		const modeToggle = document.getElementById('modeToggle');
+		if (modeToggle) modeToggle.addEventListener('change', updateSyncFromProject);
+		const readToggle = document.getElementById('readDataToggle');
+		const writeToggle = document.getElementById('writeDataToggle');
+		if (readToggle) readToggle.addEventListener('change', updateProjectFromSync);
+		if (writeToggle) writeToggle.addEventListener('change', updateProjectFromSync);
+		updateProjectFromSync();
+	}
+
+	window.hangarInitQueue = window.hangarInitQueue || [];
+	window.hangarInitQueue.push(initHeaderStatusWidget);
+})();
+</script>
 
 				<!-- Enhanced submenu behavior for left rail (Step B) -->
 				<script>

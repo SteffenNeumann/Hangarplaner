@@ -1,5 +1,31 @@
 /* Info-Widget spezifisches Styling - einheitlich mit Weather-Widget */
-#info-widget {
+:root {
+	/* Header widgets layout spacing (can be tuned by adding header-compact or header-loose on body) */
+	--header-widget-gap: 16px;
+	--header-label-col: 78px;
+	--header-col-gap: 18px;
+	--header-row-gap: 8px; /* unified spacing across header widgets */
+	/* Specific to time rows */
+	--time-col-gap: 6px;
+}
+
+body.header-compact {
+	--header-widget-gap: 10px;
+	--header-label-col: 70px;
+	--header-col-gap: 12px;
+	--header-row-gap: 8px;
+	--time-col-gap: 4px;
+}
+
+body.header-loose {
+	--header-widget-gap: 22px;
+	--header-label-col: 92px;
+	--header-col-gap: 22px;
+	--header-row-gap: 8px;
+	--time-col-gap: 8px;
+}
+
+#info-widget, #time-widget, #status-widget {
 	display: flex;
 	flex-direction: column;
 	width: auto;
@@ -10,14 +36,14 @@
 	border: none;
 	font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
 		sans-serif;
-	margin-left: 12px;
+	margin-left: var(--header-widget-gap, 12px);
 	transition: all 0.3s ease;
 	height: auto;
 	box-shadow: none;
 }
 
 /* Dark mode for info widget */
-.dark-mode #info-widget {
+.dark-mode #info-widget, .dark-mode #time-widget, .dark-mode #status-widget {
 	/* Use card background to match tiles */
 	background: var(--dark-card) !important;
 	color: #d1d5db;
@@ -25,15 +51,16 @@
 }
 .dark-mode .time-display-row .time-label,
 .dark-mode .time-display-row .time-value { color: var(--dark-text) !important; }
+.dark-mode #status-widget .status-label { color: var(--dark-text) !important; }
 .dark-mode .mode-display,
 .dark-mode .mode-display > span { color: var(--dark-text) !important; }
-.dark-mode .sync-mode-value.standalone { background: #1f2937; color: #e5e7eb; }
-.dark-mode .sync-mode-value.master { background: rgba(16,185,129,0.15); color: #86efac; }
-.dark-mode .sync-mode-value.slave { background: rgba(245,158,11,0.15); color: #fcd34d; }
+.dark-mode .sync-mode-value.standalone { background: #1f2937; color: #e5e7eb; border-color: #374151; }
+.dark-mode .sync-mode-value.master { background: rgba(249,115,22,0.15); color: #fdba74; border-color: #78350f; }
+.dark-mode .sync-mode-value.slave { background: rgba(245,158,11,0.15); color: #fcd34d; border-color: #92400e; }
 
 /* Responsive Anpassungen - einheitlich mit Weather-Widget */
 @media (max-width: 640px) {
-	#info-widget {
+	#info-widget, #time-widget, #status-widget {
 		width: auto; /* Automatische Breite wie Weather-Widget */
 		min-width: 160px;
 		padding: 6px 10px; /* Exakt wie Weather-Widget */
@@ -150,30 +177,34 @@
 
 /* Zeit-Anzeige Container - exakt wie Weather Widget Primary */
 .time-display-row {
-	display: flex;
-	justify-content: space-between;
+	display: grid;
+	grid-template-columns: var(--header-label-col, 80px) 1fr;
+	column-gap: var(--time-col-gap, 8px);
 	align-items: center;
-	margin-bottom: 4px;
-	padding-bottom: 4px;
+	margin-bottom: var(--header-row-gap, 6px);
+	padding-bottom: 0;
 }
 
 .time-display-row .time-label {
-	font-weight: 700;
-	color: #3a4354;
+	font-weight: 800; /* kräftiger, wie im Screenshot */
+	color: #334155; /* etwas dunkler/blauer Ton */
 	font-size: 0.95rem; /* Kompakter: zuvor 1rem */
 	min-width: 40px;
+	justify-self: start;
 }
 
 .time-display-row .time-value {
-	font-weight: 600;
-	font-size: 1.05rem; /* Kompakter: zuvor 1.125rem */
-	min-width: 45px;
+	font-weight: 500; /* leichter, reduzierter */
+	font-size: 0.875rem; /* wie Weather secondary */
+	min-width: 40px;
 	text-align: right;
-	margin-right: 8px;
-	color: #3a4354;
-	/* font-family: "SF Mono", "Monaco", "Inconsolata", "Roboto Mono", monospace; */
-	letter-spacing: 0.5px;
+	margin-right: 0;
+	color: #64748b; /* gleiche Farbe wie Weather secondary */
+	letter-spacing: 0px;
+	justify-self: end;
 }
+/* Time widget spacing: keep compact label/value, restore original row gap (6px) */
+#time-widget .time-display-row { column-gap: 2px; margin-bottom: 6px; line-height: 1.08; }
 
 /* Mode Display - exakt wie Weather Widget Secondary */
 .mode-display {
@@ -189,6 +220,73 @@
 	width: 100%; /* Volle Breite nutzen */
 }
 
+/* Status-Widget Zeilen */
+.status-row {
+	display: grid;
+	grid-template-columns: var(--header-label-col, 80px) 1fr;
+	column-gap: var(--header-col-gap, 16px);
+	align-items: center;
+	margin-bottom: var(--header-row-gap, 8px);
+}
+/* Gruppe für mehrere Werte rechts (Mode + Update Toggle) */
+#status-widget .status-value-group {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+}
+#status-widget .modern-toggle-switch { transform: scale(0.85); transform-origin: right center; }
+.status-label {
+	font-weight: 700;
+	color: #3a4354;
+	font-size: 0.95rem;
+	justify-self: start;
+}
+/* Werte in den Status-Zeilen rechtsbündig ausrichten */
+#status-widget .sync-mode-value,
+#status-widget .modern-toggle-switch,
+#status-widget .sync-mode-badge,
+#status-widget .status-value {
+	justify-self: end;
+}
+
+/* Header Status widget should use labels (no pills) */
+#status-widget #sync-mode,
+#status-widget .sync-mode-value,
+#status-widget .sync-mode-badge,
+#status-widget .status-label-value {
+	background: transparent !important;
+	border: none !important;
+	padding: 0 !important;
+	border-radius: 0 !important;
+	min-width: 0 !important;
+	text-align: right;
+	font-weight: 600;
+	font-size: 0.875rem;
+	color: #64748b;
+}
+#status-widget .status-meta {
+	font-size: 0.75rem;
+	color: #94a3b8;
+}
+/* Header update status colors */
+#status-widget #headerUpdateStatus.active { color: #059669; font-weight: 700; }
+#status-widget #headerUpdateStatus.inactive { color: #6b7280; font-weight: 700; }
+/* Dark mode overrides for update status colors */
+.dark-mode #status-widget #headerUpdateStatus.active { color: #34d399 !important; }
+.dark-mode #status-widget #headerUpdateStatus.inactive { color: #94a3b8 !important; }
+/* Header sync label colors by mode */
+#status-widget #sync-mode.master { color: var(--sync-master-fg, #9A3412); font-weight: 700; }
+#status-widget #sync-mode.slave { color: var(--sync-read-fg, #B93815); font-weight: 700; }
+#status-widget #sync-mode.standalone { color: var(--sync-standalone-fg, #344054); font-weight: 700; }
+
+/* Dark mode explicit color coding for all status items */
+.dark-mode #status-widget #sync-mode.master { color: #fdba74 !important; }
+.dark-mode #status-widget #sync-mode.slave { color: #fcd34d !important; }
+.dark-mode #status-widget #sync-mode.standalone { color: #cbd5e1 !important; }
+.dark-mode #status-widget .status-meta { color: #a3b1c6 !important; }
+/* Keep generic dark text only for non-status values */
+.dark-mode #status-widget .status-label { color: var(--text-secondary) !important; }
+
 /* Gemeinsame Basisstile für alle Elemente im sekundären Bereich */
 .mode-display > span {
 	display: inline-block;
@@ -198,33 +296,74 @@
 	color: #64748b;
 }
 
+/* Convert all "current sync mode" chips to labels (no pill) */
+.currentSyncMode,
+#currentSyncMode,
+#currentSyncModeSidebar {
+	background: transparent !important;
+	border: none !important;
+	padding: 0 !important;
+	border-radius: 0 !important;
+	min-width: 0 !important;
+	text-align: left;
+	font-weight: 700;
+	font-size: 0.875rem;
+	color: #64748b;
+}
+/* Color mapping for those labels based on mode class */
+.currentSyncMode.mode-master, #currentSyncMode.mode-master, #currentSyncModeSidebar.mode-master { color: var(--sync-master-fg, #C2410C); }
+.currentSyncMode.mode-sync, #currentSyncMode.mode-sync, #currentSyncModeSidebar.mode-sync { color: var(--sync-read-fg, #B93815); }
+.currentSyncMode.mode-write, #currentSyncMode.mode-write, #currentSyncModeSidebar.mode-write { color: var(--sync-write-fg, #C2410C); }
+.currentSyncMode.standalone, #currentSyncMode.standalone, #currentSyncModeSidebar.standalone { color: var(--sync-standalone-fg, #344054); }
+
+.dark-mode .currentSyncMode,
+.dark-mode #currentSyncMode,
+.dark-mode #currentSyncModeSidebar { color: var(--text-secondary) !important; }
+/* Color-coded overrides in dark mode for mode labels */
+.dark-mode .currentSyncMode.mode-master,
+.dark-mode #currentSyncMode.mode-master,
+.dark-mode #currentSyncModeSidebar.mode-master { color: #fdba74 !important; }
+.dark-mode .currentSyncMode.mode-sync,
+.dark-mode #currentSyncMode.mode-sync,
+.dark-mode #currentSyncModeSidebar.mode-sync { color: #fcd34d !important; }
+.dark-mode .currentSyncMode.mode-write,
+.dark-mode #currentSyncMode.mode-write,
+.dark-mode #currentSyncModeSidebar.mode-write { color: #fb923c !important; }
+.dark-mode .currentSyncMode.standalone,
+.dark-mode #currentSyncMode.standalone,
+.dark-mode #currentSyncModeSidebar.standalone { color: #cbd5e1 !important; }
+
 /* Mode-Wert Styling - Verbessert für bessere Sichtbarkeit */
 .sync-mode-value {
 	color: #64748b;
-	font-weight: 500; /* Etwas stärker */
-	font-size: 0.8125rem; /* Kompakter: zuvor 0.875rem */
+	font-weight: 600; /* etwas stärker für bessere Lesbarkeit */
+	font-size: 0.85rem; /* kompakter Chip */
 	display: inline-block;
 	white-space: nowrap;
-	padding: 2px 6px; /* Padding für Hintergrund */
-	border-radius: 4px; /* Abgerundete Ecken */
+	padding: 3px 8px; /* kompakter */
+	border-radius: 9999px; /* Pillenform */
 	transition: all 0.2s ease; /* Sanfte Übergänge */
-	min-width: 70px; /* Mindestbreite für Konsistenz */
+	min-width: 84px; /* kompakter */
 	text-align: center; /* Zentrierter Text */
+	border: 1px solid transparent; /* für definierte Kanten */
 }
 
 .sync-mode-value.master {
-	background: #dcfce7;
-	color: #166534;
+	background: var(--sync-master-bg, #ffe8cc);
+	color: var(--sync-master-fg, #9a3412);
+	border-color: var(--sync-master-border, #fdba74);
 }
 
 .sync-mode-value.slave {
-	background: #fef3c7;
-	color: #92400e;
+	background: var(--sync-read-bg, #fff4ea);
+	color: var(--sync-read-fg, #b93815);
+	border-color: var(--sync-read-border, #f8dfc6);
 }
 
 .sync-mode-value.standalone {
-	background: #f1f5f9;
-	color: #475569;
+	background: var(--sync-standalone-bg, #f2f4f7);
+	color: var(--sync-standalone-fg, #344054);
+	border-color: var(--sync-standalone-border, #d0d5dd);
 }
 
 /* Lade-Animation */

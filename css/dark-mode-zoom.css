@@ -2,16 +2,16 @@
 
 /* Grundlegende Dark Mode Farben */
 .dark-mode {
-	--dark-bg: #1f2937;
-	--dark-secondary: #374151;
-	--dark-card: #2d3748;
-	--dark-header: #1e293b;
+	--dark-bg: #202224;
+	--dark-secondary: #303437;
+	--dark-card: #303437;
+	--dark-header: #303437;
 	--dark-text: #e5e7eb;
 	--dark-accent: #f49e0c;
-	--dark-input-bg: #374151;
+	--dark-input-bg: #202224;
 	--dark-input-text: #e5e7eb;
-	--dark-border: #4b5563;
-	--dark-hover: #4b5563;
+	--dark-border: #303437;
+	--dark-hover: #303437;
 }
 
 /* Body und Hauptcontainer */
@@ -96,7 +96,7 @@ body.dark-mode {
 
 /* Status-Selektoren (spezielle Dropdown-Behandlung) */
 .dark-mode .status-selector {
-	background-color: var(--dark-secondary);
+	background-color: var(--dark-input-bg);
 	color: var(--dark-text);
 }
 
@@ -220,7 +220,7 @@ button {
 .dark-mode .fleet-filter-input,
 .dark-mode .fleet-filters-enhanced input,
 .dark-mode .fleet-filters-enhanced select {
-  background-color: var(--dark-input-bg) !important;
+  background-color: var(--dark-secondary) !important;
   color: var(--dark-text) !important;
   border-color: var(--dark-border) !important;
 }

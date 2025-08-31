@@ -182,14 +182,14 @@
 
 /* Dark Mode Support */
 .dark-mode #flight-data-status {
-	background: rgba(58, 67, 84, 0.95);
-	border-color: rgba(255, 255, 255, 0.1);
-	color: #e2e8f0;
+	background: var(--dark-secondary);
+	border-color: var(--dark-border);
+	color: var(--dark-text);
 }
 
 .dark-mode .status-header {
-	background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
-	border-bottom-color: rgba(255, 255, 255, 0.1);
+	background: linear-gradient(135deg, var(--dark-secondary) 0%, var(--dark-bg) 100%);
+	border-bottom-color: var(--dark-border);
 }
 
 .dark-mode .status-title {
@@ -218,7 +218,7 @@
 }
 
 .dark-mode .status-progress {
-	background: #374151;
+	background: var(--dark-border);
 }
 
 /* Responsive Anpassungen */

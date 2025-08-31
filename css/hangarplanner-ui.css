@@ -861,6 +861,13 @@ input:checked + .toggle-slider:before {
 	background: var(--bg-secondary);
 	border-right-color: var(--border-color);
 }
+/* Submenu inputs/selects should use secondary colour */
+.dark-mode .submenu-panel .sidebar-form-control,
+.dark-mode .submenu-panel .sidebar-form-select {
+	background-color: var(--bg-secondary) !important;
+	color: var(--text-primary) !important;
+	border-color: var(--border-color) !important;
+}
 .dark-mode .submenu-title { color: var(--text-secondary); border-bottom-color: var(--border-color); }
 .dark-mode .submenu-panel label { color: var(--text-secondary); }
 
@@ -1253,10 +1260,10 @@ input:checked + .toggle-slider:before {
 .dark-mode {
 	color-scheme: dark;
 	/* Einheitliche Hintergrund-Hierarchie */
-	--bg-primary: #1a202c; /* Dunkelster Hintergrund */
-	--bg-secondary: #2d3748; /* Kachel-Hintergrund */
-	--bg-tertiary: #4a5568; /* Header-Hintergrund */
-	--bg-input: #374151; /* Einheitlicher Input-Hintergrund */
+	--bg-primary: #202224; /* Main */
+	--bg-secondary: #303437; /* Secondary surfaces */
+	--bg-tertiary: #303437; /* Header/rails */
+	--bg-input: #202224; /* Inputs default to main */
 
 	/* Klare Textfarben-Hierarchie */
 	--text-primary: #f7fafc; /* Primärer Text (Aircraft ID) */
@@ -1265,11 +1272,11 @@ input:checked + .toggle-slider:before {
 	--text-muted: #718096; /* Placeholder Text */
 
 	/* Einheitliche UI-Elemente */
-	--card-bg: #2d3748; /* Kachel-Hintergrund */
-	--card-header-bg: #4a5568; /* Header-Hintergrund */
-	--input-bg: #374151; /* Alle Inputs einheitlich */
+	--card-bg: #202224; /* Tile/body surfaces = main */
+	--card-header-bg: #303437; /* Tile header = secondary */
+	--input-bg: #202224; /* Inputs default */
 	--input-text: #e2e8f0; /* Input-Text */
-	--border-color: #4a5568; /* Einheitliche Rahmen */
+	--border-color: #303437; /* Borders = secondary */
 
 	/* Verbesserte Status-Farben für Dark Mode */
 	--status-ready: #48bb78; /* Sichtbares Grün */
@@ -1324,7 +1331,7 @@ body.dark-mode {
 		--card-bg
 	) !important; /* Forciere einheitlichen Hintergrund */
 	color: var(--text-primary);
-	border: 1px solid rgba(255, 255, 255, 0.08); /* softer border to reduce distraction */
+	border: 1px solid var(--border-color);
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
@@ -1379,10 +1386,10 @@ body.dark-mode {
 .dark-mode .status-selector,
 .dark-mode select.status-selector,
 .dark-mode .tow-status-selector {
-	/* Blend inputs into the tile to reduce visual noise */
-	background-color: transparent !important;
+	/* Inputs/selects default to main colour in dark mode */
+	background-color: var(--input-bg) !important;
 	color: var(--text-primary);
-	border: 1px solid transparent !important; /* minimal borders by default */
+	border: 1px solid var(--border-color) !important;
 }
 
 /* Subtle hover/focus to keep usability without strong borders */
@@ -2243,7 +2250,7 @@ body.dark-mode {
 .toast-error { background: #fee2e2; border-color: #fecaca; color: #991b1b; }
 
 /* Dark mode adjustments */
-.dark-mode .toast { background: #1f2937; border-color: #374151; color: #e5e7eb; }
+.dark-mode .toast { background: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary); }
 .dark-mode .toast-success { background: #064e3b; border-color: #065f46; color: #d1fae5; }
 .dark-mode .toast-info { background: #1e293b; border-color: #334155; color: #93c5fd; }
  .dark-mode .toast-error { background: #3f1d1d; border-color: #7f1d1d; color: #fecaca; }

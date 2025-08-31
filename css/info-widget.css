@@ -228,6 +228,14 @@ body.header-loose {
 	align-items: center;
 	margin-bottom: var(--header-row-gap, 8px);
 }
+/* Make header status rows clearly interactive */
+#status-widget .status-row { cursor: pointer; }
+#status-widget .status-row:hover .status-label,
+#status-widget .status-row:hover .status-label-value,
+#status-widget .status-row:hover .status-meta {
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
 /* Gruppe für mehrere Werte rechts (Mode + Update Toggle) */
 #status-widget .status-value-group {
 	display: inline-flex;

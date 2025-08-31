@@ -3,10 +3,10 @@
 	/* Header widgets layout spacing (can be tuned by adding header-compact or header-loose on body) */
 	--header-widget-gap: 16px;
 	--header-label-col: 78px;
-	--header-col-gap: 18px;
-	--header-row-gap: 8px; /* unified spacing across header widgets */
+	--header-col-gap: 16px; /* horizontal gap between label and value */
+	--header-row-gap: 8px; /* default vertical gap across header widgets */
 	/* Specific to time rows */
-	--time-col-gap: 6px;
+	--time-col-gap: 16px; /* match status widget label/value gap */
 }
 
 body.header-compact {
@@ -203,8 +203,8 @@ body.header-loose {
 	letter-spacing: 0px;
 	justify-self: end;
 }
-/* Time widget spacing: keep compact label/value; unify vertical row gap with header widgets (8px default) */
-#time-widget .time-display-row { column-gap: 2px; margin-bottom: var(--header-row-gap, 8px); line-height: 1.08; }
+/* Time widget spacing: 16px vertical gap between rows, and 16px label/value gap */
+#time-widget .time-display-row { column-gap: var(--time-col-gap, 16px); margin-bottom: 16px; line-height: 1.08; }
 
 /* Mode Display - exakt wie Weather Widget Secondary */
 .mode-display {
@@ -228,6 +228,8 @@ body.header-loose {
 	align-items: center;
 	margin-bottom: var(--header-row-gap, 8px);
 }
+/* Force 16px vertical gap specifically for status content */
+#status-widget .status-row { margin-bottom: 16px; }
 /* Make header status rows clearly interactive */
 #status-widget .status-row { cursor: pointer; }
 #status-widget .status-row:hover .status-label,

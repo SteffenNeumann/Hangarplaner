@@ -858,13 +858,13 @@ input:checked + .toggle-slider:before {
 .dark-mode .left-menu .menu-label { color: var(--text-secondary); }
 
 .dark-mode .submenu-panel {
-	background: var(--bg-secondary);
-	border-right-color: var(--border-color);
+	background: var(--bg-primary); /* submenu uses main colour */
+	border-right-color: var(--border-color); /* borders secondary */
 }
-/* Submenu inputs/selects should use secondary colour */
+/* Submenu inputs/selects should use main colour */
 .dark-mode .submenu-panel .sidebar-form-control,
 .dark-mode .submenu-panel .sidebar-form-select {
-	background-color: var(--bg-secondary) !important;
+	background-color: var(--bg-primary) !important;
 	color: var(--text-primary) !important;
 	border-color: var(--border-color) !important;
 }
@@ -1259,11 +1259,11 @@ input:checked + .toggle-slider:before {
 /* Dark Mode Styles */
 .dark-mode {
 	color-scheme: dark;
-	/* Einheitliche Hintergrund-Hierarchie */
-	--bg-primary: #202224; /* Main */
-	--bg-secondary: #303437; /* Secondary surfaces */
-	--bg-tertiary: #303437; /* Header/rails */
-	--bg-input: #202224; /* Inputs default to main */
+	/* Einheitliche Hintergrund-Hierarchie (swapped) */
+	--bg-primary: #303437; /* Main (swapped) */
+	--bg-secondary: #202224; /* Secondary (swapped) */
+	--bg-tertiary: #202224; /* Small menu uses secondary */
+	--bg-input: #303437; /* Inputs default to main */
 
 	/* Klare Textfarben-Hierarchie */
 	--text-primary: #f7fafc; /* Primärer Text (Aircraft ID) */
@@ -1272,11 +1272,11 @@ input:checked + .toggle-slider:before {
 	--text-muted: #718096; /* Placeholder Text */
 
 	/* Einheitliche UI-Elemente */
-	--card-bg: #202224; /* Tile/body surfaces = main */
-	--card-header-bg: #303437; /* Tile header = secondary */
-	--input-bg: #202224; /* Inputs default */
+	--card-bg: #303437; /* Tile/body surfaces = main (swapped) */
+	--card-header-bg: #202224; /* Tile header = secondary (swapped) */
+	--input-bg: #303437; /* Inputs default to main */
 	--input-text: #e2e8f0; /* Input-Text */
-	--border-color: #303437; /* Borders = secondary */
+	--border-color: #202224; /* Borders use secondary */
 
 	/* Verbesserte Status-Farben für Dark Mode */
 	--status-ready: #48bb78; /* Sichtbares Grün */

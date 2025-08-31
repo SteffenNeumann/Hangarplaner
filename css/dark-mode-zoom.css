@@ -2,16 +2,16 @@
 
 /* Grundlegende Dark Mode Farben */
 .dark-mode {
-	--dark-bg: #202224;
-	--dark-secondary: #303437;
-	--dark-card: #303437;
-	--dark-header: #303437;
+	--dark-bg: #303437; /* main (swapped) */
+	--dark-secondary: #202224; /* secondary (swapped) */
+	--dark-card: #303437; /* card surfaces use main */
+	--dark-header: #202224; /* headers use secondary */
 	--dark-text: #e5e7eb;
 	--dark-accent: #f49e0c;
-	--dark-input-bg: #202224;
+	--dark-input-bg: #303437; /* inputs default to main */
 	--dark-input-text: #e5e7eb;
-	--dark-border: #303437;
-	--dark-hover: #303437;
+	--dark-border: #202224; /* borders use secondary */
+	--dark-hover: #202224;
 }
 
 /* Body und Hauptcontainer */

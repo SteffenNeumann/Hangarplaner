@@ -240,3 +240,38 @@ button {
 /* Tailwind custom color helpers used in subpages */
 .dark-mode .text-industrial-dark { color: var(--dark-text) !important; }
 .dark-mode .bg-gray-100 { background-color: var(--dark-secondary) !important; }
+
+/* Timetable: Airport flights container and tables (generated dynamically) */
+.dark-mode #airport-flights-container {
+  background-color: var(--dark-card) !important;
+  color: var(--dark-text) !important;
+  border-color: var(--dark-border) !important;
+}
+.dark-mode #airport-flights-container h2,
+.dark-mode #airport-flights-container h3 {
+  color: var(--dark-text) !important;
+}
+.dark-mode #airport-flights-container .flight-table th {
+  background-color: var(--dark-secondary) !important;
+  color: var(--dark-text) !important;
+  border-color: var(--dark-border) !important;
+}
+.dark-mode #airport-flights-container .flight-table td {
+  color: var(--dark-text) !important;
+  border-color: var(--dark-border) !important;
+}
+/* Override alternating row backgrounds injected by JS */
+.dark-mode #airport-flights-container .flight-table tbody tr:nth-child(odd) {
+  background-color: var(--dark-card) !important;
+}
+.dark-mode #airport-flights-container .flight-table tbody tr:nth-child(even) {
+  background-color: var(--dark-secondary) !important;
+}
+.dark-mode #airport-flights-container .flight-table tr:hover {
+  background-color: var(--dark-hover) !important;
+}
+.dark-mode #airport-flights-container .flight-reg,
+.dark-mode #airport-flights-container .flight-number,
+.dark-mode #airport-flights-container .flight-time {
+  color: var(--dark-text) !important;
+}

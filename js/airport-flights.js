@@ -145,13 +145,13 @@ const AirportFlights = (() => {
 			// Erstelle einen Container für die Fluginfos mit dem Design des Hangarplanners
 			const flightInfoContainer = document.createElement("div");
 			flightInfoContainer.id = "airport-flights-container";
-			flightInfoContainer.className = "section-container";
+			flightInfoContainer.className = "section-container fleet-table-container";
 			flightInfoContainer.style.marginTop = "2rem";
 			flightInfoContainer.style.maxWidth = "100%"; // Maximale Breite
 			flightInfoContainer.style.width = "auto"; // Anpassung an Container-Breite
 			flightInfoContainer.style.marginLeft = "auto"; // Zentrierung
 			flightInfoContainer.style.marginRight = "auto"; // Zentrierung
-			flightInfoContainer.style.backgroundColor = "white";
+			// Use CSS for theming (light/dark); avoid inline background-color
 			flightInfoContainer.style.borderRadius = "0.5rem";
 			flightInfoContainer.style.boxShadow = "0 1px 3px rgba(0,0,0,0.12)";
 			flightInfoContainer.style.padding = "1rem";

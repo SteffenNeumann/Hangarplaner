@@ -169,6 +169,9 @@
 				</button>
 			</nav>
 
+			<!-- Click-blocking scrim for submenu drawer -->
+			<div id="submenu-scrim" class="submenu-scrim hidden" aria-hidden="true"></div>
+
 			<!-- Platzhalter für Submenus (werden im nächsten Schritt befüllt) -->
 			<div id="submenu-update" class="submenu-panel hidden" data-for="update">
 				<div class="submenu-title">Update</div>
@@ -449,6 +452,7 @@
 				(function(){
 					const leftMenu = document.getElementById('leftMenu');
 					if(!leftMenu) return;
+					const scrim = document.getElementById('submenu-scrim');
 					const panelNodes = document.querySelectorAll('.submenu-panel');
 					const panels = {};
 					panelNodes.forEach(p => { const k = p.getAttribute('data-for'); if(k) panels[k] = p; });
@@ -461,6 +465,7 @@
 					function hideAll(){
 						Object.values(panels).forEach(p=> p.classList.add('hidden'));
 						buttons.forEach(btn=> { btn.classList.remove('active'); btn.setAttribute('aria-expanded','false'); });
+						if (scrim) scrim.classList.add('hidden');
 					}
 					function show(key){
 						if(!panels[key]) return;
@@ -480,11 +485,13 @@
 							e.preventDefault();
 							if(!pinned){
 								pinned = true; show(key);
+								if (scrim) scrim.classList.remove('hidden');
 							}else{
 								if(current === key){ // toggle off
 									pinned = false; hideAll(); current = null;
 								}else{ // switch pinned panel
 									pinned = true; show(key);
+									if (scrim) scrim.classList.remove('hidden');
 								}
 							}
 						});
@@ -500,13 +507,24 @@
 					leftMenu.addEventListener('mouseleave', () => { if(!pinned){ closeTimer = setTimeout(() => closeIfNotPinned(), 150); } });
 					leftMenu.addEventListener('mouseenter', clearCloseTimer);
 
-					// Click outside closes only when not pinned
+					// Click outside (or on scrim) always closes
 					document.addEventListener('click', (e) => {
-						if(pinned) return;
 						const inMenu = leftMenu.contains(e.target);
 						const inPanel = current && panels[current] && panels[current].contains(e.target);
-						if(!inMenu && !inPanel){ closeIfNotPinned(); }
+						const clickedScrim = scrim && scrim.contains(e.target);
+						if (clickedScrim) {
+							pinned = false; hideAll(); current = null; return;
+						}
+						if(!inMenu && !inPanel){ pinned = false; hideAll(); current = null; }
 					});
+
+					// Explicit scrim handler
+					if (scrim) {
+						scrim.addEventListener('click', (e) => {
+							e.stopPropagation();
+							pinned = false; hideAll(); current = null;
+						});
+					}
 
 					// ESC always closes and unpins
 					document.addEventListener('keydown', (e) => {

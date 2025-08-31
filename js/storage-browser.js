@@ -714,9 +714,19 @@ class ServerSync {
 			if (tileData.arrivalTime) {
 				const arrivalInput = document.getElementById(`arrival-time-${tileId}`);
 				if (arrivalInput) {
-					arrivalInput.value = tileData.arrivalTime;
+					let toSet = tileData.arrivalTime;
+					if (arrivalInput.type === 'datetime-local' && window.helpers) {
+						const h = window.helpers;
+						if (h.isDateTimeLocal && h.isDateTimeLocal(tileData.arrivalTime)) {
+							toSet = tileData.arrivalTime;
+						} else if (h.isHHmm && h.isHHmm(tileData.arrivalTime) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
+							const bases = h.getBaseDates();
+							toSet = h.coerceHHmmToDateTimeLocalUtc(tileData.arrivalTime, bases.arrivalBase || '');
+						}
+					}
+					arrivalInput.value = toSet || '';
 					console.log(
-						`🛬 Ankunftszeit gesetzt: ${tileId} = ${tileData.arrivalTime}`
+						`🛬 Ankunftszeit gesetzt: ${tileId} = ${toSet || ''}`
 					);
 				}
 			}
@@ -727,9 +737,19 @@ class ServerSync {
 					`departure-time-${tileId}`
 				);
 				if (departureInput) {
-					departureInput.value = tileData.departureTime;
+					let toSet = tileData.departureTime;
+					if (departureInput.type === 'datetime-local' && window.helpers) {
+						const h = window.helpers;
+						if (h.isDateTimeLocal && h.isDateTimeLocal(tileData.departureTime)) {
+							toSet = tileData.departureTime;
+						} else if (h.isHHmm && h.isHHmm(tileData.departureTime) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
+							const bases = h.getBaseDates();
+							toSet = h.coerceHHmmToDateTimeLocalUtc(tileData.departureTime, bases.departureBase || '');
+						}
+					}
+					departureInput.value = toSet || '';
 					console.log(
-						`🛫 Abflugzeit gesetzt: ${tileId} = ${tileData.departureTime}`
+						`🛫 Abflugzeit gesetzt: ${tileId} = ${toSet || ''}`
 					);
 				}
 			}

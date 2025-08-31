@@ -744,17 +744,26 @@ function applySingleTileData(tileData, isSecondary = false) {
 
 		// Arrival Time setzen (leer bedeutet keine Zeit) - mit Container-Validation
 		if (tileData.arrivalTime) {
-			const arrivalElement = document.getElementById(`arrival-time-${tileId}`);
+			const arrivalElement = document.getElementById(`arrival-time-${tileData.tileId}`);
 			if (arrivalElement && containerElement.contains(arrivalElement)) {
-				arrivalElement.value = tileData.arrivalTime;
+				const h = window.helpers || {};
+				let display = '';
+				if (h.isISODateTimeLocal && h.isISODateTimeLocal(tileData.arrivalTime)) {
+					display = h.formatISOToCompactUTC(tileData.arrivalTime);
+				} else if (h.isHHmm && h.isHHmm(tileData.arrivalTime) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
+					const bases = h.getBaseDates();
+					const iso = h.coerceHHmmToDateTimeLocalUtc(tileData.arrivalTime, bases.arrivalBase || '');
+					display = iso ? h.formatISOToCompactUTC(iso) : '';
+				} else if (h.isCompactDateTime && h.isCompactDateTime(tileData.arrivalTime)) {
+					display = tileData.arrivalTime;
+				}
+				arrivalElement.value = display || '';
 				console.log(
-					`✅ Arrival Time für Tile ${tileId} (${
-						isSecondary ? "sekundär" : "primär"
-					}) gesetzt: ${tileData.arrivalTime}`
+					`✅ Arrival Time für Tile ${tileData.tileId} (${isSecondary ? "sekundär" : "primär"}) gesetzt: ${display || ''}`
 				);
 			} else {
 				console.warn(
-					`❌ Arrival Time Input für Tile ${tileId} nicht gefunden oder in falschem Container`
+					`❌ Arrival Time Input für Tile ${tileData.tileId} nicht gefunden oder in falschem Container`
 				);
 			}
 		}
@@ -762,18 +771,27 @@ function applySingleTileData(tileData, isSecondary = false) {
 		// Departure Time setzen (leer bedeutet keine Zeit) - mit Container-Validation
 		if (tileData.departureTime) {
 			const departureElement = document.getElementById(
-				`departure-time-${tileId}`
+				`departure-time-${tileData.tileId}`
 			);
 			if (departureElement && containerElement.contains(departureElement)) {
-				departureElement.value = tileData.departureTime;
+				const h = window.helpers || {};
+				let display = '';
+				if (h.isISODateTimeLocal && h.isISODateTimeLocal(tileData.departureTime)) {
+					display = h.formatISOToCompactUTC(tileData.departureTime);
+				} else if (h.isHHmm && h.isHHmm(tileData.departureTime) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
+					const bases = h.getBaseDates();
+					const iso = h.coerceHHmmToDateTimeLocalUtc(tileData.departureTime, bases.departureBase || '');
+					display = iso ? h.formatISOToCompactUTC(iso) : '';
+				} else if (h.isCompactDateTime && h.isCompactDateTime(tileData.departureTime)) {
+					display = tileData.departureTime;
+				}
+				departureElement.value = display || '';
 				console.log(
-					`✅ Departure Time für Tile ${tileId} (${
-						isSecondary ? "sekundär" : "primär"
-					}) gesetzt: ${tileData.departureTime}`
+					`✅ Departure Time für Tile ${tileData.tileId} (${isSecondary ? "sekundär" : "primär"}) gesetzt: ${display || ''}`
 				);
 			} else {
 				console.warn(
-					`❌ Departure Time Input für Tile ${tileId} nicht gefunden oder in falschem Container`
+					`❌ Departure Time Input für Tile ${tileData.tileId} nicht gefunden oder in falschem Container`
 				);
 			}
 		}
@@ -1604,14 +1622,28 @@ window.hangarData.updateAircraftFromFlightData = async function (
 					console.log(
 						`🧹 Ankunftszeit für Kachel ${cellId} gelöscht (keine Daten)`
 					);
-				} else if (
+} else if (
 					flightData.arrivalTime &&
 					flightData.arrivalTime !== "--:--" &&
 					flightData.arrivalTime !== ""
 				) {
-					arrivalInput.value = flightData.arrivalTime;
+					let display = '';
+					if (window.helpers){
+						const h = window.helpers;
+						let iso = '';
+						if (h.isISODateTimeLocal && h.isISODateTimeLocal(flightData.arrivalTime)) {
+							iso = flightData.arrivalTime;
+						} else if (h.isHHmm && h.isHHmm(flightData.arrivalTime) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
+							const bases = h.getBaseDates();
+							iso = h.coerceHHmmToDateTimeLocalUtc(flightData.arrivalTime, bases.arrivalBase || '');
+						} else if (h.isCompactDateTime && h.isCompactDateTime(flightData.arrivalTime) && h.parseCompactToISOUTC) {
+							iso = h.parseCompactToISOUTC(flightData.arrivalTime);
+						}
+						display = iso && h.formatISOToCompactUTC ? h.formatISOToCompactUTC(iso) : (display||'');
+					}
+					arrivalInput.value = display || '';
 					console.log(
-						`✅ Ankunftszeit für Kachel ${cellId}: ${flightData.arrivalTime}`
+						`✅ Ankunftszeit für Kachel ${cellId}: ${display || ''}`
 					);
 				}
 			} else {
@@ -1634,14 +1666,28 @@ window.hangarData.updateAircraftFromFlightData = async function (
 					console.log(
 						`🧹 Abflugzeit für Kachel ${cellId} gelöscht (keine Daten)`
 					);
-				} else if (
+} else if (
 					flightData.departureTime &&
 					flightData.departureTime !== "--:--" &&
 					flightData.departureTime !== ""
 				) {
-					departureInput.value = flightData.departureTime;
+					let display = '';
+					if (window.helpers){
+						const h = window.helpers;
+						let iso = '';
+						if (h.isISODateTimeLocal && h.isISODateTimeLocal(flightData.departureTime)) {
+							iso = flightData.departureTime;
+						} else if (h.isHHmm && h.isHHmm(flightData.departureTime) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
+							const bases = h.getBaseDates();
+							iso = h.coerceHHmmToDateTimeLocalUtc(flightData.departureTime, bases.departureBase || '');
+						} else if (h.isCompactDateTime && h.isCompactDateTime(flightData.departureTime) && h.parseCompactToISOUTC) {
+							iso = h.parseCompactToISOUTC(flightData.departureTime);
+						}
+						display = iso && h.formatISOToCompactUTC ? h.formatISOToCompactUTC(iso) : (display||'');
+					}
+					departureInput.value = display || '';
 					console.log(
-						`✅ Abflugzeit für Kachel ${cellId}: ${flightData.departureTime}`
+						`✅ Abflugzeit für Kachel ${cellId}: ${display || ''}`
 					);
 				}
 			} else {

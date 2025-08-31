@@ -145,13 +145,18 @@ class HangarEventManager {
 		try {
 			// 1. Lokale Speicherung
 			const existing = (await this.loadFromStorage("hangarPlannerData")) || {};
-			existing[fieldId] = value;
+			let storeValue = value;
+			if ((fieldId.startsWith('arrival-time-') || fieldId.startsWith('departure-time-')) && typeof window.helpers !== 'undefined' && typeof window.helpers.canonicalizeDateTimeFieldValue === 'function'){
+				const iso = window.helpers.canonicalizeDateTimeFieldValue(fieldId, (value||'').trim());
+				storeValue = iso || '';
+			}
+			existing[fieldId] = storeValue;
 			existing.lastModified = new Date().toISOString();
 
 			await this.saveToStorage("hangarPlannerData", existing);
 
 			// 2. DIREKTE Server-Synchronisation
-			await this.syncFieldToServer(fieldId, value);
+			await this.syncFieldToServer(fieldId, storeValue);
 		} catch (error) {
 			console.error("Fehler beim Speichern von Feld:", fieldId, error);
 		}
@@ -307,9 +312,19 @@ class HangarEventManager {
 				} else if (fieldId.includes("notes-")) {
 					tileGroups[cellId].notes = value;
 				} else if (fieldId.includes("arrival-time-")) {
-					tileGroups[cellId].arrivalTime = value;
+					if (typeof window.helpers !== 'undefined' && typeof window.helpers.canonicalizeDateTimeFieldValue === 'function'){
+						const iso = window.helpers.canonicalizeDateTimeFieldValue(fieldId, value);
+						tileGroups[cellId].arrivalTime = iso || '';
+					} else {
+						tileGroups[cellId].arrivalTime = value;
+					}
 				} else if (fieldId.includes("departure-time-")) {
-					tileGroups[cellId].departureTime = value;
+					if (typeof window.helpers !== 'undefined' && typeof window.helpers.canonicalizeDateTimeFieldValue === 'function'){
+						const iso = window.helpers.canonicalizeDateTimeFieldValue(fieldId, value);
+						tileGroups[cellId].departureTime = iso || '';
+					} else {
+						tileGroups[cellId].departureTime = value;
+					}
 				} else if (fieldId.includes("status-")) {
 					tileGroups[cellId].status = value;
 				} else if (fieldId.includes("tow-status-")) {
@@ -509,9 +524,32 @@ class HangarEventManager {
 							event.target.value
 						);
 					}
+} else if (
+					(event.target.id.startsWith('arrival-time-') || event.target.id.startsWith('departure-time-')) &&
+					typeof window.helpers !== 'undefined'
+				) {
+					const h = window.helpers;
+					const raw = (event.target.value || '').trim();
+					let iso = (typeof h.canonicalizeDateTimeFieldValue === 'function')
+						? h.canonicalizeDateTimeFieldValue(event.target.id, raw)
+						: raw;
+					if (iso && typeof h.formatISOToCompactUTC === 'function'){
+						event.target.value = h.formatISOToCompactUTC(iso);
+						event.target.dataset.iso = iso;
+					} else {
+						event.target.value = '';
+						delete event.target.dataset.iso;
+					}
 				}
 
-				this.debouncedFieldUpdate(event.target.id, event.target.value, 100);
+				// Store ISO for date/time fields, otherwise raw value
+				let storeVal = event.target.value;
+				if ((event.target.id.startsWith('arrival-time-') || event.target.id.startsWith('departure-time-')) && typeof window.helpers !== 'undefined' && typeof window.helpers.canonicalizeDateTimeFieldValue === 'function'){
+					const iso = window.helpers.canonicalizeDateTimeFieldValue(event.target.id, (event.target.dataset.iso || event.target.value || '').trim());
+					if (iso) storeVal = iso; else storeVal = '';
+				}
+
+				this.debouncedFieldUpdate(event.target.id, storeVal, 100);
 			},
 			`${containerType}_blur`
 		);
@@ -700,9 +738,32 @@ class HangarEventManager {
 							event.target.value
 						);
 					}
+} else if (
+					(event.target.id.startsWith('arrival-time-') || event.target.id.startsWith('departure-time-')) &&
+					typeof window.helpers !== 'undefined'
+				) {
+					const h = window.helpers;
+					const raw = (event.target.value || '').trim();
+					let iso = (typeof h.canonicalizeDateTimeFieldValue === 'function')
+						? h.canonicalizeDateTimeFieldValue(event.target.id, raw)
+						: raw;
+					if (iso && typeof h.formatISOToCompactUTC === 'function'){
+						event.target.value = h.formatISOToCompactUTC(iso);
+						event.target.dataset.iso = iso;
+					} else {
+						event.target.value = '';
+						delete event.target.dataset.iso;
+					}
 				}
 
-				this.debouncedFieldUpdate(event.target.id, event.target.value, 100);
+				// Store ISO for date/time fields, otherwise raw value
+				let storeVal = event.target.value;
+				if ((event.target.id.startsWith('arrival-time-') || event.target.id.startsWith('departure-time-')) && typeof window.helpers !== 'undefined' && typeof window.helpers.canonicalizeDateTimeFieldValue === 'function'){
+					const iso = window.helpers.canonicalizeDateTimeFieldValue(event.target.id, (event.target.dataset.iso || event.target.value || '').trim());
+					if (iso) storeVal = iso; else storeVal = '';
+				}
+
+				this.debouncedFieldUpdate(event.target.id, storeVal, 100);
 			},
 			`${handlerPrefix}_blur`
 		);

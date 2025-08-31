@@ -484,7 +484,7 @@ select.status-selector {
 
 .info-grid {
 	display: grid;
-	grid-template-columns: auto auto;
+	grid-template-columns: auto 1fr;
 	gap: 0.25rem;
 	align-items: center;
 	min-width: 0;
@@ -540,6 +540,25 @@ select.status-selector {
 .info-input::placeholder {
 	color: #9ca3af;
 	font-style: italic;
+}
+
+/* Keep compact date-time input and its button in a single grid cell using absolute button */
+.compact-dt-wrap { position: relative; display: block; width: 100%; min-width: 0; }
+.compact-dt-wrap .compact-dt-btn {
+	position: absolute;
+	right: 2px;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 22px;
+	height: 22px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	border: 1px solid #cbd5e1;
+	border-radius: 4px;
+	background: #f8fafc;
+	cursor: pointer;
 }
 
 .notes-container {

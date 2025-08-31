@@ -212,14 +212,18 @@ const uiSettings = {
 				const arrivalTimeInput = document.getElementById(
 					`arrival-time-${cellId}`
 				);
-				const arrivalTime = arrivalTimeInput ? arrivalTimeInput.value : "";
+				let arrivalTime = arrivalTimeInput ? arrivalTimeInput.value : "";
+				if (window.helpers && window.helpers.canonicalizeDateTimeFieldValue) {
+					arrivalTime = window.helpers.canonicalizeDateTimeFieldValue(`arrival-time-${cellId}`, arrivalTime) || "";
+				}
 
 				const departureTimeInput = document.getElementById(
 					`departure-time-${cellId}`
 				);
-				const departureTime = departureTimeInput
-					? departureTimeInput.value
-					: "";
+				let departureTime = departureTimeInput ? departureTimeInput.value : "";
+				if (window.helpers && window.helpers.canonicalizeDateTimeFieldValue) {
+					departureTime = window.helpers.canonicalizeDateTimeFieldValue(`departure-time-${cellId}`, departureTime) || "";
+				}
 
 				// Notizen sammeln
 				const notesTextarea = document.getElementById(`notes-${cellId}`);
@@ -440,14 +444,32 @@ const uiSettings = {
 				`arrival-time-${cellId}`
 			);
 			if (arrivalTimeInput && tileValue.arrivalTime) {
-				arrivalTimeInput.value = tileValue.arrivalTime;
+				const h = window.helpers || {};
+				let display = tileValue.arrivalTime;
+				if (h.isISODateTimeLocal && h.isISODateTimeLocal(tileValue.arrivalTime)) {
+					display = h.formatISOToCompactUTC(tileValue.arrivalTime);
+				} else if (h.isHHmm && h.isHHmm(tileValue.arrivalTime) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
+					const bases = h.getBaseDates();
+					const iso = h.coerceHHmmToDateTimeLocalUtc(tileValue.arrivalTime, bases.arrivalBase || '');
+					display = iso ? h.formatISOToCompactUTC(iso) : '';
+				}
+				arrivalTimeInput.value = display || '';
 			}
 
 			const departureTimeInput = document.getElementById(
 				`departure-time-${cellId}`
 			);
 			if (departureTimeInput && tileValue.departureTime) {
-				departureTimeInput.value = tileValue.departureTime;
+				const h = window.helpers || {};
+				let display = tileValue.departureTime;
+				if (h.isISODateTimeLocal && h.isISODateTimeLocal(tileValue.departureTime)) {
+					display = h.formatISOToCompactUTC(tileValue.departureTime);
+				} else if (h.isHHmm && h.isHHmm(tileValue.departureTime) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
+					const bases = h.getBaseDates();
+					const iso = h.coerceHHmmToDateTimeLocalUtc(tileValue.departureTime, bases.departureBase || '');
+					display = iso ? h.formatISOToCompactUTC(iso) : '';
+				}
+				departureTimeInput.value = display || '';
 			}
 
 			// Status setzen
@@ -987,18 +1009,24 @@ function collectTileData(cellId) {
 				: "neutral";
 
 		const arrivalElement = document.getElementById(`arrival-time-${cellId}`);
-		const arrivalTime =
+		let arrivalTime =
 			arrivalElement && containerElement.contains(arrivalElement)
 				? arrivalElement.value || ""
 				: "";
+		if (window.helpers && window.helpers.canonicalizeDateTimeFieldValue) {
+			arrivalTime = window.helpers.canonicalizeDateTimeFieldValue(`arrival-time-${cellId}`, arrivalTime) || '';
+		}
 
 		const departureElement = document.getElementById(
 			`departure-time-${cellId}`
 		);
-		const departureTime =
+		let departureTime =
 			departureElement && containerElement.contains(departureElement)
 				? departureElement.value || ""
 				: "";
+		if (window.helpers && window.helpers.canonicalizeDateTimeFieldValue) {
+			departureTime = window.helpers.canonicalizeDateTimeFieldValue(`departure-time-${cellId}`, departureTime) || '';
+		}
 
 		const tileData = {
 			tileId: cellId,

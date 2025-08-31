@@ -172,8 +172,9 @@ function createDataTable(data, title, options = {}) {
 		// Erstelle Zellen basierend auf Feldauswahl
 		const cells = [];
 		if (exportFields.aircraft) cells.push(row.aircraft);
-		if (exportFields.arrival) cells.push(row.arrival);
-		if (exportFields.departure) cells.push(row.departure);
+		const toPDF = (v) => (window.helpers && window.helpers.formatDateTimeLocalForPdf) ? window.helpers.formatDateTimeLocalForPdf(v) : v;
+		if (exportFields.arrival) cells.push(toPDF(row.arrival));
+		if (exportFields.departure) cells.push(toPDF(row.departure));
 		if (exportFields.position) cells.push(row.position);
 		if (exportFields.hangarPosition) cells.push(row.hangarPosition);
 		if (exportFields.status) cells.push(getStatusText(row.status));

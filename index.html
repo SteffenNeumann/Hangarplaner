@@ -103,6 +103,23 @@
 				background-color: white;
 				color: #333333;
 			}
+
+			/* Inline unit suffix for inputs like the Update interval field */
+			.input-with-suffix {
+				position: relative;
+			}
+			.input-with-suffix .input-suffix {
+				position: absolute;
+				right: 10px;
+				top: 50%;
+				transform: translateY(-50%);
+				color: #6b7280; /* subtle grey */
+				font-size: 12px;
+				pointer-events: none;
+			}
+			.input-with-suffix .has-suffix {
+				padding-right: 70px; /* space for 'Minutes' */
+			}
 		</style>
 	</head>
 	<body class="bg-industrial-dark text-white font-sans edit-mode">
@@ -195,8 +212,9 @@
 				<div class="sidebar-form-group">
 					<div class="sidebar-form-row">
 						<label for="updateIntervalInput">Time interval</label>
-						<div class="input-container">
-							<input type="number" id="updateIntervalInput" class="sidebar-form-control" min="1" value="15" placeholder="minutes" title="Minutes" />
+						<div class="input-container input-with-suffix">
+							<input type="number" id="updateIntervalInput" class="sidebar-form-control has-suffix" min="1" value="15" placeholder="" title="Minutes" />
+							<span class="input-suffix">Minutes</span>
 						</div>
 					</div>
 				</div>
@@ -747,17 +765,19 @@
 									<div class="info-grid mb-3">
 										<div class="info-label">Arr:</div>
 										<input
-											type="time"
+											type="datetime-local"
 											id="arrival-time-1"
 											class="info-input"
-											title="Time" />
+											title="Date/Time (UTC)"
+											placeholder="YYYY-MM-DDTHH:mm" />
 
 										<div class="info-label">Dep:</div>
 										<input
-											type="time"
+											type="datetime-local"
 											id="departure-time-1"
 											class="info-input"
-											title="Time" />
+											title="Date/Time (UTC)"
+											placeholder="YYYY-MM-DDTHH:mm" />
 
 										<div class="info-label">Pos:</div>
 										<input
@@ -841,17 +861,19 @@
 									<div class="info-grid mb-3">
 										<div class="info-label">Arr:</div>
 										<input
-											type="time"
+											type="datetime-local"
 											id="arrival-time-2"
 											class="info-input"
-											title="Time" />
+											title="Date/Time (UTC)"
+											placeholder="YYYY-MM-DDTHH:mm" />
 
 										<div class="info-label">Dep:</div>
 										<input
-											type="time"
+											type="datetime-local"
 											id="departure-time-2"
 											class="info-input"
-											title="Time" />
+											title="Date/Time (UTC)"
+											placeholder="YYYY-MM-DDTHH:mm" />
 
 										<div class="info-label">Pos:</div>
 										<input
@@ -935,15 +957,19 @@
 									<div class="info-grid mb-3">
 										<div class="info-label">Arr:</div>
 										<input
-											type="time"
+type="datetime-local"
 											id="arrival-time-3"
+											title="Date/Time (UTC)"
+placeholder="YY.MM.DD,HH:mm"
 											class="info-input"
 											title="Time" />
 
 										<div class="info-label">Dep:</div>
 										<input
-											type="time"
+type="datetime-local"
 											id="departure-time-3"
+											title="Date/Time (UTC)"
+											placeholder="YYYY-MM-DDTHH:mm"
 											class="info-input"
 											title="Time" />
 
@@ -1029,15 +1055,19 @@
 									<div class="info-grid mb-3">
 										<div class="info-label">Arr:</div>
 										<input
-											type="time"
+type="datetime-local"
 											id="arrival-time-4"
+											title="Date/Time (UTC)"
+											placeholder="YYYY-MM-DDTHH:mm"
 											class="info-input"
 											title="Time" />
 
 										<div class="info-label">Dep:</div>
 										<input
-											type="time"
+type="datetime-local"
 											id="departure-time-4"
+											title="Date/Time (UTC)"
+											placeholder="YYYY-MM-DDTHH:mm"
 											class="info-input"
 											title="Time" />
 
@@ -1124,14 +1154,18 @@
 									<div class="info-grid mb-3">
 										<div class="info-label">Arr:</div>
 										<input
-											type="time"
+type="datetime-local"
 											id="arrival-time-5"
+											title="Date/Time (UTC)"
+											placeholder="YYYY-MM-DDTHH:mm"
 											class="info-input"
 											title="Time" />
 										<div class="info-label">Dep:</div>
 										<input
-											type="time"
+type="datetime-local"
 											id="departure-time-5"
+											title="Date/Time (UTC)"
+											placeholder="YYYY-MM-DDTHH:mm"
 											class="info-input"
 											title="Time" />
 										<div class="info-label">Pos:</div>
@@ -1215,14 +1249,18 @@
 									<div class="info-grid mb-3">
 										<div class="info-label">Arr:</div>
 										<input
-											type="time"
+type="datetime-local"
 											id="arrival-time-6"
+											title="Date/Time (UTC)"
+											placeholder="YYYY-MM-DDTHH:mm"
 											class="info-input"
 											title="Time" />
 										<div class="info-label">Dep:</div>
 										<input
-											type="time"
+type="datetime-local"
 											id="departure-time-6"
+											title="Date/Time (UTC)"
+											placeholder="YYYY-MM-DDTHH:mm"
 											class="info-input"
 											title="Time" />
 										<div class="info-label">Pos:</div>
@@ -1306,14 +1344,18 @@
 									<div class="info-grid mb-3">
 										<div class="info-label">Arr:</div>
 										<input
-											type="time"
+type="datetime-local"
 											id="arrival-time-7"
+											title="Date/Time (UTC)"
+											placeholder="YYYY-MM-DDTHH:mm"
 											class="info-input"
 											title="Time" />
 										<div class="info-label">Dep:</div>
 										<input
-											type="time"
+type="datetime-local"
 											id="departure-time-7"
+											title="Date/Time (UTC)"
+											placeholder="YYYY-MM-DDTHH:mm"
 											class="info-input"
 											title="Time" />
 										<div class="info-label">Pos:</div>
@@ -1398,14 +1440,18 @@
 									<div class="info-grid mb-3">
 										<div class="info-label">Arr:</div>
 										<input
-											type="time"
+type="datetime-local"
 											id="arrival-time-8"
+											title="Date/Time (UTC)"
+											placeholder="YYYY-MM-DDTHH:mm"
 											class="info-input"
 											title="Time" />
 										<div class="info-label">Dep:</div>
 										<input
-											type="time"
+type="datetime-local"
 											id="departure-time-8"
+											title="Date/Time (UTC)"
+											placeholder="YYYY-MM-DDTHH:mm"
 											class="info-input"
 											title="Time" />
 										<div class="info-label">Pos:</div>
@@ -1488,14 +1534,18 @@
 									<div class="info-grid mb-3">
 										<div class="info-label">Arr:</div>
 										<input
-											type="time"
+type="datetime-local"
 											id="arrival-time-9"
+											title="Date/Time (UTC)"
+											placeholder="YYYY-MM-DDTHH:mm"
 											class="info-input"
 											title="Time" />
 										<div class="info-label">Dep:</div>
 										<input
-											type="time"
+type="datetime-local"
 											id="departure-time-9"
+											title="Date/Time (UTC)"
+											placeholder="YYYY-MM-DDTHH:mm"
 											class="info-input"
 											title="Time" />
 										<div class="info-label">Pos:</div>
@@ -1577,14 +1627,18 @@
 									<div class="info-grid mb-3">
 										<div class="info-label">Arr:</div>
 										<input
-											type="time"
+type="datetime-local"
 											id="arrival-time-10"
+											title="Date/Time (UTC)"
+											placeholder="YYYY-MM-DDTHH:mm"
 											class="info-input"
 											title="Time" />
 										<div class="info-label">Dep:</div>
 										<input
-											type="time"
+type="datetime-local"
 											id="departure-time-10"
+											title="Date/Time (UTC)"
+											placeholder="YYYY-MM-DDTHH:mm"
 											class="info-input"
 											title="Time" />
 										<div class="info-label">Pos:</div>
@@ -1666,14 +1720,18 @@
 									<div class="info-grid mb-3">
 										<div class="info-label">Arr:</div>
 										<input
-											type="time"
+type="datetime-local"
 											id="arrival-time-11"
+											title="Date/Time (UTC)"
+											placeholder="YYYY-MM-DDTHH:mm"
 											class="info-input"
 											title="Time" />
 										<div class="info-label">Dep:</div>
 										<input
-											type="time"
+type="datetime-local"
 											id="departure-time-11"
+											title="Date/Time (UTC)"
+											placeholder="YYYY-MM-DDTHH:mm"
 											class="info-input"
 											title="Time" />
 
@@ -1757,14 +1815,18 @@
 									<div class="info-grid mb-3">
 										<div class="info-label">Arr:</div>
 										<input
-											type="time"
+type="datetime-local"
 											id="arrival-time-12"
+											title="Date/Time (UTC)"
+											placeholder="YYYY-MM-DDTHH:mm"
 											class="info-input"
 											title="Time" />
 										<div class="info-label">Dep:</div>
 										<input
-											type="time"
+type="datetime-local"
 											id="departure-time-12"
+											title="Date/Time (UTC)"
+											placeholder="YYYY-MM-DDTHH:mm"
 											class="info-input"
 											title="Time" />
 

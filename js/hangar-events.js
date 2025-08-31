@@ -446,27 +446,55 @@ function applyFlightDataToUI(flightData) {
 
 			// Arrival Time
 			const arrivalInput = document.getElementById(`arrival-time-${cellId}`);
-			if (arrivalInput && flight.arrivalTime) {
-				arrivalInput.value = flight.arrivalTime;
-				saveFlightTimeValueToLocalStorage(
-					cellId,
-					"arrivalTime",
-					flight.arrivalTime
-				);
-			}
+				if (arrivalInput && flight.arrivalTime) {
+					let display = '';
+					let iso = '';
+					if (window.helpers) {
+						const h = window.helpers;
+						if (h.isISODateTimeLocal && h.isISODateTimeLocal(flight.arrivalTime)) {
+							iso = flight.arrivalTime;
+						} else if (h.isHHmm && h.isHHmm(flight.arrivalTime) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
+							const bases = h.getBaseDates();
+							iso = h.coerceHHmmToDateTimeLocalUtc(flight.arrivalTime, bases.arrivalBase || '');
+						} else if (h.isCompactDateTime && h.isCompactDateTime(flight.arrivalTime) && h.parseCompactToISOUTC) {
+							iso = h.parseCompactToISOUTC(flight.arrivalTime);
+						}
+						if (iso && h.formatISOToCompactUTC) display = h.formatISOToCompactUTC(iso);
+					}
+					arrivalInput.value = display || '';
+					saveFlightTimeValueToLocalStorage(
+						cellId,
+						"arrivalTime",
+						iso || ''
+					);
+				}
 
 			// Departure Time
 			const departureInput = document.getElementById(
 				`departure-time-${cellId}`
 			);
-			if (departureInput && flight.departureTime) {
-				departureInput.value = flight.departureTime;
-				saveFlightTimeValueToLocalStorage(
-					cellId,
-					"departureTime",
-					flight.departureTime
-				);
-			}
+				if (departureInput && flight.departureTime) {
+					let display = '';
+					let iso = '';
+					if (window.helpers) {
+						const h = window.helpers;
+						if (h.isISODateTimeLocal && h.isISODateTimeLocal(flight.departureTime)) {
+							iso = flight.departureTime;
+						} else if (h.isHHmm && h.isHHmm(flight.departureTime) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
+							const bases = h.getBaseDates();
+							iso = h.coerceHHmmToDateTimeLocalUtc(flight.departureTime, bases.departureBase || '');
+						} else if (h.isCompactDateTime && h.isCompactDateTime(flight.departureTime) && h.parseCompactToISOUTC) {
+							iso = h.parseCompactToISOUTC(flight.departureTime);
+						}
+						if (iso && h.formatISOToCompactUTC) display = h.formatISOToCompactUTC(iso);
+					}
+					departureInput.value = display || '';
+					saveFlightTimeValueToLocalStorage(
+						cellId,
+						"departureTime",
+						iso || ''
+					);
+				}
 		}
 	});
 

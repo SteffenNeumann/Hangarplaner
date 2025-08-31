@@ -1124,3 +1124,374 @@ if (window.helpers) {
 }
 
 // === HELPERS MODULE BEREIT ===
+
+// Date/Time helpers for datetime-local handling in UTC context
+(function(){
+  // Validates ISO local datetime YYYY-MM-DDTHH:mm (no seconds)
+  function isISODateTimeLocal(str){
+    return typeof str === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(str);
+  }
+
+  // Back-compat alias (old name)
+  function isDateTimeLocal(str){ return isISODateTimeLocal(str); }
+
+  // Validates HH:mm only
+  function isHHmm(str){
+    return typeof str === 'string' && /^\d{1,2}:\d{2}$/.test(str);
+  }
+
+  // Validates compact format yy.mm.dd,HH:mm
+  function isCompactDateTime(str){
+    return typeof str === 'string' && /^\d{2}\.\d{2}\.\d{2},\d{2}:\d{2}$/.test(str);
+  }
+
+  // Pads to 2-digit
+  function pad2(n){ return String(n).padStart(2,'0'); }
+
+  // Adds N days to a YYYY-MM-DD string (UTC-safe by parsing parts only)
+  function addDaysToDateString(dateStr, days){
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return '';
+    const [y,m,d] = dateStr.split('-').map(Number);
+    const dt = new Date(Date.UTC(y, m-1, d));
+    dt.setUTCDate(dt.getUTCDate() + (days||0));
+    const yy = dt.getUTCFullYear();
+    const mm = pad2(dt.getUTCMonth()+1);
+    const dd = pad2(dt.getUTCDate());
+    return `${yy}-${mm}-${dd}`;
+  }
+
+  // Reads base dates from UI; arrival := #currentDateInput; departure := arrival+1 day
+  function getBaseDates(){
+    const baseEl = document.getElementById('currentDateInput');
+    const base = (baseEl && /^\d{4}-\d{2}-\d{2}$/.test(baseEl.value)) ? baseEl.value : '';
+    return {
+      arrivalBase: base,
+      departureBase: base ? addDaysToDateString(base, 1) : ''
+    };
+  }
+
+  // Converts HH:mm to datetime-local ISO (YYYY-MM-DDTHH:mm) using provided base date (YYYY-MM-DD)
+  // Returns '' if invalid inputs
+  function coerceHHmmToDateTimeLocalUtc(hhmm, baseDateStr){
+    if (!isHHmm(hhmm) || !/^\d{4}-\d{2}-\d{2}$/.test(baseDateStr)) return '';
+    const [h, min] = hhmm.split(':').map(x=>parseInt(x,10));
+    if (isNaN(h) || isNaN(min) || h<0 || h>23 || min<0 || min>59) return '';
+    return `${baseDateStr}T${pad2(h)}:${pad2(min)}`;
+  }
+
+  // Formats ISO local datetime to yy.mm.dd,HH:mm (UTC-based display requested)
+  function formatISOToCompactUTC(iso){
+    if (!isISODateTimeLocal(iso)) return '';
+    const [date, time] = iso.split('T');
+    const [y,m,d] = date.split('-');
+    const yy = y.slice(-2);
+    return `${yy}.${m}.${d},${time}`;
+  }
+
+  // Parse compact yy.mm.dd,HH:mm to ISO local datetime YYYY-MM-DDTHH:mm
+  // Assumes years 2000-2099 for two-digit year (UTC context)
+  function parseCompactToISOUTC(compact){
+    if (!isCompactDateTime(compact)) return '';
+    const [datePart, timePart] = compact.split(',');
+    const [yy, mm, dd] = datePart.split('.');
+    const [HH, MM] = timePart.split(':');
+    const yyyy = String(2000 + parseInt(yy,10));
+    return `${yyyy}-${mm}-${dd}T${HH}:${MM}`;
+  }
+
+  // Formats datetime-local to yy.mm.dd,HH:mm for PDF display (accepts ISO string)
+  function formatDateTimeLocalForPdf(dt){
+    if (!isISODateTimeLocal(dt)) return '';
+    return formatISOToCompactUTC(dt);
+  }
+
+  // Canonicalize value for a date-time field (arrival/departure) to ISO for storage
+  function canonicalizeDateTimeFieldValue(fieldId, value){
+    const v = (value||'').trim();
+    if (!v) return '';
+    // Field type discovery (arrival vs departure) only matters for HH:mm base selection
+    const isArrival = fieldId.startsWith('arrival-time-');
+    const isDeparture = fieldId.startsWith('departure-time-');
+    if (!isArrival && !isDeparture) return v; // not our concern
+
+    if (isISODateTimeLocal(v)) return v;
+    if (isCompactDateTime(v)) return parseCompactToISOUTC(v);
+    if (isHHmm(v)){
+      const bases = getBaseDates();
+      const base = isArrival ? bases.arrivalBase : bases.departureBase;
+      return base ? coerceHHmmToDateTimeLocalUtc(v, base) : '';
+    }
+    return '';
+  }
+
+  // Helper: create masked compact value from digits (max 10 digits: YYMMDDHHmm)
+  function digitsToCompact(digits){
+    const d = (digits||'').replace(/\D+/g,'').slice(0,10);
+    let out = '';
+    for (let i=0;i<d.length;i++){
+      out += d[i];
+      if (i===1) out += '.'; // after YY
+      if (i===3) out += '.'; // after YY.MM
+      if (i===5) out += ','; // after YY.MM.DD
+      if (i===7) out += ':'; // after YY.MM.DD,HH
+    }
+    return out;
+  }
+
+  // Attach input mask and interactions to a compact datetime input
+  function attachCompactMask(input){
+    if (!input || input.__compactMaskAttached) return;
+    input.setAttribute('inputmode','numeric');
+    input.setAttribute('placeholder','yy.mm.dd,HH:mm');
+    input.dataset.dtCompact = 'true';
+
+    // Ensure input fills its cell and leave space for absolute calendar button
+    try {
+      input.style.display = 'block';
+      input.style.width = '100%';
+      input.style.paddingRight = '28px';
+    } catch(e){}
+
+    const onInput = (e)=>{
+      const raw = e.target.value || '';
+      // If user types ISO, show compact immediately
+      if (isISODateTimeLocal(raw)){
+        e.target.value = formatISOToCompactUTC(raw);
+        return;
+      }
+      e.target.value = digitsToCompact(raw);
+    };
+
+    const onBlur = (e)=>{
+      const raw = (e.target.value||'').trim();
+      let iso = '';
+      if (isISODateTimeLocal(raw)) iso = raw;
+      else if (isCompactDateTime(raw)) iso = parseCompactToISOUTC(raw);
+      else if (isHHmm(raw)) iso = canonicalizeDateTimeFieldValue(e.target.id, raw);
+      else iso = '';
+
+      if (iso){
+        e.target.value = formatISOToCompactUTC(iso); // keep display compact
+        e.target.dataset.iso = iso; // store ISO reference on the element
+      } else {
+        // invalid → clear
+        e.target.value = '';
+        delete e.target.dataset.iso;
+      }
+    };
+
+    input.addEventListener('input', onInput);
+    input.addEventListener('blur', onBlur);
+
+    // Double-click to open lightweight picker
+    input.addEventListener('dblclick', ()=> openCompactDateTimePicker(input));
+
+    // Calendar button placed absolutely inside a wrapper so grid stays 2-column
+    try{
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = '🗓';
+      btn.title = 'Open date/time picker';
+      btn.className = 'compact-dt-btn';
+      // inline fallback; full look via CSS
+      btn.style.position = 'absolute';
+      btn.style.right = '2px';
+      btn.style.top = '50%';
+      btn.style.transform = 'translateY(-50%)';
+      btn.style.width = '22px';
+      btn.style.height = '22px';
+      btn.style.display = 'inline-flex';
+      btn.style.alignItems = 'center';
+      btn.style.justifyContent = 'center';
+      btn.style.padding = '0';
+      btn.style.border = '1px solid #cbd5e1';
+      btn.style.borderRadius = '4px';
+      btn.style.background = '#f8fafc';
+      btn.style.cursor = 'pointer';
+      btn.addEventListener('click', ()=> openCompactDateTimePicker(input));
+
+      const parent = input.parentElement;
+      if (parent){
+        // If not already wrapped, create a wrapper to keep input as a single grid item
+        if (!parent.classList || !parent.classList.contains('compact-dt-wrap')){
+          const wrap = document.createElement('div');
+          wrap.className = 'compact-dt-wrap';
+          wrap.style.position = 'relative';
+          wrap.style.display = 'block';
+          wrap.style.width = '100%';
+          wrap.style.minWidth = '0';
+          parent.insertBefore(wrap, input);
+          wrap.appendChild(input);
+          wrap.appendChild(btn);
+        } else {
+          parent.appendChild(btn);
+        }
+      }
+    } catch(e){}
+
+    input.__compactMaskAttached = true;
+  }
+
+  // Transform existing datetime-local inputs to compact text inputs
+  function transformDateTimeLocalInputsToCompact(root){
+    const scope = root || document;
+    const nodes = scope.querySelectorAll('input[type="datetime-local"][id^="arrival-time-"], input[type="datetime-local"][id^="departure-time-"]');
+    nodes.forEach(inp => {
+      try{ inp.setAttribute('type','text'); } catch(e){}
+      inp.classList.add('compact-datetime');
+      inp.setAttribute('placeholder','yy.mm.dd,HH:mm');
+      attachCompactMask(inp);
+      // If value is ISO from storage, show compact
+      const val = (inp.value||'').trim();
+      if (isISODateTimeLocal(val)){
+        inp.value = formatISOToCompactUTC(val);
+      }
+    });
+  }
+
+  // Lightweight picker overlay (single instance)
+  let picker = null;
+  let pickerTarget = null;
+
+  function ensurePicker(){
+    if (picker) return picker;
+    picker = document.createElement('div');
+    picker.style.position = 'fixed';
+    picker.style.zIndex = '99999';
+    picker.style.background = '#ffffff';
+    picker.style.color = '#111827';
+    picker.style.border = '1px solid #cbd5e1';
+    picker.style.borderRadius = '6px';
+    picker.style.boxShadow = '0 10px 20px rgba(0,0,0,0.15)';
+    picker.style.padding = '8px';
+    picker.style.display = 'none';
+    picker.style.width = '240px'; // compact width to avoid wrapping tile layout
+
+    const date = document.createElement('input');
+    date.type = 'date';
+    date.style.marginBottom = '6px';
+    date.style.width = '100%';
+
+    const time = document.createElement('input');
+    time.type = 'time';
+    time.step = '60';
+    time.style.marginBottom = '8px';
+    time.style.width = '100%';
+
+    const ok = document.createElement('button'); ok.type='button'; ok.textContent='OK';
+    ok.style.marginRight = '6px'; ok.style.padding='4px 8px'; ok.style.border='1px solid #0ea5e9'; ok.style.background='#e0f2fe'; ok.style.borderRadius='4px';
+    const cancel = document.createElement('button'); cancel.type='button'; cancel.textContent='Cancel';
+    cancel.style.padding='4px 8px'; cancel.style.border='1px solid #cbd5e1'; cancel.style.background='#f8fafc'; cancel.style.borderRadius='4px';
+
+    const column = document.createElement('div');
+    column.style.display='flex';
+    column.style.flexDirection='column';
+    column.style.alignItems='stretch';
+
+    const actions = document.createElement('div');
+    actions.style.display='flex';
+    actions.style.justifyContent='flex-end';
+    actions.appendChild(ok); actions.appendChild(cancel);
+
+    column.appendChild(date); column.appendChild(time); column.appendChild(actions);
+
+    picker.appendChild(column);
+    document.body.appendChild(picker);
+
+    function close(){ picker.style.display='none'; pickerTarget = null; }
+
+    ok.addEventListener('click', ()=>{
+      if (!pickerTarget) { close(); return; }
+      const d = date.value; const t = time.value;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(d) && /^\d{2}:\d{2}$/.test(t)){
+        const iso = `${d}T${t}`;
+        pickerTarget.dataset.iso = iso;
+        pickerTarget.value = formatISOToCompactUTC(iso);
+        // Trigger change/save
+        pickerTarget.dispatchEvent(new Event('input', {bubbles:true}));
+        pickerTarget.dispatchEvent(new Event('change', {bubbles:true}));
+        pickerTarget.dispatchEvent(new Event('blur', {bubbles:true}));
+      }
+      close();
+    });
+    cancel.addEventListener('click', close);
+
+    picker._date = date; picker._time = time; picker._close = close;
+    return picker;
+  }
+
+  function openCompactDateTimePicker(input){
+    const p = ensurePicker();
+    pickerTarget = input;
+
+    // Pre-fill from input
+    const raw = (input.value||'').trim();
+    let iso = '';
+    if (isISODateTimeLocal(raw)) iso = raw;
+    else if (isCompactDateTime(raw)) iso = parseCompactToISOUTC(raw);
+    else if (isHHmm(raw)) iso = canonicalizeDateTimeFieldValue(input.id, raw);
+
+    if (iso){
+      const [d,t] = iso.split('T');
+      p._date.value = d;
+      p._time.value = t;
+    } else {
+      // default to today UTC + 00:00
+      const now = new Date();
+      const yyyy = now.getUTCFullYear();
+      const mm = pad2(now.getUTCMonth()+1);
+      const dd = pad2(now.getUTCDate());
+      p._date.value = `${yyyy}-${mm}-${dd}`;
+      p._time.value = '00:00';
+    }
+
+    // Position near input
+    const rect = input.getBoundingClientRect();
+    const assumedWidth = parseInt(p.style.width,10) || 260;
+    const assumedHeight = 120;
+    p.style.left = `${Math.min(rect.left, window.innerWidth - assumedWidth - 4)}px`;
+    p.style.top = `${Math.min(rect.bottom + 4, window.innerHeight - assumedHeight)}px`;
+    p.style.display = 'block';
+  }
+
+  // Attach compact behavior to arrival/departure inputs
+  function attachCompactDateTimeInputs(root){
+    const scope = root || document;
+    const inputs = scope.querySelectorAll('input[id^="arrival-time-"], input[id^="departure-time-"]');
+    inputs.forEach(attachCompactMask);
+  }
+
+  // Centralized init hookup
+  window.hangarInitQueue = window.hangarInitQueue || [];
+  window.hangarInitQueue.push(function(){
+    try{
+      transformDateTimeLocalInputsToCompact();
+      attachCompactDateTimeInputs();
+    } catch(e){ console.warn('Compact datetime init failed', e); }
+  });
+
+  // Also react to secondary tile creation
+  document.addEventListener('secondaryTilesCreated', function(evt){
+    try{
+      transformDateTimeLocalInputsToCompact();
+      attachCompactDateTimeInputs();
+    } catch(e){}
+  });
+
+  // Export globals
+  window.helpers = window.helpers || {};
+  window.helpers.isDateTimeLocal = isDateTimeLocal; // legacy
+  window.helpers.isISODateTimeLocal = isISODateTimeLocal;
+  window.helpers.isCompactDateTime = isCompactDateTime;
+  window.helpers.isHHmm = isHHmm;
+  window.helpers.getBaseDates = getBaseDates;
+  window.helpers.coerceHHmmToDateTimeLocalUtc = coerceHHmmToDateTimeLocalUtc;
+  window.helpers.formatDateTimeLocalForPdf = formatDateTimeLocalForPdf;
+  window.helpers.addDaysToDateString = addDaysToDateString;
+  window.helpers.formatISOToCompactUTC = formatISOToCompactUTC;
+  window.helpers.parseCompactToISOUTC = parseCompactToISOUTC;
+  window.helpers.canonicalizeDateTimeFieldValue = canonicalizeDateTimeFieldValue;
+  window.helpers.attachCompactDateTimeInputs = attachCompactDateTimeInputs;
+  window.helpers.transformDateTimeLocalInputsToCompact = transformDateTimeLocalInputsToCompact;
+  window.helpers.openCompactDateTimePicker = openCompactDateTimePicker;
+})();

@@ -1,52 +1,5 @@
 
-/* ===== Read-Only Helper Styles ===== */
-
-/* Base: lock inputs when in read-only mode */
-body.read-only #hangarGrid input[disabled],
-body.read-only #hangarGrid select[disabled],
-body.read-only #hangarGrid textarea[disabled],
-body.read-only #secondaryHangarGrid input[disabled],
-body.read-only #secondaryHangarGrid select[disabled],
-body.read-only #secondaryHangarGrid textarea[disabled] {
-  cursor: not-allowed;
-}
-
-/* Light mode: make disabled fields slightly darker and less distracting */
-body.read-only:not(.dark-mode) #hangarGrid input[disabled],
-body.read-only:not(.dark-mode) #hangarGrid select[disabled],
-body.read-only:not(.dark-mode) #hangarGrid textarea[disabled],
-body.read-only:not(.dark-mode) #secondaryHangarGrid input[disabled],
-body.read-only:not(.dark-mode) #secondaryHangarGrid select[disabled],
-body.read-only:not(.dark-mode) #secondaryHangarGrid textarea[disabled] {
-  background-color: #e2e8f0; /* gray-200 */
-  border-color: #cbd5e1;     /* gray-300 */
-  color: #64748b;            /* gray-500/600 */
-}
-body.read-only:not(.dark-mode) #hangarGrid input[disabled]::placeholder,
-body.read-only:not(.dark-mode) #hangarGrid textarea[disabled]::placeholder,
-body.read-only:not(.dark-mode) #secondaryHangarGrid input[disabled]::placeholder,
-body.read-only:not(.dark-mode) #secondaryHangarGrid textarea[disabled]::placeholder {
-  color: #94a3b8; /* gray-400 */
-}
-
-/* Dark mode: keep disabled fields aligned with dark palette */
-.dark-mode #hangarGrid input[disabled],
-.dark-mode #hangarGrid select[disabled],
-.dark-mode #hangarGrid textarea[disabled],
-.dark-mode #secondaryHangarGrid input[disabled],
-.dark-mode #secondaryHangarGrid select[disabled],
-.dark-mode #secondaryHangarGrid textarea[disabled] {
-  background-color: var(--input-bg) !important;
-  border-color: var(--border-color) !important;
-  color: var(--text-secondary) !important;
-  opacity: 0.9;
-}
-
-/* Optional subtle cue on container while read-only */
-body.read-only .hangar-container {
-  outline: 1px dashed rgba(107,114,128,0.25); /* softer */
-  outline-offset: -4px;
-}
+/* ===== Read-Only: visuals unchanged. Functional gating only. ===== */
 
 /*
  * hangarplanner-ui.css

@@ -5,8 +5,9 @@
 	--header-label-col: 78px;
 	--header-col-gap: 16px; /* horizontal gap between label and value */
 	--header-row-gap: 8px; /* default vertical gap across header widgets */
+	--header-columns-gap: 64px; /* horizontal gap between the three header widgets */
 	/* Specific to time rows */
-	--time-col-gap: 16px; /* match status widget label/value gap */
+	--time-col-gap: 16px; /* default label/value gap for time */
 }
 
 body.header-compact {
@@ -30,22 +31,22 @@ body.header-loose {
 	flex-direction: column;
 	width: auto;
 	min-width: 220px;
-	background: rgba(255, 255, 255, 0.97);
-	padding: 8px 14px;
-	border-radius: 10px;
+	/* Remove card styling inside header; kept generic for other usages if any */
+	background: transparent;
+	padding: 0;
+	border-radius: 0;
 	border: none;
 	font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
 		sans-serif;
-	margin-left: var(--header-widget-gap, 12px);
+	margin-left: 0;
 	transition: all 0.3s ease;
 	height: auto;
 	box-shadow: none;
 }
 
-/* Dark mode for info widget */
+/* Dark mode for header widgets: keep transparent to blend with header */
 .dark-mode #info-widget, .dark-mode #time-widget, .dark-mode #status-widget {
-	/* Use card background to match tiles */
-	background: var(--dark-card) !important;
+	background: transparent !important;
 	color: #d1d5db;
 	border: none !important;
 }
@@ -54,9 +55,6 @@ body.header-loose {
 .dark-mode #status-widget .status-label { color: var(--dark-text) !important; }
 .dark-mode .mode-display,
 .dark-mode .mode-display > span { color: var(--dark-text) !important; }
-.dark-mode .sync-mode-value.standalone { background: #1f2937; color: #e5e7eb; border-color: #374151; }
-.dark-mode .sync-mode-value.master { background: rgba(249,115,22,0.15); color: #fdba74; border-color: #78350f; }
-.dark-mode .sync-mode-value.slave { background: rgba(245,158,11,0.15); color: #fcd34d; border-color: #92400e; }
 
 /* Responsive Anpassungen - einheitlich mit Weather-Widget */
 @media (max-width: 640px) {
@@ -79,10 +77,6 @@ body.header-loose {
 		font-size: 0.9rem; /* Angleichen an Weather-Widget responsive */
 	}
 
-	.sync-mode-value {
-		font-size: 0.875rem; /* Konsistent mit Labels */
-		padding: 1px 6px;
-	}
 }
 
 /* Info-Icon Container wird absolut positioniert */
@@ -204,7 +198,7 @@ body.header-loose {
 	justify-self: end;
 }
 /* Time widget spacing: 16px vertical gap between rows, and 16px label/value gap */
-#time-widget .time-display-row { column-gap: var(--time-col-gap, 16px); margin-bottom: 16px; line-height: 1.08; }
+#time-widget .time-display-row { column-gap: var(--time-col-gap, 16px); margin-bottom: 16px; }
 
 /* Mode Display - exakt wie Weather Widget Secondary */
 .mode-display {
@@ -218,6 +212,27 @@ body.header-loose {
 	height: 1.2em;
 	line-height: 1.2;
 	width: 100%; /* Volle Breite nutzen */
+}
+
+/* New unified header layout: three equal columns (Weather, Time, Status) */
+.hp-header .header-widgets {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(260px, 1fr));
+	column-gap: var(--header-columns-gap, 48px);
+	row-gap: 16px;
+	align-items: center; /* center blocks vertically for a cleaner line */
+}
+
+/* Remove leftover card chrome inside header */
+.hp-header #weather-widget,
+.hp-header #time-widget,
+.hp-header #status-widget {
+	background: transparent !important;
+	padding: 0 !important;
+	border: 0 !important;
+	border-radius: 0 !important;
+	margin: 0 !important;
+	min-width: 0 !important;
 }
 
 /* Status-Widget Zeilen */
@@ -344,36 +359,35 @@ body.header-loose {
 .dark-mode #currentSyncModeSidebar.standalone { color: #cbd5e1 !important; }
 
 /* Mode-Wert Styling - Verbessert für bessere Sichtbarkeit */
-.sync-mode-value {
-	color: #64748b;
-	font-weight: 600; /* etwas stärker für bessere Lesbarkeit */
-	font-size: 0.85rem; /* kompakter Chip */
-	display: inline-block;
-	white-space: nowrap;
-	padding: 3px 8px; /* kompakter */
-	border-radius: 9999px; /* Pillenform */
-	transition: all 0.2s ease; /* Sanfte Übergänge */
-	min-width: 84px; /* kompakter */
-	text-align: center; /* Zentrierter Text */
-	border: 1px solid transparent; /* für definierte Kanten */
-}
 
-.sync-mode-value.master {
-	background: var(--sync-master-bg, #ffe8cc);
-	color: var(--sync-master-fg, #9a3412);
-	border-color: var(--sync-master-border, #fdba74);
+/* Compact height for Time and Status widgets in header */
+#time-widget,
+#status-widget {
+	height: 50px;
+	min-height: 50px;
+	/* keep existing flex column layout; center content vertically */
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: stretch;
+	gap: 4px; /* tighter spacing between the two rows */
 }
+/* tighten vertical spacing inside to fit two rows within 50px */
+#time-widget .time-display-row { margin-bottom: 0; }
+#time-widget .time-display-row:last-child { margin-bottom: 0; }
+#status-widget .status-row { margin-bottom: 0; }
+#status-widget .status-row:last-child { margin-bottom: 0; }
+/* reduce row line-height slightly to compact vertically */
+#time-widget .time-display-row,
+#status-widget .status-row { line-height: 1.1; }
 
-.sync-mode-value.slave {
-	background: var(--sync-read-bg, #fff4ea);
-	color: var(--sync-read-fg, #b93815);
-	border-color: var(--sync-read-border, #f8dfc6);
-}
-
-.sync-mode-value.standalone {
-	background: var(--sync-standalone-bg, #f2f4f7);
-	color: var(--sync-standalone-fg, #344054);
-	border-color: var(--sync-standalone-border, #d0d5dd);
+/* Fixed width for Time widget to 100px and compact internal layout */
+#time-widget {
+	width: 100px;
+	min-width: 100px;
+	/* Narrower label column and smaller label/value gap to fit within 100px */
+	--header-label-col: 36px;
+	--time-col-gap: 6px;
 }
 
 /* Lade-Animation */

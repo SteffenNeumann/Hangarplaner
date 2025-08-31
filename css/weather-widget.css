@@ -4,9 +4,9 @@
 	flex-direction: column;
 	width: auto; /* Anpassung an Inhalt */
 	min-width: 220px; /* Etwas vergrößert für bessere Darstellung */
-	background: rgba(255, 255, 255, 0.97);
-	padding: 8px 14px;
-	border-radius: 10px;
+	background: transparent; /* blend into header */
+	padding: 0; /* header grid manages spacing */
+	border-radius: 0;
 	/* removed border and shadow per request */
 	font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
 		sans-serif;
@@ -20,7 +20,6 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	margin-bottom: var(--header-row-gap, 8px);
 	padding-bottom: 0;
 }
 
@@ -192,8 +191,7 @@
 
 /* Dark Mode Unterstützung */
 .dark-mode #weather-widget {
-	/* Use card background to match tiles */
-	background: var(--dark-card) !important;
+	background: transparent !important;
 	color: var(--dark-text) !important;
 	border: none !important;
 }

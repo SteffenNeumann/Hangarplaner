@@ -203,8 +203,8 @@ body.header-loose {
 	letter-spacing: 0px;
 	justify-self: end;
 }
-/* Time widget spacing: keep compact label/value, restore original row gap (6px) */
-#time-widget .time-display-row { column-gap: 2px; margin-bottom: 6px; line-height: 1.08; }
+/* Time widget spacing: keep compact label/value; unify vertical row gap with header widgets (8px default) */
+#time-widget .time-display-row { column-gap: 2px; margin-bottom: var(--header-row-gap, 8px); line-height: 1.08; }
 
 /* Mode Display - exakt wie Weather Widget Secondary */
 .mode-display {

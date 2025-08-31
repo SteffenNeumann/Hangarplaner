@@ -20,8 +20,8 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	margin-bottom: 4px;
-	padding-bottom: 4px;
+	margin-bottom: var(--header-row-gap, 8px);
+	padding-bottom: 0;
 }
 
 /* Zweite Zeile mit zusätzlichen Wetterdaten */
@@ -31,7 +31,7 @@
 	justify-content: space-between; /* Gleichmäßige Verteilung */
 	font-size: 0.875rem;
 	color: #64748b;
-	margin-top: 4px;
+	margin-top: 0;
 	flex-wrap: nowrap;
 	height: 1.2em;
 	line-height: 1.2;

@@ -107,6 +107,9 @@ window.displayOptions = {
 		darkMode: false,
 		viewMode: false, // false = Kachel, true = Tabelle
 		zoomLevel: 100,
+		// New: Header widgets visibility
+		showWeatherWidget: true,
+		showTimeWidget: true,
 	},
 
 	// Aktuelle Werte
@@ -381,6 +384,9 @@ async init() {
 			darkMode: document.getElementById("darkModeToggle"),
 			viewMode: document.getElementById("viewModeToggle"),
 			zoomLevel: document.getElementById("displayZoom"),
+			// New: widget toggles
+			weatherWidget: document.getElementById("weatherWidgetToggle"),
+			timeWidget: document.getElementById("timeWidgetToggle"),
 		};
 
 		// Werte sammeln mit Fallback auf Standardwerte
@@ -408,6 +414,14 @@ async init() {
 		this.current.zoomLevel = elements.zoomLevel
 			? parseInt(elements.zoomLevel.value) || this.defaults.zoomLevel
 			: this.defaults.zoomLevel;
+
+		// New: widget visibility (default to true when control absent)
+		this.current.showWeatherWidget = elements.weatherWidget
+			? !!elements.weatherWidget.checked
+			: true;
+		this.current.showTimeWidget = elements.timeWidget
+			? !!elements.timeWidget.checked
+			: true;
 	},
 
 	/**
@@ -430,6 +444,12 @@ async init() {
 
 		const viewModeToggle = document.getElementById("viewModeToggle");
 		if (viewModeToggle) viewModeToggle.checked = this.current.viewMode;
+
+		// New: widget toggles
+		const weatherToggle = document.getElementById("weatherWidgetToggle");
+		if (weatherToggle) weatherToggle.checked = this.current.showWeatherWidget !== false;
+		const timeToggle = document.getElementById("timeWidgetToggle");
+		if (timeToggle) timeToggle.checked = this.current.showTimeWidget !== false;
 
 		// View/Edit Mode Toggle synchronisieren - NEU HINZUGEFÜGT
 		const modeToggle = document.getElementById("modeToggle");
@@ -463,6 +483,9 @@ async init() {
 
 		// View Mode anwenden
 		this.applyViewMode(this.current.viewMode);
+
+		// New: header widgets visibility
+		this.applyWidgetsVisibility();
 
 		// Layout und Tiles anwenden
 		this.applyLayout();
@@ -509,6 +532,26 @@ applyDarkMode(enabled) {
 			body.classList.add("tile-view");
 			body.classList.remove("table-view");
 		}
+	},
+
+	/**
+	 * Sichtbarkeit der Header-Widgets anwenden
+	 */
+	applyWidgetsVisibility() {
+		try {
+			const weather = document.getElementById("weather-widget");
+			if (weather) {
+				const showW = this.current.showWeatherWidget !== false; // default true
+				weather.classList.toggle("hidden", !showW);
+				if (weather.style) weather.style.display = showW ? "" : "none";
+			}
+			const time = document.getElementById("time-widget");
+			if (time) {
+				const showT = this.current.showTimeWidget !== false; // default true
+				time.classList.toggle("hidden", !showT);
+				if (time.style) time.style.display = showT ? "" : "none";
+			}
+		} catch (e) { /* noop */ }
 	},
 
 	/**
@@ -627,6 +670,18 @@ applyDarkMode(enabled) {
 			zoomSlider.addEventListener("input", this.onZoomChange.bind(this));
 		}
 
+		// New: widget toggle handlers
+		const weatherToggle = document.getElementById("weatherWidgetToggle");
+		if (weatherToggle) {
+			weatherToggle.removeEventListener("change", this.onWidgetVisibilityChange);
+			weatherToggle.addEventListener("change", this.onWidgetVisibilityChange.bind(this));
+		}
+		const timeToggle = document.getElementById("timeWidgetToggle");
+		if (timeToggle) {
+			timeToggle.removeEventListener("change", this.onWidgetVisibilityChange);
+			timeToggle.addEventListener("change", this.onWidgetVisibilityChange.bind(this));
+		}
+
 		console.log("🎛️ Display Options Event-Handler eingerichtet");
 	},
 
@@ -725,6 +780,15 @@ onDarkModeChange() {
 	},
 
 	/**
+	 * Event-Handler für Widget Sichtbarkeit (mit Debouncing)
+	 */
+	onWidgetVisibilityChange() {
+		this.collectFromUI();
+		this.applyWidgetsVisibility();
+		this.debouncedSave();
+	},
+
+	/**
 	 * Event-Handler für Zoom-Änderung (mit Debouncing)
 	 */
 	onZoomChange() {
@@ -787,7 +851,9 @@ onDarkModeChange() {
 			currentSettings.layout !== lastSettings.layout ||
 			currentSettings.darkMode !== lastSettings.darkMode ||
 			currentSettings.viewMode !== lastSettings.viewMode ||
-			currentSettings.zoomLevel !== lastSettings.zoomLevel;
+			currentSettings.zoomLevel !== lastSettings.zoomLevel ||
+			currentSettings.showWeatherWidget !== lastSettings.showWeatherWidget ||
+			currentSettings.showTimeWidget !== lastSettings.showTimeWidget;
 
 		if (hasChanged) {
 			console.log("📊 Einstellungsänderung erkannt:", {

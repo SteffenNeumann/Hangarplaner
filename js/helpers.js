@@ -1290,9 +1290,10 @@ if (window.helpers) {
     try{
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.textContent = '🗓';
       btn.title = 'Open date/time picker';
       btn.className = 'compact-dt-btn';
+      // SVG calendar icon using currentColor so it adapts to dark/light
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/><line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/><rect x="7" y="14" width="3" height="3" fill="currentColor"/><rect x="12" y="14" width="3" height="3" fill="currentColor"/></svg>';
       // inline fallback; full look via CSS
       btn.style.position = 'absolute';
       btn.style.right = '2px';
@@ -1383,6 +1384,66 @@ if (window.helpers) {
     const cancel = document.createElement('button'); cancel.type='button'; cancel.textContent='Cancel';
     cancel.style.padding='4px 8px'; cancel.style.border='1px solid #cbd5e1'; cancel.style.background='#f8fafc'; cancel.style.borderRadius='4px';
 
+    // Apply theme-aware colors (dark/light) using CSS variables if available
+    function applyPickerTheme(){
+      const root = getComputedStyle(document.documentElement);
+      const isDark = document.documentElement.classList.contains('dark-mode') || document.body.classList.contains('dark-mode');
+      const get = (name, fallback) => (root.getPropertyValue(name) || '').trim() || fallback;
+      const bgPrimary = get('--bg-primary', '#202224');
+      const bgSecondary = get('--bg-secondary', '#303437');
+      const border = get('--border-color', '#303437');
+      const text = get('--text-primary', '#f7fafc');
+      const textSecondary = get('--text-secondary', '#e2e8f0');
+      const accent = '#FF7043';
+
+      if (isDark){
+        picker.style.background = bgSecondary;
+        picker.style.color = text;
+        picker.style.border = `1px solid ${border}`;
+        picker.style.boxShadow = '0 12px 28px rgba(0,0,0,0.45)';
+
+        date.style.background = bgPrimary;
+        date.style.color = text;
+        date.style.border = `1px solid ${border}`;
+        date.style.outline = 'none';
+        date.style.colorScheme = 'dark';
+
+        time.style.background = bgPrimary;
+        time.style.color = text;
+        time.style.border = `1px solid ${border}`;
+        time.style.outline = 'none';
+        time.style.colorScheme = 'dark';
+
+        ok.style.background = accent;
+        ok.style.border = `1px solid ${accent}`;
+        ok.style.color = '#ffffff';
+        cancel.style.background = bgPrimary;
+        cancel.style.border = `1px solid ${border}`;
+        cancel.style.color = textSecondary;
+      } else {
+        // light theme defaults already set above; ensure text colors readable
+        picker.style.background = '#ffffff';
+        picker.style.color = '#111827';
+        picker.style.border = '1px solid #cbd5e1';
+        picker.style.boxShadow = '0 10px 20px rgba(0,0,0,0.15)';
+
+        date.style.background = '#ffffff';
+        date.style.color = '#111827';
+        date.style.border = '1px solid #cbd5e1';
+
+        time.style.background = '#ffffff';
+        time.style.color = '#111827';
+        time.style.border = '1px solid #cbd5e1';
+
+        ok.style.background = '#e0f2fe';
+        ok.style.border = '1px solid #0ea5e9';
+        ok.style.color = '#0c4a6e';
+        cancel.style.background = '#f8fafc';
+        cancel.style.border = '1px solid #cbd5e1';
+        cancel.style.color = '#334155';
+      }
+    }
+
     const column = document.createElement('div');
     column.style.display='flex';
     column.style.flexDirection='column';
@@ -1397,6 +1458,9 @@ if (window.helpers) {
 
     picker.appendChild(column);
     document.body.appendChild(picker);
+
+    // Initial theme apply and on dark-mode toggles if your app toggles classes
+    applyPickerTheme();
 
     function close(){ picker.style.display='none'; pickerTarget = null; }
 
@@ -1416,12 +1480,14 @@ if (window.helpers) {
     });
     cancel.addEventListener('click', close);
 
-    picker._date = date; picker._time = time; picker._close = close;
+    picker._date = date; picker._time = time; picker._close = close; picker._applyTheme = applyPickerTheme;
     return picker;
   }
 
   function openCompactDateTimePicker(input){
     const p = ensurePicker();
+    // Re-apply theme in case user toggled dark mode since creation
+    if (typeof p._applyTheme === 'function') p._applyTheme();
     pickerTarget = input;
 
     // Pre-fill from input

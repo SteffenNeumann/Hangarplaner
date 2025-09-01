@@ -1379,29 +1379,36 @@ function checkForSelectedAircraft() {
 
 		// Hilfsfunktion: alle freien (leeren) sichtbaren Kacheln sammeln
 		function getFreeTileIds() {
+			// Nur PRIMÄRE Kacheln berücksichtigen, um doppelte Labels aus sekundären Clones zu vermeiden
 			const ids = [];
-			// Sammle alle Aircraft-Inputs (primär und sekundär, falls vorhanden)
-			const inputs = document.querySelectorAll('#hangarGrid input[id^="aircraft-"], #secondaryHangarGrid input[id^="aircraft-"]');
+			const inputs = document.querySelectorAll('#hangarGrid input[id^="aircraft-"]');
 			inputs.forEach((inp) => {
 				const idMatch = inp.id.match(/aircraft-(\d+)/);
 				if (!idMatch) return;
 				const cellId = parseInt(idMatch[1], 10);
 				const cell = inp.closest('.hangar-cell');
-				const isHiddenByClass = cell?.classList?.contains('hidden');
-				const isStyleHidden = cell && (cell.style.display === 'none' || cell.style.visibility === 'hidden');
+				if (!cell) return;
+				const isHiddenByClass = cell.classList.contains('hidden');
+				const style = window.getComputedStyle ? window.getComputedStyle(cell) : cell.style;
+				const isStyleHidden = style.display === 'none' || style.visibility === 'hidden';
 				const isEmpty = !inp.value || inp.value.trim() === '';
 				if (!isHiddenByClass && !isStyleHidden && isEmpty) {
 					ids.push(cellId);
 				}
 			});
-			// Fallback: wenn nichts gefunden, versuche Standardbereich 1..12
-			if (ids.length === 0) {
+			// Dedup sicherheitshalber (gegen doppelte IDs durch unvorhergesehene DOM-Strukturen)
+			const uniqueSorted = Array.from(new Set(ids)).sort((a,b)=>a-b);
+			// Fallback: wenn nichts gefunden, prüfe Standardbereich 1..12 direkt
+			if (uniqueSorted.length === 0) {
 				for (let i = 1; i <= 12; i++) {
 					const el = document.getElementById(`aircraft-${i}`);
-					if (el && (!el.value || el.value.trim() === '')) ids.push(i);
+					const host = document.querySelector(`#hangarGrid [data-cell-id="${i}"]`) || document.querySelector(`#hangarGrid .hangar-cell:nth-child(${i})`);
+					const style = host ? (window.getComputedStyle ? window.getComputedStyle(host) : host.style) : null;
+					const hidden = host ? (host.classList.contains('hidden') || (style && (style.display === 'none' || style.visibility === 'hidden'))) : false;
+					if (!hidden && el && (!el.value || el.value.trim() === '')) uniqueSorted.push(i);
 				}
 			}
-			return ids.sort((a,b)=>a-b);
+			return uniqueSorted;
 		}
 
 		function clearSelection() {

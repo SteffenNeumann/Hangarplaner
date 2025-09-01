@@ -1602,7 +1602,7 @@ async function checkForSelectedAircraft() {
 			// Header
 			const title = document.createElement('div');
 			title.className = 'submenu-title';
-			title.textContent = 'Kachel auswählen';
+			title.textContent = 'Select Space';
 
 			const subtitle = document.createElement('div');
 			subtitle.className = 'text-xs mb-4';
@@ -1610,11 +1610,10 @@ async function checkForSelectedAircraft() {
 			subtitle.innerHTML = `<div><span class=\"font-semibold\">Reg:</span> ${selectedAircraft}</div>` +
 				(selectedArr || selectedDep ? `<div><span class=\"font-semibold\">Arr:</span> ${selectedArr || '--'} &nbsp;&nbsp; <span class=\"font-semibold\">Dep:</span> ${selectedDep || '--'}</div>` : '');
 
-			// Section label
-			const sectionLabel = document.createElement('div');
-			sectionLabel.className = 'section-label';
+			// Section label (simple H3 style)
+			const sectionLabel = document.createElement('h3');
 			sectionLabel.style.marginBottom = '8px';
-			sectionLabel.textContent = normalized.length > 0 ? 'Freie Kacheln' : 'Keine freien Kacheln';
+			sectionLabel.textContent = normalized.length > 0 ? 'Free Spaces' : 'No free spaces available';
 
 			// Grid of free tiles
 			const grid = document.createElement('div');
@@ -1642,44 +1641,9 @@ async function checkForSelectedAircraft() {
 				const hint = document.createElement('div');
 				hint.className = 'text-xs';
 				hint.style.color = '#6b6b6b';
-				hint.textContent = 'Bitte geben Sie eine Kachelnummer ein (1–12), diese wird überschrieben.';
+				hint.textContent = 'No free spaces available.';
 				grid.appendChild(hint);
 			}
-
-			// Manual entry row
-			const manualRow = document.createElement('div');
-			manualRow.className = 'flex items-center gap-2 mb-4';
-			const manualLabel = document.createElement('label');
-			manualLabel.className = 'text-xs font-semibold';
-			manualLabel.setAttribute('for','tileManualInput');
-			manualLabel.textContent = 'Andere Kachel-ID';
-			const manualInput = document.createElement('input');
-			manualInput.id = 'tileManualInput';
-			manualInput.type = 'number';
-			manualInput.min = '1';
-			manualInput.placeholder = 'z.B. 1 oder 101';
-			manualInput.className = 'sidebar-form-control';
-			manualInput.style.width = '110px';
-			const manualBtn = document.createElement('button');
-			manualBtn.className = 'sidebar-btn sidebar-btn-primary';
-			manualBtn.style.minHeight = '32px';
-			manualBtn.style.fontSize = '12px';
-			manualBtn.textContent = 'Einfügen';
-			manualBtn.addEventListener('click', () => {
-				const v = parseInt((manualInput.value || '').trim(), 10);
-				const exists = !isNaN(v) && !!document.getElementById(`aircraft-${v}`);
-				if (exists) {
-					finalizeInsert(v);
-					document.body.removeChild(overlay);
-				} else {
-					if (window.showNotification) {
-						window.showNotification('Bitte gültige vorhandene Kachel-ID eingeben (z.B. 1..12 oder 101..)', 'warning');
-					}
-				}
-			});
-			manualRow.appendChild(manualLabel);
-			manualRow.appendChild(manualInput);
-			manualRow.appendChild(manualBtn);
 
 			// Footer
 			const footer = document.createElement('div');
@@ -1700,7 +1664,6 @@ async function checkForSelectedAircraft() {
 			modal.appendChild(subtitle);
 			modal.appendChild(sectionLabel);
 			modal.appendChild(grid);
-			modal.appendChild(manualRow);
 			modal.appendChild(footer);
 
 			overlay.appendChild(modal);

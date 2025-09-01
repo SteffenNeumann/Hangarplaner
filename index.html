@@ -130,6 +130,50 @@
 		<div class="flex h-screen">
 			<!-- Neue linke Hauptnavigation -->
 			<nav id="leftMenu" class="left-menu">
+				<button class="menu-item" data-menu="project" title="Project">
+					<svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M3 6h14" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M17 4v4" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M3 12h18" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M13 10v4" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M3 18h10" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M9 16v4" />
+					</svg>
+					<span class="menu-label">Project</span>
+				</button>
+				<button class="menu-item" data-menu="display" title="Display">
+					<svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16v10H4z" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M12 16v4" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M8 20h8" />
+					</svg>
+					<span class="menu-label">Display</span>
+				</button>
+				<button class="menu-item" data-menu="sync" title="Sync">
+					<svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M3 12h18" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M7 8l-4 4 4 4" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4-4-4" />
+					</svg>
+					<span class="menu-label">Sync</span>
+				</button>
+				<button class="menu-item" data-menu="update" title="Update">
+					<svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M4 4v6h6" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M20 20v-6h-6" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M5 20a9 9 0 0014-7" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M19 4a9 9 0 00-14 7" />
+					</svg>
+					<span class="menu-label">Update</span>
+				</button>
+				<button class="menu-item" data-menu="export" title="Export">
+					<svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M8 11l4 4 4-4" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M4 21h16" />
+					</svg>
+					<span class="menu-label">Export</span>
+				</button>
 				<a href="timetable.html" class="menu-item" title="Timetable">
 					<svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3M5 8h14M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -144,50 +188,6 @@
 					</svg>
 					<span class="menu-label">Database</span>
 				</a>
-				<button class="menu-item" data-menu="update" title="Update">
-					<svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M4 4v6h6" />
-						<path stroke-linecap="round" stroke-linejoin="round" d="M20 20v-6h-6" />
-						<path stroke-linecap="round" stroke-linejoin="round" d="M5 20a9 9 0 0014-7" />
-						<path stroke-linecap="round" stroke-linejoin="round" d="M19 4a9 9 0 00-14 7" />
-					</svg>
-					<span class="menu-label">Update</span>
-				</button>
-				<button class="menu-item" data-menu="sync" title="Sync">
-					<svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M3 12h18" />
-						<path stroke-linecap="round" stroke-linejoin="round" d="M7 8l-4 4 4 4" />
-						<path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4-4-4" />
-					</svg>
-					<span class="menu-label">Sync</span>
-				</button>
-				<button class="menu-item" data-menu="display" title="Display">
-					<svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16v10H4z" />
-						<path stroke-linecap="round" stroke-linejoin="round" d="M12 16v4" />
-						<path stroke-linecap="round" stroke-linejoin="round" d="M8 20h8" />
-					</svg>
-					<span class="menu-label">Display</span>
-				</button>
-				<button class="menu-item" data-menu="export" title="Export">
-					<svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12" />
-						<path stroke-linecap="round" stroke-linejoin="round" d="M8 11l4 4 4-4" />
-						<path stroke-linecap="round" stroke-linejoin="round" d="M4 21h16" />
-					</svg>
-					<span class="menu-label">Export</span>
-				</button>
-				<button class="menu-item" data-menu="project" title="Project">
-					<svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M3 6h14" />
-						<path stroke-linecap="round" stroke-linejoin="round" d="M17 4v4" />
-						<path stroke-linecap="round" stroke-linejoin="round" d="M3 12h18" />
-						<path stroke-linecap="round" stroke-linejoin="round" d="M13 10v4" />
-						<path stroke-linecap="round" stroke-linejoin="round" d="M3 18h10" />
-						<path stroke-linecap="round" stroke-linejoin="round" d="M9 16v4" />
-					</svg>
-					<span class="menu-label">Project</span>
-				</button>
 			</nav>
 
 			<!-- Click-blocking scrim for submenu drawer -->

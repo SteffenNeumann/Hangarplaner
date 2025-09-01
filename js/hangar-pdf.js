@@ -5,6 +5,36 @@
  */
 
 /**
+ * Utility: read a date/time input and return an ISO local datetime (YYYY-MM-DDTHH:mm)
+ * Handles values typed as:
+ *  - dataset.iso (preferred, set by helpers on blur or picker)
+ *  - dd.mm.yy,HH:mm (compact) → parsed via helpers.parseCompactToISOUTC
+ *  - HH:mm (time-only) → canonicalized via helpers.canonicalizeDateTimeFieldValue using base date
+ *  - or an ISO value already in the input
+ */
+function readDateTimeISO(inputEl, fieldId){
+	if (!inputEl) return "";
+	const h = (window.helpers || {});
+	// 1) Prefer ISO stored in dataset by our masking logic
+	if (inputEl.dataset && inputEl.dataset.iso && typeof h.isISODateTimeLocal === 'function' && h.isISODateTimeLocal(inputEl.dataset.iso)){
+		return inputEl.dataset.iso;
+	}
+	const raw = (inputEl.value || '').trim();
+	if (!raw) return "";
+	// If it's already ISO
+	if (typeof h.isISODateTimeLocal === 'function' && h.isISODateTimeLocal(raw)) return raw;
+	// dd.mm.yy,HH:mm
+	if (typeof h.isCompactDateTime === 'function' && h.isCompactDateTime(raw) && typeof h.parseCompactToISOUTC === 'function'){
+		return h.parseCompactToISOUTC(raw) || "";
+	}
+	// HH:mm
+	if (typeof h.isHHmm === 'function' && h.isHHmm(raw) && typeof h.canonicalizeDateTimeFieldValue === 'function'){
+		return h.canonicalizeDateTimeFieldValue(fieldId, raw) || "";
+	}
+	return "";
+}
+
+/**
  * Sammelt alle Daten aus den Kacheln (primär und sekundär)
  */
 function collectAllHangarData() {
@@ -30,11 +60,13 @@ function collectAllHangarData() {
 			aircraftField.value &&
 			aircraftField.value.trim() !== ""
 		) {
+			const arrivalIso = readDateTimeISO(arrivalField, `arrival-time-${i}`);
+			const departureIso = readDateTimeISO(departureField, `departure-time-${i}`);
 			data.primary.push({
 				id: i,
 				aircraft: aircraftField.value.trim(),
-				arrival: arrivalField ? arrivalField.value : "",
-				departure: departureField ? departureField.value : "",
+				arrival: arrivalIso,
+				departure: departureIso,
 				position: positionField ? positionField.value : "",
 				hangarPosition: hangarPosField ? hangarPosField.value : "",
 				status: statusField ? statusField.value : "neutral",
@@ -61,11 +93,13 @@ function collectAllHangarData() {
 			aircraftField.value &&
 			aircraftField.value.trim() !== ""
 		) {
+			const arrivalIso = readDateTimeISO(arrivalField, `arrival-time-${i}`);
+			const departureIso = readDateTimeISO(departureField, `departure-time-${i}`);
 			data.secondary.push({
 				id: i,
 				aircraft: aircraftField.value.trim(),
-				arrival: arrivalField ? arrivalField.value : "",
-				departure: departureField ? departureField.value : "",
+				arrival: arrivalIso,
+				departure: departureIso,
 				position: positionField ? positionField.value : "",
 				hangarPosition: hangarPosField ? hangarPosField.value : "",
 				status: statusField ? statusField.value : "neutral",
@@ -179,7 +213,19 @@ function createDataTable(data, title, options = {}) {
 		// Erstelle Zellen basierend auf Feldauswahl
 		const cells = [];
 		if (exportFields.aircraft) cells.push(row.aircraft);
-		const toPDF = (v) => (window.helpers && window.helpers.formatDateTimeLocalForPdf) ? window.helpers.formatDateTimeLocalForPdf(v) : v;
+		const toPDF = (v) => {
+			const h = (window.helpers || {});
+			if (!v) return "";
+			// If we were passed ISO, format to compact for PDF
+			if (typeof h.isISODateTimeLocal === 'function' && h.isISODateTimeLocal(v) && typeof h.formatDateTimeLocalForPdf === 'function'){
+				return h.formatDateTimeLocalForPdf(v);
+			}
+			// If somehow a compact slipped through, keep it as-is
+			if (typeof h.isCompactDateTime === 'function' && h.isCompactDateTime(v)) return v;
+			// If it's HH:mm only, just return as-is
+			if (typeof h.isHHmm === 'function' && h.isHHmm(v)) return v;
+			return v || "";
+		};
 		if (exportFields.arrival) cells.push(toPDF(row.arrival));
 		if (exportFields.departure) cells.push(toPDF(row.departure));
 		if (exportFields.position) cells.push(row.position);

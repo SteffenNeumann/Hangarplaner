@@ -1377,38 +1377,38 @@ function checkForSelectedAircraft() {
 		const selectedArr = localStorage.getItem("selectedArrivalTime") || "";
 		const selectedDep = localStorage.getItem("selectedDepartureTime") || "";
 
-		// Hilfsfunktion: alle freien (leeren) sichtbaren Kacheln sammeln
-		function getFreeTileIds() {
-			// Nur PRIMÄRE Kacheln berücksichtigen, um doppelte Labels aus sekundären Clones zu vermeiden
-			const ids = [];
-			const inputs = document.querySelectorAll('#hangarGrid input[id^="aircraft-"]');
+		// Hilfsfunktion: Position-Label einer Kachel ermitteln
+		function getPositionLabelForTileId(id){
+			const posElPrimary = document.getElementById(`hangar-position-${id}`);
+			const posElAlt     = document.getElementById(`position-${id}`);
+			const primaryVal   = (posElPrimary?.value || '').trim();
+			const primaryPh    = (posElPrimary?.getAttribute?.('placeholder') || '').trim();
+			const altVal       = (posElAlt?.value || '').trim();
+			const altPh        = (posElAlt?.getAttribute?.('placeholder') || '').trim();
+			return primaryVal || primaryPh || altVal || altPh || `#${id}`;
+		}
+
+		// Hilfsfunktion: alle freien (leeren) sichtbaren Kacheln sammeln (nur primär)
+		function getFreeTilesWithLabels() {
+			const list = [];
+			const inputs = document.querySelectorAll('#hangarGrid .hangar-cell input[id^="aircraft-"]');
 			inputs.forEach((inp) => {
 				const idMatch = inp.id.match(/aircraft-(\d+)/);
 				if (!idMatch) return;
 				const cellId = parseInt(idMatch[1], 10);
 				const cell = inp.closest('.hangar-cell');
 				if (!cell) return;
-				const isHiddenByClass = cell.classList.contains('hidden');
 				const style = window.getComputedStyle ? window.getComputedStyle(cell) : cell.style;
-				const isStyleHidden = style.display === 'none' || style.visibility === 'hidden';
+				const isHidden = cell.classList.contains('hidden') || style.display === 'none' || style.visibility === 'hidden';
 				const isEmpty = !inp.value || inp.value.trim() === '';
-				if (!isHiddenByClass && !isStyleHidden && isEmpty) {
-					ids.push(cellId);
+				if (!isHidden && isEmpty) {
+					list.push({ id: cellId, label: getPositionLabelForTileId(cellId) });
 				}
 			});
-			// Dedup sicherheitshalber (gegen doppelte IDs durch unvorhergesehene DOM-Strukturen)
-			const uniqueSorted = Array.from(new Set(ids)).sort((a,b)=>a-b);
-			// Fallback: wenn nichts gefunden, prüfe Standardbereich 1..12 direkt
-			if (uniqueSorted.length === 0) {
-				for (let i = 1; i <= 12; i++) {
-					const el = document.getElementById(`aircraft-${i}`);
-					const host = document.querySelector(`#hangarGrid [data-cell-id="${i}"]`) || document.querySelector(`#hangarGrid .hangar-cell:nth-child(${i})`);
-					const style = host ? (window.getComputedStyle ? window.getComputedStyle(host) : host.style) : null;
-					const hidden = host ? (host.classList.contains('hidden') || (style && (style.display === 'none' || style.visibility === 'hidden'))) : false;
-					if (!hidden && el && (!el.value || el.value.trim() === '')) uniqueSorted.push(i);
-				}
-			}
-			return uniqueSorted;
+			// Dedup by id (guard against unexpected DOM duplication)
+			const byId = new Map();
+			list.forEach(item => { if (!byId.has(item.id)) byId.set(item.id, item); });
+			return Array.from(byId.values()).sort((a,b)=>a.id-b.id);
 		}
 
 		function clearSelection() {
@@ -1489,6 +1489,14 @@ function checkForSelectedAircraft() {
 		}
 
 		function showTileSelectionModal(freeTiles) {
+			// Support both: array of numbers OR array of {id,label}
+			const normalized = (freeTiles || []).map(item => {
+				if (typeof item === 'number') {
+					return { id: item, label: getPositionLabelForTileId(item) };
+				}
+				return { id: item.id, label: item.label || getPositionLabelForTileId(item.id) };
+			});
+
 			// Overlay
 			const overlay = document.createElement('div');
 			overlay.id = 'tileSelectionOverlay';
@@ -1520,25 +1528,20 @@ function checkForSelectedAircraft() {
 			// Grid of free tiles
 			const grid = document.createElement('div');
 			grid.className = 'grid grid-cols-4 gap-2 mb-4';
-			if (freeTiles.length > 0) {
-				freeTiles.forEach(id => {
+			if (normalized.length > 0) {
+				normalized.forEach(({id, label}) => {
 					const btn = document.createElement('button');
 					btn.className = 'sidebar-btn sidebar-btn-primary';
 					btn.style.minHeight = '32px';
 					btn.style.padding = '0 10px';
 					btn.style.fontSize = '12px';
-					// Use the tile's position label if available (support both hangar-position-* and position-*)
-					const posElPrimary = document.getElementById(`hangar-position-${id}`);
-					const posElAlt = document.getElementById(`position-${id}`);
-					const primaryVal = (posElPrimary?.value || '').trim();
-					const primaryPh  = (posElPrimary?.getAttribute?.('placeholder') || '').trim();
-					const altVal      = (posElAlt?.value || '').trim();
-					const altPh       = (posElAlt?.getAttribute?.('placeholder') || '').trim();
-					const posLabel    = primaryVal || primaryPh || altVal || altPh;
-					btn.textContent = posLabel ? `${posLabel}` : `#${id}`;
-					btn.title = `Kachel #${id}${posLabel ? ` • Position: ${posLabel}` : ''}`;
-					btn.addEventListener('click', () => {
-						finalizeInsert(id);
+					btn.dataset.tileId = String(id);
+					btn.dataset.posLabel = label;
+					btn.textContent = label || `#${id}`;
+					btn.title = `Kachel #${id}${label ? ` • Position: ${label}` : ''}`;
+					btn.addEventListener('click', (e) => {
+						const tid = parseInt(e.currentTarget.dataset.tileId, 10);
+						finalizeInsert(tid);
 						document.body.removeChild(overlay);
 					});
 					grid.appendChild(btn);
@@ -1627,7 +1630,7 @@ function checkForSelectedAircraft() {
 		}
 
 		// Zeige modalen Dialog im Projektstil
-		const freeTiles = getFreeTileIds();
+		const freeTiles = getFreeTilesWithLabels();
 		showTileSelectionModal(freeTiles);
 	}
 }
@@ -1710,18 +1713,19 @@ function findFirstEmptyTile() {
 	}
 
 	function schedule() {
-		setTimeout(runOnceWhenReady, 100);
+		// Explizite Startverzögerung nach Seitenladen, damit Werte/Placeholders sicher gerendert sind
+		setTimeout(runOnceWhenReady, 700);
 	}
 
 	// Also re-run when tile data has been applied from storage/server
 	document.addEventListener("dataLoaded", () => {
 		// Give the UI a brief moment to render values before detection
-		setTimeout(runOnceWhenReady, 50);
+		setTimeout(runOnceWhenReady, 250);
 	}, { once: true });
 
 	// If secondary tiles are created dynamically, re-check afterwards
 	document.addEventListener("secondaryTilesCreated", () => {
-		setTimeout(runOnceWhenReady, 50);
+		setTimeout(runOnceWhenReady, 250);
 	}, { once: true });
 
 	if (document.readyState === "complete" || document.readyState === "interactive") {

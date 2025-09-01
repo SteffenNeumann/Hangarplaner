@@ -157,6 +157,13 @@ function createDataTable(data, title, options = {}) {
 		headerRow.appendChild(th);
 	});
 
+	// Ensure table text color is readable regardless of theme
+	try {
+		container.style.color = '#111827';
+		table.style.color = '#111827';
+		thead.style.color = '#ffffff';
+	} catch (e) { /* noop */ }
+
 	thead.appendChild(headerRow);
 	table.appendChild(thead);
 
@@ -236,6 +243,19 @@ function exportToPDF() {
 		document.getElementById("pdfFilename").value || "Hangar_Plan";
 	const landscapeMode = document.getElementById("landscapeMode").checked;
 
+	// Temporarily disable dark mode during export to avoid inherited dark styles
+	// affecting the hidden export DOM (prevents low-contrast text in PDFs)
+	const htmlEl = document.documentElement;
+	const bodyEl = document.body || document.querySelector('body');
+	const hadDarkHtml = htmlEl && htmlEl.classList.contains('dark-mode');
+	const hadDarkBody = bodyEl && bodyEl.classList.contains('dark-mode');
+	try {
+		if (hadDarkHtml) htmlEl.classList.remove('dark-mode');
+		if (hadDarkBody) bodyEl.classList.remove('dark-mode');
+	} catch (e) {
+		/* noop */
+	}
+
 	// Lese Feldauswahl
 	const exportFields = {
 		aircraft: document.getElementById("exportAircraft").checked,
@@ -262,16 +282,38 @@ function exportToPDF() {
 
 	// Erstelle Export-Container
 	const exportContainer = document.createElement("div");
-	exportContainer.className = "pdf-content";
+	exportContainer.className = "pdf-content pdf-force-light";
 	exportContainer.style.cssText = `
         padding: 20px;
-        background-color: white;
-        color: black;
+        background-color: white !important;
+        color: #111827 !important;
         font-family: Arial, sans-serif;
         width: 100%;
         margin: 0 auto;
         max-width: ${landscapeMode ? "1100px" : "900px"};
+        color-scheme: light !important;
+        filter: none !important;
     `;
+
+	// Inject a local style block to aggressively force light theme inside the export subtree
+	const lightStyle = document.createElement('style');
+	lightStyle.textContent = `
+      .pdf-force-light, .pdf-force-light * { 
+        color-scheme: light !important; 
+        -webkit-print-color-adjust: exact !important; 
+        print-color-adjust: exact !important; 
+        background: #ffffff !important; 
+        color: #111827 !important; 
+        filter: none !important; 
+        text-shadow: none !important; 
+      }
+      .pdf-force-light h1, .pdf-force-light h2, .pdf-force-light p { color: #111827 !important; }
+      .pdf-force-light table { border-collapse: collapse; width: 100%; }
+      .pdf-force-light th { color: #ffffff !important; background-color: #4CAF50 !important; }
+      .pdf-force-light td { color: #111827 !important; border-color: #dddddd !important; }
+      .pdf-force-light tbody tr:nth-child(even) { background-color: #f9f9f9 !important; }
+    `;
+	exportContainer.appendChild(lightStyle);
 
 	// Titel
 	const title = document.createElement("h1");
@@ -372,10 +414,12 @@ function exportToPDF() {
 	// Benachrichtigung und Export
 	window.showNotification("PDF wird erstellt...", "info");
 
-	html2pdf()
+	const worker = html2pdf()
 		.from(exportContainer)
 		.set(options)
-		.save()
+		.save();
+
+	worker
 		.then(() => {
 			window.showNotification("PDF erfolgreich erstellt!", "success");
 			console.log("✅ Tabellarischer PDF Export abgeschlossen");
@@ -386,6 +430,13 @@ function exportToPDF() {
 				"PDF-Export fehlgeschlagen: " + error.message,
 				"error"
 			);
+		})
+		.finally(() => {
+			// Restore dark mode state
+			try {
+				if (hadDarkHtml) htmlEl.classList.add('dark-mode');
+				if (hadDarkBody) bodyEl.classList.add('dark-mode');
+			} catch (e) { /* noop */ }
 		});
 }
 

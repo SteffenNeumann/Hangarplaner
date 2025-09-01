@@ -120,6 +120,10 @@
 			.input-with-suffix .has-suffix {
 				padding-right: 70px; /* space for 'Minutes' */
 			}
+
+			/* Utility: force-hide header widgets from Display toggles */
+			.hide-weather-widget #weather-widget { display: none !important; }
+			.hide-time-widget #time-widget { display: none !important; }
 		</style>
 	</head>
 	<body class="bg-industrial-dark text-white font-sans edit-mode">
@@ -2732,6 +2736,44 @@ type="datetime-local"
 						}
 					});
 					viewToggle.__wired = true;
+				}
+
+				// New: Weather & Time widget toggles (fallback wiring)
+				const weatherToggle = document.getElementById('weatherWidgetToggle');
+				if (weatherToggle && !weatherToggle.__wired){
+					const applyWeather = function(){
+						const show = !!weatherToggle.checked;
+						document.body.classList.toggle('hide-weather-widget', !show);
+						var el = document.getElementById('weather-widget');
+						if (el){
+							el.classList.toggle('hidden', !show);
+							el.style.display = show ? '' : 'none';
+							if (show) { el.removeAttribute('hidden'); } else { el.setAttribute('hidden',''); }
+						}
+					};
+					// initial apply
+					applyWeather();
+					weatherToggle.addEventListener('change', applyWeather);
+					weatherToggle.addEventListener('input', applyWeather);
+					weatherToggle.__wired = true;
+				}
+
+				const timeToggle = document.getElementById('timeWidgetToggle');
+				if (timeToggle && !timeToggle.__wired){
+					const applyTime = function(){
+						const show = !!timeToggle.checked;
+						document.body.classList.toggle('hide-time-widget', !show);
+						var el = document.getElementById('time-widget');
+						if (el){
+							el.classList.toggle('hidden', !show);
+							el.style.display = show ? '' : 'none';
+							if (show) { el.removeAttribute('hidden'); } else { el.setAttribute('hidden',''); }
+						}
+					};
+					applyTime();
+					timeToggle.addEventListener('change', applyTime);
+					timeToggle.addEventListener('input', applyTime);
+					timeToggle.__wired = true;
 				}
 
 				const tilesInput = document.getElementById('tilesCount');

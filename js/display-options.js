@@ -540,17 +540,44 @@ applyDarkMode(enabled) {
 	applyWidgetsVisibility() {
 		try {
 			const weather = document.getElementById("weather-widget");
-			if (weather) {
-				const showW = this.current.showWeatherWidget !== false; // default true
-				weather.classList.toggle("hidden", !showW);
-				if (weather.style) weather.style.display = showW ? "" : "none";
-			}
 			const time = document.getElementById("time-widget");
-			if (time) {
-				const showT = this.current.showTimeWidget !== false; // default true
-				time.classList.toggle("hidden", !showT);
-				if (time.style) time.style.display = showT ? "" : "none";
+			const body = document.body || document.documentElement;
+
+			// Determine desired visibility once
+			const showW = this.current.showWeatherWidget !== false; // default true
+			const showT = this.current.showTimeWidget !== false; // default true
+
+			// Always toggle body utility classes regardless of element presence
+			if (body) {
+				body.classList.toggle("hide-weather-widget", !showW);
+				body.classList.toggle("hide-time-widget", !showT);
 			}
+
+			if (weather) {
+				// Apply multiple mechanisms to guarantee hiding regardless of CSS precedence
+				weather.classList.toggle("hidden", !showW);
+				if (showW) {
+					weather.style.display = "";
+					weather.removeAttribute("hidden");
+				} else {
+					weather.style.display = "none";
+					weather.setAttribute("hidden", "");
+				}
+			}
+
+			if (time) {
+				// Apply multiple mechanisms to guarantee hiding regardless of CSS precedence
+				time.classList.toggle("hidden", !showT);
+				if (showT) {
+					time.style.display = "";
+					time.removeAttribute("hidden");
+				} else {
+					time.style.display = "none";
+					time.setAttribute("hidden", "");
+				}
+			}
+
+			try { console.log(`[displayOptions] applyWidgetsVisibility: weather=${showW}, time=${showT}`); } catch(e){}
 		} catch (e) { /* noop */ }
 	},
 
@@ -672,15 +699,48 @@ applyDarkMode(enabled) {
 
 		// New: widget toggle handlers
 		const weatherToggle = document.getElementById("weatherWidgetToggle");
-		if (weatherToggle) {
-			weatherToggle.removeEventListener("change", this.onWidgetVisibilityChange);
-			weatherToggle.addEventListener("change", this.onWidgetVisibilityChange.bind(this));
-		}
 		const timeToggle = document.getElementById("timeWidgetToggle");
-		if (timeToggle) {
-			timeToggle.removeEventListener("change", this.onWidgetVisibilityChange);
-			timeToggle.addEventListener("change", this.onWidgetVisibilityChange.bind(this));
+
+		// Use a single bound handler to avoid duplicates
+		if (!this._onWidgetVisibilityChangeHandler) {
+			this._onWidgetVisibilityChangeHandler = this.onWidgetVisibilityChange.bind(this);
 		}
+		const handler = this._onWidgetVisibilityChangeHandler;
+
+		if (weatherToggle) {
+			weatherToggle.removeEventListener("change", handler);
+			weatherToggle.removeEventListener("input", handler);
+			weatherToggle.addEventListener("change", handler);
+			weatherToggle.addEventListener("input", handler);
+		}
+		if (timeToggle) {
+			timeToggle.removeEventListener("change", handler);
+			timeToggle.removeEventListener("input", handler);
+			timeToggle.addEventListener("change", handler);
+			timeToggle.addEventListener("input", handler);
+		}
+
+		// Global fallback in case elements are re-rendered
+		try {
+			if (!this._widgetToggleFallbackListenersAdded) {
+				const self = this;
+				document.addEventListener("change", function(e){
+					const t = e.target;
+					if (!t || !t.id) return;
+					if (t.id === "weatherWidgetToggle" || t.id === "timeWidgetToggle") {
+						self.onWidgetVisibilityChange.call(self);
+					}
+				});
+				document.addEventListener("input", function(e){
+					const t = e.target;
+					if (!t || !t.id) return;
+					if (t.id === "weatherWidgetToggle" || t.id === "timeWidgetToggle") {
+						self.onWidgetVisibilityChange.call(self);
+					}
+				});
+				this._widgetToggleFallbackListenersAdded = true;
+			}
+		} catch(e){}
 
 		console.log("🎛️ Display Options Event-Handler eingerichtet");
 	},
@@ -784,6 +844,7 @@ onDarkModeChange() {
 	 */
 	onWidgetVisibilityChange() {
 		this.collectFromUI();
+		try { console.log(`[displayOptions] Widget toggle changed: weather=${this.current.showWeatherWidget}, time=${this.current.showTimeWidget}`); } catch(e){}
 		this.applyWidgetsVisibility();
 		this.debouncedSave();
 	},

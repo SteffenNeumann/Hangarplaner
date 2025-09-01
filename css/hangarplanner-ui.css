@@ -1334,12 +1334,22 @@ body.dark-mode {
 .dark-mode input[type="datetime-local"]::-webkit-datetime-edit-text {
 	color: var(--text-secondary);
 }
-.dark-mode input[type="date"]::-webkit-calendar-picker-indicator,
+ .dark-mode input[type="date"]::-webkit-calendar-picker-indicator,
 .dark-mode input[type="time"]::-webkit-calendar-picker-indicator,
 .dark-mode input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-	/* Make the indicator visible on dark backgrounds */
-	filter: invert(1) opacity(0.85);
+	/* Force dark icon appearance across WebKit/Blink */
+	filter: invert(100%) sepia(2%) saturate(0%) hue-rotate(180deg) brightness(95%) contrast(90%);
+	opacity: 0.95;
 	background: transparent;
+}
+/* Also tint spinner/clear buttons to suit dark */
+.dark-mode input[type="date"]::-webkit-inner-spin-button,
+.dark-mode input[type="time"]::-webkit-inner-spin-button,
+.dark-mode input[type="datetime-local"]::-webkit-inner-spin-button,
+.dark-mode input[type="date"]::-webkit-clear-button,
+.dark-mode input[type="time"]::-webkit-clear-button,
+.dark-mode input[type="datetime-local"]::-webkit-clear-button {
+	filter: invert(100%);
 }
 /* Inline compact date/time button inside inputs */
 .dark-mode .compact-dt-wrap .compact-dt-btn {

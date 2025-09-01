@@ -1479,6 +1479,126 @@ window.generateDefaultProjectName = generateDefaultProjectName;
  * @param {string} aircraftId - Die Flugzeugkennung
  * @param {Object} flightData - Die von der API erhaltenen Flugdaten
  */
+// === Last Update Badge: Global creation helper and persistence ===
+(function(){
+	const STORE_KEY = 'hangar.lastUpdateMeta';
+
+	function loadStore(){
+		try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}') || {}; } catch(e){ return {}; }
+	}
+	function saveStore(obj){
+		try { localStorage.setItem(STORE_KEY, JSON.stringify(obj)); } catch(e) {}
+	}
+
+	function createOrUpdateLastUpdateBadge(cellId, source = 'api', timestampMs = null, options = {}){
+		try {
+			const persist = options.persist !== false; // default true
+			let tile = document.querySelector(`[data-cell-id="${cellId}"]`);
+			if (!tile && cellId >= 1 && cellId <= 100) {
+				tile = document.querySelector(`#hangarGrid .hangar-cell:nth-child(${cellId})`);
+			}
+			if (!tile && cellId >= 101) {
+				const secondaryIndex = cellId - 100;
+				tile = document.querySelector(`#secondaryHangarGrid .hangar-cell:nth-child(${secondaryIndex})`);
+			}
+			if (!tile) {
+				console.warn(`❌ Tile mit cellId ${cellId} nicht gefunden (Badge)`);
+				return;
+			}
+
+			// remove existing
+			const existing = tile.querySelector('.last-update-badge');
+			if (existing) existing.remove();
+
+			// compute time
+			const now = (timestampMs && !isNaN(timestampMs)) ? new Date(timestampMs) : new Date();
+			const display = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
+			// build badge
+			const badge = document.createElement('div');
+			badge.className = 'last-update-badge fresh';
+			badge.title = `Letztes Update: ${now.toLocaleString()} (${source})`;
+			badge.dataset.timestamp = String(now.getTime());
+			badge.dataset.source = source;
+			badge.style.position = 'absolute';
+			badge.style.top = '8px';
+			badge.style.left = '50%';
+			badge.style.transform = 'translateX(-50%)';
+			badge.style.fontSize = '9px';
+			badge.style.padding = '2px 6px';
+			badge.style.borderRadius = '8px';
+			badge.style.backgroundColor = 'rgba(34, 197, 94, 0.1)';
+			badge.style.color = '#16a34a';
+			badge.style.border = '1px solid rgba(34, 197, 94, 0.3)';
+			badge.style.zIndex = '20';
+			badge.style.fontWeight = '500';
+			badge.style.boxShadow = 'none';
+			badge.style.minWidth = '40px';
+			badge.style.textAlign = 'center';
+			badge.style.fontFamily = 'monospace';
+			badge.textContent = display;
+
+			// ensure relative tile
+			if (getComputedStyle(tile).position === 'static') {
+				tile.style.position = 'relative';
+			}
+			tile.appendChild(badge);
+
+			// persist
+			if (persist) {
+				const store = loadStore();
+				store[String(cellId)] = { ts: now.getTime(), source: source };
+				saveStore(store);
+			}
+
+			// update style age
+			if (typeof window.refreshAllUpdateBadges === 'function') {
+				setTimeout(window.refreshAllUpdateBadges, 0);
+			}
+		} catch (e) {
+			console.warn('⚠️ createOrUpdateLastUpdateBadge Fehler:', e);
+		}
+	}
+
+	// expose
+	window.createOrUpdateLastUpdateBadge = createOrUpdateLastUpdateBadge;
+	window.LastUpdateBadges = {
+		load: loadStore,
+		save: saveStore,
+		set(cellId, ts, source){
+			const store = loadStore();
+			store[String(cellId)] = { ts, source };
+			saveStore(store);
+		},
+		remove(cellId){
+			const store = loadStore();
+			delete store[String(cellId)];
+			saveStore(store);
+			// remove DOM badge
+			const host = document.querySelector(`[data-cell-id="${cellId}"]`) || document.querySelector(`#hangarGrid .hangar-cell:nth-child(${cellId})`) || document.querySelector(`#secondaryHangarGrid .hangar-cell:nth-child(${cellId-100})`);
+			if (host) {
+				const b = host.querySelector('.last-update-badge');
+				if (b) b.remove();
+			}
+		},
+		clearAll(){
+			try { localStorage.removeItem(STORE_KEY); } catch(e) {}
+			document.querySelectorAll('.last-update-badge').forEach(b => b.remove());
+		},
+		reatachAll(){ this.reattachAll(); }, // backward-compat typo guard
+		reattachAll(){
+			const store = loadStore();
+			Object.keys(store).forEach(k => {
+				const meta = store[k] || {};
+				createOrUpdateLastUpdateBadge(parseInt(k,10), meta.source || 'api', meta.ts, { persist: false });
+			});
+			if (typeof window.refreshAllUpdateBadges === 'function') {
+				setTimeout(window.refreshAllUpdateBadges, 0);
+			}
+		}
+	};
+})();
+
 window.hangarData.updateAircraftFromFlightData = async function (
 	aircraftId,
 	flightData
@@ -1493,86 +1613,6 @@ window.hangarData.updateAircraftFromFlightData = async function (
 		return;
 	}
 
-	// ✅ NEUE FUNKTION: Last Update Badge hinzufügen/aktualisieren
-	function updateLastUpdateBadge(cellId, source = "api") {
-		console.log(`🏷️ updateLastUpdateBadge called for cellId: ${cellId}, source: ${source}`);
-		
-		// KORREKTUR: Verbesserte Tile-Suche mit data-cell-id Attribut
-		let tile = document.querySelector(`[data-cell-id="${cellId}"]`);
-		
-		// Fallback: Suche über nth-child für primäre Kacheln (1-8)
-		if (!tile && cellId >= 1 && cellId <= 8) {
-			tile = document.querySelector(`#hangarGrid .hangar-cell:nth-child(${cellId})`);
-		}
-		
-		// Fallback: Suche über nth-child für sekundäre Kacheln (101+)
-		if (!tile && cellId >= 101) {
-			const secondaryIndex = cellId - 100;
-			tile = document.querySelector(`#secondaryHangarGrid .hangar-cell:nth-child(${secondaryIndex})`);
-		}
-
-		if (!tile) {
-			console.warn(`❌ Tile mit cellId ${cellId} nicht gefunden`);
-			return;
-		}
-		
-		console.log(`✅ Tile gefunden für cellId ${cellId}:`, tile);
-
-		// Entferne vorhandenes Badge
-		const existingBadge = tile.querySelector(".last-update-badge");
-		if (existingBadge) {
-			existingBadge.remove();
-		}
-
-		// Suche den Header-Bereich für die Positionierung
-		const cardHeader = tile.querySelector(".card-header");
-		const headerElements = tile.querySelector(".header-elements");
-		const targetContainer = headerElements || cardHeader || tile;
-
-		// Erstelle neues Badge
-		const badge = document.createElement("div");
-		badge.className = "last-update-badge fresh";
-		badge.title = `Letztes Update: ${new Date().toLocaleString()} (${source})`;
-
-		const now = new Date();
-		badge.textContent = now.toLocaleTimeString("de-DE", {
-			hour: "2-digit",
-			minute: "2-digit",
-		});
-
-		// Speichere Timestamp für spätere Aktualisierung
-		badge.dataset.timestamp = now.getTime();
-		badge.dataset.source = source;
-
-		// ✅ NEUE POSITIONIERUNG: Zentriert im Header zwischen Status und Position - DEZENT
-		badge.style.position = "absolute";
-		badge.style.top = "8px";
-		badge.style.left = "50%";
-		badge.style.transform = "translateX(-50%)";
-		badge.style.fontSize = "9px";
-		badge.style.padding = "2px 6px";
-		badge.style.borderRadius = "8px";
-		badge.style.backgroundColor = "rgba(34, 197, 94, 0.1)"; // Sehr transparentes Grün
-		badge.style.color = "#16a34a"; // Dunkleres Grün für Text
-		badge.style.border = "1px solid rgba(34, 197, 94, 0.3)"; // Subtile Umrandung
-		badge.style.zIndex = "20";
-		badge.style.fontWeight = "500"; // Weniger bold
-		badge.style.boxShadow = "none"; // Kein Schatten für dezentere Optik
-		badge.style.minWidth = "40px";
-		badge.style.textAlign = "center";
-		badge.style.fontFamily = "monospace"; // Monospace für Zeitanzeige
-
-		// Stelle sicher dass das Tile relative Positionierung hat
-		if (getComputedStyle(tile).position === "static") {
-			tile.style.position = "relative";
-		}
-
-		tile.appendChild(badge);
-
-		console.log(
-			`🏷️ Update-Badge für Kachel ${cellId} zentriert im Header gesetzt: ${badge.textContent}`
-		);
-	}
 
 	// Suche nach Kacheln mit der entsprechenden Aircraft ID
 	const primaryTiles = document.querySelectorAll("#hangarGrid .hangar-cell");
@@ -1740,7 +1780,9 @@ window.hangarData.updateAircraftFromFlightData = async function (
 			// }
 
 			// ✅ NEUE FUNKTION: Last Update Badge hinzufügen
-			updateLastUpdateBadge(cellId, "api");
+			if (typeof window.createOrUpdateLastUpdateBadge === 'function') {
+				window.createOrUpdateLastUpdateBadge(cellId, 'api');
+			}
 
 			updatedTiles++;
 		}

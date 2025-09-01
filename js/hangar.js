@@ -1044,6 +1044,65 @@ function setupFlightDataEventHandlers() {
 			}
 		});
 	}
+
+// Wire Display submenu: Reset screen (confirm and clear all tile inputs except Hangar Position)
+const resetScreenBtn = document.getElementById('resetScreenBtn');
+if (resetScreenBtn) {
+	resetScreenBtn.addEventListener('click', function(e){
+		e.preventDefault();
+		const ok = window.confirm('Reset screen?\n\nThis will:\n• clear all per-tile update timestamps\n• reset all tile inputs (Aircraft, Arr/Dep, Pos/Route, Notes, Tow, Status)\n• keep Hangar Position inputs unchanged');
+		if (!ok) return;
+		try {
+			// 1) Clear all update badges and persisted meta
+			if (window.LastUpdateBadges && typeof window.LastUpdateBadges.clearAll === 'function') {
+				window.LastUpdateBadges.clearAll();
+			}
+
+			// 2) Reset inputs for all tiles (primary and secondary), except Hangar Position
+			const tiles = document.querySelectorAll('#hangarGrid .hangar-cell, #secondaryHangarGrid .hangar-cell');
+			tiles.forEach(tile => {
+				// Clear aircraft id
+				tile.querySelectorAll('input[id^="aircraft-"]').forEach(el => { el.value = ''; });
+				// Clear times
+				tile.querySelectorAll('input[id^="arrival-time-"]').forEach(el => { el.value = ''; });
+				tile.querySelectorAll('input[id^="departure-time-"]').forEach(el => { el.value = ''; });
+				// Clear route/position (Pos in info grid)
+				tile.querySelectorAll('input[id^="position-"]').forEach(el => { el.value = ''; });
+				// Notes
+				tile.querySelectorAll('textarea[id^="notes-"]').forEach(el => { el.value = ''; });
+				// Tow status -> neutral
+				tile.querySelectorAll('select[id^="tow-status-"]').forEach(sel => {
+					sel.value = 'neutral';
+					if (window.updateTowStatusStyles) window.updateTowStatusStyles(sel);
+				});
+			});
+
+			// 3) Reset tile status selectors and lights to neutral
+			if (typeof resetAllTilesToNeutral === 'function') {
+				resetAllTilesToNeutral();
+			} else {
+				// Fallback
+				document.querySelectorAll('.status-selector').forEach(sel => {
+					sel.value = 'neutral';
+					if (window.updateStatusLight) window.updateStatusLight(sel);
+				});
+			}
+
+			// 4) Inform user
+			if (window.showNotification) window.showNotification('Screen reset completed', 'success');
+		} catch (err) {
+			console.warn('Reset screen failed:', err);
+			if (window.showNotification) window.showNotification('Reset failed', 'error');
+		}
+	});
+}
+
+// Rehydrate badges from localStorage on load
+	try {
+		if (window.LastUpdateBadges && typeof window.LastUpdateBadges.reattachAll === 'function') {
+			window.LastUpdateBadges.reattachAll();
+		}
+	} catch (e) { console.warn('Badge rehydrate failed:', e); }
 }
 
 /**
@@ -1379,6 +1438,10 @@ function checkForSelectedAircraft() {
 					window.showNotification(`${selectedAircraft} → Kachel ${tileId}${timeInfo}`, 'success');
 				}
 				console.log(`✅ ${selectedAircraft} zu Kachel ${tileId} hinzugefügt (Arr: ${selectedArr}, Dep: ${selectedDep})`);
+				// Create/update last-update badge for subpage insertion
+				if (window.createOrUpdateLastUpdateBadge) {
+					window.createOrUpdateLastUpdateBadge(tileId, 'subpage');
+				}
 			}
 			clearSelection();
 		}

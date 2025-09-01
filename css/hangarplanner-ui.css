@@ -1308,6 +1308,48 @@ body.dark-mode {
 	border-color: var(--border-color);
 }
 
+/* Dark mode: native date/time inputs + pickers */
+.dark-mode input[type="date"],
+.dark-mode input[type="time"],
+.dark-mode input[type="datetime-local"] {
+	/* Ensure UA widgets (calendar/time popover) adopt dark UI */
+	color-scheme: dark;
+	background-color: var(--input-bg);
+	color: var(--input-text);
+	border: 1px solid var(--border-color);
+}
+/* WebKit/Blink datetime editor internals */
+.dark-mode input[type="date"]::-webkit-datetime-edit,
+.dark-mode input[type="time"]::-webkit-datetime-edit,
+.dark-mode input[type="datetime-local"]::-webkit-datetime-edit {
+	color: var(--input-text);
+}
+.dark-mode input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+.dark-mode input[type="time"]::-webkit-datetime-edit-fields-wrapper,
+.dark-mode input[type="datetime-local"]::-webkit-datetime-edit-fields-wrapper {
+	background-color: transparent;
+}
+.dark-mode input[type="date"]::-webkit-datetime-edit-text,
+.dark-mode input[type="time"]::-webkit-datetime-edit-text,
+.dark-mode input[type="datetime-local"]::-webkit-datetime-edit-text {
+	color: var(--text-secondary);
+}
+.dark-mode input[type="date"]::-webkit-calendar-picker-indicator,
+.dark-mode input[type="time"]::-webkit-calendar-picker-indicator,
+.dark-mode input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+	/* Make the indicator visible on dark backgrounds */
+	filter: invert(1) opacity(0.85);
+	background: transparent;
+}
+/* Inline compact date/time button inside inputs */
+.dark-mode .compact-dt-wrap .compact-dt-btn {
+	background: var(--bg-secondary);
+	border-color: var(--border-color);
+	color: var(--text-secondary);
+}
+.dark-mode .compact-dt-wrap .compact-dt-btn svg { color: var(--text-secondary); }
+.dark-mode .compact-dt-wrap .compact-dt-btn:hover { background: rgba(255,255,255,0.06); }
+
 .dark-mode .sidebar-form-control,
 .dark-mode .sidebar-form-select {
 	background-color: var(--input-bg);

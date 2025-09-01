@@ -1305,9 +1305,10 @@ if (window.helpers) {
       btn.style.alignItems = 'center';
       btn.style.justifyContent = 'center';
       btn.style.padding = '0';
-      btn.style.border = '1px solid #cbd5e1';
+      // Use CSS for theme-specific border/background; do not override inline
+      btn.style.border = '';
       btn.style.borderRadius = '4px';
-      btn.style.background = '#f8fafc';
+      btn.style.background = '';
       btn.style.cursor = 'pointer';
       btn.addEventListener('click', ()=> openCompactDateTimePicker(input));
 

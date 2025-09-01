@@ -564,7 +564,8 @@ const AirportFlights = (() => {
 	};
 
 	// Aktion: Flugzeug im HangarPlanner verwenden (wie Fleet Database)
-	const useInHangar = (registration) => {
+	// ERWEITERT: Arr/Dep Zeiten an die Hauptseite übergeben
+	const useInHangar = (registration, arrTime, depTime) => {
 		const reg = (registration || "").trim();
 		if (!reg || reg === "-----") {
 			alert("Registration not available for this flight");
@@ -573,9 +574,24 @@ const AirportFlights = (() => {
 		// Mark that we should prompt for a target tile on the Hangar page
 		localStorage.setItem("selectedAircraft", reg);
 		localStorage.setItem("selectedAircraftPrompt", "true");
+		// Persist provided times (HH:MM) for pickup on index.html
+		if (arrTime && typeof arrTime === 'string' && arrTime.trim()) {
+			localStorage.setItem("selectedArrivalTime", arrTime.trim());
+		} else {
+			localStorage.removeItem("selectedArrivalTime");
+		}
+		if (depTime && typeof depTime === 'string' && depTime.trim()) {
+			localStorage.setItem("selectedDepartureTime", depTime.trim());
+		} else {
+			localStorage.removeItem("selectedDepartureTime");
+		}
 		try {
-			const url = "index.html?selectedAircraft=" + encodeURIComponent(reg) + "&prompt=1";
-			window.location.href = url;
+			const params = new URLSearchParams();
+			params.set("selectedAircraft", reg);
+			if (arrTime && arrTime.trim()) params.set("arr", arrTime.trim());
+			if (depTime && depTime.trim()) params.set("dep", depTime.trim());
+			params.set("prompt", "1");
+			window.location.href = `index.html?${params.toString()}`;
 		} catch (e) {
 			// Fallback redirect without params
 			window.location.href = "index.html";

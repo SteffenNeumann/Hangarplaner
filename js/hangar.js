@@ -1415,14 +1415,49 @@ function checkForSelectedAircraft() {
 			const aircraftInput = document.getElementById(`aircraft-${tileId}`);
 			if (aircraftInput) {
 				aircraftInput.value = selectedAircraft;
-				// Zeiten setzen, falls vorhanden
+				// Zeiten setzen, falls vorhanden — konvertiere HH:mm/compact → ISO → kompakte Anzeige
+				const h = window.helpers || {};
 				if (selectedArr) {
 					const arrEl = document.getElementById(`arrival-time-${tileId}`);
-					if (arrEl) arrEl.value = selectedArr;
+					if (arrEl) {
+						let iso = '';
+						if (h.isISODateTimeLocal && h.isISODateTimeLocal(selectedArr)) {
+							iso = selectedArr;
+						} else if (h.isHHmm && h.isHHmm(selectedArr) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
+							const bases = h.getBaseDates();
+							iso = h.coerceHHmmToDateTimeLocalUtc(selectedArr, (bases && bases.arrivalBase) || '');
+						} else if (h.isCompactDateTime && h.isCompactDateTime(selectedArr) && h.parseCompactToISOUTC) {
+							iso = h.parseCompactToISOUTC(selectedArr);
+						}
+						// Auf kompakte Anzeige setzen, falls ISO berechnet
+						if (iso && h.formatISOToCompactUTC) {
+							arrEl.value = h.formatISOToCompactUTC(iso);
+							arrEl.dataset.iso = iso;
+						} else {
+							// Fallback: rohen Wert setzen
+							arrEl.value = selectedArr;
+						}
+					}
 				}
 				if (selectedDep) {
 					const depEl = document.getElementById(`departure-time-${tileId}`);
-					if (depEl) depEl.value = selectedDep;
+					if (depEl) {
+						let iso = '';
+						if (h.isISODateTimeLocal && h.isISODateTimeLocal(selectedDep)) {
+							iso = selectedDep;
+						} else if (h.isHHmm && h.isHHmm(selectedDep) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
+							const bases = h.getBaseDates();
+							iso = h.coerceHHmmToDateTimeLocalUtc(selectedDep, (bases && bases.departureBase) || '');
+						} else if (h.isCompactDateTime && h.isCompactDateTime(selectedDep) && h.parseCompactToISOUTC) {
+							iso = h.parseCompactToISOUTC(selectedDep);
+						}
+						if (iso && h.formatISOToCompactUTC) {
+							depEl.value = h.formatISOToCompactUTC(iso);
+							depEl.dataset.iso = iso;
+						} else {
+							depEl.value = selectedDep;
+						}
+					}
 				}
 
 				// Event auslösen für weitere Verarbeitung (z.B. Flugdaten abrufen)
@@ -1485,10 +1520,11 @@ function checkForSelectedAircraft() {
 					btn.style.minHeight = '32px';
 					btn.style.padding = '0 10px';
 					btn.style.fontSize = '12px';
-					// Use the tile's position label if available
-					const posEl = document.getElementById(`hangar-position-${id}`);
-					const posLabel = (posEl?.value || '').trim();
-					btn.textContent = posLabel || `#${id}`;
+					// Use the tile's position label if available (support both hangar-position-* and position-*)
+					const posElPrimary = document.getElementById(`hangar-position-${id}`);
+					const posElAlt = document.getElementById(`position-${id}`);
+					const posLabel = ((posElPrimary?.value || posElAlt?.value) || '').trim();
+					btn.textContent = posLabel ? `${posLabel}` : `#${id}`;
 					btn.title = `Kachel #${id}${posLabel ? ` • Position: ${posLabel}` : ''}`;
 					btn.addEventListener('click', () => {
 						finalizeInsert(id);

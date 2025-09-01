@@ -68,7 +68,7 @@ body {
 	transform-origin: center center;
 	justify-self: center;
 	box-shadow: none !important;
-	border: 1px solid transparent;
+	border: 1px solid var(--border-light);
 	border-radius: 12px;
 	background-color: #ffffff !important; /* Zurück auf weiß */
 }

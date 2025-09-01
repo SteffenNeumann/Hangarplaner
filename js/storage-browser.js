@@ -518,11 +518,24 @@ class ServerSync {
 					...window.displayOptions.defaults,
 					...serverData.settings.displayOptions,
 				};
+				// CRITICAL: Respect locally persisted theme (never let server override user's choice)
+				try {
+					const persisted = (localStorage.getItem('hangar.theme') || '').toLowerCase();
+					if (persisted === 'dark') {
+						window.displayOptions.current.darkMode = true;
+					} else if (persisted === 'light') {
+						window.displayOptions.current.darkMode = false;
+					} else {
+						// Fallback: derive from current DOM if set
+						const domDark = document.documentElement.classList.contains('dark-mode') || (document.body && document.body.classList.contains('dark-mode'));
+						if (domDark) window.displayOptions.current.darkMode = true;
+					}
+				} catch (e) { /* noop */ }
 				window.displayOptions.updateUI();
 				window.displayOptions.applySettings();
 				console.log(
-					"🎛️ Display Options vom Server angewendet:",
-					serverData.settings.displayOptions
+					"🎛️ Display Options vom Server angewendet (theme respected from local):",
+					window.displayOptions.current
 				);
 			} else if (serverData.settings) {
 				// Legacy-Format: Direkte Einstellungen ohne displayOptions

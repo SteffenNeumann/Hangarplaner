@@ -1411,6 +1411,15 @@ function checkForSelectedAircraft() {
 			return Array.from(byId.values()).sort((a,b)=>a.id-b.id);
 		}
 
+		// Hilfsfunktion: ermittelt die Kachel-ID anhand des Positionslabels (z. B. "1B")
+		function resolveTileIdByLabel(label){
+			if (!label) return null;
+			for (let i = 1; i <= 12; i++) {
+				if (getPositionLabelForTileId(i) === label) return i;
+			}
+			return null;
+		}
+
 		function clearSelection() {
 			localStorage.removeItem("selectedAircraft");
 			localStorage.removeItem("selectedArrivalTime");
@@ -1540,7 +1549,13 @@ function checkForSelectedAircraft() {
 					btn.textContent = label || `#${id}`;
 					btn.title = `Kachel #${id}${label ? ` • Position: ${label}` : ''}`;
 					btn.addEventListener('click', (e) => {
-						const tid = parseInt(e.currentTarget.dataset.tileId, 10);
+						const target = e.currentTarget;
+						const label = target.dataset.posLabel || '';
+						let tid = resolveTileIdByLabel(label);
+						if (!tid) {
+							// Fallback auf hinterlegte ID
+							tid = parseInt(target.dataset.tileId, 10);
+						}
 						finalizeInsert(tid);
 						document.body.removeChild(overlay);
 					});

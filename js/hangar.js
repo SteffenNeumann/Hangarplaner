@@ -1369,7 +1369,7 @@ document.addEventListener("projectSaved", function () {
  * Überprüft, ob ein Flugzeug aus der Fleet Database ausgewählt wurde
  * und fügt es automatisch zur ersten freien Kachel hinzu
  */
-function checkForSelectedAircraft() {
+async function checkForSelectedAircraft() {
 	const selectedAircraft = localStorage.getItem("selectedAircraft");
 
 	if (selectedAircraft) {
@@ -1382,16 +1382,30 @@ function checkForSelectedAircraft() {
 			const posElPrimary = document.getElementById(`hangar-position-${id}`);
 			const posElAlt     = document.getElementById(`position-${id}`);
 			const primaryVal   = (posElPrimary?.value || '').trim();
-			const primaryPh    = (posElPrimary?.getAttribute?.('placeholder') || '').trim();
 			const altVal       = (posElAlt?.value || '').trim();
+			const primaryPh    = (posElPrimary?.getAttribute?.('placeholder') || '').trim();
 			const altPh        = (posElAlt?.getAttribute?.('placeholder') || '').trim();
-			return primaryVal || primaryPh || altVal || altPh || `#${id}`;
+
+			// Primary tiles (1..12) may rely on placeholder labels like "1A" if no explicit value set.
+			const isPrimary = Number.isFinite(id) && id >= 1 && id <= 12;
+
+			if (primaryVal) return primaryVal;
+			if (altVal) return altVal;
+
+			if (isPrimary) {
+				// Only for primary tiles, allow placeholder if meaningful (and not generic like "--").
+				if (primaryPh) return primaryPh;
+				if (altPh && altPh !== '--') return altPh;
+			}
+
+			// For secondary or missing labels, fall back to the numeric tile id
+			return `#${id}`;
 		}
 
 		// Hilfsfunktion: alle freien (leeren) sichtbaren Kacheln sammeln (nur primär)
 		function getFreeTilesWithLabels() {
 			const list = [];
-			const inputs = document.querySelectorAll('#hangarGrid .hangar-cell input[id^="aircraft-"]');
+			const inputs = document.querySelectorAll('#hangarGrid .hangar-cell input[id^="aircraft-"], #secondaryHangarGrid .hangar-cell input[id^="aircraft-"]');
 			inputs.forEach((inp) => {
 				const idMatch = inp.id.match(/aircraft-(\d+)/);
 				if (!idMatch) return;
@@ -1399,7 +1413,8 @@ function checkForSelectedAircraft() {
 				const cell = inp.closest('.hangar-cell');
 				if (!cell) return;
 				const style = window.getComputedStyle ? window.getComputedStyle(cell) : cell.style;
-				const isHidden = cell.classList.contains('hidden') || style.display === 'none' || style.visibility === 'hidden';
+				// Robust visibility: hidden class, display/visibility, or no client rects
+				const isHidden = cell.classList.contains('hidden') || style.display === 'none' || style.visibility === 'hidden' || cell.getClientRects().length === 0;
 				const isEmpty = !inp.value || inp.value.trim() === '';
 				if (!isHidden && isEmpty) {
 					list.push({ id: cellId, label: getPositionLabelForTileId(cellId) });
@@ -1408,7 +1423,13 @@ function checkForSelectedAircraft() {
 			// Dedup by id (guard against unexpected DOM duplication)
 			const byId = new Map();
 			list.forEach(item => { if (!byId.has(item.id)) byId.set(item.id, item); });
-			return Array.from(byId.values()).sort((a,b)=>a.id-b.id);
+			// Sort: primary (1..12) first, then secondary (>=101), by id
+			return Array.from(byId.values()).sort((a,b)=>{
+				const ap = a.id >= 101 ? 1 : 0;
+				const bp = b.id >= 101 ? 1 : 0;
+				if (ap !== bp) return ap - bp;
+				return a.id - b.id;
+			});
 		}
 
 		// Hilfsfunktion: ermittelt die Kachel-ID anhand des Positionslabels (z. B. "1B")
@@ -1477,12 +1498,68 @@ function checkForSelectedAircraft() {
 				}
 
 				// Event auslösen für weitere Verarbeitung (z.B. Flugdaten abrufen)
+				// Persist via event-manager/local storage (immediate + debounced)
+				try {
+					if (window.hangarEventManager) {
+						if (typeof window.hangarEventManager.updateFieldInStorage === 'function') {
+							window.hangarEventManager.updateFieldInStorage(`aircraft-${tileId}`, aircraftInput.value);
+						}
+						if (typeof window.hangarEventManager.debouncedFieldUpdate === 'function') {
+							window.hangarEventManager.debouncedFieldUpdate(`aircraft-${tileId}`, aircraftInput.value, 50);
+						}
+					}
+					// Fire input/blur to trigger any listeners hooked elsewhere
+					aircraftInput.dispatchEvent(new Event('input', { bubbles: true }));
+					aircraftInput.dispatchEvent(new Event('blur', { bubbles: true }));
+				} catch (e) { /* noop */ }
+
 				if (window.hangarEvents && window.hangarEvents.handleAircraftIdChange) {
 					window.hangarEvents.handleAircraftIdChange(
 						`aircraft-${tileId}`,
 						selectedAircraft
 					);
 				}
+
+				// Also persist times
+				try {
+					const arrId = `arrival-time-${tileId}`;
+					const depId = `departure-time-${tileId}`;
+					const arrEl = document.getElementById(arrId);
+					const depEl = document.getElementById(depId);
+					if (arrEl) {
+						const val = arrEl.dataset?.iso || arrEl.value || '';
+						if (window.hangarEventManager) {
+							if (typeof window.hangarEventManager.updateFieldInStorage === 'function') {
+								window.hangarEventManager.updateFieldInStorage(arrId, val);
+							}
+							if (typeof window.hangarEventManager.debouncedFieldUpdate === 'function') {
+								window.hangarEventManager.debouncedFieldUpdate(arrId, val, 50);
+							}
+						}
+						arrEl.dispatchEvent(new Event('input', { bubbles: true }));
+						arrEl.dispatchEvent(new Event('blur', { bubbles: true }));
+					}
+					if (depEl) {
+						const val = depEl.dataset?.iso || depEl.value || '';
+						if (window.hangarEventManager) {
+							if (typeof window.hangarEventManager.updateFieldInStorage === 'function') {
+								window.hangarEventManager.updateFieldInStorage(depId, val);
+							}
+							if (typeof window.hangarEventManager.debouncedFieldUpdate === 'function') {
+								window.hangarEventManager.debouncedFieldUpdate(depId, val, 50);
+							}
+						}
+						depEl.dispatchEvent(new Event('input', { bubbles: true }));
+						depEl.dispatchEvent(new Event('blur', { bubbles: true }));
+					}
+				} catch (e) { /* noop */ }
+
+				// Optional: trigger a quick server sync if available and in master mode
+				try {
+					if (window.serverSync && window.serverSync.isMaster && typeof window.serverSync.manualSync === 'function') {
+						setTimeout(() => window.serverSync.manualSync(), 200);
+					}
+				} catch (e) { /* noop */ }
 
 				if (window.showNotification) {
 					const timeInfo = (selectedArr || selectedDep) ? ` (Arr: ${selectedArr || '--'} | Dep: ${selectedDep || '--'})` : '';
@@ -1504,6 +1581,11 @@ function checkForSelectedAircraft() {
 					return { id: item, label: getPositionLabelForTileId(item) };
 				}
 				return { id: item.id, label: item.label || getPositionLabelForTileId(item.id) };
+			}).sort((a,b)=>{
+				const ap = a.id >= 101 ? 1 : 0;
+				const bp = b.id >= 101 ? 1 : 0;
+				if (ap !== bp) return ap - bp;
+				return a.id - b.id;
 			});
 
 			// Overlay
@@ -1532,7 +1614,7 @@ function checkForSelectedAircraft() {
 			const sectionLabel = document.createElement('div');
 			sectionLabel.className = 'section-label';
 			sectionLabel.style.marginBottom = '8px';
-			sectionLabel.textContent = freeTiles.length > 0 ? 'Freie Kacheln' : 'Keine freien Kacheln';
+			sectionLabel.textContent = normalized.length > 0 ? 'Freie Kacheln' : 'Keine freien Kacheln';
 
 			// Grid of free tiles
 			const grid = document.createElement('div');
@@ -1550,12 +1632,7 @@ function checkForSelectedAircraft() {
 					btn.title = `Kachel #${id}${label ? ` • Position: ${label}` : ''}`;
 					btn.addEventListener('click', (e) => {
 						const target = e.currentTarget;
-						const label = target.dataset.posLabel || '';
-						let tid = resolveTileIdByLabel(label);
-						if (!tid) {
-							// Fallback auf hinterlegte ID
-							tid = parseInt(target.dataset.tileId, 10);
-						}
+						const tid = parseInt(target.dataset.tileId, 10);
 						finalizeInsert(tid);
 						document.body.removeChild(overlay);
 					});
@@ -1575,14 +1652,14 @@ function checkForSelectedAircraft() {
 			const manualLabel = document.createElement('label');
 			manualLabel.className = 'text-xs font-semibold';
 			manualLabel.setAttribute('for','tileManualInput');
-			manualLabel.textContent = 'Andere Kachel (1–12)';
+			manualLabel.textContent = 'Andere Kachel-ID';
 			const manualInput = document.createElement('input');
 			manualInput.id = 'tileManualInput';
 			manualInput.type = 'number';
 			manualInput.min = '1';
-			manualInput.max = '12';
+			manualInput.placeholder = 'z.B. 1 oder 101';
 			manualInput.className = 'sidebar-form-control';
-			manualInput.style.width = '90px';
+			manualInput.style.width = '110px';
 			const manualBtn = document.createElement('button');
 			manualBtn.className = 'sidebar-btn sidebar-btn-primary';
 			manualBtn.style.minHeight = '32px';
@@ -1590,12 +1667,13 @@ function checkForSelectedAircraft() {
 			manualBtn.textContent = 'Einfügen';
 			manualBtn.addEventListener('click', () => {
 				const v = parseInt((manualInput.value || '').trim(), 10);
-				if (!isNaN(v) && v >= 1 && v <= 12) {
+				const exists = !isNaN(v) && !!document.getElementById(`aircraft-${v}`);
+				if (exists) {
 					finalizeInsert(v);
 					document.body.removeChild(overlay);
 				} else {
 					if (window.showNotification) {
-						window.showNotification('Bitte gültige Kachelnummer (1–12) eingeben', 'warning');
+						window.showNotification('Bitte gültige vorhandene Kachel-ID eingeben (z.B. 1..12 oder 101..)', 'warning');
 					}
 				}
 			});
@@ -1644,11 +1722,85 @@ function checkForSelectedAircraft() {
 			});
 		}
 
-		// Zeige modalen Dialog im Projektstil
+		// Warte, bis die Tiles stabil befüllt sind (z. B. nach Server/Local-Load)
+		await (async function waitForStableTiles(){
+			const start = Date.now();
+			let lastSnapshot = Array.from(document.querySelectorAll('#hangarGrid input[id^="aircraft-"]')).map(el => el.value || '');
+			let stableSince = Date.now();
+			const maxWait = 3500; // ms
+			const stableWindow = 450; // ms ohne Änderungen
+			return new Promise((resolve) => {
+				const collectSnap = () => Array.from(document.querySelectorAll('#hangarGrid input[id^="aircraft-"], #secondaryHangarGrid input[id^="aircraft-"]')).map(el => el.value || '');
+				const tick = () => {
+					const applying = !!(window.isApplyingServerData || window.serverSync?.isApplyingServerData);
+					const nowValues = collectSnap();
+					const changed = nowValues.length !== lastSnapshot.length || nowValues.some((v, i) => v !== lastSnapshot[i]);
+					if (changed) {
+						lastSnapshot = nowValues;
+						stableSince = Date.now();
+					}
+					const stableEnough = (Date.now() - stableSince) >= stableWindow;
+					if (!applying && stableEnough) return resolve();
+					if ((Date.now() - start) >= maxWait) return resolve();
+					setTimeout(tick, 120);
+				};
+				tick();
+			});
+		})();
+
+		// Zeige modalen Dialog im Projektstil (nachdem Tile-Werte stabil sind)
 		const freeTiles = getFreeTilesWithLabels();
 		showTileSelectionModal(freeTiles);
 	}
 }
+
+// Lightweight local rehydration: apply values from localStorage (hangarPlannerData) into empty fields only
+(function setupLocalRehydrate(){
+	function rehydrateLocalFieldsIfEmpty(){
+		try {
+			const raw = localStorage.getItem('hangarPlannerData');
+			if (!raw) return;
+			const data = JSON.parse(raw);
+			if (!data || typeof data !== 'object') return;
+			const h = window.helpers || {};
+			Object.keys(data).forEach(key => {
+				if (!/^(aircraft|arrival-time|departure-time|position|hangar-position|notes|status|tow-status)-(\d+)$/.test(key)) return;
+				const el = document.getElementById(key);
+				if (!el) return;
+				// Only fill if currently empty or neutral (for selects)
+				const isSelect = el.tagName === 'SELECT';
+				const current = (el.value || '').trim();
+				const target = data[key] || '';
+				if (isSelect) {
+					if (!current || current === 'neutral') {
+						el.value = target;
+						if (key.startsWith('status-') && window.updateStatusLights) {
+							const cellId = parseInt(key.replace('status-',''),10);
+							if (!isNaN(cellId)) window.updateStatusLights(cellId);
+						}
+					}
+				} else if (!current) {
+					if (key.startsWith('arrival-time-') || key.startsWith('departure-time-')) {
+						let iso = target;
+						if (iso && h.formatISOToCompactUTC && h.isISODateTimeLocal && h.isISODateTimeLocal(iso)) {
+							el.value = h.formatISOToCompactUTC(iso);
+							el.dataset.iso = iso;
+						} else {
+							el.value = target;
+						}
+					} else {
+						el.value = target;
+					}
+				}
+			});
+		} catch (e) {
+			console.warn('Local rehydrate failed:', e);
+		}
+	}
+	// Schedule after initial app setup so we don't override server-applied values; only empties are filled
+	window.hangarInitQueue = window.hangarInitQueue || [];
+	window.hangarInitQueue.push(function(){ setTimeout(rehydrateLocalFieldsIfEmpty, 2400); });
+})();
 
 /**
  * Findet die erste freie Kachel (ohne Aircraft ID)

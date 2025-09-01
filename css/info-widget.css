@@ -26,7 +26,7 @@ body.header-loose {
 	--time-col-gap: 8px;
 }
 
-#info-widget, #time-widget, #status-widget {
+#info-widget, #time-widget, #status-widget, #towing-reminder-widget {
 	display: flex;
 	flex-direction: column;
 	width: auto;
@@ -45,7 +45,7 @@ body.header-loose {
 }
 
 /* Dark mode for header widgets: keep transparent to blend with header */
-.dark-mode #info-widget, .dark-mode #time-widget, .dark-mode #status-widget {
+.dark-mode #info-widget, .dark-mode #time-widget, .dark-mode #status-widget, .dark-mode #towing-reminder-widget {
 	background: transparent !important;
 	color: #d1d5db;
 	border: none !important;
@@ -226,7 +226,8 @@ body.header-loose {
 /* Remove leftover card chrome inside header */
 .hp-header #weather-widget,
 .hp-header #time-widget,
-.hp-header #status-widget {
+.hp-header #status-widget,
+.hp-header #towing-reminder-widget {
 	background: transparent !important;
 	padding: 0 !important;
 	border: 0 !important;
@@ -362,7 +363,8 @@ body.header-loose {
 
 /* Compact height for Time and Status widgets in header */
 #time-widget,
-#status-widget {
+#status-widget,
+#towing-reminder-widget {
 	height: 50px;
 	min-height: 50px;
 	/* keep existing flex column layout; center content vertically */
@@ -377,9 +379,12 @@ body.header-loose {
 #time-widget .time-display-row:last-child { margin-bottom: 0; }
 #status-widget .status-row { margin-bottom: 0; }
 #status-widget .status-row:last-child { margin-bottom: 0; }
+#towing-reminder-widget .status-row { margin-bottom: 0; }
+#towing-reminder-widget .status-row:last-child { margin-bottom: 0; }
 /* reduce row line-height slightly to compact vertically */
 #time-widget .time-display-row,
-#status-widget .status-row { line-height: 1.1; }
+#status-widget .status-row,
+#towing-reminder-widget .status-row { line-height: 1.1; }
 
 /* Fixed width for Time widget to 100px and compact internal layout */
 #time-widget {

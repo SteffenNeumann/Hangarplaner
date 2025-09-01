@@ -124,6 +124,55 @@
 			/* Utility: force-hide header widgets from Display toggles */
 			.hide-weather-widget #weather-widget { display: none !important; }
 			.hide-time-widget #time-widget { display: none !important; }
+
+			/* Small reminder icon next to Tow Status */
+			.tow-badge {
+				display: inline-block;
+				margin-left: 6px;
+				line-height: 1;
+				vertical-align: middle;
+			}
+			.tow-badge svg {
+				width: 14px;
+				height: 14px;
+				stroke: #ef4444; /* red */
+				fill: none;
+				stroke-width: 2;
+				stroke-linecap: round;
+				stroke-linejoin: round;
+				display: inline-block;
+				vertical-align: middle;
+			}
+
+			/* Header badge inside Tow Reminder widget - plain green text */
+			.reminder-active-badge {
+				display: inline-block;
+				font-size: 12px;
+				font-weight: 600;
+				color: #16a34a; /* green */
+				background: none;
+				border: none;
+				padding: 0;
+			}
+
+			/* Ensure Tow Reminder matches other header widget fonts and stays on one row */
+			#towing-reminder-widget .status-row {
+				display: flex;
+				flex-wrap: nowrap;
+				align-items: center;
+				white-space: nowrap;
+			}
+			#towing-reminder-widget .status-label,
+			#towing-reminder-widget .status-label-value,
+			#towingReminderList {
+				color: #111827; /* match other header text (gray-900) */
+			}
+			.dark-mode #towing-reminder-widget .status-label,
+			.dark-mode #towing-reminder-widget .status-label-value,
+			.dark-mode #towingReminderList {
+				color: #111827; /* header remains light background; keep dark text */
+			}
+			#towing-reminder-widget .status-label-value { margin-left: 8px; }
 		</style>
 	</head>
 	<body class="bg-industrial-dark text-white font-sans edit-mode">
@@ -444,6 +493,28 @@
 					<button id="saveBtn" class="sidebar-btn sidebar-btn-primary flex-1">Save</button>
 					<button id="loadBtn" class="sidebar-btn sidebar-btn-secondary flex-1">Load</button>
 				</div>
+
+				<!-- Towing Reminder Settings -->
+				<div class="sidebar-form-group">
+					<div class="sidebar-form-row">
+						<label for="towingReminderMinutesInput">Set Time to Reminder</label>
+						<div class="input-container input-with-suffix">
+							<input type="number" id="towingReminderMinutesInput" class="sidebar-form-control has-suffix" min="1" value="15" placeholder="" title="Minutes" />
+							<span class="input-suffix">Minutes</span>
+						</div>
+					</div>
+				</div>
+				<div class="sidebar-form-group">
+					<div class="sidebar-form-row">
+						<label for="towingReminderToggle">Activate</label>
+						<div class="input-container">
+							<label class="modern-toggle-switch" aria-label="Towing Reminder Active">
+								<input type="checkbox" id="towingReminderToggle" />
+								<span class="modern-toggle-slider"></span>
+							</label>
+						</div>
+					</div>
+				</div>
 			</div>
 
 			<!-- Hauptbereich mit Hangar-Kacheln -->
@@ -453,6 +524,20 @@
 						class="bg-white p-4 shadow-md flex justify-between items-center gap-16">
 						<!-- Wetter-Widget unverändert lassen -->
 						<div class="flex-grow"></div>
+						<!-- Tow Reminder Header Widget (leftmost among widgets) -->
+						<div id="towing-reminder-widget" hidden>
+							<div class="status-row" data-open-submenu="project" title="Open Project settings">
+								<span class="status-label">Tow Reminder</span>
+								<span class="status-label-value">
+									<span id="towingReminderActiveBadge" class="reminder-active-badge" hidden>Active</span>
+								</span>
+							</div>
+							<div class="status-row" data-open-submenu="project" title="Open Project settings">
+								<span class="status-label"></span>
+								<span class="status-label-value" id="towingReminderList"></span>
+							</div>
+						</div>
+
 						<div id="weather-widget">
 							<div class="weather-primary">
 								<div class="weather-airport">MUC</div>
@@ -514,6 +599,7 @@
 								</div>
 							</div>
 							</div>
+
 
 </header>
 
@@ -657,7 +743,241 @@
 	}
 
 	window.hangarInitQueue = window.hangarInitQueue || [];
-	window.hangarInitQueue.push(initHeaderStatusWidget);
+							window.hangarInitQueue.push(initHeaderStatusWidget);
+})();
+</script>
+
+<!-- Towing Reminder Logic (UTC-based time comparison) -->
+<script>
+(function(){
+  const STORAGE_KEY = 'towingReminder';
+  let timerId = null;
+
+  // Persist one-time reminder flags per tile+aircraft to avoid duplicates
+  const FLAGS_KEY = 'towingReminder.flags';
+  function readFlags(){
+    try { const raw = localStorage.getItem(FLAGS_KEY); return raw ? (JSON.parse(raw) || {}) : {}; } catch(e){ return {}; }
+  }
+  function saveFlags(flags){
+    try { localStorage.setItem(FLAGS_KEY, JSON.stringify(flags || {})); } catch(e){}
+  }
+  function isTriggered(cellId, reg){
+    if (!reg) return false;
+    const flags = readFlags();
+    return !!(flags && Object.prototype.hasOwnProperty.call(flags, cellId) && flags[cellId] === reg);
+  }
+  function markTriggered(entries){
+    if (!entries || !entries.length) return;
+    const flags = readFlags();
+    let changed = false;
+    entries.forEach(e => {
+      if (!flags[e.cellId] || flags[e.cellId] !== e.reg){
+        flags[e.cellId] = e.reg;
+        changed = true;
+      }
+    });
+    if (changed) saveFlags(flags);
+  }
+  function clearFlagForCell(cellId){
+    const flags = readFlags();
+    if (flags && Object.prototype.hasOwnProperty.call(flags, cellId)){
+      delete flags[cellId];
+      saveFlags(flags);
+    }
+  }
+
+  function readConfig(){
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw){
+        const cfg = JSON.parse(raw);
+        const minutes = Math.max(1, parseInt(cfg.minutes||15,10)||15);
+        const active = !!cfg.active;
+        return { minutes, active };
+      }
+    } catch(e) { console.warn('towingReminder read failed', e); }
+    return { minutes: 15, active: false };
+  }
+  function saveConfig(cfg){
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ minutes: cfg.minutes, active: !!cfg.active })); } catch(e){}
+  }
+  function pad2(n){ return String(n).padStart(2,'0'); }
+  // Parse ISO local (YYYY-MM-DDTHH:mm) as UTC epoch ms
+  function parseISOAsUTC(iso){
+    if (typeof iso !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(iso)) return NaN;
+    const [date, time] = iso.split('T');
+    const [y,m,d] = date.split('-').map(Number);
+    const [hh,mm] = time.split(':').map(Number);
+    return Date.UTC(y, (m||1)-1, d||1, hh||0, mm||0, 0, 0);
+  }
+  function getISOFromField(field, fieldId){
+    const raw = (field?.dataset?.iso || field?.value || '').trim();
+    if (raw && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(raw)) return raw;
+    if (window.helpers && typeof window.helpers.canonicalizeDateTimeFieldValue === 'function'){
+      const iso = window.helpers.canonicalizeDateTimeFieldValue(fieldId, raw);
+      if (iso && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(iso)) return iso;
+    }
+    return '';
+  }
+  function formatHHmmUTC(ms){
+    if (!isFinite(ms)) return '';
+    const d = new Date(ms);
+    return pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes());
+  }
+  function collectEligible(minutes){
+    const cutoffMs = Date.now() + minutes * 60000; // include past to avoid missing towing time
+    const result = [];
+    document.querySelectorAll("select[id^='tow-status-']").forEach(sel => {
+      if (!sel) return;
+      const m = sel.id.match(/^tow-status-(\d+)$/);
+      if (!m) return;
+      const cellId = parseInt(m[1],10);
+      if (sel.value !== 'on-position') return;
+      const depField = document.getElementById(`departure-time-${cellId}`);
+      if (!depField) return;
+      const iso = getISOFromField(depField, `departure-time-${cellId}`);
+      if (!iso) return;
+      const depMs = parseISOAsUTC(iso);
+      if (!isFinite(depMs)) return;
+      if (depMs <= cutoffMs){
+        const reg = (document.getElementById(`aircraft-${cellId}`)?.value || '').trim();
+        if (!reg) return;
+        result.push({ cellId, reg, depMs, hhmm: formatHHmmUTC(depMs) });
+      }
+    });
+    result.sort((a,b)=> a.depMs - b.depMs);
+    return result;
+  }
+  function ensureBadge(cellId, present){
+    const sel = document.getElementById(`tow-status-${cellId}`);
+    if (!sel) return;
+    // Find existing badge immediately after the select
+    const sib = sel.nextElementSibling;
+    const exists = sib && sib.classList && sib.classList.contains('tow-badge');
+    if (present){
+      if (exists) return;
+      const badge = document.createElement('span');
+      badge.className = 'tow-badge';
+      // Simple clock hands only (no outer circle), to avoid a filled/pill look against green backgrounds
+      badge.innerHTML = '<svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M12 7v5l3 3"></path></svg>';
+      sel.insertAdjacentElement('afterend', badge);
+    } else {
+      if (exists) sib.remove();
+    }
+  }
+  function updateBadges(eligible){
+    const keep = new Set(eligible.map(x=>x.cellId));
+    document.querySelectorAll("select[id^='tow-status-']").forEach(sel => {
+      const m = sel.id.match(/^tow-status-(\d+)$/);
+      if (!m) return;
+      ensureBadge(parseInt(m[1],10), keep.has(parseInt(m[1],10)));
+    });
+  }
+  function setWidgetVisibility(active){
+    const w = document.getElementById('towing-reminder-widget');
+    if (!w) return;
+    if (active){
+      w.hidden = false;
+      w.style.display = '';
+      w.removeAttribute('hidden');
+    } else {
+      w.hidden = true;
+      w.style.display = 'none';
+    }
+  }
+  function updateActiveBadge(active){
+    const b = document.getElementById('towingReminderActiveBadge');
+    if (!b) return;
+    b.hidden = !active;
+    if (active){ b.style.display = 'inline-block'; b.removeAttribute('hidden'); }
+    else { b.style.display = 'none'; }
+  }
+  function renderHeader(eligible){
+    const listEl = document.getElementById('towingReminderList');
+    if (!listEl) return;
+    const items = eligible.map(x => `${x.reg} ${x.hhmm}`);
+    listEl.textContent = items.join(' / ');
+  }
+  function runOnce(){
+    const cfg = readConfig();
+    setWidgetVisibility(cfg.active);
+    updateActiveBadge(cfg.active);
+    const eligibleAll = cfg.active ? collectEligible(cfg.minutes) : [];
+    // Show new (unflagged) reminders in header, but show red dot on all eligible tiles
+    const unflagged = cfg.active ? eligibleAll.filter(x => !isTriggered(x.cellId, x.reg)) : [];
+    renderHeader(unflagged);
+    if (unflagged.length) markTriggered(unflagged);
+    updateBadges(eligibleAll);
+  }
+  function start(){
+    stop();
+    runOnce();
+    timerId = setInterval(runOnce, 60*1000);
+  }
+  function stop(){
+    if (timerId){ clearInterval(timerId); timerId = null; }
+    renderHeader([]);
+    updateBadges([]);
+  }
+  function initControls(){
+    const minutesInput = document.getElementById('towingReminderMinutesInput');
+    const toggle = document.getElementById('towingReminderToggle');
+    const cfg = readConfig();
+    if (minutesInput){
+      minutesInput.value = cfg.minutes;
+      let t = null;
+      const apply = ()=>{
+        let v = parseInt(minutesInput.value,10);
+        if (!isFinite(v) || v < 1) v = 1;
+        minutesInput.value = v;
+        const newCfg = { minutes: v, active: !!(toggle && toggle.checked) };
+        saveConfig(newCfg);
+        if (newCfg.active) runOnce();
+      };
+      minutesInput.addEventListener('input', ()=>{ clearTimeout(t); t = setTimeout(apply, 200); });
+      minutesInput.addEventListener('change', apply);
+    }
+    if (toggle){
+      toggle.checked = !!cfg.active;
+      toggle.addEventListener('change', ()=>{
+        const minutes = parseInt(document.getElementById('towingReminderMinutesInput')?.value,10) || cfg.minutes || 15;
+        const newCfg = { minutes, active: !!toggle.checked };
+        saveConfig(newCfg);
+        setWidgetVisibility(newCfg.active);
+        updateActiveBadge(newCfg.active);
+        if (newCfg.active) start(); else stop();
+      });
+    }
+    setWidgetVisibility(cfg.active);
+    updateActiveBadge(cfg.active);
+    if (cfg.active) start(); else stop();
+
+    // Reset one-time reminder flag only when user sets Tow Status away from "on-position"
+    document.addEventListener('change', function(e){
+      const el = e.target;
+      if (el && el.matches("select[id^='tow-status-']")){
+        const m = el.id.match(/^tow-status-(\d+)$/);
+        if (m && el.value !== 'on-position'){
+          clearFlagForCell(parseInt(m[1],10));
+        }
+      }
+    });
+  }
+  function initHeaderWidget(){
+    const container = document.getElementById('towing-reminder-widget');
+    if (!container) return;
+    container.querySelectorAll('.status-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const btn = document.querySelector('#leftMenu .menu-item[data-menu="project"]');
+        if (btn) btn.click();
+      });
+    });
+  }
+  window.hangarInitQueue = window.hangarInitQueue || [];
+  window.hangarInitQueue.push(function(){
+    try { initControls(); } catch(e){}
+    try { initHeaderWidget(); } catch(e){}
+  });
 })();
 </script>
 

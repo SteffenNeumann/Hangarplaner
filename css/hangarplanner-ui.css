@@ -1544,6 +1544,26 @@ body.dark-mode {
 	color: var(--status-ready);
 }
 
+/* Inline badge for towing reminder next to Aircraft ID */
+.tow-badge {
+	display: inline-block;
+	margin-left: 6px;
+	padding: 2px 6px;
+	font-size: 11px;
+	line-height: 1;
+	border: 1px solid #10b981;
+	color: #065f46;
+	background: #d1fae5;
+	border-radius: 10px;
+	vertical-align: middle;
+	user-select: none;
+}
+.dark-mode .tow-badge {
+	border-color: #34d399;
+	color: #a7f3d0;
+	background: rgba(16, 185, 129, 0.15);
+}
+
 /* Placeholder-Text im Dark Mode */
 .dark-mode .aircraft-id::placeholder,
 .dark-mode .info-input::placeholder,

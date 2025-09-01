@@ -1523,7 +1523,11 @@ function checkForSelectedAircraft() {
 					// Use the tile's position label if available (support both hangar-position-* and position-*)
 					const posElPrimary = document.getElementById(`hangar-position-${id}`);
 					const posElAlt = document.getElementById(`position-${id}`);
-					const posLabel = ((posElPrimary?.value || posElAlt?.value) || '').trim();
+					const primaryVal = (posElPrimary?.value || '').trim();
+					const primaryPh  = (posElPrimary?.getAttribute?.('placeholder') || '').trim();
+					const altVal      = (posElAlt?.value || '').trim();
+					const altPh       = (posElAlt?.getAttribute?.('placeholder') || '').trim();
+					const posLabel    = primaryVal || primaryPh || altVal || altPh;
 					btn.textContent = posLabel ? `${posLabel}` : `#${id}`;
 					btn.title = `Kachel #${id}${posLabel ? ` • Position: ${posLabel}` : ''}`;
 					btn.addEventListener('click', () => {

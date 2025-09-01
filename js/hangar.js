@@ -1706,6 +1706,17 @@ function findFirstEmptyTile() {
 		setTimeout(runOnceWhenReady, 100);
 	}
 
+	// Also re-run when tile data has been applied from storage/server
+	document.addEventListener("dataLoaded", () => {
+		// Give the UI a brief moment to render values before detection
+		setTimeout(runOnceWhenReady, 50);
+	}, { once: true });
+
+	// If secondary tiles are created dynamically, re-check afterwards
+	document.addEventListener("secondaryTilesCreated", () => {
+		setTimeout(runOnceWhenReady, 50);
+	}, { once: true });
+
 	if (document.readyState === "complete" || document.readyState === "interactive") {
 		schedule();
 	} else {

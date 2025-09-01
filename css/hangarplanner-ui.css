@@ -68,7 +68,7 @@ body {
 	transform-origin: center center;
 	justify-self: center;
 	box-shadow: none !important;
-	border: 1px solid #e5e7eb;
+	border: 1px solid transparent;
 	border-radius: 12px;
 	background-color: #ffffff !important; /* Zurück auf weiß */
 }
@@ -861,10 +861,10 @@ input:checked + .toggle-slider:before {
 	background: var(--bg-primary); /* submenu uses main colour */
 	border-right-color: var(--border-color); /* borders secondary */
 }
-/* Submenu inputs/selects should use main colour */
+/* Submenu inputs/selects should use secondary colour per menu exception */
 .dark-mode .submenu-panel .sidebar-form-control,
 .dark-mode .submenu-panel .sidebar-form-select {
-	background-color: var(--bg-primary) !important;
+	background-color: var(--bg-secondary) !important;
 	color: var(--text-primary) !important;
 	border-color: var(--border-color) !important;
 }
@@ -1259,11 +1259,11 @@ input:checked + .toggle-slider:before {
 /* Dark Mode Styles */
 .dark-mode {
 	color-scheme: dark;
-	/* Einheitliche Hintergrund-Hierarchie (swapped) */
-	--bg-primary: #303437; /* Main (swapped) */
-	--bg-secondary: #202224; /* Secondary (swapped) */
-	--bg-tertiary: #202224; /* Small menu uses secondary */
-	--bg-input: #303437; /* Inputs default to main */
+	/* Einheitliche Hintergrund-Hierarchie */
+	--bg-primary: #202224; /* Main */
+	--bg-secondary: #303437; /* Secondary */
+	--bg-tertiary: #303437; /* Small menu uses secondary */
+	--bg-input: #202224; /* Inputs default to main */
 
 	/* Klare Textfarben-Hierarchie */
 	--text-primary: #f7fafc; /* Primärer Text (Aircraft ID) */
@@ -1272,11 +1272,11 @@ input:checked + .toggle-slider:before {
 	--text-muted: #718096; /* Placeholder Text */
 
 	/* Einheitliche UI-Elemente */
-	--card-bg: #303437; /* Tile/body surfaces = main (swapped) */
-	--card-header-bg: #202224; /* Tile header = secondary (swapped) */
-	--input-bg: #303437; /* Inputs default to main */
+	--card-bg: #202224; /* Tile/body surfaces = main */
+	--card-header-bg: #303437; /* Tile header = secondary */
+	--input-bg: #202224; /* Inputs default to main */
 	--input-text: #e2e8f0; /* Input-Text */
-	--border-color: #202224; /* Borders use secondary */
+	--border-color: #303437; /* Borders use secondary */
 
 	/* Verbesserte Status-Farben für Dark Mode */
 	--status-ready: #48bb78; /* Sichtbares Grün */
@@ -1331,8 +1331,11 @@ body.dark-mode {
 		--card-bg
 	) !important; /* Forciere einheitlichen Hintergrund */
 	color: var(--text-primary);
-	border: 1px solid var(--border-color);
+	border: 1px solid transparent;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+.dark-mode .hangar-cell:hover {
+	border-color: var(--border-color);
 }
 
 /* MAXIMALE PRIORITÄT: Überschreibe alle möglichen Status-basierten Hintergründe im Dark Mode */
@@ -2291,7 +2294,7 @@ body.dark-mode {
 
 /* Dark mode overrides for Sync submenu */
 .dark-mode #submenu-sync {
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   border-right-color: var(--border-color);
 }
 .dark-mode #submenu-sync .sync-mode-description {
@@ -2326,7 +2329,7 @@ body.dark-mode {
 #submenu-update .modern-toggle-switch input:checked + .modern-toggle-slider:before { transform: translateX(15px) translateY(-50%); }
 
 /* Dark mode overrides for Update submenu */
-.dark-mode #submenu-update { background: var(--bg-secondary); border-right-color: var(--border-color); }
+.dark-mode #submenu-update { background: var(--bg-primary); border-right-color: var(--border-color); }
 .dark-mode #submenu-update .update-description { color: var(--text-secondary); }
 .dark-mode #submenu-update .sidebar-form-row > label { color: var(--text-secondary); }
 .dark-mode #submenu-update .modern-toggle-slider { background-color: var(--border-color); border-color: var(--border-color); }

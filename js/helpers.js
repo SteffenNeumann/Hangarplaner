@@ -1179,21 +1179,21 @@ if (window.helpers) {
     return `${baseDateStr}T${pad2(h)}:${pad2(min)}`;
   }
 
-  // Formats ISO local datetime to yy.mm.dd,HH:mm (UTC-based display requested)
+  // Formats ISO local datetime to dd.mm.yy,HH:mm (UTC-based display requested)
   function formatISOToCompactUTC(iso){
     if (!isISODateTimeLocal(iso)) return '';
     const [date, time] = iso.split('T');
     const [y,m,d] = date.split('-');
     const yy = y.slice(-2);
-    return `${yy}.${m}.${d},${time}`;
+    return `${d}.${m}.${yy},${time}`;
   }
 
-  // Parse compact yy.mm.dd,HH:mm to ISO local datetime YYYY-MM-DDTHH:mm
+  // Parse compact dd.mm.yy,HH:mm to ISO local datetime YYYY-MM-DDTHH:mm
   // Assumes years 2000-2099 for two-digit year (UTC context)
   function parseCompactToISOUTC(compact){
     if (!isCompactDateTime(compact)) return '';
     const [datePart, timePart] = compact.split(',');
-    const [yy, mm, dd] = datePart.split('.');
+    const [dd, mm, yy] = datePart.split('.');
     const [HH, MM] = timePart.split(':');
     const yyyy = String(2000 + parseInt(yy,10));
     return `${yyyy}-${mm}-${dd}T${HH}:${MM}`;
@@ -1224,16 +1224,28 @@ if (window.helpers) {
     return '';
   }
 
-  // Helper: create masked compact value from digits (max 10 digits: YYMMDDHHmm)
+  // Helper: create masked compact value from digits (max 10 digits: DDMMYYHHmm)
   function digitsToCompact(digits){
     const d = (digits||'').replace(/\D+/g,'').slice(0,10);
     let out = '';
     for (let i=0;i<d.length;i++){
       out += d[i];
-      if (i===1) out += '.'; // after YY
-      if (i===3) out += '.'; // after YY.MM
-      if (i===5) out += ','; // after YY.MM.DD
-      if (i===7) out += ':'; // after YY.MM.DD,HH
+      if (i===1) out += '.'; // after DD
+      if (i===3) out += '.'; // after DD.MM
+      if (i===5) out += ','; // after DD.MM.YY
+      if (i===7) out += ':'; // after DD.MM.YY,HH
+    }
+    return out;
+  }
+
+  // Helper: mask for just a date portion dd.mm.yy
+  function digitsToDdMmYy(digits){
+    const d = (digits||'').replace(/\D+/g,'').slice(0,6);
+    let out = '';
+    for (let i=0;i<d.length;i++){
+      out += d[i];
+      if (i===1) out += '.'; // after DD
+      if (i===3) out += '.'; // after DD.MM
     }
     return out;
   }
@@ -1242,7 +1254,7 @@ if (window.helpers) {
   function attachCompactMask(input){
     if (!input || input.__compactMaskAttached) return;
     input.setAttribute('inputmode','numeric');
-    input.setAttribute('placeholder','yy.mm.dd,HH:mm');
+    input.setAttribute('placeholder','dd.mm.yy,HH:mm');
     input.dataset.dtCompact = 'true';
 
     // Ensure input fills its cell and leave space for absolute calendar button
@@ -1257,6 +1269,11 @@ if (window.helpers) {
       // If user types ISO, show compact immediately
       if (isISODateTimeLocal(raw)){
         e.target.value = formatISOToCompactUTC(raw);
+        return;
+      }
+      // Allow typing time-only (HH:mm) without masking
+      if (isHHmm(raw)) {
+        // keep as typed; canonicalization runs on blur
         return;
       }
       e.target.value = digitsToCompact(raw);
@@ -1341,7 +1358,7 @@ if (window.helpers) {
     nodes.forEach(inp => {
       try{ inp.setAttribute('type','text'); } catch(e){}
       inp.classList.add('compact-datetime');
-      inp.setAttribute('placeholder','yy.mm.dd,HH:mm');
+      inp.setAttribute('placeholder','dd.mm.yy,HH:mm');
       attachCompactMask(inp);
       // If value is ISO from storage, show compact
       const val = (inp.value||'').trim();
@@ -1370,9 +1387,12 @@ if (window.helpers) {
     picker.style.width = '240px'; // compact width to avoid wrapping tile layout
 
     const date = document.createElement('input');
-    date.type = 'date';
+    date.type = 'text';
+    date.placeholder = 'dd.mm.yy';
+    date.inputMode = 'numeric';
     date.style.marginBottom = '6px';
     date.style.width = '100%';
+    date.addEventListener('input', ()=> { date.value = digitsToDdMmYy(date.value); });
 
     const time = document.createElement('input');
     time.type = 'time';
@@ -1467,15 +1487,18 @@ if (window.helpers) {
 
     ok.addEventListener('click', ()=>{
       if (!pickerTarget) { close(); return; }
-      const d = date.value; const t = time.value;
-      if (/^\d{4}-\d{2}-\d{2}$/.test(d) && /^\d{2}:\d{2}$/.test(t)){
-        const iso = `${d}T${t}`;
-        pickerTarget.dataset.iso = iso;
-        pickerTarget.value = formatISOToCompactUTC(iso);
-        // Trigger change/save
-        pickerTarget.dispatchEvent(new Event('input', {bubbles:true}));
-        pickerTarget.dispatchEvent(new Event('change', {bubbles:true}));
-        pickerTarget.dispatchEvent(new Event('blur', {bubbles:true}));
+      const d = (date.value || '').trim();
+      const t = (time.value || '').trim();
+      if (/^\d{2}\.\d{2}\.\d{2}$/.test(d) && /^\d{2}:\d{2}$/.test(t)){
+        const iso = parseCompactToISOUTC(`${d},${t}`);
+        if (iso){
+          pickerTarget.dataset.iso = iso;
+          pickerTarget.value = formatISOToCompactUTC(iso);
+          // Trigger change/save
+          pickerTarget.dispatchEvent(new Event('input', {bubbles:true}));
+          pickerTarget.dispatchEvent(new Event('change', {bubbles:true}));
+          pickerTarget.dispatchEvent(new Event('blur', {bubbles:true}));
+        }
       }
       close();
     });
@@ -1499,16 +1522,17 @@ if (window.helpers) {
     else if (isHHmm(raw)) iso = canonicalizeDateTimeFieldValue(input.id, raw);
 
     if (iso){
-      const [d,t] = iso.split('T');
-      p._date.value = d;
-      p._time.value = t;
+      const compact = formatISOToCompactUTC(iso);
+      const parts = compact.split(',');
+      p._date.value = parts[0] || '';
+      p._time.value = parts[1] || '';
     } else {
-      // default to today UTC + 00:00
+      // default to today UTC + 00:00 in dd.mm.yy
       const now = new Date();
-      const yyyy = now.getUTCFullYear();
+      const yy = String(now.getUTCFullYear()).slice(-2);
       const mm = pad2(now.getUTCMonth()+1);
       const dd = pad2(now.getUTCDate());
-      p._date.value = `${yyyy}-${mm}-${dd}`;
+      p._date.value = `${dd}.${mm}.${yy}`;
       p._time.value = '00:00';
     }
 

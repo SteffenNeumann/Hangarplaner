@@ -166,10 +166,11 @@
 			/* Align Tow widget typography to Status widget; overdue list styled via class */
 			#towing-reminder-widget .status-label { color: #3a4354; font-weight: 700; }
 			#towing-reminder-widget .status-label-value { color: #64748b; font-weight: 600; margin-left: 8px; }
-			#towingReminderList { color: #64748b; }
+			/* Second row (list) always red */
+			#towingReminderList { color: #ef4444 !important; font-weight: 700; }
 			.dark-mode #towing-reminder-widget .status-label { color: var(--text-secondary); }
 			.dark-mode #towing-reminder-widget .status-label-value { color: #cbd5e1; }
-			.dark-mode #towingReminderList { color: #cbd5e1; }
+			.dark-mode #towingReminderList { color: #ef4444 !important; }
 		</style>
 	</head>
 	<body class="bg-industrial-dark text-white font-sans edit-mode">
@@ -569,7 +570,7 @@
 						<!-- Tow Reminder Header Widget (between time and status) -->
 						<div id="towing-reminder-widget">
 							<div class="status-row" data-open-submenu="project" title="Open Project settings">
-								<span class="status-label">Tow:</span>
+								<span class="status-label">Tow Reminder</span>
 								<span class="status-label-value">
 									<span id="towingReminderActiveBadge" class="reminder-active-badge inactive">Inactive</span>
 								</span>

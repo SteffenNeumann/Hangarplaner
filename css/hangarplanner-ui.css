@@ -2402,6 +2402,21 @@ body.dark-mode {
 #submenu-update .modern-toggle-slider:before { width: 18px; height: 18px; left: -1px; top: 50%; transform: translateY(-50%); }
 #submenu-update .modern-toggle-switch input:checked + .modern-toggle-slider:before { transform: translateX(15px) translateY(-50%); }
 
+/* Project submenu description and divider */
+#submenu-project .sync-mode-description {
+  color: #6b6b6b;
+  font-size: 10px;
+  line-height: 1.2;
+  margin: 4px 16px 8px 16px;
+}
+#submenu-project .panel-divider {
+  height: 1px;
+  background: #e6e6e6;
+  margin: 8px 16px;
+}
+.dark-mode #submenu-project .sync-mode-description { color: var(--text-secondary); }
+.dark-mode #submenu-project .panel-divider { background: var(--border-color); }
+
 /* Dark mode overrides for Update submenu */
 .dark-mode #submenu-update { background: var(--bg-primary); border-right-color: var(--border-color); }
 .dark-mode #submenu-update .update-description { color: var(--text-secondary); }

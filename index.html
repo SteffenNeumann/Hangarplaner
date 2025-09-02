@@ -144,16 +144,17 @@
 				vertical-align: middle;
 			}
 
-			/* Header badge inside Tow Reminder widget - plain green text */
+			/* Header badge inside Tow Reminder widget */
 			.reminder-active-badge {
 				display: inline-block;
 				font-size: 12px;
 				font-weight: 600;
-				color: #16a34a; /* green */
 				background: none;
 				border: none;
 				padding: 0;
 			}
+			.reminder-active-badge.active { color: #16a34a; }
+			.reminder-active-badge.inactive { color: #6b7280; }
 
 			/* Ensure Tow Reminder matches other header widget fonts and stays on one row */
 			#towing-reminder-widget .status-row {
@@ -162,17 +163,13 @@
 				align-items: center;
 				white-space: nowrap;
 			}
-			#towing-reminder-widget .status-label,
-			#towing-reminder-widget .status-label-value,
-			#towingReminderList {
-				color: #111827; /* match other header text (gray-900) */
-			}
-			.dark-mode #towing-reminder-widget .status-label,
-			.dark-mode #towing-reminder-widget .status-label-value,
-			.dark-mode #towingReminderList {
-				color: #111827; /* header remains light background; keep dark text */
-			}
-			#towing-reminder-widget .status-label-value { margin-left: 8px; }
+			/* Align Tow widget typography to Status widget; overdue list styled via class */
+			#towing-reminder-widget .status-label { color: #3a4354; font-weight: 700; }
+			#towing-reminder-widget .status-label-value { color: #64748b; font-weight: 600; margin-left: 8px; }
+			#towingReminderList { color: #64748b; }
+			.dark-mode #towing-reminder-widget .status-label { color: var(--text-secondary); }
+			.dark-mode #towing-reminder-widget .status-label-value { color: #cbd5e1; }
+			.dark-mode #towingReminderList { color: #cbd5e1; }
 		</style>
 	</head>
 	<body class="bg-industrial-dark text-white font-sans edit-mode">
@@ -526,20 +523,6 @@
 						class="bg-white p-4 shadow-md flex justify-between items-center gap-16">
 						<!-- Wetter-Widget unverändert lassen -->
 						<div class="flex-grow"></div>
-						<!-- Tow Reminder Header Widget (leftmost among widgets) -->
-						<div id="towing-reminder-widget" hidden>
-							<div class="status-row" data-open-submenu="project" title="Open Project settings">
-								<span class="status-label">Tow Reminder</span>
-								<span class="status-label-value">
-									<span id="towingReminderActiveBadge" class="reminder-active-badge" hidden>Active</span>
-								</span>
-							</div>
-							<div class="status-row" data-open-submenu="project" title="Open Project settings">
-								<span class="status-label"></span>
-								<span class="status-label-value" id="towingReminderList"></span>
-							</div>
-						</div>
-
 						<div id="weather-widget">
 							<div class="weather-primary">
 								<div class="weather-airport">MUC</div>
@@ -581,10 +564,24 @@
 								<span class="time-label">LOC:</span>
 								<span id="local-time" class="time-value">19:17</span>
 							</div>
-							</div>
+						</div>
 
-							<!-- Neuer Status-Widget: gebündelte Einstellungen -->
-							<div id="status-widget">
+						<!-- Tow Reminder Header Widget (between time and status) -->
+						<div id="towing-reminder-widget">
+							<div class="status-row" data-open-submenu="project" title="Open Project settings">
+								<span class="status-label">Tow:</span>
+								<span class="status-label-value">
+									<span id="towingReminderActiveBadge" class="reminder-active-badge inactive">Inactive</span>
+								</span>
+							</div>
+							<div class="status-row" data-open-submenu="project" title="Open Project settings">
+								<span class="status-label"></span>
+								<span class="status-label-value" id="towingReminderList"></span>
+							</div>
+						</div>
+
+						<!-- Neuer Status-Widget: gebündelte Einstellungen -->
+						<div id="status-widget">
 							<!-- Row 1: Mode label only (no pill) -->
 							<div class="status-row" data-open-submenu="sync" title="Open Sync settings">
 								<span class="status-label">Mode:</span>
@@ -827,7 +824,8 @@
     return pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes());
   }
   function collectEligible(minutes){
-    const cutoffMs = Date.now() + minutes * 60000; // include past to avoid missing towing time
+    const nowMs = Date.now();
+    const cutoffMs = nowMs + minutes * 60000; // include upcoming within window
     const result = [];
     document.querySelectorAll("select[id^='tow-status-']").forEach(sel => {
       if (!sel) return;
@@ -842,9 +840,8 @@
       const depMs = parseISOAsUTC(iso);
       if (!isFinite(depMs)) return;
       if (depMs <= cutoffMs){
-        const reg = (document.getElementById(`aircraft-${cellId}`)?.value || '').trim();
-        if (!reg) return;
-        result.push({ cellId, reg, depMs, hhmm: formatHHmmUTC(depMs) });
+        const hangarPos = (document.getElementById(`hangar-position-${cellId}`)?.value || '').trim();
+        result.push({ cellId, depMs, hhmm: formatHHmmUTC(depMs), hangarPos, overdue: depMs <= nowMs });
       }
     });
     result.sort((a,b)=> a.depMs - b.depMs);
@@ -853,18 +850,19 @@
   function ensureBadge(cellId, present){
     const sel = document.getElementById(`tow-status-${cellId}`);
     if (!sel) return;
-    // Find existing badge immediately after the select
+    // Find existing indicator immediately after the select
     const sib = sel.nextElementSibling;
-    const exists = sib && sib.classList && sib.classList.contains('tow-badge');
+    const isDot = sib && sib.classList && sib.classList.contains('tow-dot');
+    const isOld = sib && sib.classList && sib.classList.contains('tow-badge');
     if (present){
-      if (exists) return;
-      const badge = document.createElement('span');
-      badge.className = 'tow-badge';
-      // Simple clock hands only (no outer circle), to avoid a filled/pill look against green backgrounds
-      badge.innerHTML = '<svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M12 7v5l3 3"></path></svg>';
-      sel.insertAdjacentElement('afterend', badge);
+      if (isDot) return; // already correct
+      if (isOld) { sib.remove(); }
+      const dot = document.createElement('span');
+      dot.className = 'tow-dot';
+      dot.title = 'Tow reminder';
+      sel.insertAdjacentElement('afterend', dot);
     } else {
-      if (exists) sib.remove();
+      if (isDot || isOld) sib.remove();
     }
   }
   function updateBadges(eligible){
@@ -876,39 +874,42 @@
     });
   }
   function setWidgetVisibility(active){
+    // Always visible; badge reflects active/inactive state
     const w = document.getElementById('towing-reminder-widget');
     if (!w) return;
-    if (active){
-      w.hidden = false;
-      w.style.display = '';
-      w.removeAttribute('hidden');
-    } else {
-      w.hidden = true;
-      w.style.display = 'none';
-    }
+    w.hidden = false;
+    w.style.display = '';
+    w.removeAttribute('hidden');
   }
   function updateActiveBadge(active){
     const b = document.getElementById('towingReminderActiveBadge');
     if (!b) return;
-    b.hidden = !active;
-    if (active){ b.style.display = 'inline-block'; b.removeAttribute('hidden'); }
-    else { b.style.display = 'none'; }
+    b.hidden = false;
+    b.style.display = 'inline-block';
+    b.textContent = active ? 'Active' : 'Inactive';
+    b.classList.remove('active','inactive');
+    b.classList.add(active ? 'active' : 'inactive');
   }
-  function renderHeader(eligible){
+  function renderHeader(overdueItems){
     const listEl = document.getElementById('towingReminderList');
     if (!listEl) return;
-    const items = eligible.map(x => `${x.reg} ${x.hhmm}`);
-    listEl.textContent = items.join(' / ');
+    const positions = (overdueItems || [])
+      .map(x => (x.hangarPos || '').trim())
+      .filter(Boolean);
+    listEl.textContent = positions.join(', ');
+    if (positions.length) {
+      listEl.classList.add('tow-overdue');
+    } else {
+      listEl.classList.remove('tow-overdue');
+    }
   }
   function runOnce(){
     const cfg = readConfig();
     setWidgetVisibility(cfg.active);
     updateActiveBadge(cfg.active);
     const eligibleAll = cfg.active ? collectEligible(cfg.minutes) : [];
-    // Show new (unflagged) reminders in header, but show red dot on all eligible tiles
-    const unflagged = cfg.active ? eligibleAll.filter(x => !isTriggered(x.cellId, x.reg)) : [];
-    renderHeader(unflagged);
-    if (unflagged.length) markTriggered(unflagged);
+    const overdueOnly = cfg.active ? eligibleAll.filter(x => x.overdue && x.hangarPos && x.hangarPos.length) : [];
+    renderHeader(overdueOnly);
     updateBadges(eligibleAll);
   }
   function start(){

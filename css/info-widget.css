@@ -300,6 +300,23 @@ body.header-loose {
 /* Dark mode overrides for update status colors */
 .dark-mode #status-widget #headerUpdateStatus.active { color: #34d399 !important; }
 .dark-mode #status-widget #headerUpdateStatus.inactive { color: #94a3b8 !important; }
+
+/* Match Tow Reminder Active badge styling to headerUpdateStatus (light + dark) */
+#towing-reminder-widget #towingReminderActiveBadge {
+	background: transparent !important;
+	border: none !important;
+	padding: 0 !important;
+	border-radius: 0 !important;
+	min-width: 0 !important;
+	text-align: right;
+	font-weight: 600;
+	font-size: 0.875rem;
+	color: #64748b;
+}
+#towing-reminder-widget #towingReminderActiveBadge.active { color: #059669; font-weight: 700; }
+#towing-reminder-widget #towingReminderActiveBadge.inactive { color: #6b7280; font-weight: 700; }
+.dark-mode #towing-reminder-widget #towingReminderActiveBadge.active { color: #34d399 !important; }
+.dark-mode #towing-reminder-widget #towingReminderActiveBadge.inactive { color: #94a3b8 !important; }
 /* Header sync label colors by mode */
 #status-widget #sync-mode.master { color: var(--sync-master-fg, #9A3412); font-weight: 700; }
 #status-widget #sync-mode.slave { color: var(--sync-read-fg, #B93815); font-weight: 700; }

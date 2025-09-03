@@ -898,6 +898,17 @@
       .map(x => (x.hangarPos || '').trim())
       .filter(Boolean);
     listEl.textContent = positions.join(', ');
+
+    // Toggle styling for second-row presence
+    const container = document.getElementById('towing-reminder-widget');
+    if (container) {
+      if (positions.length) {
+        container.classList.add('has-second-row');
+      } else {
+        container.classList.remove('has-second-row');
+      }
+    }
+
     if (positions.length) {
       listEl.classList.add('tow-overdue');
     } else {

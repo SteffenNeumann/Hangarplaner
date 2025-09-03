@@ -403,6 +403,23 @@ body.header-loose {
 #status-widget .status-row,
 #towing-reminder-widget .status-row { line-height: 1.1; }
 
+/* Fix Tow Reminder alignment: top-align when second row empty, center when populated */
+#towing-reminder-widget {
+	justify-content: flex-start; /* Default: align to top when only first row visible */
+}
+/* Modern browsers: center when #towingReminderList has content */
+#towing-reminder-widget:has(#towingReminderList:not(:empty)) {
+	justify-content: center;
+}
+/* Fallback for older browsers using JS-toggled class */
+#towing-reminder-widget.has-second-row {
+	justify-content: center;
+}
+/* Fine-tune: add small top padding when single-row to match other widgets' baseline */
+#towing-reminder-widget:not(.has-second-row):not(:has(#towingReminderList:not(:empty))) {
+	padding-top: 6px;
+}
+
 /* Fixed width for Time widget to 100px and compact internal layout */
 #time-widget {
 	width: 100px;

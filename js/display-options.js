@@ -335,7 +335,7 @@ async init() {
 		} finally {
 			this.isSaving = false;
 		}
-	}
+	},
 
 	/**
 	 * Speichert Display Options nur in localStorage (Fallback)

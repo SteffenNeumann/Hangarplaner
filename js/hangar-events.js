@@ -664,9 +664,6 @@ function handleAircraftIdChange(aircraftInputId, newValue) {
 								error
 							);
 						});
-				} else {
-					console.warn("⚠️ Datum-Parameter fehlen für Flugdaten-Abfrage");
-				}
 			}, 500); // 500ms Verzögerung um Tippgeschwindigkeit abzuwarten
 		} else {
 			console.warn(

@@ -1853,7 +1853,7 @@ window.hangarData.updateAircraftFromFlightData = async function (
 		if (window.HangarDataCoordinator) {
 			window.HangarDataCoordinator.apiChangesPendingSync = true;
 		}
-	}
+
 		// WICHTIG: Daten in HangarDataCoordinator persistieren um Überschreibung zu verhindern
 		if (window.HangarDataCoordinator) {
 			console.log(

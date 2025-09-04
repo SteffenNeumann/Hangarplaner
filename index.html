@@ -288,34 +288,37 @@
 				</div>
 			</div>
 
-			<div id="submenu-sync" class="submenu-panel hidden" data-for="sync">
-				<div class="submenu-title">Sync Settings</div>
-				<div class="sync-mode-description">Configure how your data syncs with the server</div>
-				<div class="sync-toggle-row">
-					<div class="sync-toggle-info">
-						<div class="sync-toggle-title">Read Data</div>
-						<div class="sync-toggle-desc">Receive updates from server</div>
+				<div id="submenu-sync" class="submenu-panel hidden" data-for="sync">
+					<div class="submenu-title">Sync Settings</div>
+					<div class="sync-mode-description">Configure how your data syncs with the server</div>
+					<div class="sync-toggle-row">
+						<div class="sync-toggle-info">
+							<div class="sync-toggle-title">Read Data</div>
+							<div class="sync-toggle-desc">Receive updates from server</div>
+						</div>
+						<div class="sync-toggle-control">
+							<label class="modern-toggle-switch" aria-label="Read Data">
+								<input type="checkbox" id="readDataToggle" />
+								<span class="modern-toggle-slider"></span>
+							</label>
+						</div>
 					</div>
-					<div class="sync-toggle-control">
-						<label class="modern-toggle-switch" aria-label="Read Data">
-							<input type="checkbox" id="readDataToggle" />
-							<span class="modern-toggle-slider"></span>
-						</label>
+					<div class="sync-toggle-row">
+						<div class="sync-toggle-info">
+							<div class="sync-toggle-title">Write Data</div>
+							<div class="sync-toggle-desc">Send changes to server (Master mode)</div>
+						</div>
+						<div class="sync-toggle-control">
+							<label class="modern-toggle-switch" aria-label="Write Data">
+								<input type="checkbox" id="writeDataToggle" />
+								<span class="modern-toggle-slider"></span>
+							</label>
+						</div>
 					</div>
+					<div class="panel-divider"></div>
+					<button id="manualSyncBtn" class="sidebar-btn sidebar-btn-primary w-full" title="Trigger a one-time sync now">Manual Sync</button>
+					<div class="text-sm text-center" style="margin-top: 6px; color: #64748b;">Trigger a one-time sync now</div>
 				</div>
-				<div class="sync-toggle-row">
-					<div class="sync-toggle-info">
-						<div class="sync-toggle-title">Write Data</div>
-						<div class="sync-toggle-desc">Send changes to server (Master mode)</div>
-					</div>
-					<div class="sync-toggle-control">
-						<label class="modern-toggle-switch" aria-label="Write Data">
-							<input type="checkbox" id="writeDataToggle" />
-							<span class="modern-toggle-slider"></span>
-						</label>
-					</div>
-				</div>
-			</div>
 
 			<div id="submenu-display" class="submenu-panel hidden" data-for="display">
 				<div class="submenu-title">Display Settings</div>
@@ -2340,6 +2343,17 @@ type="datetime-local"
 			<script src="js/storage-browser.js"></script>
 			<script src="js/sharing-manager.js"></script>
 			<script src="js/fleet-database-manager.js"></script>
+			<script>
+				// Ensure Sharing Manager initializes (binds sync toggles and manual sync button)
+				window.hangarInitQueue = window.hangarInitQueue || [];
+				window.hangarInitQueue.push(function(){
+					try {
+						if (window.sharingManager && !window.sharingManager.initialized) {
+							window.sharingManager.init();
+						}
+					} catch (e) { console.warn('SharingManager init failed', e); }
+				});
+			</script>
 
 			<!-- Timetable API Integration - NACH AeroDataBox API laden -->
 			<script src="js/timetable-api-integration.js"></script>

@@ -1708,40 +1708,40 @@ window.hangarData.updateAircraftFromFlightData = async function (
 				!!arrivalInput,
 				arrivalInput?.id
 			);
-				if (arrivalInput) {
-					if (shouldClearFields) {
-						// Felder löschen wenn keine Daten gefunden wurden
-						arrivalInput.value = "";
-						try { delete arrivalInput.dataset.iso; } catch (e) {}
-						console.log(
-							`🧹 Ankunftszeit für Kachel ${cellId} gelöscht (keine Daten)`
-						);
-					} else if (
-						flightData.arrivalTime &&
-						flightData.arrivalTime !== "--:--" &&
-						flightData.arrivalTime !== ""
-					) {
-						let display = '';
-						let iso = '';
-						if (window.helpers){
-							const h = window.helpers;
-							if (h.isISODateTimeLocal && h.isISODateTimeLocal(flightData.arrivalTime)) {
-								iso = flightData.arrivalTime;
-							} else if (h.isHHmm && h.isHHmm(flightData.arrivalTime) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
-								const bases = h.getBaseDates();
-								iso = h.coerceHHmmToDateTimeLocalUtc(flightData.arrivalTime, bases.arrivalBase || '');
-							} else if (h.isCompactDateTime && h.isCompactDateTime(flightData.arrivalTime) && h.parseCompactToISOUTC) {
-								iso = h.parseCompactToISOUTC(flightData.arrivalTime);
-							}
-							display = iso && h.formatISOToCompactUTC ? h.formatISOToCompactUTC(iso) : (display||'');
+			if (arrivalInput) {
+				if (shouldClearFields) {
+					// Felder löschen wenn keine Daten gefunden wurden
+					arrivalInput.value = "";
+					try { delete arrivalInput.dataset.iso; } catch (e) {}
+					console.log(
+						`🧹 Ankunftszeit für Kachel ${cellId} gelöscht (keine Daten)`
+					);
+				} else if (
+					flightData.arrivalTime &&
+					flightData.arrivalTime !== "--:--" &&
+					flightData.arrivalTime !== ""
+				) {
+					let display = '';
+					let iso = '';
+					if (window.helpers){
+						const h = window.helpers;
+						if (h.isISODateTimeLocal && h.isISODateTimeLocal(flightData.arrivalTime)) {
+							iso = flightData.arrivalTime;
+						} else if (h.isHHmm && h.isHHmm(flightData.arrivalTime) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
+							const bases = h.getBaseDates();
+							iso = h.coerceHHmmToDateTimeLocalUtc(flightData.arrivalTime, bases.arrivalBase || '');
+						} else if (h.isCompactDateTime && h.isCompactDateTime(flightData.arrivalTime) && h.parseCompactToISOUTC) {
+							iso = h.parseCompactToISOUTC(flightData.arrivalTime);
 						}
-						arrivalInput.value = display || '';
-						if (iso) { try { arrivalInput.dataset.iso = iso; } catch (e) {} } else { try { delete arrivalInput.dataset.iso; } catch (e) {} }
-						console.log(
-							`✅ Ankunftszeit für Kachel ${cellId}: ${display || ''}`
-						);
+						display = iso && h.formatISOToCompactUTC ? h.formatISOToCompactUTC(iso) : (display||'');
 					}
+					arrivalInput.value = display || '';
+					if (iso) { try { arrivalInput.dataset.iso = iso; } catch (e) {} } else { try { delete arrivalInput.dataset.iso; } catch (e) {} }
+					console.log(
+						`✅ Ankunftszeit für Kachel ${cellId}: ${display || ''}`
+					);
 				}
+			} else {
 				console.warn(
 					`❌ Ankunftszeit Input nicht gefunden für Kachel ${cellId}`
 				);
@@ -1754,40 +1754,40 @@ window.hangarData.updateAircraftFromFlightData = async function (
 				!!departureInput,
 				departureInput?.id
 			);
-				if (departureInput) {
-					if (shouldClearFields) {
-						// Felder löschen wenn keine Daten gefunden wurden
-						departureInput.value = "";
-						try { delete departureInput.dataset.iso; } catch (e) {}
-						console.log(
-							`🧹 Abflugzeit für Kachel ${cellId} gelöscht (keine Daten)`
-						);
-					} else if (
-						flightData.departureTime &&
-						flightData.departureTime !== "--:--" &&
-						flightData.departureTime !== ""
-					) {
-						let display = '';
-						let iso = '';
-						if (window.helpers){
-							const h = window.helpers;
-							if (h.isISODateTimeLocal && h.isISODateTimeLocal(flightData.departureTime)) {
-								iso = flightData.departureTime;
-							} else if (h.isHHmm && h.isHHmm(flightData.departureTime) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
-								const bases = h.getBaseDates();
-								iso = h.coerceHHmmToDateTimeLocalUtc(flightData.departureTime, bases.departureBase || '');
-							} else if (h.isCompactDateTime && h.isCompactDateTime(flightData.departureTime) && h.parseCompactToISOUTC) {
-								iso = h.parseCompactToISOUTC(flightData.departureTime);
-							}
-							display = iso && h.formatISOToCompactUTC ? h.formatISOToCompactUTC(iso) : (display||'');
+			if (departureInput) {
+				if (shouldClearFields) {
+					// Felder löschen wenn keine Daten gefunden wurden
+					departureInput.value = "";
+					try { delete departureInput.dataset.iso; } catch (e) {}
+					console.log(
+						`🧹 Abflugzeit für Kachel ${cellId} gelöscht (keine Daten)`
+					);
+				} else if (
+					flightData.departureTime &&
+					flightData.departureTime !== "--:--" &&
+					flightData.departureTime !== ""
+				) {
+					let display = '';
+					let iso = '';
+					if (window.helpers){
+						const h = window.helpers;
+						if (h.isISODateTimeLocal && h.isISODateTimeLocal(flightData.departureTime)) {
+							iso = flightData.departureTime;
+						} else if (h.isHHmm && h.isHHmm(flightData.departureTime) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
+							const bases = h.getBaseDates();
+							iso = h.coerceHHmmToDateTimeLocalUtc(flightData.departureTime, bases.departureBase || '');
+						} else if (h.isCompactDateTime && h.isCompactDateTime(flightData.departureTime) && h.parseCompactToISOUTC) {
+							iso = h.parseCompactToISOUTC(flightData.departureTime);
 						}
-						departureInput.value = display || '';
-						if (iso) { try { departureInput.dataset.iso = iso; } catch (e) {} } else { try { delete departureInput.dataset.iso; } catch (e) {} }
-						console.log(
-							`✅ Abflugzeit für Kachel ${cellId}: ${display || ''}`
-						);
+						display = iso && h.formatISOToCompactUTC ? h.formatISOToCompactUTC(iso) : (display||'');
 					}
+					departureInput.value = display || '';
+					if (iso) { try { departureInput.dataset.iso = iso; } catch (e) {} } else { try { delete departureInput.dataset.iso; } catch (e) {} }
+					console.log(
+						`✅ Abflugzeit für Kachel ${cellId}: ${display || ''}`
+					);
 				}
+			} else {
 				console.warn(`❌ Abflugzeit Input nicht gefunden für Kachel ${cellId}`);
 			}
 

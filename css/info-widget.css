@@ -263,7 +263,7 @@ body.header-loose {
 #status-widget .modern-toggle-switch { transform: scale(0.85); transform-origin: right center; }
 .status-label {
 	font-weight: 700;
-	color: #3a4354;
+	color: #334155;
 	font-size: 0.95rem;
 	justify-self: start;
 }
@@ -295,10 +295,10 @@ body.header-loose {
 	color: #94a3b8;
 }
 /* Header update status colors */
-#status-widget #headerUpdateStatus.active { color: #059669; font-weight: 700; }
+#status-widget #headerUpdateStatus.active { color: #0d9488; font-weight: 700; }
 #status-widget #headerUpdateStatus.inactive { color: #6b7280; font-weight: 700; }
 /* Dark mode overrides for update status colors */
-.dark-mode #status-widget #headerUpdateStatus.active { color: #34d399 !important; }
+.dark-mode #status-widget #headerUpdateStatus.active { color: #5eead4 !important; }
 .dark-mode #status-widget #headerUpdateStatus.inactive { color: #94a3b8 !important; }
 
 /* Match Tow Reminder Active badge styling to headerUpdateStatus (light + dark) */
@@ -313,9 +313,9 @@ body.header-loose {
 	font-size: 0.875rem;
 	color: #64748b;
 }
-#towing-reminder-widget #towingReminderActiveBadge.active { color: #059669; font-weight: 700; }
+#towing-reminder-widget #towingReminderActiveBadge.active { color: #0d9488; font-weight: 700; }
 #towing-reminder-widget #towingReminderActiveBadge.inactive { color: #6b7280; font-weight: 700; }
-.dark-mode #towing-reminder-widget #towingReminderActiveBadge.active { color: #34d399 !important; }
+.dark-mode #towing-reminder-widget #towingReminderActiveBadge.active { color: #5eead4 !important; }
 .dark-mode #towing-reminder-widget #towingReminderActiveBadge.inactive { color: #94a3b8 !important; }
 /* Header sync label colors by mode */
 #status-widget #sync-mode.master { color: var(--sync-master-fg, #9A3412); font-weight: 700; }

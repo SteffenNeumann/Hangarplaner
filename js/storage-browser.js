@@ -329,10 +329,14 @@ class ServerSync {
 
 			clearTimeout(timeoutId);
 
-			if (response.ok) {
-				console.log("✅ Master: Server-Sync erfolgreich");
-				return true;
-			} else {
+				if (response.ok) {
+					console.log("✅ Master: Server-Sync erfolgreich");
+					// Reset API-Sync-Bypass-Flag nach erfolgreicher Speicherung
+					if (window.HangarDataCoordinator) {
+						window.HangarDataCoordinator.apiChangesPendingSync = false;
+					}
+					return true;
+				} else {
 				console.warn("⚠️ Server-Sync fehlgeschlagen:", response.status);
 				return false;
 			}
@@ -793,6 +797,14 @@ class ServerSync {
 					failedToApply++;
 				}
 			}
+
+			// Last-Update Badge aus geladenen Daten wiederherstellen (falls vorhanden)
+			if (tileData.updatedAt && typeof window.createOrUpdateLastUpdateBadge === 'function') {
+				const ts = Date.parse(tileData.updatedAt);
+				if (!isNaN(ts)) {
+					window.createOrUpdateLastUpdateBadge(tileId, 'server', ts, { persist: true });
+				}
+			}
 		});
 
 		// NEUE ZUSAMMENFASSUNG
@@ -823,14 +835,24 @@ class ServerSync {
 				if (lastApiUpdate) {
 					const timeSinceApiUpdate =
 						Date.now() - new Date(lastApiUpdate).getTime();
-					// Blockiere Server-Sync für 5 Minuten nach API-Update
-					if (timeSinceApiUpdate < 300000) {
-						// 5 Minuten in Millisekunden
-						console.log(
-							"⏸️ Server-Sync pausiert: Kürzliche API-Updates schützen"
-						);
-						return false;
-					}
+						// Blockiere Server-Sync für 5 Minuten nach API-Update
+						if (timeSinceApiUpdate < 300000) {
+							// 5 Minuten in Millisekunden
+							if (
+								window.HangarDataCoordinator &&
+								window.HangarDataCoordinator.apiChangesPendingSync
+							) {
+								console.log(
+									"⏭️ API Sync-Bypass aktiviert: Update-Änderungen werden synchronisiert"
+								);
+								// kein return; weiter mit normaler Change-Detection
+							} else {
+								console.log(
+									"⏸️ Server-Sync pausiert: Kürzliche API-Updates schützen"
+								);
+								return false;
+							}
+						}
 				}
 			}
 

@@ -410,6 +410,18 @@ class SharingManager {
 			});
 		}
 
+		// Manual Sync button enable/disable based on mode
+		try {
+			const manualSyncBtn = document.getElementById("manualSyncBtn");
+			if (manualSyncBtn) {
+				const enable = !!writeEnabled; // only enabled when Write is ON (Master)
+				manualSyncBtn.disabled = !enable;
+				manualSyncBtn.style.opacity = enable ? "" : "0.6";
+				manualSyncBtn.style.cursor = enable ? "" : "not-allowed";
+				manualSyncBtn.title = enable ? "Trigger a one-time sync now" : "Enable Write Data to allow manual sync";
+			}
+		} catch (e) {}
+
 		// Sync Status Button aktualisieren
 		if (syncStatusBtn) {
 			syncStatusBtn.classList.remove(
@@ -660,10 +672,19 @@ class SharingManager {
 	async performManualSync() {
 		const manualSyncBtn = document.getElementById("manualSyncBtn");
 
+		// Guard: disabled in read-only (Write OFF)
+		try {
+			const writeToggle = document.getElementById("writeDataToggle");
+			if (writeToggle && !writeToggle.checked) {
+				this.showNotification("Manual Sync is disabled in read-only mode", "warning");
+				return;
+			}
+		} catch (e) {}
+
 		// Button deaktivieren während Sync
 		if (manualSyncBtn) {
 			manualSyncBtn.disabled = true;
-			manualSyncBtn.textContent = "🔄 Syncing...";
+			manualSyncBtn.textContent = "Syncing...";
 		}
 
 		try {
@@ -690,7 +711,7 @@ class SharingManager {
 			// Button wieder aktivieren
 			if (manualSyncBtn) {
 				manualSyncBtn.disabled = false;
-				manualSyncBtn.textContent = "🔄 Manual Sync";
+				manualSyncBtn.textContent = "Manual Sync";
 			}
 		}
 	}

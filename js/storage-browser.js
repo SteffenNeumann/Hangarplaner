@@ -198,6 +198,13 @@ class ServerSync {
 			await this.slaveCheckForUpdates();
 		}, 30000); // 30 Sekunden für Master-Update-Check
 
+		// Sofort einen ersten Schreibversuch starten, damit andere Browser zeitnah Daten erhalten
+		try {
+			this.syncWithServer();
+		} catch (e) {
+			console.warn("⚠️ Sofortiger Master-Sync fehlgeschlagen:", e?.message || e);
+		}
+
 		console.log("👑 Master-Modus gestartet - bidirektionale Synchronisation aktiv (Senden + Empfangen)");
 	}
 
@@ -280,12 +287,18 @@ class ServerSync {
 	async syncWithServer() {
 		if (!this.serverSyncUrl) {
 			console.warn("⚠️ Server-URL nicht konfiguriert");
+			if (window.showNotification) {
+				window.showNotification("Server-URL nicht konfiguriert – Sync übersprungen", "warning");
+			}
 			return false;
 		}
 
 		// NEUE PRÜFUNG: Nur Master darf speichern
 		if (!this.isMaster) {
 			console.log("⛔ Read-only mode: save skipped (client not master)");
+			if (window.showNotification) {
+				window.showNotification("Read-only Modus – Schreiben zum Server deaktiviert", "info");
+			}
 			return true; // Kein Fehler, nur keine Berechtigung
 		}
 
@@ -344,7 +357,12 @@ class ServerSync {
 					}
 					return true;
 				} else {
-				console.warn("⚠️ Server-Sync fehlgeschlagen:", response.status);
+				let detail = '';
+				try { detail = await response.text(); } catch (e) { /* noop */ }
+				console.warn("⚠️ Server-Sync fehlgeschlagen:", response.status, detail);
+				if (window.showNotification) {
+					window.showNotification(`Server-Sync fehlgeschlagen: ${response.status}${detail ? ' • ' + detail : ''}`, 'error');
+				}
 				return false;
 			}
 		} catch (error) {

@@ -843,46 +843,44 @@ const AeroDataBoxAPI = (() => {
 				);
 			}
 
-			// Schritt 3: Finde den ersten Abflug am Tag 2 vom gewählten Flughafen (nur wenn Übernachtung bestätigt)
-			if (overnightArrival) {
-				const nextDayDeparturesFromAirport = nextDayFlights
-					.filter((flight) => {
-						const departurePoint = flight.flightPoints?.find(
-							(p) => p.departurePoint
-						);
-						return (
-							departurePoint && departurePoint.iataCode === selectedAirport
-						);
-					})
-					.sort((a, b) => {
-						const timeA = getTimeFromFlightPoint(
-							a.flightPoints.find((p) => p.departurePoint)
-						);
-						const timeB = getTimeFromFlightPoint(
-							b.flightPoints.find((p) => p.departurePoint)
-						);
-						return timeA - timeB; // Früheste zuerst
-					});
-
-				if (nextDayDeparturesFromAirport.length > 0) {
-					overnightDeparture = nextDayDeparturesFromAirport[0];
-					console.log(`✅ Erster Abflug am ${nextDate} gefunden:`);
-					const depPoint = overnightDeparture.flightPoints.find(
+			// Schritt 3: Finde den ersten Abflug am Tag 2 vom gewählten Flughafen (unabhängig von Ankunft)
+			const nextDayDeparturesFromAirport = nextDayFlights
+				.filter((flight) => {
+					const departurePoint = flight.flightPoints?.find(
 						(p) => p.departurePoint
 					);
-					const arrPoint = overnightDeparture.flightPoints.find(
-						(p) => p.arrivalPoint
+					return (
+						departurePoint && departurePoint.iataCode === selectedAirport
 					);
-					console.log(
-						`   ${depPoint?.iataCode || "???"} → ${
-							arrPoint?.iataCode || "???"
-						} um ${getTimeStringFromFlightPoint(depPoint)}`
+				})
+				.sort((a, b) => {
+					const timeA = getTimeFromFlightPoint(
+						a.flightPoints.find((p) => p.departurePoint)
 					);
-				} else {
-					console.log(
-						`⚠️ Kein Abflug am ${nextDate} vom Flughafen ${selectedAirport} gefunden`
+					const timeB = getTimeFromFlightPoint(
+						b.flightPoints.find((p) => p.departurePoint)
 					);
-				}
+					return timeA - timeB; // Früheste zuerst
+				});
+
+			if (nextDayDeparturesFromAirport.length > 0) {
+				overnightDeparture = nextDayDeparturesFromAirport[0];
+				console.log(`✅ Erster Abflug am ${nextDate} gefunden:`);
+				const depPoint = overnightDeparture.flightPoints.find(
+					(p) => p.departurePoint
+				);
+				const arrPoint = overnightDeparture.flightPoints.find(
+					(p) => p.arrivalPoint
+				);
+				console.log(
+					`   ${depPoint?.iataCode || "???"} → ${
+						arrPoint?.iataCode || "???"
+					} um ${getTimeStringFromFlightPoint(depPoint)}`
+				);
+			} else {
+				console.log(
+					`⚠️ Kein Abflug am ${nextDate} vom Flughafen ${selectedAirport} gefunden`
+				);
 			}
 
 			console.log(`🏨 === ENDE ÜBERNACHTUNGS-PRÜFUNG ===\n`);
@@ -940,23 +938,15 @@ const AeroDataBoxAPI = (() => {
 				console.log(`🎯 === ENDE FINALE AUSWAHL (ÜBERNACHTUNG) ===`);
 			}
 
-			// Wenn keine Übernachtung stattfindet (beide Flüge müssen vorhanden sein für Übernachtung)
-			if (!lastArrival || !firstDeparture) {
-				let reason = "";
-				if (!lastArrival && !firstDeparture) {
-					reason = "kein Ankunfts- und kein Abflugsflug";
-				} else if (!lastArrival) {
-					reason = "kein Ankunftsflug am Vortag";
-				} else {
-					reason = "kein Abflugsflug am Folgetag";
-				}
-
+			// Neue Definition: Übernachtung gilt, wenn letzter Ankunftsflug ODER erster Abflug am Folgetag vorhanden ist
+			if (!lastArrival && !firstDeparture) {
+				const reason = "kein Ankunfts- und kein Abflugsflug";
 				updateFetchStatus(
 					`${aircraftId} übernachtet nicht in ${selectedAirport} (${reason})`,
 					false
 				);
 
-				// KORREKTUR: Explizite Markierung für "keine Übernachtung"
+				// Explizite Markierung für "keine Übernachtung"
 				return {
 					originCode: "",
 					destCode: "",
@@ -3437,12 +3427,13 @@ const AeroDataBoxAPI = (() => {
 					console.log(`   📥 Day 1 arrivals at ${selectedAirport}: ${day1Arrivals.length}`);
 					console.log(`   📤 Day 2 departures from ${selectedAirport}: ${day2Departures.length}`);
 
-					if (day1Arrivals.length === 0) {
-						console.log(`   ❌ No arrivals at ${selectedAirport} on day 1 - no overnight possible`);
-						continue;
-					}
+				// If there are no arrivals on day 1, we can still classify overnight via day 2 first departure
+				if (day1Arrivals.length === 0 && day2Departures.length === 0) {
+					console.log(`   ❌ No arrivals on day 1 and no departures on day 2 - no overnight`);
+					continue;
+				}
 
-					// Find last arrival on day 1
+				// Find last arrival on day 1 (if any)
 					const lastArrival = day1Arrivals.sort((a, b) => {
 						const timeA = new Date(a.arrival?.scheduledTime?.utc || 0);
 						const timeB = new Date(b.arrival?.scheduledTime?.utc || 0);
@@ -3465,12 +3456,14 @@ const AeroDataBoxAPI = (() => {
 					console.log(`   🔄 Subsequent departures on day 1: ${sameDayDepartures.length}`);
 
 				if (sameDayDepartures.length > 0) {
-					console.log(`   ❌ Aircraft continues same day - no overnight`);
-					continue;
+					console.log(`   ❌ Aircraft continues same day after last arrival`);
+					// We still allow overnight detection via day 2 first departure rule below
+					lastArrival = null;
 				}
 
-				// UPDATED LOGIC: Aircraft stays overnight if no same-day departures
-				// Whether it has a next-day departure or not (parked vs continuing)
+				// UPDATED LOGIC: Aircraft stays overnight if
+				// (a) it has a last arrival with no same-day departures, OR
+				// (b) it has a first departure on day 2 from the selected airport
 				let firstDeparture = null;
 				let overnightType = "";
 				let route = "";
@@ -3485,18 +3478,24 @@ const AeroDataBoxAPI = (() => {
 					})[0];
 					
 					overnightType = "continues";
-					route = `${lastArrival.departure?.airport?.iata || ""} → ${firstDeparture.arrival?.airport?.iata || ""}`;
-					duration = calculateOvernightDuration(
-						lastArrival.arrival?.scheduledTime?.utc,
-						firstDeparture.departure?.scheduledTime?.utc
-					);
+					if (lastArrival) {
+						route = `${lastArrival.departure?.airport?.iata || ""} → ${firstDeparture.arrival?.airport?.iata || ""}`;
+						duration = calculateOvernightDuration(
+							lastArrival.arrival?.scheduledTime?.utc,
+							firstDeparture.departure?.scheduledTime?.utc
+						);
+					} else {
+						// No last arrival known – still consider overnight by departure rule
+						route = `${selectedAirport} → ${firstDeparture.arrival?.airport?.iata || ""}`;
+						duration = "unknown";
+					}
 					
 					console.log(`   ⏰ First departure: ${firstDeparture.departure?.scheduledTime?.utc?.substring(11, 16)} (${firstDeparture.number})`);
 					console.log(`   🏨 ✅ OVERNIGHT CONFIRMED for ${registration} - continues next day!`);
 				} else {
 					// No departure on day 2 - aircraft is PARKED overnight
 					overnightType = "parked";
-					route = `${lastArrival.departure?.airport?.iata || ""} → PARKED`;
+					route = `${lastArrival?.departure?.airport?.iata || selectedAirport} → PARKED`;
 					duration = "∞ (parked)";
 					
 					console.log(`   🏨 ✅ OVERNIGHT CONFIRMED for ${registration} - PARKED (no departure scheduled)!`);
@@ -3504,14 +3503,20 @@ const AeroDataBoxAPI = (() => {
 
 				overnightResults.push({
 					registration,
-					aircraftType: lastArrival.aircraft?.model || (firstDeparture?.aircraft?.model) || "Unknown",
+					aircraftType: lastArrival?.aircraft?.model || (firstDeparture?.aircraft?.model) || "Unknown",
 					overnightType, // "continues" or "parked"
-					arrival: {
+					arrival: lastArrival ? {
 						from: lastArrival.departure?.airport?.iata || "",
 						to: selectedAirport,
 						time: lastArrival.arrival?.scheduledTime?.utc?.substring(11, 16) || "--:--",
 						date: startDate,
 						flightNumber: lastArrival.number || ""
+					} : {
+						from: "",
+						to: selectedAirport,
+						time: "--:--",
+						date: startDate,
+						flightNumber: ""
 					},
 					departure: firstDeparture ? {
 						from: selectedAirport,

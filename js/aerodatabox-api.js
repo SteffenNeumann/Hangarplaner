@@ -3253,10 +3253,10 @@ const AeroDataBoxAPI = (() => {
 				// STEP 1: Get ALL flights from airport (4 time periods for complete coverage)
 				console.log(`📡 === STEP 1: COLLECTING ALL AIRPORT FLIGHTS ===`);
 				const timeWindows = [
-					{ start: `${startDate}T06:00`, end: `${startDate}T18:00`, desc: "Day 1 Morning-Afternoon" },
-					{ start: `${startDate}T18:00`, end: `${startDate}T23:59`, desc: "Day 1 Evening-Night" },
-					{ start: `${endDate}T05:00`, end: `${endDate}T15:00`, desc: "Day 2 Morning-Afternoon" },
-					{ start: `${endDate}T15:00`, end: `${endDate}T23:59`, desc: "Day 2 Afternoon-Night" }
+					{ start: `${startDate}T00:00`, end: `${startDate}T12:00`, desc: "Day 1 Midnight-Noon" },
+					{ start: `${startDate}T12:00`, end: `${startDate}T23:59`, desc: "Day 1 Noon-Midnight" },
+					{ start: `${endDate}T00:00`, end: `${endDate}T12:00`, desc: "Day 2 Midnight-Noon" },
+					{ start: `${endDate}T12:00`, end: `${endDate}T23:59`, desc: "Day 2 Noon-Midnight" }
 				];
 
 				console.log(`🕐 Collecting flights for ${timeWindows.length} time windows...`);

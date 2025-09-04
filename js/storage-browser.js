@@ -226,6 +226,13 @@ class ServerSync {
 			"👤 Slave-Modus gestartet - Polling für Updates alle 15 Sekunden aktiv"
 		);
 		// HINWEIS: Initialer Load erfolgt bereits in initSync()
+
+		// Sofort einen Update-Check ausführen, damit Daten ohne Wartezeit geladen werden
+		try {
+			this.slaveCheckForUpdates();
+		} catch (e) {
+			console.warn("⚠️ Sofortiger Slave-Update-Check fehlgeschlagen:", e?.message || e);
+		}
 	}
 
 	/**

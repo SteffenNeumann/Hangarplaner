@@ -269,6 +269,13 @@ document.addEventListener("DOMContentLoaded", function () {
 						"📞 Rufe setupFlightDataEventHandlers nachträglich auf..."
 					);
 					setupFlightDataEventHandlers();
+					// Trigger the newly installed handler immediately so the first click performs the action
+					setTimeout(() => {
+						const btn2 = document.getElementById("fetchFlightData");
+						if (btn2) {
+							btn2.click();
+						}
+					}, 0);
 				}
 			};
 		} else if (fetchFlightBtn) {

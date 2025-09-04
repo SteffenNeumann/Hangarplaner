@@ -3564,7 +3564,7 @@ const AeroDataBoxAPI = (() => {
 							const flightData = {
 								arrivalTime: overnightMatch.arrival.time,
 								departureTime: overnightMatch.departure.time,
-								position: `🏨 ${overnightMatch.route}`,
+								positionText: `🏨 ${overnightMatch.route}`,
 								originCode: overnightMatch.arrival.from,
 								destCode: overnightMatch.departure.to
 							};
@@ -3596,9 +3596,11 @@ const AeroDataBoxAPI = (() => {
 							const emptyData = {
 								arrivalTime: "",
 								departureTime: "",
-								position: "",
+								positionText: "",
 								originCode: "",
-								destCode: ""
+								destCode: "",
+								_noDataFound: true,
+								_clearFields: true
 							};
 							
 							try {

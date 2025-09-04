@@ -100,20 +100,20 @@ body.dark-mode {
 	color: var(--dark-text);
 }
 
-/* Tow-Status mit Dark Mode-angepassten Farben */
+/* Tow-Status mit Dark Mode-angepassten Farben - Maximaler Kontrast mit weißer Schrift */
 .dark-mode .tow-status-selector.tow-initiated {
-	background-color: #543900;
-	color: #fef3c7;
+	background-color: #92400e; /* Dunkleres Orange-Braun für guten Kontrast */
+	color: #ffffff; /* Reine weiße Schrift für maximale Helligkeit */
 }
 
 .dark-mode .tow-status-selector.tow-ongoing {
-	background-color: #1e3a8a;
-	color: #dbeafe;
+	background-color: #1e40af; /* Tieferes Blau für besseren Kontrast */
+	color: #ffffff; /* Reine weiße Schrift für maximale Helligkeit */
 }
 
 .dark-mode .tow-status-selector.tow-on-position {
-	background-color: #065f46;
-	color: #d1fae5;
+	background-color: #166534; /* Dunkleres Grün für besseren Kontrast */
+	color: #ffffff; /* Reine weiße Schrift für maximale Helligkeit */
 }
 
 /* Sidebar im Dark Mode */

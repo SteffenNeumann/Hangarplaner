@@ -2698,19 +2698,37 @@ type="datetime-local"
 					const value = select.value;
 					select.classList.add(`tow-${value}`);
 
-					// Optional: Hintergrundfarbe direkt setzen
+					// Dark mode detection
+					const isDarkMode = document.body.classList.contains('dark-mode');
+					
+					// Hintergrundfarbe und Textfarbe direkt setzen
 					if (value === "neutral") {
 						select.style.backgroundColor = "white";
 						select.style.color = "#333333";
 					} else if (value === "initiated") {
-						select.style.backgroundColor = "#FEF3C7"; // Hellgelb
-						select.style.color = "#92400E";
+						if (isDarkMode) {
+							select.style.backgroundColor = "#92400e"; // Dark mode: dunkleres Orange-Braun
+							select.style.color = "#ffffff"; // Dark mode: weiße Schrift
+						} else {
+							select.style.backgroundColor = "#FEF3C7"; // Light mode: Hellgelb
+							select.style.color = "#92400E";
+						}
 					} else if (value === "ongoing") {
-						select.style.backgroundColor = "#DBEAFE"; // Hellblau
-						select.style.color = "#1E40AF";
+						if (isDarkMode) {
+							select.style.backgroundColor = "#1e40af"; // Dark mode: tieferes Blau
+							select.style.color = "#ffffff"; // Dark mode: weiße Schrift
+						} else {
+							select.style.backgroundColor = "#DBEAFE"; // Light mode: Hellblau
+							select.style.color = "#1E40AF";
+						}
 					} else if (value === "on-position") {
-						select.style.backgroundColor = "#D1FAE5"; // Hellgrün
-						select.style.color = "#065F46";
+						if (isDarkMode) {
+							select.style.backgroundColor = "#166534"; // Dark mode: dunkleres Grün
+							select.style.color = "#ffffff"; // Dark mode: weiße Schrift
+						} else {
+							select.style.backgroundColor = "#D1FAE5"; // Light mode: Hellgrün
+							select.style.color = "#065F46";
+						}
 					}
 				}
 

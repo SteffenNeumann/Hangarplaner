@@ -576,6 +576,16 @@ function setupFlightDataEventHandlers() {
 				console.log("🏨 *** OVERNIGHT FLIGHTS PROCESSING MODE SELECTED ***");
 				console.log("🔄 Bypassing API facade and using direct AeroDataBox overnight processing...");
 				
+				// Show status panel (shared with dedicated overnight button)
+				const statusPanel = document.getElementById("overnightFlightsStatus");
+				const statusMessage = document.getElementById("overnightFlightsMessage");
+				if (statusPanel) {
+					statusPanel.style.display = "block";
+					if (statusMessage) {
+						statusMessage.textContent = "Starting overnight flights analysis...";
+					}
+				}
+				
 				// Get airport and date parameters
 				const airportCodeInput = document.getElementById("airportCodeInput");
 				const currentDateInput = document.getElementById("currentDateInput");
@@ -595,6 +605,11 @@ function setupFlightDataEventHandlers() {
 					return new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 				})();
 
+				// Helper to hide panel after delay
+				const hideStatusPanelSoon = () => {
+					setTimeout(() => { if (statusPanel) statusPanel.style.display = 'none'; }, 5000);
+				};
+
 				console.log(`🏨 Parameters: Airport=${airportCode}, StartDate=${currentDate}, EndDate=${nextDate}`);
 
 				// Call the new correct overnight processing function DIRECTLY
@@ -611,12 +626,16 @@ function setupFlightDataEventHandlers() {
 
 						if (result && result.success) {
 							console.log("✅ Overnight processing completed successfully!");
+							if (statusMessage) {
+								statusMessage.textContent = `Processing completed: ${result.overnightAircraft} overnight aircraft found, ${result.tilesMatched} tiles updated`;
+							}
 							if (window.showNotification) {
 								window.showNotification(
 									`Overnight processing complete: ${result.overnightAircraft} aircraft found, ${result.tilesMatched} tiles updated`,
 									"success"
 								);
 							}
+							hideStatusPanelSoon();
 						} else {
 							console.error("❌ Overnight processing failed, result:", result);
 							if (window.showNotification) {
@@ -625,6 +644,7 @@ function setupFlightDataEventHandlers() {
 									: "Overnight processing failed. Check console for details.";
 								window.showNotification(errorMsg, "error");
 							}
+							hideStatusPanelSoon();
 						}
 					} catch (error) {
 						console.error("❌ Error during overnight processing:", error);
@@ -634,6 +654,7 @@ function setupFlightDataEventHandlers() {
 								"error"
 							);
 						}
+						hideStatusPanelSoon();
 					}
 				} else {
 					console.error("❌ AeroDataBoxAPI.processOvernightFlightsCorrectly not available!");
@@ -644,6 +665,7 @@ function setupFlightDataEventHandlers() {
 							"error"
 						);
 					}
+					hideStatusPanelSoon();
 				}
 				console.log("🏨 *** OVERNIGHT PROCESSING COMPLETE - EXITING EARLY ***");
 				return; // Exit early for overnight processing
@@ -962,7 +984,7 @@ function setupFlightDataEventHandlers() {
 			"✅ Event-Handler für Process Overnight Flights Button erfolgreich registriert"
 		);
 	} else {
-		console.error("❌ Process Overnight Flights Button nicht gefunden!");
+		console.info("ℹ️ Process Overnight Flights Button not present – using 'Update' button for overnight processing.");
 	}
 
 	// Event-Handler für API-Provider Dropdown zur Anzeige von Hilfetexten

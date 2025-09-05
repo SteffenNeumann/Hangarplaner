@@ -254,6 +254,13 @@ body.header-loose {
 	text-decoration: underline;
 	text-underline-offset: 2px;
 }
+/* Make Tow Reminder rows interactive and consistent */
+#towing-reminder-widget .status-row { cursor: pointer; }
+#towing-reminder-widget .status-row:hover .status-label,
+#towing-reminder-widget .status-row:hover .status-label-value {
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
 /* Gruppe für mehrere Werte rechts (Mode + Update Toggle) */
 #status-widget .status-value-group {
 	display: inline-flex;

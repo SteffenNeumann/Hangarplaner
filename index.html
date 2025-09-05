@@ -984,9 +984,13 @@
   function initHeaderWidget(){
     const container = document.getElementById('towing-reminder-widget');
     if (!container) return;
-    container.querySelectorAll('.status-row').forEach(row => {
-      row.addEventListener('click', () => {
-        const btn = document.querySelector('#leftMenu .menu-item[data-menu="project"]');
+    // Mirror Status widget behavior: open left submenu based on data-open-submenu
+    container.querySelectorAll('.status-row[data-open-submenu]').forEach(row => {
+      row.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const key = row.getAttribute('data-open-submenu') || 'project';
+        const btn = document.querySelector(`#leftMenu .menu-item[data-menu="${key}"]`);
         if (btn) btn.click();
       });
     });

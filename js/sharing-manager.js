@@ -34,9 +34,6 @@ class SharingManager {
 		// Initial-Status setzen basierend auf gespeicherten Einstellungen
 		this.updateAllSyncDisplays();
 
-		// Starte Überwachung, damit Modus erneut angewendet wird, sobald ServerSync bereit ist
-		try { setTimeout(() => { if (this.monitorServerSyncReady) this.monitorServerSyncReady(0); }, 300); } catch (e) {}
-
 		this.initialized = true;
 
 		console.log("🔗 Sharing Manager initialisiert - Modus:", this.syncMode);
@@ -86,30 +83,6 @@ class SharingManager {
 		}
 
 		console.log("🎯 Dual-Toggle Event-Handler registriert");
-	}
-
-	/**
-	 * Überwacht die Verfügbarkeit von ServerSync und wendet den aktuellen Modus an, sobald bereit
-	 */
-	monitorServerSyncReady(attempt = 0) {
-		try {
-			if (attempt >= 20) return; // max ~10s
-			const ss = window.serverSync;
-			if (
-				ss &&
-				typeof ss.startSlaveMode === 'function' &&
-				typeof ss.startMasterMode === 'function' &&
-				typeof ss.stopPeriodicSync === 'function'
-			) {
-				const readToggle = document.getElementById("readDataToggle");
-				const writeToggle = document.getElementById("writeDataToggle");
-				const readEnabled = !!readToggle?.checked;
-				const writeEnabled = !!writeToggle?.checked;
-				this.updateSyncMode(readEnabled, writeEnabled);
-				return;
-			}
-		} catch (e) {}
-		setTimeout(() => this.monitorServerSyncReady(attempt + 1), 500);
 	}
 
 	/**

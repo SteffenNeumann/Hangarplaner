@@ -3250,6 +3250,16 @@ const AeroDataBoxAPI = (() => {
 
 				updateFetchStatus(`🏢 Starting airport-wide overnight processing for ${selectedAirport}...`, false);
 
+				// Local helper: normalize registrations to match tile format (first letter + hyphen + rest)
+				function normalizeRegForTiles(reg) {
+					if (!reg) return '';
+					let v = String(reg).toUpperCase();
+					if (v.length > 1 && !v.includes('-')) {
+						v = v.charAt(0) + '-' + v.substring(1);
+					}
+					return v;
+				}
+
 				// STEP 1: Get ALL flights from airport (4 time periods for complete coverage)
 				console.log(`📡 === STEP 1: COLLECTING ALL AIRPORT FLIGHTS ===`);
 				const timeWindows = [
@@ -3311,11 +3321,12 @@ const AeroDataBoxAPI = (() => {
 
 				// OPTIMIZED: Only extract essential data for overnight detection
 				allFlights.forEach(flight => {
-					const registration = flight.aircraft?.reg || 
+					const rawRegistration = flight.aircraft?.reg || 
 										 flight.aircraft?.registration || 
 										 flight.aircraft?.tail ||
 										 flight.aircraftRegistration ||
 										 flight.registration;
+					const registration = normalizeRegForTiles(rawRegistration);
 					const flightNumber = flight.number;
 					const flightDate = flight.departure?.scheduledTime?.utc?.substring(0, 10) || 
 									   flight.arrival?.scheduledTime?.utc?.substring(0, 10);
@@ -3332,17 +3343,17 @@ const AeroDataBoxAPI = (() => {
 
 					if (isDay1Arrival || isDay2Departure) {
 						if (registration) {
-							// Direct registration available
-							const regUpper = registration.toUpperCase();
-							if (!potentialOvernightFlights.has(regUpper)) {
-								potentialOvernightFlights.set(regUpper, { 
-									registration: regUpper, 
+							// Direct registration available (normalized for tile format)
+							const regKey = registration;
+							if (!potentialOvernightFlights.has(regKey)) {
+								potentialOvernightFlights.set(regKey, { 
+									registration: regKey, 
 									arrivals: [], 
 									departures: [],
 									allFlights: []
 								});
 							}
-							const aircraftData = potentialOvernightFlights.get(regUpper);
+							const aircraftData = potentialOvernightFlights.get(regKey);
 							if (isDay1Arrival) aircraftData.arrivals.push(flight);
 							if (isDay2Departure) aircraftData.departures.push(flight);
 							aircraftData.allFlights.push(flight);
@@ -3378,7 +3389,7 @@ const AeroDataBoxAPI = (() => {
 						const lookupResult = await this.getFlightByNumber(flightNumber, startDate);
 					
 						if (lookupResult.registration) {
-							const regUpper = lookupResult.registration.toUpperCase();
+							const regUpper = normalizeRegForTiles(lookupResult.registration);
 							const flightData = unknownFlightData.get(flightNumber);
 							
 							// Create or get aircraft entry
@@ -3434,7 +3445,7 @@ const AeroDataBoxAPI = (() => {
 				}
 
 				// Find last arrival on day 1 (if any)
-					const lastArrival = day1Arrivals.sort((a, b) => {
+					let lastArrival = day1Arrivals.sort((a, b) => {
 						const timeA = new Date(a.arrival?.scheduledTime?.utc || 0);
 						const timeB = new Date(b.arrival?.scheduledTime?.utc || 0);
 						return timeB - timeA; // Latest first
@@ -3442,7 +3453,7 @@ const AeroDataBoxAPI = (() => {
 
 					// Check for subsequent departures on day 1 AFTER the last arrival
 					const arrivalTime = new Date(lastArrival.arrival?.scheduledTime?.utc);
-					const sameDayDepartures = flights.filter(flight => {
+					const sameDayDepartures = allFlights.filter(flight => {
 						const flightDate = flight.departure?.scheduledTime?.utc?.substring(0, 10);
 						const departureAirport = flight.departure?.airport?.iata || flight.departure?.airport?.icao;
 						const departureTime = new Date(flight.departure?.scheduledTime?.utc);
@@ -3548,7 +3559,8 @@ const AeroDataBoxAPI = (() => {
 				let empty = 0;
 
 				tiles.forEach(async tile => {
-					const tileAircraftId = tile.value.trim().toUpperCase();
+					const tileAircraftIdRaw = tile.value.trim().toUpperCase();
+					const tileAircraftId = normalizeRegForTiles(tileAircraftIdRaw);
 					const tileNumber = tile.id.split('-')[1];
 
 					if (!tileAircraftId) {

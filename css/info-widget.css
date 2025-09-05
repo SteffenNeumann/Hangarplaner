@@ -290,7 +290,7 @@ body.header-loose {
 	border: 1px solid transparent !important;
 	min-width: 0 !important;
 	text-align: right;
-	font-weight: 700;
+	font-weight: 400; /* no bold */
 	font-size: 0.875rem;
 	background: #f8fafc !important; /* will be overridden per-state */
 	color: #475569;

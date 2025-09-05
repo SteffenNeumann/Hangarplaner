@@ -1437,28 +1437,29 @@ body.dark-mode {
 }
 
 /* Alle Input-Elemente einheitlich */
-.dark-mode .info-input,
-.dark-mode .position-input,
-.dark-mode .notes-textarea,
-.dark-mode .status-selector,
-.dark-mode select.status-selector,
-.dark-mode .tow-status-selector {
-	/* Inputs/selects default to main colour in dark mode */
-	background-color: var(--input-bg) !important;
-	color: var(--text-primary);
-	border: 1px solid var(--border-color) !important;
-}
+ .dark-mode .info-input,
+ .dark-mode .position-input,
+ .dark-mode .notes-textarea,
+ .dark-mode .status-selector,
+ .dark-mode select.status-selector,
+ .dark-mode .tow-status-selector {
+ 	/* Inputs/selects default to main colour in dark mode */
+ 	background-color: var(--input-bg) !important;
+ 	color: var(--text-primary);
+ 	border: 1px solid transparent !important; /* remove default borders inside tiles */
+ }
 
 /* Subtle hover/focus to keep usability without strong borders */
-.dark-mode .aircraft-id:hover,
-.dark-mode .info-input:hover,
-.dark-mode .position-input:hover,
-.dark-mode .notes-textarea:hover,
-.dark-mode .status-selector:hover,
-.dark-mode select.status-selector:hover,
-.dark-mode .tow-status-selector:hover {
-	background-color: rgba(255, 255, 255, 0.03) !important;
-}
+ .dark-mode .aircraft-id:hover,
+ .dark-mode .info-input:hover,
+ .dark-mode .position-input:hover,
+ .dark-mode .notes-textarea:hover,
+ .dark-mode .status-selector:hover,
+ .dark-mode select.status-selector:hover,
+ .dark-mode .tow-status-selector:hover {
+ 	background-color: rgba(255, 255, 255, 0.03) !important;
+ 	border-color: rgba(255, 255, 255, 0.12) !important; /* subtle hover border to reveal inputs */
+ }
 .dark-mode .info-input:focus,
 .dark-mode .position-input:focus,
 .dark-mode .notes-textarea:focus,
@@ -1793,7 +1794,7 @@ body.dark-mode {
 .dark-mode .info-input {
 	background-color: var(--input-bg);
 	color: var(--text-primary);
-	border: 1px solid var(--border-color);
+	border: 1px solid transparent; /* remove default border inside tiles */
 }
 
 .dark-mode .info-input:focus {
@@ -1802,7 +1803,8 @@ body.dark-mode {
 }
 
 .dark-mode .info-input:hover {
-	background-color: var(--hover-bg);
+	background-color: rgba(255, 255, 255, 0.03);
+	border-color: rgba(255, 255, 255, 0.12);
 }
 
 .dark-mode .info-input::placeholder {

@@ -77,11 +77,18 @@ window.globalInitialization = {
 		if (!window.serverSync && !window.storageBrowser) {
 			console.warn("⚠️ ServerSync nicht verfügbar, erstelle Dummy-Fallback");
 			window.serverSync = {
-				syncWithServer: () => Promise.resolve(false),
+				// Read paths
 				loadFromServer: () => Promise.resolve(null),
-				getStatus: () => ({ serverUrl: null, isActive: false }),
 				applyServerData: () => Promise.resolve(false),
 				testServerConnection: () => Promise.resolve(false),
+				getStatus: () => ({ serverUrl: null, isActive: false }),
+				// Write paths
+				syncWithServer: () => Promise.resolve(false),
+				manualSync: () => Promise.resolve(false),
+				// Mode control (no-ops with warnings)
+				startMasterMode: () => { console.warn("⚠️ Dummy ServerSync: startMasterMode() no-op (echte ServerSync noch nicht geladen)"); return false; },
+				startSlaveMode: () => { console.warn("⚠️ Dummy ServerSync: startSlaveMode() no-op (echte ServerSync noch nicht geladen)"); return false; },
+				stopPeriodicSync: () => { console.warn("⚠️ Dummy ServerSync: stopPeriodicSync() no-op (echte ServerSync noch nicht geladen)"); },
 			};
 			window.storageBrowser = window.serverSync;
 		} else {

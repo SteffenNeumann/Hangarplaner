@@ -147,12 +147,12 @@ class SharingManager {
 	/**
 	 * NEU: Aktiviert Standalone-Modus (nur localStorage, einmalige Server-Ladung)
 	 */
-	async enableStandaloneMode() {
+async enableStandaloneMode() {
 		try {
 			console.log("🏠 Aktiviere Standalone-Modus...");
 
 			// ServerSync komplett stoppen
-			if (window.serverSync) {
+			if (window.serverSync && typeof window.serverSync.stopPeriodicSync === 'function') {
 				window.serverSync.stopPeriodicSync();
 
 				if (window.serverSync.slaveCheckInterval) {
@@ -162,6 +162,8 @@ class SharingManager {
 
 				window.serverSync.isMaster = false;
 				window.serverSync.isSlaveActive = false;
+			} else {
+				console.warn("⚠️ ServerSync nicht initialisiert – stopPeriodicSync nicht verfügbar");
 			}
 
 			// Lokale Flags setzen
@@ -187,11 +189,11 @@ class SharingManager {
 	/**
 	 * NEU: Aktiviert Sync-Modus (Slave) - Empfängt Server-Updates
 	 */
-	async enableSyncMode() {
+async enableSyncMode() {
 		try {
 			console.log("📡 Aktiviere Sync-Modus (Slave)...");
 
-			if (window.serverSync) {
+			if (window.serverSync && typeof window.serverSync.startSlaveMode === 'function') {
 				// Bestimme Rolle - für Sync-Modus immer Slave
 				window.serverSync.isMaster = false;
 				window.serverSync.isSlaveActive = true;
@@ -227,7 +229,8 @@ class SharingManager {
 
 				console.log("✅ Sync-Modus (Slave) aktiviert");
 			} else {
-				throw new Error("ServerSync nicht verfügbar");
+				console.warn("⚠️ ServerSync nicht initialisiert – Sync-Modus kann nicht aktiviert werden");
+				this.showNotification("Server-Sync noch nicht bereit – Read-Only Sync nicht möglich (prüfe js/storage-browser.js)", "warning");
 			}
 		} catch (error) {
 			console.error("❌ Fehler beim Aktivieren des Sync-Modus:", error);
@@ -244,11 +247,11 @@ class SharingManager {
 	/**
 	 * NEU: Aktiviert Master-Modus - Sendet Daten an Server
 	 */
-	async enableMasterMode() {
+async enableMasterMode() {
 		try {
 			console.log("👑 Aktiviere Master-Modus...");
 
-			if (window.serverSync) {
+			if (window.serverSync && typeof window.serverSync.startMasterMode === 'function') {
 				// Master-Rolle setzen
 				window.serverSync.isMaster = true;
 				window.serverSync.isSlaveActive = false;
@@ -271,7 +274,8 @@ class SharingManager {
 
 				console.log("✅ Master-Modus aktiviert");
 			} else {
-				throw new Error("ServerSync nicht verfügbar");
+				console.warn("⚠️ ServerSync nicht initialisiert – Master-Modus kann nicht aktiviert werden");
+				this.showNotification("Server-Sync noch nicht bereit – Master-Modus nicht möglich (prüfe js/storage-browser.js)", "warning");
 			}
 		} catch (error) {
 			console.error("❌ Fehler beim Aktivieren des Master-Modus:", error);

@@ -508,11 +508,11 @@ class SharingManager {
 	/**
 	 * ÜBERARBEITET: Widget-Sync-Display-Update für Info-Widget mit neuen Modi
 	 */
-	updateWidgetSyncDisplay(status, isActive) {
+updateWidgetSyncDisplay(status, isActive) {
 		const syncModeElement = document.getElementById("sync-mode");
 		if (syncModeElement) {
 			// CSS-Klassen zurücksetzen
-			syncModeElement.classList.remove("master", "slave", "standalone");
+			syncModeElement.classList.remove("master", "slave", "standalone", "write-only");
 
 			if (isActive) {
 				// Zeige echten Status basierend auf neuen Modi
@@ -521,7 +521,10 @@ class SharingManager {
 					syncModeElement.classList.add("master");
 				} else if (status === "Sync" || status === "Slave") {
 					syncModeElement.textContent = "Sync Read only";
-					syncModeElement.classList.add("slave"); // Verwende slave-CSS für gelbe Farbe
+					syncModeElement.classList.add("slave");
+				} else if (status === "Write-Only") {
+					syncModeElement.textContent = "Write-only";
+					syncModeElement.classList.add("write-only");
 				} else {
 					// Fallback für unbekannte aktive Status
 					syncModeElement.textContent = status;

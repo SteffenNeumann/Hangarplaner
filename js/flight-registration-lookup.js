@@ -15,13 +15,13 @@ const FlightRegistrationLookup = (() => {
 		enableCaching: true,
 		cacheExpiry: 24 * 60 * 60 * 1000, // 24 Stunden
 		debugMode: true,
-		sources: {
-			aerodatabox: true, // PRIMÄRE QUELLE: AeroDataBox API
-			opensky: true,
-			faa: true,
-			webScraping: true,
-			localDatabase: false, // DEAKTIVIERT: Flight numbers können verschiedene Aircraft an verschiedenen Daten verwenden
-		},
+			sources: {
+				aerodatabox: true, // PRIMÄRE QUELLE: AeroDataBox API
+				opensky: true,
+				faa: true,
+				webScraping: false, // Disabled for reliability: use only API-backed sources
+				localDatabase: false, // DEAKTIVIERT: Flight numbers können verschiedene Aircraft an verschiedenen Daten verwenden
+			},
 	};
 
 	// Cache für bereits aufgelöste Registrierungen

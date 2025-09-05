@@ -1529,19 +1529,22 @@ body.dark-mode {
 .dark-mode .tow-status-selector.tow-initiated {
 	background-color: rgba(237, 137, 54, 0.2) !important;
 	border-color: var(--status-maintenance);
-	color: var(--status-maintenance);
+	/* In Dark Mode ist die Standardschriftfarbe weiß */
+	color: var(--text-primary) !important;
 }
 
 .dark-mode .tow-status-selector.tow-ongoing {
 	background-color: rgba(59, 130, 246, 0.2) !important;
 	border-color: #3b82f6;
-	color: #60a5fa;
+	/* In Dark Mode ist die Standardschriftfarbe weiß */
+	color: var(--text-primary) !important;
 }
 
 .dark-mode .tow-status-selector.tow-on-position {
 	background-color: rgba(72, 187, 120, 0.2) !important;
 	border-color: var(--status-ready);
-	color: var(--status-ready);
+	/* In Dark Mode ist die Standardschriftfarbe weiß */
+	color: var(--text-primary) !important;
 }
 
 /* Inline badge for towing reminder next to Aircraft ID */

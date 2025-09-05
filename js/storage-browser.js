@@ -16,8 +16,19 @@ class ServerSync {
 		this.isMaster = false;
 		this.isSlaveActive = false;
 		this.serverTimestamp = null;
-		this.slaveCheckInterval = null;
+		this.slaveCheckInterval = null; // legacy fixed-interval (deprecated in favor of adaptive timer)
 		this.lastServerTimestamp = 0;
+
+		// Micro-sync scheduler (debounced writes in master mode)
+		this.microSyncTimer = null;
+		this.microSyncDelayMs = 900; // default debounce ~0.9s
+
+		// Adaptive polling (read-only mode)
+		this.slavePollTimer = null; // setTimeout-based adaptive poll
+		this.lastServerChangeAt = 0; // ms since epoch of last detected server change
+		this.recentActivityWindowMs = 3 * 60 * 1000; // 3 minutes window considered "recent"
+		this.fastPollMs = 7000; // 7s when recent changes
+		this.slowPollMs = 30000; // 30s when idle
 
 		// Global verfügbar machen für Kompatibilität und Race Condition Prevention
 		window.isApplyingServerData = false;
@@ -77,10 +88,11 @@ class ServerSync {
 		}
 	}
 
-	/**
-	 * Startet periodische Synchronisation alle 60 Sekunden (optimiert)
-	 */
-	startPeriodicSync() {
+/**
+ * Startet periodische Synchronisation alle 60 Sekunden (optimiert)
+ */
+startPeriodicSync() {
+		// Master periodic sync for writes (change-detection gated)
 		if (this.serverSyncInterval) {
 			clearInterval(this.serverSyncInterval);
 		}
@@ -179,14 +191,18 @@ class ServerSync {
 	/**
 	 * AKTUALISIERT: Startet Master-Modus mit bidirektionaler Synchronisation
 	 */
-	startMasterMode() {
+startMasterMode() {
 		this.isMaster = true;
 		this.isSlaveActive = true; // GEÄNDERT: Master empfängt auch Updates
 
-		// Stoppe bestehende Intervalle
+		// Stoppe bestehende Intervalle/Timer
 		if (this.slaveCheckInterval) {
 			clearInterval(this.slaveCheckInterval);
 			this.slaveCheckInterval = null;
+		}
+		if (this.slavePollTimer) {
+			clearTimeout(this.slavePollTimer);
+			this.slavePollTimer = null;
 		}
 		this.stopPeriodicSync();
 
@@ -211,26 +227,31 @@ class ServerSync {
 	/**
 	 * NEUE METHODE: Startet Slave-Modus
 	 */
-	startSlaveMode() {
+startSlaveMode() {
 		this.isMaster = false;
 		this.isSlaveActive = true;
 
 		// Stoppe normale Sync falls aktiv
 		this.stopPeriodicSync();
 
-		// Cleanup bestehende Slave-Intervalle
+		// Cleanup bestehende Polling-Mechanismen
 		if (this.slaveCheckInterval) {
 			clearInterval(this.slaveCheckInterval);
 			this.slaveCheckInterval = null;
 		}
+		if (this.slavePollTimer) {
+			clearTimeout(this.slavePollTimer);
+			this.slavePollTimer = null;
+		}
 
-		// Starte Slave-Polling (nur Laden bei Änderungen)
-		this.slaveCheckInterval = setInterval(async () => {
-			await this.slaveCheckForUpdates();
-		}, 15000); // 15 Sekunden Polling-Intervall
+		// Initiale Annahme: vor kurzem Aktivität, poll schnell
+		this.lastServerChangeAt = Date.now();
+
+		// Starte adaptives Slave-Polling (nur Laden bei Änderungen)
+		this.scheduleAdaptiveSlavePoll();
 
 		console.log(
-			"👤 Slave-Modus gestartet - Polling für Updates alle 15 Sekunden aktiv"
+			"👤 Slave-Modus gestartet - Adaptives Polling aktiv (7s bei Aktivität, bis 30s bei Inaktivität)"
 		);
 		// HINWEIS: Initialer Load erfolgt bereits in initSync()
 
@@ -245,7 +266,7 @@ class ServerSync {
 	/**
 	 * NEUE METHODE: Slave prüft auf Server-Updates
 	 */
-	async slaveCheckForUpdates() {
+async slaveCheckForUpdates() {
 		if (!this.isSlaveActive) return;
 
 		try {
@@ -262,6 +283,7 @@ class ServerSync {
 				if (serverData && !serverData.error) {
 					await this.applyServerData(serverData);
 					this.lastServerTimestamp = currentServerTimestamp;
+					this.lastServerChangeAt = Date.now(); // record recent activity
 					console.log(
 						"✅ Slave: Server-Daten erfolgreich geladen und angewendet"
 					);
@@ -278,8 +300,13 @@ class ServerSync {
 			}
 		} catch (error) {
 			console.error("❌ Slave: Fehler beim Prüfen auf Updates:", error);
+		} finally {
+			// Re-schedule adaptive poll if in slave mode
+			if (this.isSlaveActive) {
+				this.scheduleAdaptiveSlavePoll();
+			}
 		}
-	}
+}
 
 	/**
 	 * Synchronisiert Daten mit dem Server (NUR Master-Modus)
@@ -660,6 +687,7 @@ class ServerSync {
 			setTimeout(() => {
 				this.isApplyingServerData = false;
 				window.isApplyingServerData = false;
+				this.lastServerChangeAt = Date.now(); // treat as recent activity for adaptive polling
 				console.log("🏁 Server-Sync abgeschlossen, Flag zurückgesetzt");
 
 				// Event-Handler nach Server-Load reaktivieren
@@ -1087,13 +1115,22 @@ class ServerSync {
 	/**
 	 * NEUE METHODE: Bereinigt alle Intervalle und Ressourcen
 	 */
-	destroy() {
+destroy() {
 		this.stopPeriodicSync();
 
 		if (this.slaveCheckInterval) {
 			clearInterval(this.slaveCheckInterval);
 			this.slaveCheckInterval = null;
 			console.log("🧹 Slave-Check-Intervall bereinigt");
+		}
+		if (this.slavePollTimer) {
+			clearTimeout(this.slavePollTimer);
+			this.slavePollTimer = null;
+			console.log("🧹 Adaptiver Slave-Poll-Timer bereinigt");
+		}
+		if (this.microSyncTimer) {
+			clearTimeout(this.microSyncTimer);
+			this.microSyncTimer = null;
 		}
 
 		this.serverSyncUrl = null;
@@ -1103,6 +1140,67 @@ class ServerSync {
 		this.isSlaveActive = false;
 
 		console.log("🧹 ServerSync vollständig bereinigt");
+}
+}
+
+
+/**
+ * Schedules a debounced micro-sync for master mode writes.
+ * Batches rapid changes (~0.9s) and avoids overlapping saves.
+ */
+scheduleMicroSync(reason = "field-change", delayMs = null) {
+	try {
+		if (!this.isMaster) {
+			console.log("⛔ scheduleMicroSync: not master – skipped", reason);
+			return false;
+		}
+		if (!this.serverSyncUrl) {
+			console.warn("⚠️ scheduleMicroSync: server URL not configured");
+			return false;
+		}
+		if (window.isSavingToServer) {
+			// a save is in-flight; allow it to finish, then next change will reschedule
+			return false;
+		}
+		// debounce
+		const d = typeof delayMs === 'number' ? delayMs : this.microSyncDelayMs;
+		if (this.microSyncTimer) {
+			clearTimeout(this.microSyncTimer);
+		}
+		this.microSyncTimer = setTimeout(async () => {
+			this.microSyncTimer = null;
+			try {
+				if (this.hasDataChanged()) {
+					await this.syncWithServer();
+				}
+			} catch (e) {
+				console.warn("⚠️ scheduleMicroSync failed:", e?.message || e);
+			}
+		}, Math.max(200, d));
+		return true;
+	} catch (e) {
+		console.warn("⚠️ scheduleMicroSync error:", e?.message || e);
+		return false;
+	}
+}
+
+/**
+ * Computes next adaptive slave poll delay and schedules a single-shot poll.
+ */
+scheduleAdaptiveSlavePoll() {
+	try {
+		if (!this.isSlaveActive) return;
+		const now = Date.now();
+		const since = now - (this.lastServerChangeAt || 0);
+		const withinRecent = since >= 0 && since < this.recentActivityWindowMs;
+		const nextDelay = withinRecent ? this.fastPollMs : this.slowPollMs;
+		if (this.slavePollTimer) clearTimeout(this.slavePollTimer);
+		this.slavePollTimer = setTimeout(async () => {
+			try { await this.slaveCheckForUpdates(); } catch (e) { /* noop */ }
+		}, nextDelay);
+		console.log(`⏱️ Adaptives Polling geplant in ${Math.round(nextDelay/1000)}s (recent=${withinRecent})`);
+	} catch (e) {
+		console.warn("⚠️ scheduleAdaptiveSlavePoll error:", e?.message || e);
 	}
 }
 

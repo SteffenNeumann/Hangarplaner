@@ -126,7 +126,7 @@ class HangarEventManager {
 	 * DEBOUNCED FIELD UPDATES
 	 * Verhindert zu häufige localStorage-Updates
 	 */
-	debouncedFieldUpdate(fieldId, value, delay = 500) {
+	debouncedFieldUpdate(fieldId, value, delay = 900) {
 		// Bestehenden Timer löschen
 		if (this.debounceTimers.has(fieldId)) {
 			clearTimeout(this.debounceTimers.get(fieldId));
@@ -185,7 +185,11 @@ class HangarEventManager {
 			}
 
 			// Bevor wir eine eigene POST-Anfrage bauen, bevorzugt über die zentrale ServerSync-Schicht schreiben
-			if (window.serverSync && typeof window.serverSync.syncWithServer === "function") {
+			if (window.serverSync && typeof window.serverSync.scheduleMicroSync === "function") {
+				// Schedule a debounced micro-sync to batch rapid edits
+				window.serverSync.scheduleMicroSync(fieldId);
+				return;
+			} else if (window.serverSync && typeof window.serverSync.syncWithServer === "function") {
 				await window.serverSync.syncWithServer();
 				return;
 			}

@@ -1457,6 +1457,16 @@ const AeroDataBoxAPI = (() => {
 				);
 			}
 
+			// Helper: normalize registration for tile comparison (adds hyphen after first char)
+			function normalizeRegForTiles(reg) {
+				if (!reg) return '';
+				let v = String(reg).toUpperCase();
+				if (v.length > 1 && !v.includes('-')) {
+					v = v.charAt(0) + '-' + v.substring(1);
+				}
+				return v;
+			}
+
 			// Nach Flügen mit dieser Aircraft Registration suchen
 			const matchingFlights = allFlights.filter((flight) => {
 				// Verschiedene mögliche Felder für Aircraft Registration prüfen
@@ -1467,7 +1477,9 @@ const AeroDataBoxAPI = (() => {
 					flight.aircraftRegistration ||
 					flight.registration;
 
-				return aircraftReg && aircraftReg.toUpperCase() === aircraft.id;
+				const aircraftRegNorm = aircraftReg ? normalizeRegForTiles(aircraftReg) : '';
+				const tileRegNorm = normalizeRegForTiles(aircraft.id);
+				return aircraftRegNorm && aircraftRegNorm === tileRegNorm;
 			});
 
 			if (config.debugMode) {
@@ -1509,10 +1521,9 @@ const AeroDataBoxAPI = (() => {
 									searchDate
 								);
 
-							if (
-								foundRegistration &&
-								foundRegistration.toUpperCase() === aircraft.id
-							) {
+						const foundNorm = normalizeRegForTiles(foundRegistration);
+						const tileNorm = normalizeRegForTiles(aircraft.id);
+						if (foundNorm && foundNorm === tileNorm) {
 								console.log(
 									`✅ MATCH GEFUNDEN: ${flightNumber} → ${foundRegistration} = ${aircraft.id}`
 								);
@@ -3380,18 +3391,63 @@ const AeroDataBoxAPI = (() => {
 				console.log(`🔎 === STEP 3: FLIGHT NUMBER TO REGISTRATION LOOKUP ===`);
 				let lookupSuccesses = 0;
 				let lookupFailures = 0;
+				// UI status hint so users can see that registration-by-flight lookup is running
+				try {
+					const count = unknownFlightNumbers.size;
+					updateFetchStatus(`Looking up registrations for ${count} flight number(s)...`, false);
+				} catch (e) { /* ignore UI status issues */ }
+
+				// Helper: robust resolver that tries provider (single day), provider (multi-day), then FlightRegistrationLookup
+				async function resolveRegistrationForFlightNumber(flightNumber, primaryDate, extraDates = []) {
+					const dates = Array.from(new Set([primaryDate, ...extraDates].filter(Boolean)));
+					// Try provider by exact date(s)
+					for (const date of dates) {
+						try {
+							const res = await (window.AeroDataBoxAPI?.getFlightByNumber
+								? window.AeroDataBoxAPI.getFlightByNumber(flightNumber, date)
+								: null);
+							if (res && res.registration) {
+								return { registration: res.registration, source: 'provider', dateTried: date };
+							}
+						} catch (e) {
+							// continue to next date
+						}
+					}
+					// Try small multi-day forward search (up to 3 days)
+					try {
+						const multi = await (window.AeroDataBoxAPI?.getFlightByNumberMultipleDays
+							? window.AeroDataBoxAPI.getFlightByNumberMultipleDays(flightNumber, primaryDate, 3)
+							: null);
+						if (Array.isArray(multi) && multi.length) {
+							const withReg = multi.find(x => x && x.registration);
+							if (withReg) {
+								return { registration: withReg.registration, source: 'provider-multiday', dateTried: withReg.date };
+							}
+						}
+					} catch (e) {}
+					// FlightRegistrationLookup fallback (can use multiple sources internally)
+					if (window.FlightRegistrationLookup?.lookupRegistration) {
+						try {
+							const reg = await window.FlightRegistrationLookup.lookupRegistration(flightNumber, primaryDate);
+							if (reg) {
+								return { registration: reg, source: 'lookup', dateTried: primaryDate };
+							}
+						} catch (e) {}
+					}
+					return null;
+				}
 
 				for (const flightNumber of unknownFlightNumbers) {
 					try {
 						updateFetchStatus(`Looking up registration for flight ${flightNumber}...`, false);
-						
-						// Use the getFlightByNumber function to lookup registration
-						const lookupResult = await this.getFlightByNumber(flightNumber, startDate);
-					
-						if (lookupResult.registration) {
-							const regUpper = normalizeRegForTiles(lookupResult.registration);
+						const flightMeta = unknownFlightData.get(flightNumber) || {};
+						const primaryDate = flightMeta.flightDate || startDate;
+						const altDates = [startDate, endDate];
+						const resolved = await resolveRegistrationForFlightNumber(flightNumber, primaryDate, altDates);
+
+						if (resolved && resolved.registration) {
+							const regUpper = normalizeRegForTiles(resolved.registration);
 							const flightData = unknownFlightData.get(flightNumber);
-							
 							// Create or get aircraft entry
 							if (!potentialOvernightFlights.has(regUpper)) {
 								potentialOvernightFlights.set(regUpper, { 
@@ -3401,13 +3457,11 @@ const AeroDataBoxAPI = (() => {
 									allFlights: []
 								});
 							}
-							
 							const aircraftData = potentialOvernightFlights.get(regUpper);
-							if (flightData.isDay1Arrival) aircraftData.arrivals.push(flightData.flight);
-							if (flightData.isDay2Departure) aircraftData.departures.push(flightData.flight);
-							aircraftData.allFlights.push(flightData.flight);
-							
-							console.log(`✅ Found registration ${regUpper} for flight ${flightNumber}`);
+							if (flightData?.isDay1Arrival) aircraftData.arrivals.push(flightData.flight);
+							if (flightData?.isDay2Departure) aircraftData.departures.push(flightData.flight);
+							if (flightData?.flight) aircraftData.allFlights.push(flightData.flight);
+							console.log(`✅ Found registration ${regUpper} for flight ${flightNumber} via ${resolved.source} (${resolved.dateTried})`);
 							lookupSuccesses++;
 						} else {
 							console.log(`❌ No registration found for flight ${flightNumber}`);

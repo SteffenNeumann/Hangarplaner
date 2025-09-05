@@ -572,11 +572,15 @@ function setupFlightDataEventHandlers() {
 			// Debug-Log
 			console.log("*** UPDATE DATA BUTTON WURDE GEKLICKT ***");
 
-			// Check API provider selection to determine behavior
+			// Force the new airport-first overnight processing for the Update action
+			// Rationale: This path includes the robust "flight number → registration" lookup and tile clearing logic
+			const selectedProvider = "overnight-flights";
+			console.log(`🔍 Selected API Provider forced to: ${selectedProvider}`);
+			// If a provider dropdown exists, reflect it visually but do not change behavior
+			try {
 				const apiProviderSelect = document.getElementById("apiProviderSelect");
-				// Default to overnight processing when provider select is absent
-				const selectedProvider = apiProviderSelect?.value || "overnight-flights";
-				console.log(`🔍 Selected API Provider: ${selectedProvider}`);
+				if (apiProviderSelect) apiProviderSelect.value = selectedProvider;
+			} catch (e) { /* ignore */ }
 
 			// Route to appropriate processing based on provider selection
 			if (selectedProvider === "overnight-flights") {

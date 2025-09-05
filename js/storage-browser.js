@@ -1111,12 +1111,72 @@ async slaveCheckForUpdates() {
 		);
 		console.log("=== END SYNC STATUS ===");
 	}
+	}
+
+	/**
+	 * Schedules a debounced micro-sync for master mode writes.
+	 * Batches rapid changes (~0.9s) and avoids overlapping saves.
+	 */
+	scheduleMicroSync(reason = "field-change", delayMs = null) {
+		try {
+			if (!this.isMaster) {
+				console.log("⛔ scheduleMicroSync: not master – skipped", reason);
+				return false;
+			}
+			if (!this.serverSyncUrl) {
+				console.warn("⚠️ scheduleMicroSync: server URL not configured");
+				return false;
+			}
+			if (window.isSavingToServer) {
+				// a save is in-flight; allow it to finish, then next change will reschedule
+				return false;
+			}
+			// debounce
+			const d = typeof delayMs === 'number' ? delayMs : this.microSyncDelayMs;
+			if (this.microSyncTimer) {
+				clearTimeout(this.microSyncTimer);
+			}
+			this.microSyncTimer = setTimeout(async () => {
+				this.microSyncTimer = null;
+				try {
+					if (this.hasDataChanged()) {
+						await this.syncWithServer();
+					}
+				} catch (e) {
+					console.warn("⚠️ scheduleMicroSync failed:", e?.message || e);
+				}
+			}, Math.max(200, d));
+			return true;
+		} catch (e) {
+			console.warn("⚠️ scheduleMicroSync error:", e?.message || e);
+			return false;
+		}
+	}
+
+	/**
+	 * Computes next adaptive slave poll delay and schedules a single-shot poll.
+	 */
+	scheduleAdaptiveSlavePoll() {
+		try {
+			if (!this.isSlaveActive) return;
+			const now = Date.now();
+			const since = now - (this.lastServerChangeAt || 0);
+			const withinRecent = since >= 0 && since < this.recentActivityWindowMs;
+			const nextDelay = withinRecent ? this.fastPollMs : this.slowPollMs;
+			if (this.slavePollTimer) clearTimeout(this.slavePollTimer);
+			this.slavePollTimer = setTimeout(async () => {
+				try { await this.slaveCheckForUpdates(); } catch (e) { /* noop */ }
+			}, nextDelay);
+			console.log(`⏱️ Adaptives Polling geplant in ${Math.round(nextDelay/1000)}s (recent=${withinRecent})`);
+		} catch (e) {
+			console.warn("⚠️ scheduleAdaptiveSlavePoll error:", e?.message || e);
+		}
+	}
 
 	/**
 	 * NEUE METHODE: Bereinigt alle Intervalle und Ressourcen
 	 */
-destroy() {
-		this.stopPeriodicSync();
+	destroy() {
 
 		if (this.slaveCheckInterval) {
 			clearInterval(this.slaveCheckInterval);
@@ -1143,66 +1203,6 @@ destroy() {
 }
 }
 
-
-/**
- * Schedules a debounced micro-sync for master mode writes.
- * Batches rapid changes (~0.9s) and avoids overlapping saves.
- */
-scheduleMicroSync(reason = "field-change", delayMs = null) {
-	try {
-		if (!this.isMaster) {
-			console.log("⛔ scheduleMicroSync: not master – skipped", reason);
-			return false;
-		}
-		if (!this.serverSyncUrl) {
-			console.warn("⚠️ scheduleMicroSync: server URL not configured");
-			return false;
-		}
-		if (window.isSavingToServer) {
-			// a save is in-flight; allow it to finish, then next change will reschedule
-			return false;
-		}
-		// debounce
-		const d = typeof delayMs === 'number' ? delayMs : this.microSyncDelayMs;
-		if (this.microSyncTimer) {
-			clearTimeout(this.microSyncTimer);
-		}
-		this.microSyncTimer = setTimeout(async () => {
-			this.microSyncTimer = null;
-			try {
-				if (this.hasDataChanged()) {
-					await this.syncWithServer();
-				}
-			} catch (e) {
-				console.warn("⚠️ scheduleMicroSync failed:", e?.message || e);
-			}
-		}, Math.max(200, d));
-		return true;
-	} catch (e) {
-		console.warn("⚠️ scheduleMicroSync error:", e?.message || e);
-		return false;
-	}
-}
-
-/**
- * Computes next adaptive slave poll delay and schedules a single-shot poll.
- */
-scheduleAdaptiveSlavePoll() {
-	try {
-		if (!this.isSlaveActive) return;
-		const now = Date.now();
-		const since = now - (this.lastServerChangeAt || 0);
-		const withinRecent = since >= 0 && since < this.recentActivityWindowMs;
-		const nextDelay = withinRecent ? this.fastPollMs : this.slowPollMs;
-		if (this.slavePollTimer) clearTimeout(this.slavePollTimer);
-		this.slavePollTimer = setTimeout(async () => {
-			try { await this.slaveCheckForUpdates(); } catch (e) { /* noop */ }
-		}, nextDelay);
-		console.log(`⏱️ Adaptives Polling geplant in ${Math.round(nextDelay/1000)}s (recent=${withinRecent})`);
-	} catch (e) {
-		console.warn("⚠️ scheduleAdaptiveSlavePoll error:", e?.message || e);
-	}
-}
 
 // Globale Instanz für Kompatibilität
 window.serverSync = new ServerSync();

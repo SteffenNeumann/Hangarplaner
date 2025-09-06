@@ -81,6 +81,24 @@
           }
         } catch (e) {}
       });
+      // Re-assert theme on BFCache return
+      (function(){
+        function syncTheme(){
+          try {
+            var t = (localStorage.getItem('hangar.theme')||'').toLowerCase();
+            var isDark = false;
+            if (t === 'dark') isDark = true; else if (t === 'light') isDark = false; else {
+              try {
+                var raw = localStorage.getItem('displayOptions');
+                if (raw) { var parsed = JSON.parse(raw); if (parsed && parsed.darkMode) isDark = true; }
+              } catch(e){}
+            }
+            document.documentElement.classList.toggle('dark-mode', isDark);
+            if (document.body) document.body.classList.toggle('dark-mode', isDark);
+          } catch(e){}
+        }
+        window.addEventListener('pageshow', syncTheme);
+      })();
     </script>
   </head>
   <body class="bg-industrial-dark text-white font-sans">

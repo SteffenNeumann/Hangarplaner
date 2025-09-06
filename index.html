@@ -3052,34 +3052,40 @@ type="datetime-local"
 		<div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
 
 		<!-- Ensure theme/toggle stay in sync even on BFCache back-navigation -->
-		<script>
-			(function(){
-				function syncThemeAndToggle(){
-					try {
-						var t = (localStorage.getItem('hangar.theme')||'').toLowerCase();
-						var isDark = false;
-						if (t === 'dark') isDark = true; else if (t === 'light') isDark = false; else {
-							try {
-								var raw = localStorage.getItem('displayOptions');
-								if (raw) {
-									var parsed = JSON.parse(raw);
-									if (parsed && parsed.darkMode) isDark = true;
-								}
-							} catch(e) {}
-						}
-						// Apply to DOM
-						document.documentElement.classList.toggle('dark-mode', isDark);
-						if (document.body) document.body.classList.toggle('dark-mode', isDark);
-						// Reflect in toggle if present
-						var toggle = document.getElementById('darkModeToggle');
-						if (toggle) toggle.checked = isDark;
-					} catch (e) { /* noop */ }
-				}
-				// Run on pageshow (covers BFCache), and once after DOM ready as safety
-				window.addEventListener('pageshow', syncThemeAndToggle);
-				document.addEventListener('DOMContentLoaded', function(){ setTimeout(syncThemeAndToggle, 0); });
-			})();
-		</script>
+        <script>
+            (function(){
+                function syncThemeAndToggle(){
+                    try {
+                        var t = (localStorage.getItem('hangar.theme')||'').toLowerCase();
+                        var isDark = false;
+                        if (t === 'dark') isDark = true; else if (t === 'light') isDark = false; else {
+                            try {
+                                var raw = localStorage.getItem('displayOptions');
+                                if (raw) {
+                                    var parsed = JSON.parse(raw);
+                                    if (parsed && parsed.darkMode) isDark = true;
+                                }
+                            } catch(e) {}
+                        }
+                        // Apply to DOM
+                        document.documentElement.classList.toggle('dark-mode', isDark);
+                        if (document.body) document.body.classList.toggle('dark-mode', isDark);
+                        // Reflect in toggle if present
+                        var toggle = document.getElementById('darkModeToggle');
+                        if (toggle) toggle.checked = isDark;
+                        // Also align displayOptions state if available (keeps UI consistent after BFCache)
+                        try {
+                            if (window.displayOptions && window.displayOptions.current) {
+                                window.displayOptions.current.darkMode = !!isDark;
+                            }
+                        } catch (e) { /* noop */ }
+                    } catch (e) { /* noop */ }
+                }
+                // Run on pageshow (covers BFCache), and once after DOM ready as safety
+                window.addEventListener('pageshow', syncThemeAndToggle);
+                document.addEventListener('DOMContentLoaded', function(){ setTimeout(syncThemeAndToggle, 0); });
+            })();
+        </script>
 
 		<!-- Persist Export submenu selections across sessions -->
 		<script>

@@ -1181,19 +1181,28 @@ window.hangarInitQueue = window.hangarInitQueue || [];
 window.hangarInitQueue.push(async function () {
 	console.log("🔄 Server-Sync wird über zentrale Initialisierung gestartet...");
 
-	// PRODUKTIONS-Server-URL für hangarplanner.de
-	const productionServerUrl = "https://hangarplanner.de/sync/data.php";
+	// PRODUKTIONS-Server-URL (korrekte Domain)
+	const productionServerUrl = "https://hangarplaner.de/sync/data.php";
 
-	// Fallback für lokale Entwicklung
+	// Bevorzugt: gleiches Origin (vermeidet CORS)
 	const localServerUrl = window.location.origin + "/sync/data.php";
 
-	// Prüfe auf Server-Konfiguration oder verwende Produktions-URL
-	let serverUrl = localStorage.getItem("hangarServerSyncUrl");
+	// Prüfe auf Server-Konfiguration oder wähle sinnvolle Defaults
+	let serverUrl = localStorage.getItem("hangarServerSyncUrl") || "";
 
-	// Wenn keine URL gespeichert ist, verwende Produktions-URL
+	// Legacy-Korrektur: falsche Domain automatisch auf aktuellen Host korrigieren
+	try {
+		const host = window.location.hostname || "";
+		if (serverUrl.includes("hangarplanner.de") && host.includes("hangarplaner.de")) {
+			serverUrl = localServerUrl;
+			console.log("🔧 Korrigiere gespeicherte Server-URL auf lokalen Host:", serverUrl);
+		}
+	} catch (e) { /* noop */ }
+
+	// Wenn keine URL gespeichert ist, verwende bevorzugt das gleiche Origin
 	if (!serverUrl) {
-		serverUrl = productionServerUrl;
-		console.log("🌐 Verwende Produktions-Server:", productionServerUrl);
+		serverUrl = localServerUrl || productionServerUrl;
+		console.log("🌐 Verwende Server:", serverUrl);
 	} else {
 		console.log("💾 Verwende gespeicherte Server-URL:", serverUrl);
 	}

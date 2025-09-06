@@ -1146,10 +1146,24 @@ default: // "standalone"
 			return false;
 		}
 
-		// Prüfe ob Server-URL konfiguriert ist
+		// Prüfe ob Server-URL konfiguriert ist; warte kurz auf Initialisierung
 		if (!window.serverSync.serverSyncUrl) {
-			console.warn("⚠️ Server-URL nicht konfiguriert - keine Server-Datenladung möglich");
-			return false;
+			console.warn("⚠️ Server-URL nicht konfiguriert - warte auf Initialisierung...");
+			const ready = await new Promise((resolve) => {
+				let waited = 0;
+				const iv = setInterval(() => {
+					if (window.serverSync && window.serverSync.serverSyncUrl) {
+						clearInterval(iv);
+						resolve(true);
+					}
+					waited += 100;
+					if (waited >= 2500) { clearInterval(iv); resolve(false); }
+				}, 100);
+			});
+			if (!ready) {
+				console.warn("⚠️ Server-URL weiterhin nicht konfiguriert - überspringe sofortige Ladung");
+				return false;
+			}
 		}
 
 		try {

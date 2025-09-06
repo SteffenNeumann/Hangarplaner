@@ -758,29 +758,76 @@ const AirportFlights = (() => {
 		const arrHHMM = flight.arrival ? extractHHMM(flight.arrival.scheduledTime) : '';
 		const depHHMM = flight.departure ? extractHHMM(flight.departure.scheduledTime) : '';
 
+		// Bestimme Lookup-Datum (YYYY-MM-DD) für on-demand Auflösung
+		let dateStrForLookup = (function(){
+			try {
+				if (pointData && pointData.scheduledTime) {
+					if (typeof pointData.scheduledTime === 'object') {
+						if (pointData.scheduledTime.utc && pointData.scheduledTime.utc.length >= 10) return pointData.scheduledTime.utc.substring(0,10);
+						if (pointData.scheduledTime.local && pointData.scheduledTime.local.length >= 10) return pointData.scheduledTime.local.substring(0,10);
+					}
+					if (typeof pointData.scheduledTime === 'string') {
+						const d = new Date(pointData.scheduledTime);
+						if (!isNaN(d.getTime())) return d.toISOString().substring(0,10);
+					}
+				}
+				const di = document.getElementById('flightDateInput');
+				if (di && di.value) return di.value;
+			} catch(e) {}
+			return new Date().toISOString().substring(0,10);
+		})();
+		const flightNumNorm = String(flightNumber || '').replace(/\s+/g,'');
+
 		// Zelleninhalte erstellen - geänderte Reihenfolge (erst Registrierung, dann Flugnummer) und Action-Spalte
 		row.innerHTML = `
 			<td>
-				<span class="flight-reg">${registration}</span>
+				<span class=\"flight-reg\">${registration}</span>
 			</td>
 			<td>
-				<span class="flight-number">${flightNumber}</span>
+				<span class=\"flight-number\">${flightNumber}</span>
 			</td>
 			<td>
-				<span class="flight-time">${timeText}</span>
+				<span class=\"flight-time\">${timeText}</span>
 			</td>
 			<td>${otherAirport}</td>
 			<td>
-				<span class="flight-status ${statusClass}">${status}</span>
+				<span class=\"flight-status ${statusClass}\">${status}</span>
 			</td>
 			<td>
 				${hasReg
 					? `<button class=\"text-green-600 hover:text-green-800\" onclick=\"AirportFlights.useInHangar('${registration}','${arrHHMM}','${depHHMM}')\" title=\"In HangarPlanner verwenden\">\n\t\t\t\t\t\t<svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">\n\t\t\t\t\t\t\t<path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 6v6m0 0v6m0-6h6m-6 0H6\"></path>\n\t\t\t\t\t\t</svg>\n\t\t\t\t\t</button>`
-					: `<span class=\"text-gray-400\" title=\"Keine Registrierung\">—</span>`}
+					: `<button class=\"text-blue-600 hover:text-blue-800\" onclick=\"AirportFlights.resolveRegistration('${flightNumNorm}','${dateStrForLookup}', this)\" title=\"Resolve registration\">🔍</button>`}
 			</td>
 		`;
 
 		return row;
+	};
+
+	// On-demand: resolve a single row's registration by flight number and date
+	const resolveRegistration = async (flightNumber, dateStr, btn) => {
+		try {
+			if (!window.FlightRegistrationLookup?.lookupRegistration) return;
+			if (!flightNumber || !dateStr) return;
+			const tr = btn.closest('tr');
+			const regCell = tr ? tr.querySelector('.flight-reg') : null;
+			btn.disabled = true;
+			const prev = btn.textContent;
+			btn.textContent = '…';
+			let reg = window.FlightRegistrationLookup.getCachedRegistration?.(flightNumber, dateStr) || null;
+			if (!reg) reg = await window.FlightRegistrationLookup.lookupRegistration(flightNumber, dateStr);
+			if (reg && regCell) {
+				regCell.textContent = reg;
+				btn.textContent = '✓';
+				btn.classList.remove('text-blue-600');
+				btn.classList.add('text-green-600');
+			} else {
+				btn.textContent = prev;
+				btn.disabled = false;
+			}
+		} catch (e) {
+			btn.disabled = false;
+			btn.textContent = '🔍';
+		}
 	};
 
 	// Aktion: Flugzeug im HangarPlanner verwenden (wie Fleet Database)
@@ -912,6 +959,7 @@ const AirportFlights = (() => {
 		displayAirportFlights,
 		init,
 		useInHangar,
+		resolveRegistration,
 	};
 })();
 

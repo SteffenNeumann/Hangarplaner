@@ -1958,23 +1958,123 @@ document.addEventListener("DOMContentLoaded", function () {
 	}
 });
 window.hangarData.saveCurrentStateToLocalStorage = function () {
-	// DEAKTIVIERT: localStorage-Speicherung zur Konfliktvermeidung
-	console.log("💾 localStorage-Speicherung deaktiviert (Konfliktvermeidung)");
+	try {
+		// Sammle aktuellen Zustand im Legacy- und im neuen Format
+		const tilesLegacy = [];
+		// Erzeuge Legacy tileValues Einträge mit cellId
+		document.querySelectorAll('#hangarGrid .hangar-cell').forEach((cell, idx) => {
+			const cellId = idx + 1;
+			tilesLegacy.push({
+				cellId,
+				position: document.getElementById(`hangar-position-${cellId}`)?.value || "",
+				aircraftId: document.getElementById(`aircraft-${cellId}`)?.value || "",
+				status: document.getElementById(`status-${cellId}`)?.value || "neutral",
+				towStatus: document.getElementById(`tow-status-${cellId}`)?.value || "neutral",
+				notes: document.getElementById(`notes-${cellId}`)?.value || "",
+				arrivalTime: document.getElementById(`arrival-time-${cellId}`)?.value || "",
+				departureTime: document.getElementById(`departure-time-${cellId}`)?.value || "",
+			});
+		});
+		document.querySelectorAll('#secondaryHangarGrid .hangar-cell').forEach((cell, idx) => {
+			const cellId = 101 + idx;
+			tilesLegacy.push({
+				cellId,
+				position: document.getElementById(`hangar-position-${cellId}`)?.value || "",
+				aircraftId: document.getElementById(`aircraft-${cellId}`)?.value || "",
+				status: document.getElementById(`status-${cellId}`)?.value || "neutral",
+				towStatus: document.getElementById(`tow-status-${cellId}`)?.value || "neutral",
+				notes: document.getElementById(`notes-${cellId}`)?.value || "",
+				arrivalTime: document.getElementById(`arrival-time-${cellId}`)?.value || "",
+				departureTime: document.getElementById(`departure-time-${cellId}`)?.value || "",
+			});
+		});
 
-	// Optional: Sammle Daten für Debugging
-	const projectData = {
-		projectName:
-			document.getElementById("projectName")?.value ||
-			generateDefaultProjectName(),
-		lastSaved: new Date().toISOString(),
-		tilesData: collectTilesData(),
-		settings: collectSettingsData(),
-	};
+		// Legacy settings payload for compatibility with initializeUI() restore helpers
+		const legacySettings = {
+			tilesCount: parseInt(document.getElementById('tilesCount')?.value) || 12,
+			secondaryTilesCount: parseInt(document.getElementById('secondaryTilesCount')?.value) || 0,
+			layout: parseInt(document.getElementById('layoutType')?.value) || 4,
+			tileValues: tilesLegacy,
+			lastSaved: new Date().toISOString(),
+		};
+		try { localStorage.setItem('hangarPlannerSettings', JSON.stringify(legacySettings)); } catch (e) {}
 
-	// In-Memory-Cache für Debugging
-	window.currentProjectState = projectData;
-	console.log("📋 Aktueller Zustand im Memory-Cache gespeichert:", projectData);
+		// New autosave payload (project-like format)
+		const projectData = {
+			metadata: {
+				projectName: document.getElementById('projectName')?.value || generateDefaultProjectName(),
+				lastModified: new Date().toISOString(),
+			},
+			tilesData: (function(){
+				const all = [];
+				tilesLegacy.forEach(t => {
+					all.push({
+						id: t.cellId,
+						position: t.position,
+						aircraftId: t.aircraftId,
+						status: t.status,
+						towStatus: t.towStatus,
+						notes: t.notes,
+						arrivalTime: t.arrivalTime,
+						departureTime: t.departureTime,
+						positionInfoGrid: document.getElementById(`position-${t.cellId}`)?.value || "",
+					});
+				});
+				return all;
+			})(),
+			settings: collectSettingsData(),
+		};
+		try { localStorage.setItem('hangarPlanner.autosave.v1', JSON.stringify(projectData)); } catch (e) {}
+
+		// In-Memory-Cache für Debugging
+		window.currentProjectState = projectData;
+		console.log("💾 Autosave gespeichert (localStorage)");
+	} catch (e) {
+		console.warn('⚠️ Autosave fehlgeschlagen:', e);
+	}
 };
+
+// Lädt lokalen Autosave und wendet ihn an (falls verfügbar)
+window.hangarData.loadFromLocalAutosave = function(){
+	try {
+		if (window.isApplyingServerData || window.isLoadingServerData) return false;
+		const raw = localStorage.getItem('hangarPlanner.autosave.v1');
+		if (!raw) return false;
+		const data = JSON.parse(raw);
+		if (!data || (typeof data !== 'object')) return false;
+		// Wende Projektformat an
+		if (typeof applyProjectData === 'function') {
+			applyProjectData(data);
+			console.log('✅ Lokaler Autosave angewendet');
+			return true;
+		}
+		return false;
+	} catch (e) { console.warn('Autosave laden fehlgeschlagen', e); return false; }
+};
+
+// Installiert Change-Handler, die bei Änderungen automatisch speichern (debounced)
+(function(){
+	let saveTimer = null;
+	function requestAutosave(){
+		clearTimeout(saveTimer);
+		saveTimer = setTimeout(() => { try { window.hangarData.saveCurrentStateToLocalStorage(); } catch(e){} }, 400);
+	}
+	function install(){
+		const root1 = document.getElementById('hangarGrid');
+		const root2 = document.getElementById('secondaryHangarGrid');
+		[root1, root2].forEach(root => {
+			if (!root || root.__autosaveInstalled) return;
+			root.addEventListener('input', requestAutosave, { passive: true });
+			root.addEventListener('change', requestAutosave, { passive: true });
+			root.__autosaveInstalled = true;
+		});
+	}
+	// Zentrale Init-Queue nutzen
+	window.hangarInitQueue = window.hangarInitQueue || [];
+	window.hangarInitQueue.push(function(){ install(); /* frühes Restore, falls gewünscht */ try { window.hangarData.loadFromLocalAutosave(); } catch(e){} });
+	// Auch beim BFCache zurück (Safari/Firefox) die UI synchron halten
+	window.addEventListener('pageshow', function(){ try { window.hangarData.loadFromLocalAutosave(); } catch(e){} });
+})();
 
 /**
  * ZENTRALE DATENKOORDINATION - Ersetzt localStorage-basierte Ladelogik

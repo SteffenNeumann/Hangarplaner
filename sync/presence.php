@@ -73,6 +73,69 @@ function cleanup_expired($users, $ttlSeconds) {
     return $out;
 }
 
+// Atomic read-modify-write with file lock to avoid overwrite races
+function update_presence_atomic($file, $ttlSeconds, $mutator, $reqId = '') {
+    $dir = dirname($file);
+    if (!is_dir($dir)) {
+        if (!@mkdir($dir, 0777, true)) {
+            presence_log("$reqId ERROR mkdir failed for " . $dir . " err=" . json_encode(error_get_last()));
+            return false;
+        }
+    }
+    $fp = @fopen($file, 'c+'); // create if not exists, read/write
+    if (!$fp) {
+        presence_log("$reqId ERROR fopen failed for file=" . $file . " err=" . json_encode(error_get_last()));
+        return false;
+    }
+    try {
+        if (!@flock($fp, LOCK_EX)) {
+            presence_log("$reqId ERROR flock LOCK_EX failed for file=" . $file);
+            @fclose($fp);
+            return false;
+        }
+        // Read current content under lock
+        @rewind($fp);
+        $raw = '';
+        while (!feof($fp)) {
+            $chunk = fread($fp, 8192);
+            if ($chunk === false) break;
+            $raw .= $chunk;
+        }
+        $data = json_decode($raw, true);
+        $users = (is_array($data) && isset($data['users']) && is_array($data['users'])) ? $data['users'] : [];
+        $before = count($users);
+        $users = cleanup_expired($users, $ttlSeconds);
+        // Use associative map keyed by sessionId to avoid duplicates and ease merge
+        $map = [];
+        foreach ($users as $u) { if (isset($u['sessionId'])) { $map[$u['sessionId']] = $u; } }
+        // Apply mutator; it should modify $map by reference
+        $mutator($map);
+        // Rebuild users array
+        $users = array_values($map);
+        // Write back
+        $payload = json_encode(['users' => $users], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        if ($payload === false) $payload = '{"users":[]}';
+        @ftruncate($fp, 0);
+        @rewind($fp);
+        $wrote = @fwrite($fp, $payload);
+        @fflush($fp);
+        @flock($fp, LOCK_UN);
+        @fclose($fp);
+        if ($wrote === false) {
+            presence_log("$reqId ERROR fwrite failed for file=" . $file . " err=" . json_encode(error_get_last()));
+            return false;
+        }
+        @chmod($file, 0664);
+        presence_log("$reqId ATOMIC update users_before=$before users_after=" . count($users));
+        return $users;
+    } catch (Throwable $t) {
+        @flock($fp, LOCK_UN);
+        @fclose($fp);
+        presence_log("$reqId EXCEPTION atomic update: " . $t->getMessage());
+        return false;
+    }
+}
+
 $method = $_SERVER['REQUEST_METHOD'];
 $reqId = bin2hex(random_bytes(4));
 presence_log("$reqId BEGIN method=" . $method . " uri=" . ($_SERVER['REQUEST_URI'] ?? '-') . " ip=" . ($_SERVER['REMOTE_ADDR'] ?? '-'));
@@ -101,54 +164,26 @@ if ($method === 'POST') {
         if (!in_array($role, ['master','sync','standalone'])) $role = 'standalone';
         $page = isset($body['page']) ? substr(trim($body['page']), 0, 120) : '';
 
-        // Read current users, cleanup expired
-        $users = read_presence($presenceFile);
-        $users_before = count($users);
-        $users = cleanup_expired($users, $TTL_SECONDS);
-
+        // Atomic update to avoid overwrite races
         $now = time();
-        $updated = false;
-
-        if ($action === 'leave') {
-            // Remove this session explicitly
-            $new = [];
-            foreach ($users as $u) {
-                if (!isset($u['sessionId']) || $u['sessionId'] !== $sessionId) $new[] = $u;
-            }
-            $removed = (count($users) - count($new));
-            $users = $new;
-            $updated = true;
-            presence_log("$reqId LEAVE sessionId=$sessionId removed=$removed users_before=$users_before users_after=" . count($users));
-        } else { // heartbeat default
-            $found = false;
-            foreach ($users as &$u) {
-                if (isset($u['sessionId']) && $u['sessionId'] === $sessionId) {
-                    $u['displayName'] = $displayName;
-                    $u['role'] = $role;
-                    $u['page'] = $page;
-                    $u['lastSeen'] = $now;
-                    $found = true;
-                    break;
-                }
-            }
-            unset($u);
-            if (!$found) {
-                $users[] = [
+        $users = update_presence_atomic($presenceFile, $TTL_SECONDS, function (&$map) use ($action, $sessionId, $displayName, $role, $page, $now, $reqId) {
+            if ($action === 'leave') {
+                if (isset($map[$sessionId])) unset($map[$sessionId]);
+                presence_log("$reqId LEAVE sessionId=$sessionId");
+            } else {
+                $map[$sessionId] = [
                     'sessionId' => $sessionId,
                     'displayName' => $displayName,
                     'role' => $role,
                     'page' => $page,
                     'lastSeen' => $now,
                 ];
+                presence_log("$reqId HEARTBEAT sessionId=$sessionId role=$role page=$page");
             }
-            $updated = true;
-            presence_log("$reqId HEARTBEAT sessionId=$sessionId found=" . ($found ? '1' : '0') . " users_before=$users_before users_after=" . count($users));
-        }
+        }, $reqId);
 
-        if ($updated) {
-            if (!write_presence($presenceFile, $users)) {
-                presence_log("$reqId ERROR write_presence failed");
-            }
+        if ($users === false) {
+            throw new Exception('Atomic presence update failed');
         }
 
         // Respond with current active list

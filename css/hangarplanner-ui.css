@@ -1264,7 +1264,7 @@ input:checked + .toggle-slider:before {
 	--bg-primary: #202224; /* Main */
 	--bg-secondary: #303437; /* Secondary */
 	--bg-tertiary: #303437; /* Small menu uses secondary */
-	--bg-input: #202224; /* Inputs default to main */
+	--bg-input: #303437; /* Inputs use secondary for uniform tile look */
 
 	/* Klare Textfarben-Hierarchie */
 	--text-primary: #f7fafc; /* Primärer Text (Aircraft ID) */
@@ -1273,9 +1273,9 @@ input:checked + .toggle-slider:before {
 	--text-muted: #718096; /* Placeholder Text */
 
 	/* Einheitliche UI-Elemente */
-	--card-bg: #202224; /* Tile/body surfaces = main */
+	--card-bg: #303437; /* Tiles match header background */
 	--card-header-bg: #303437; /* Tile header = secondary */
-	--input-bg: #202224; /* Inputs default to main */
+	--input-bg: #303437; /* Inputs align with tiles */
 	--input-text: #e2e8f0; /* Input-Text */
 	--border-color: #303437; /* Borders use secondary */
 
@@ -1424,7 +1424,7 @@ body.dark-mode {
 }
 
 .dark-mode .aircraft-id {
-	background-color: var(--dark-card) !important;
+	background-color: var(--input-bg) !important;
 	color: var(--text-primary);
 	border: none !important;
 	font-weight: 700;
@@ -1450,15 +1450,15 @@ body.dark-mode {
  }
 
 /* Subtle hover/focus to keep usability without strong borders */
- .dark-mode .aircraft-id:hover,
+.dark-mode .aircraft-id:hover,
  .dark-mode .info-input:hover,
  .dark-mode .position-input:hover,
  .dark-mode .notes-textarea:hover,
  .dark-mode .status-selector:hover,
  .dark-mode select.status-selector:hover,
  .dark-mode .tow-status-selector:hover {
- 	background-color: rgba(255, 255, 255, 0.03) !important;
- 	border-color: rgba(255, 255, 255, 0.12) !important; /* subtle hover border to reveal inputs */
+ 	background-color: rgba(255, 255, 255, 0.03) !important; /* subtle hover background only */
+ 	border-color: transparent !important;
  }
 .dark-mode .info-input:focus,
 .dark-mode .position-input:focus,
@@ -2480,9 +2480,12 @@ body.dark-mode {
 }
 .presence-name-input::placeholder { color: #64748b; opacity: 0.7; }
 .dark-mode .presence-name-input::placeholder { color: var(--text-secondary); opacity: 0.6; }
-.dark-mode .presence-name-input { color: var(--text-secondary); }
+.dark-mode .presence-name-input { color: var(--text-secondary); border: none !important; }
 .presence-name-input:focus { outline: none; border-bottom: 1px solid #cbd5e1; }
-.dark-mode .presence-name-input:focus { border-bottom-color: var(--border-color); }
+.dark-mode .presence-name-input:focus { border: none !important; outline: none !important; }
+/* Explicit id selector as requested */
+.dark-mode #presenceNameInput { border: none !important; }
+.dark-mode #presenceNameInput:focus { border: none !important; outline: none !important; }
 
 /* Users list truncation and layout */
 #presenceNames { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }

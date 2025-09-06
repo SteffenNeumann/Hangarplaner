@@ -520,17 +520,31 @@ const AirportFlights = (() => {
 				return reg || null;
 			}
 
+			// Build a deduplicated, prioritized candidate set
+			const candidateMap = new Map(); // key -> { flightNumber, dateStr, timeMs, flights: [] }
+			const getTimeMsFromSched = (sched) => {
+				try {
+					if (sched && typeof sched === 'object') {
+						const s = typeof sched.utc === 'string' ? sched.utc : (typeof sched.local === 'string' ? sched.local : null);
+						if (s) {
+							const t = Date.parse(s);
+							if (!isNaN(t)) return t;
+						}
+					} else if (typeof sched === 'string') {
+						const t = Date.parse(sched);
+						if (!isNaN(t)) return t;
+					}
+				} catch (e) {}
+				return Number.POSITIVE_INFINITY;
+			};
+
 			for (const f of flights) {
-				// Skip when registration is already present
-				const existingReg = (f && (
-					f.aircraft?.reg || f.aircraft?.registration || f.aircraftRegistration || f.registration
-				));
+				const existingReg = (f && (f.aircraft?.reg || f.aircraft?.registration || f.aircraftRegistration || f.registration));
 				if (existingReg && String(existingReg).trim() !== '') continue;
 
-				const flightNum = f?.number;
-				if (!flightNum || String(flightNum).trim() === '') continue;
+				const flightNumRaw = f?.number;
+				if (!flightNumRaw || String(flightNumRaw).trim() === '') continue;
 
-				// Determine date for lookup from scheduled time (prefer UTC), with sensible fallback
 				let dateStr = null;
 				const sched = isArrival ? f?.arrival?.scheduledTime : f?.departure?.scheduledTime;
 				try {
@@ -547,17 +561,37 @@ const AirportFlights = (() => {
 				} catch (e) {}
 				if (!dateStr) dateStr = fallbackDate;
 
-				try {
-					const resolved = await resolveRegistration(flightNum, dateStr);
-					if (resolved) {
-						// Ensure downstream code can read the registration consistently
-						if (!f.aircraft) f.aircraft = {};
-						if (!f.aircraft.reg) f.aircraft.reg = resolved;
-						if (!f.aircraftRegistration) f.aircraftRegistration = resolved;
-					}
-				} catch (e) {
-					console.warn('[AirportFlights] Registration resolution failed:', e?.message || e);
+				const timeMs = getTimeMsFromSched(sched);
+				const flightNumber = toNormFlight(flightNumRaw);
+				const key = `${flightNumber}_${dateStr}`;
+				if (!candidateMap.has(key)) {
+					candidateMap.set(key, { flightNumber, dateStr, timeMs, flights: [] });
 				}
+				candidateMap.get(key).flights.push(f);
+			}
+
+			const MAX_LOOKUPS = 30;
+			const CONCURRENCY = 4;
+			const candidates = Array.from(candidateMap.values())
+				.sort((a, b) => a.timeMs - b.timeMs)
+				.slice(0, MAX_LOOKUPS);
+
+			for (let i = 0; i < candidates.length; i += CONCURRENCY) {
+				const batch = candidates.slice(i, i + CONCURRENCY);
+				await Promise.all(batch.map(async (c) => {
+					try {
+						const resolved = await resolveRegistration(c.flightNumber, c.dateStr);
+						if (resolved) {
+							c.flights.forEach((f) => {
+								if (!f.aircraft) f.aircraft = {};
+								if (!f.aircraft.reg) f.aircraft.reg = resolved;
+								if (!f.aircraftRegistration) f.aircraftRegistration = resolved;
+							});
+						}
+					} catch (e) {
+						console.warn('[AirportFlights] Registration resolution failed:', e?.message || e);
+					}
+				}));
 			}
 		} catch (e) {
 			console.warn('[AirportFlights] prefillMissingRegistrations failed:', e?.message || e);

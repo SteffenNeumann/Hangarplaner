@@ -2477,3 +2477,9 @@ body.dark-mode {
 .dark-mode .presence-name-input::placeholder { color: var(--text-secondary); opacity: 0.6; }
 .presence-name-input:focus { outline: none; border-bottom: 1px solid #cbd5e1; }
 .dark-mode .presence-name-input:focus { border-bottom-color: var(--border-color); }
+
+/* Users list truncation and layout */
+#presenceNames { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.presence-user { display: inline-flex; align-items: center; gap: 6px; }
+.presence-sep { color: #94a3b8; }
+.dark-mode .presence-sep { color: var(--text-secondary); opacity: 0.6; }

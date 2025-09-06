@@ -1266,9 +1266,23 @@ default: // "standalone"
 			// Header widget rows
 			const namesEl = document.getElementById('presenceNames');
 			if (namesEl) {
-				const names = (users || []).map(u => (u?.displayName || '').replace(/[<>]/g, ''))
-					.filter(n => n.length > 0);
-				namesEl.textContent = names.join(', ');
+			// Build colored labels per user (exclude myself) and truncate with title
+			const others = (users || []).filter(u => u && u.sessionId !== this.presence.sessionId);
+			const roleMap = { master: 'Master', sync: 'Sync', standalone: 'Standalone' };
+			const htmlParts = [];
+			const titleParts = [];
+			others.forEach((u, idx) => {
+				const name = (u.displayName || '').replace(/[<>]/g, '');
+				const r = (u.role || 'standalone').toLowerCase();
+				const roleLabel = roleMap[r] || 'Standalone';
+				const roleClass = r === 'master' ? 'mode-master' : (r === 'sync' ? 'mode-sync' : 'standalone');
+				if (name.length > 0) {
+					htmlParts.push(`<span class="presence-user"><span class="presence-username">${name}</span> <span class="currentSyncMode ${roleClass}">${roleLabel}</span></span>`);
+					titleParts.push(`${name} (${roleLabel})`);
+				}
+			});
+			namesEl.innerHTML = htmlParts.join('<span class="presence-sep">, </span>');
+			namesEl.title = titleParts.join(', ');
 			}
 			// Update my role label and input value
 			const roleEl = document.getElementById('presenceRole');

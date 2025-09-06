@@ -48,10 +48,12 @@ hangarData.collectAllHangarData = function () {
 		if (window.displayOptions) {
 			// Aktuelle UI-Werte sammeln
 			window.displayOptions.collectFromUI();
-			// Display Options zu den Einstellungen hinzufügen
-			settings.displayOptions = { ...window.displayOptions.current };
+			// Display Options zu den Einstellungen hinzufügen – darkMode NIE mitsenden
+			const opts = { ...window.displayOptions.current };
+			delete opts.darkMode; // Theme bleibt nur lokal
+			settings.displayOptions = opts;
 			console.log(
-				"🎛️ Display Options zu collectAllHangarData hinzugefügt:",
+				"🎛️ Display Options zu collectAllHangarData hinzugefügt (ohne darkMode):",
 				settings.displayOptions
 			);
 		}

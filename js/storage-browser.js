@@ -390,19 +390,21 @@ class ServerSync {
 				const data = window.hangarData.collectAllHangarData();
 
 				// *** NEU: Display Options ergänzen ***
-				if (window.displayOptions) {
-					// Sammle aktuelle UI-Werte
-					window.displayOptions.collectFromUI();
+					if (window.displayOptions) {
+						// Sammle aktuelle UI-Werte
+						window.displayOptions.collectFromUI();
 
-					// Füge Display Options zu den Einstellungen hinzu
-					if (!data.settings) data.settings = {};
-					data.settings.displayOptions = { ...window.displayOptions.current };
+						// Füge Display Options zu den Einstellungen hinzu, aber NIEMALS darkMode synchronisieren
+						if (!data.settings) data.settings = {};
+						const opts = { ...window.displayOptions.current };
+						delete opts.darkMode; // Theme bleibt stets lokal
+						data.settings.displayOptions = opts;
 
-					console.log(
-						"🎛️ Display Options zu Server-Daten hinzugefügt:",
-						data.settings.displayOptions
-					);
-				}
+						console.log(
+							"🎛️ Display Options zu Server-Daten hinzugefügt (ohne darkMode):",
+							data.settings.displayOptions
+						);
+					}
 
 				return data;
 			}
@@ -424,8 +426,10 @@ class ServerSync {
 			// *** NEU: Display Options auch im Fallback hinzufügen ***
 			if (window.displayOptions) {
 				window.displayOptions.collectFromUI();
-				data.settings.displayOptions = { ...window.displayOptions.current };
-				console.log("🎛️ Display Options zu Fallback-Daten hinzugefügt");
+				const opts = { ...window.displayOptions.current };
+				delete opts.darkMode; // Theme nie auf Server schreiben
+				data.settings.displayOptions = opts;
+				console.log("🎛️ Display Options zu Fallback-Daten hinzugefügt (ohne darkMode)");
 			}
 
 			return data;
@@ -542,10 +546,12 @@ class ServerSync {
 				serverData.settings.displayOptions &&
 				window.displayOptions
 			) {
-				// Server-Display-Options in das aktuelle Display Options System laden
+				// Server-Display-Options in das aktuelle Display Options System laden (ohne darkMode)
+				const serverOpts = { ...serverData.settings.displayOptions };
+				delete serverOpts.darkMode;
 				window.displayOptions.current = {
 					...window.displayOptions.defaults,
-					...serverData.settings.displayOptions,
+					...serverOpts,
 				};
 				// CRITICAL: Respect locally persisted theme (never let server override user's choice)
 				try {

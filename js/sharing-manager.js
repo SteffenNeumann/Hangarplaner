@@ -1146,9 +1146,23 @@ default: // "standalone"
 			return false;
 		}
 
-		// Prüfe ob Server-URL konfiguriert ist; warte kurz auf Initialisierung
+		// Prüfe ob Server-URL konfiguriert ist; falls nicht, initialisiere proaktiv mit Fallback
 		if (!window.serverSync.serverSyncUrl) {
-			console.warn("⚠️ Server-URL nicht konfiguriert - warte auf Initialisierung...");
+			console.warn("⚠️ Server-URL nicht konfiguriert - versuche Initialisierung...");
+			try {
+				// Bevorzugt gespeicherte URL, sonst gleiches Origin
+				let candidate = null;
+				try { candidate = localStorage.getItem('hangarServerSyncUrl'); } catch (e) { candidate = null; }
+				if (!candidate || typeof candidate !== 'string' || candidate.length === 0) {
+					candidate = window.location.origin + '/sync/data.php';
+				}
+				if (typeof window.serverSync.initSync === 'function') {
+					// Nicht awaiten – initSync setzt serverSyncUrl synchron zu Beginn
+					window.serverSync.initSync(candidate);
+				}
+			} catch (e) { /* noop */ }
+
+			// Warte kurz auf Initialisierung (falls noch ausstehend)
 			const ready = await new Promise((resolve) => {
 				let waited = 0;
 				const iv = setInterval(() => {

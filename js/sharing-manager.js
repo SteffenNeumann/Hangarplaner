@@ -249,10 +249,19 @@ class SharingManager {
 					setTimeout(async () => {
 						if (typeof window.serverSync.startSlaveMode === 'function') {
 							await window.serverSync.startSlaveMode();
-						} else {
-							try { this.loadServerDataImmediately(); } catch (e) {}
 						}
-						console.log("🔄 Slave-Polling Retry ausgeführt");
+						// Falls nach Retry weiterhin kein Intervall läuft, starte hartes Fallback
+						setTimeout(() => {
+							if (!window.serverSync.slaveCheckInterval && !this.legacySlaveInterval) {
+								console.warn("⚠️ Kein Slave-Intervall aktiv – starte Fallback-Polling (15s)");
+								this.legacySlaveInterval = setInterval(() => {
+									try { this.loadServerDataImmediately(); } catch (e) {}
+								}, 15000);
+							} else {
+								console.log("✅ Slave-Polling nach Retry aktiv");
+							}
+							console.log("🔄 Slave-Polling Retry ausgeführt");
+						}, 300);
 					}, 2000);
 				}
 
@@ -469,11 +478,17 @@ class SharingManager {
 			try {
 				const manualSyncBtn = document.getElementById("manualSyncBtn");
 				if (manualSyncBtn) {
-					const enable = !!writeEnabled; // only enabled when Write is ON (Master)
+					const enable = !!(readEnabled || writeEnabled); // enabled if either Read or Write is ON
 					manualSyncBtn.disabled = !enable;
 					manualSyncBtn.style.opacity = enable ? "" : "0.6";
 					manualSyncBtn.style.cursor = enable ? "" : "not-allowed";
-					manualSyncBtn.title = enable ? "Trigger a one-time sync now" : "Enable Write Data to allow manual sync";
+					if (!enable) {
+						manualSyncBtn.title = "Enable Read or Write to allow manual refresh";
+					} else if (writeEnabled) {
+						manualSyncBtn.title = "Trigger a one-time sync (send changes to server)";
+					} else {
+						manualSyncBtn.title = "Fetch latest data from server now";
+					}
 				}
 			} catch (e) {}
 
@@ -749,41 +764,46 @@ updateWidgetSyncDisplay(status, isActive) {
 	async performManualSync() {
 		const manualSyncBtn = document.getElementById("manualSyncBtn");
 
-		// Guard: disabled in read-only (Write OFF)
+		// Determine current toggles
+		let readOn = false, writeOn = false;
 		try {
+			const readToggle = document.getElementById("readDataToggle");
 			const writeToggle = document.getElementById("writeDataToggle");
-			if (writeToggle && !writeToggle.checked) {
-				this.showNotification("Manual Sync is disabled in read-only mode", "warning");
-				return;
-			}
+			readOn = !!(readToggle && readToggle.checked);
+			writeOn = !!(writeToggle && writeToggle.checked);
 		} catch (e) {}
 
-		// Button deaktivieren während Sync
+		if (!readOn && !writeOn) {
+			this.showNotification("Manual refresh requires Read or Write to be ON", "warning");
+			return;
+		}
+
+		// Button deaktivieren während Aktion
 		if (manualSyncBtn) {
 			manualSyncBtn.disabled = true;
-			manualSyncBtn.textContent = "Syncing...";
+			manualSyncBtn.textContent = writeOn ? "Syncing..." : "Refreshing...";
 		}
 
 		try {
-			if (window.serverSync && window.serverSync.manualSync) {
-				const success = await window.serverSync.manualSync();
-
-				if (success) {
-					this.showNotification(
-						"Manuelle Synchronisation erfolgreich",
-						"success"
-					);
-					this.updateSyncStatusIndicator("success");
-				} else {
-					this.showNotification("Synchronisation fehlgeschlagen", "error");
-					this.updateSyncStatusIndicator("error");
-				}
+			let success = false;
+			if (writeOn && window.serverSync && typeof window.serverSync.manualSync === 'function') {
+				// Master mode: send changes
+				success = await window.serverSync.manualSync();
 			} else {
-				this.showNotification("Server-Sync nicht verfügbar", "warning");
+				// Read-only manual refresh: fetch latest server data immediately
+				success = await this.loadServerDataImmediately();
+			}
+
+			if (success) {
+				this.showNotification(writeOn ? "Manuelle Synchronisation erfolgreich" : "Aktuelle Server-Daten geladen", "success");
+				this.updateSyncStatusIndicator("success");
+			} else {
+				this.showNotification("Aktion fehlgeschlagen", "error");
+				this.updateSyncStatusIndicator("error");
 			}
 		} catch (error) {
-			console.error("❌ Manueller Sync Fehler:", error);
-			this.showNotification("Synchronisation fehlgeschlagen", "error");
+			console.error("❌ Manueller Sync/Refresh Fehler:", error);
+			this.showNotification("Aktion fehlgeschlagen", "error");
 		} finally {
 			// Button wieder aktivieren
 			if (manualSyncBtn) {
@@ -1149,6 +1169,22 @@ updateWidgetSyncDisplay(status, isActive) {
 			}
 			return candidate;
 		};
+		
+		// If ServerSync is missing or looks like a stub, try to load the real implementation dynamically
+		const looksLikeStub = (obj) => !obj || typeof obj.initSync !== 'function' || typeof obj.startSlaveMode !== 'function' || typeof obj.syncWithServer !== 'function';
+		if (looksLikeStub(window.serverSync)) {
+			try {
+				// Avoid double-injecting
+				if (!document.querySelector('script[data-dynamic="storage-browser"]')) {
+					const s = document.createElement('script');
+					s.src = 'js/storage-browser.js';
+					s.async = false; // preserve execution order
+					s.setAttribute('data-dynamic', 'storage-browser');
+					document.head.appendChild(s);
+				}
+			} catch (e) { /* noop */ }
+		}
+		
 		const start = Date.now();
 		while (Date.now() - start < timeoutMs) {
 			try {

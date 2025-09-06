@@ -108,7 +108,7 @@
           runTimetableReloadUsingThisPageInputs();
         }
       }, 400);
-      operatorInput.addEventListener('input', handler);
+      // Use change (not input) to avoid heavy API reloads on each keystroke; instant UI filter handles live typing
       operatorInput.addEventListener('change', handler);
     }
 

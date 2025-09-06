@@ -472,6 +472,13 @@ const AirportFlights = (() => {
 		const otherPointData = isArrival ? flight.departure : flight.arrival;
 		const flightNumber = flight.number || "----";
 		const registration = flight.aircraft?.reg || "-----";
+
+		// Expose airline codes for client-side filtering (IATA/ICAO)
+		const airlineIata = (flight.airline && flight.airline.iata) ? flight.airline.iata : "";
+		const airlineIcao = (flight.airline && flight.airline.icao) ? flight.airline.icao : "";
+		row.dataset.airlineIata = airlineIata;
+		row.dataset.airlineIcao = airlineIcao;
+
 		const otherAirport = isArrival
 			? flight.departure?.airport?.iata || "---"
 			: flight.arrival?.airport?.iata || "---";

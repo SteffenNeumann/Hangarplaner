@@ -181,6 +181,7 @@ Back
       function applyAirportFlightsFilters() {
         const regFilter = (document.getElementById('flightRegFilter')?.value || '').trim().toUpperCase();
         const fnFilter = (document.getElementById('flightNumberFilter')?.value || '').trim().toUpperCase();
+        const opFilter = (document.getElementById('operatorCodeInput')?.value || '').trim().toUpperCase();
         const container = document.getElementById('airport-flights-container');
         if (!container) return;
         const rows = container.querySelectorAll('table tbody tr');
@@ -189,12 +190,15 @@ Back
           const numCell = row.querySelector('.flight-number');
           const regText = (regCell?.textContent || '').toUpperCase();
           const numText = (numCell?.textContent || '').toUpperCase();
+          const airlineIata = (row.dataset.airlineIata || '').toUpperCase();
+          const airlineIcao = (row.dataset.airlineIcao || '').toUpperCase();
           const matchesReg = !regFilter || regText.includes(regFilter);
           const matchesNum = !fnFilter || numText.includes(fnFilter);
-          row.style.display = (matchesReg && matchesNum) ? '' : 'none';
+          const matchesOp = !opFilter || airlineIata.includes(opFilter) || airlineIcao.includes(opFilter) || numText.startsWith(opFilter);
+          row.style.display = (matchesReg && matchesNum && matchesOp) ? '' : 'none';
         });
       }
-      ['flightRegFilter', 'flightNumberFilter'].forEach(id => {
+      ['flightRegFilter', 'flightNumberFilter', 'operatorCodeInput'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('input', applyAirportFlightsFilters);
       });

@@ -12,6 +12,19 @@ class SharingManager {
 		this.isMasterMode = false;
 		this.initialized = false;
 
+		// Presence state
+		this.presence = {
+			url: null,
+			sessionId: null,
+			displayName: null,
+			heartbeatId: null,
+			listPollId: null,
+			lastUsers: []
+		};
+		this.presenceTTLSeconds = 90;
+		this.presenceHeartbeatMs = 30000; // 30s
+		this.presenceListPollMs = 30000; // 30s
+
 		// Singleton Pattern
 		if (SharingManager.instance) {
 			return SharingManager.instance;
@@ -33,6 +46,9 @@ class SharingManager {
 
 		// Initial-Status setzen basierend auf gespeicherten Einstellungen
 		this.updateAllSyncDisplays();
+
+		// Start presence heartbeat/listener
+		this.initPresence();
 
 		this.initialized = true;
 
@@ -1134,6 +1150,151 @@ default: // "standalone"
 		} finally {
 			window.isLoadingServerData = false;
 		}
+	}
+
+	/** Presence: initialize heartbeat + list polling */
+	initPresence() {
+		try {
+			// Derive endpoint URL from serverSync URL or fallback
+			let base = window.serverSync?.getServerUrl?.() || window.serverSync?.serverSyncUrl || '';
+			if (typeof base !== 'string' || base.length === 0) base = window.location.origin + '/sync/data.php';
+			this.presence.url = base.replace(/data\.php(?:\?.*)?$/i, 'presence.php');
+			if (!/presence\.php/i.test(this.presence.url)) {
+				// Fallback if replacement didn’t match
+				this.presence.url = window.location.origin + '/sync/presence.php';
+			}
+
+			// Stable sessionId
+			try {
+				const existing = localStorage.getItem('presence.sessionId');
+				this.presence.sessionId = existing && existing.length > 0 ? existing : (Math.random().toString(36).slice(2) + Date.now().toString(36));
+				localStorage.setItem('presence.sessionId', this.presence.sessionId);
+			} catch (e) {
+				this.presence.sessionId = (Math.random().toString(36).slice(2) + Date.now().toString(36));
+			}
+
+			// Display name
+			try {
+				this.presence.displayName = localStorage.getItem('presence.displayName') || '';
+			} catch (e) { this.presence.displayName = ''; }
+
+			// Click handler for badge
+			const badge = document.getElementById('presence-badge');
+			const pop = document.getElementById('presence-popover');
+			if (badge && pop) {
+				badge.addEventListener('click', (e) => {
+					e.preventDefault(); e.stopPropagation();
+					pop.classList.toggle('hidden');
+				});
+				document.addEventListener('click', (e) => {
+					if (!pop.contains(e.target) && !badge.contains(e.target)) pop.classList.add('hidden');
+				});
+			}
+
+			// Heartbeat loop
+			const doHeartbeat = async () => { try { await this.heartbeatPresence(); } catch (e) {} };
+			doHeartbeat();
+			if (this.presence.heartbeatId) clearInterval(this.presence.heartbeatId);
+			this.presence.heartbeatId = setInterval(doHeartbeat, this.presenceHeartbeatMs);
+
+			// List polling
+			const pollList = async () => { try { await this.fetchPresenceList(); } catch (e) {} };
+			pollList();
+			if (this.presence.listPollId) clearInterval(this.presence.listPollId);
+			this.presence.listPollId = setInterval(pollList, this.presenceListPollMs);
+
+			// Visibility: send heartbeat when tab becomes active
+			document.addEventListener('visibilitychange', () => {
+				if (document.visibilityState === 'visible') doHeartbeat();
+			});
+
+			// Try to notify on unload (best-effort)
+			window.addEventListener('beforeunload', () => {
+				try {
+					const payload = JSON.stringify({ action: 'leave', sessionId: this.presence.sessionId, displayName: this.presence.displayName || '', role: this.getRoleForPresence(), page: location.pathname });
+					navigator.sendBeacon(this.presence.url, new Blob([payload], { type: 'application/json' }));
+				} catch (e) {}
+			});
+
+			console.log('👥 Presence initialized at', this.presence.url);
+		} catch (e) {
+			console.warn('⚠️ Presence init failed:', e);
+		}
+	}
+
+	getRoleForPresence() {
+		// Prefer syncMode property, fallback to toggles
+		switch ((this.syncMode || '').toLowerCase()) {
+			case 'master': return 'master';
+			case 'sync': return 'sync';
+			case 'standalone': default: return 'standalone';
+		}
+	}
+
+	async heartbeatPresence() {
+		if (!this.presence?.url) return;
+		const body = {
+			action: 'heartbeat',
+			sessionId: this.presence.sessionId,
+			displayName: this.presence.displayName || '',
+			role: this.getRoleForPresence(),
+			page: location.pathname
+		};
+		await fetch(this.presence.url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+	}
+
+	async fetchPresenceList() {
+		if (!this.presence?.url) return;
+		const res = await fetch(this.presence.url + '?action=list', { method: 'GET', headers: { 'Accept': 'application/json' } });
+		if (!res.ok) return;
+		const data = await res.json();
+		if (!data || !Array.isArray(data.users)) return;
+		// Only update UI if changed (shallow compare by sessionId and lastSeen)
+		const next = data.users;
+		const prev = this.presence.lastUsers || [];
+		const changed = next.length !== prev.length || next.some((u, i) => (u.sessionId !== (prev[i]?.sessionId) || u.lastSeen !== (prev[i]?.lastSeen)));
+		this.presence.lastUsers = next;
+		if (changed) this.renderPresence(next);
+	}
+
+	renderPresence(users) {
+		try {
+			const countEl = document.getElementById('presence-count');
+			if (countEl) countEl.textContent = String(users?.length || 0);
+			const pop = document.getElementById('presence-popover');
+			if (pop) {
+				const roleIcon = (r) => r === 'master' ? '👑' : (r === 'sync' ? '📡' : '🏠');
+				const now = Date.now();
+				const html = [
+					'<div class="presence-list">',
+					...(users || []).map(u => {
+						const age = u.lastSeen ? Math.max(0, Math.round((now - (u.lastSeen * 1000)) / 1000)) : 0;
+						const safeName = (u.displayName || '').replace(/[<>]/g, '');
+						return `<div class="presence-item">${roleIcon(u.role)} <span class="presence-name">${safeName}</span><span class="presence-age">${age}s</span></div>`;
+					}),
+					'<div class="presence-actions"><button id="presence-set-name" class="presence-btn">Set my name</button></div>',
+					'</div>'
+				].join('');
+				pop.innerHTML = html;
+				const btn = document.getElementById('presence-set-name');
+				if (btn) btn.addEventListener('click', () => {
+					const current = this.presence.displayName || '';
+					const name = prompt('Your display name', current);
+					if (name !== null) {
+						this.setDisplayName((name || '').trim());
+					}
+				});
+			}
+		} catch (e) { /* ignore */ }
+	}
+
+	setDisplayName(name) {
+		try {
+			this.presence.displayName = String(name || '').slice(0, 64);
+			localStorage.setItem('presence.displayName', this.presence.displayName);
+			// Force immediate heartbeat to reflect new name
+			this.heartbeatPresence();
+		} catch (e) {}
 	}
 
 	/**

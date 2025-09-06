@@ -17,6 +17,7 @@ const FlightRegistrationLookup = (() => {
 		debugMode: false,
 			sources: {
 				aerodatabox: true, // PRIMÄRE QUELLE: AeroDataBox API
+				goflightlabs: true,
 				opensky: false,
 				faa: false,
 				webScraping: false, // Disabled for reliability: use only API-backed sources
@@ -110,9 +111,22 @@ const FlightRegistrationLookup = (() => {
 			} catch (error) {
 				console.error("AeroDataBox Lookup Fehler:", error);
 			}
-		}
+			}
 
-		// 3. Lokale Datenbank als zweite Quelle
+			// 2b. GoFlightLabs (fast direct)
+			if (config.sources.goflightlabs) {
+				try {
+					if (window.GoFlightLabsAPI?.getFlightByNumber) {
+						const g = await window.GoFlightLabsAPI.getFlightByNumber(flightNumber, flightDate);
+						if (g && g.registration) {
+							cacheResult(cacheKey, g.registration, 'goflightlabs');
+							return g.registration;
+						}
+					}
+				} catch (e) {}
+			}
+
+			// 3. Lokale Datenbank als zweite Quelle
 		if (config.sources.localDatabase && knownMappings.has(flightNumber)) {
 			const registration = knownMappings.get(flightNumber);
 			cacheResult(cacheKey, registration, "localDatabase");

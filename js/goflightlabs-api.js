@@ -414,6 +414,46 @@ const GoFlightLabsAPI = (() => {
 	};
 
 	/**
+	 * Flight info by number and date (fast path registration lookup)
+	 */
+	const getFlightByNumber = async (flightNumber, date) => {
+		try {
+			const normalized = String(flightNumber || '').replace(/\s+/g, '').toUpperCase();
+			const day = formatDate(date);
+			return await rateLimiter(async () => {
+				const params = {
+					endpoint: 'flight_info',
+					flight_iata: normalized,
+					date: day,
+				};
+				const url = `sync/goflightlabs-proxy.php?${new URLSearchParams(params).toString()}`;
+				if (config.debugMode) console.log(`[GoFlightLabs] getFlightByNumber → ${url}`);
+				const res = await fetch(url, { method: 'GET', headers: { Accept: 'application/json' }, cache: 'no-cache' });
+				if (!res.ok) return { flightNumber: normalized, date: day, registration: null };
+				const data = await res.json();
+				let item = null;
+				if (Array.isArray(data) && data.length) item = data[0];
+				else if (data && typeof data === 'object') item = data;
+				const pull = (o, p) => p.split('.').reduce((a, k) => (a && a[k] !== undefined ? a[k] : null), o);
+				const candidates = [
+					pull(item, 'aircraft.reg'),
+					pull(item, 'aircraft.registration'),
+					pull(item, 'aircraft.tail'),
+					pull(item, 'aircraftRegistration'),
+					pull(item, 'registration'),
+					pull(item, 'flight.aircraft.registration'),
+				];
+				let reg = null;
+				for (const v of candidates) { if (v && String(v).trim()) { reg = String(v).trim().toUpperCase(); break; } }
+				return { flightNumber: normalized, date: day, registration: reg };
+			});
+		} catch (e) {
+			if (config.debugMode) console.warn('[GoFlightLabs] getFlightByNumber error:', e?.message || e);
+			return { flightNumber: String(flightNumber || '').toUpperCase(), date: formatDate(date), registration: null };
+		}
+	};
+
+	/**
 	 * Aircraft-Daten für zwei Tage abrufen (Übernachtungslogik OPTIMIERT)
 	 * Verwendet Flight Data by Date API für präzise Registrierungs-Suche
 	 */
@@ -784,6 +824,7 @@ const GoFlightLabsAPI = (() => {
 		getLiveFlights,
 		getHistoricalFlights,
 		getAirportFlights,
+		getFlightByNumber,
 
 		// Utility-Funktionen
 		getAPIInfo,

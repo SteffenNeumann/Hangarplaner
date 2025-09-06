@@ -19,6 +19,15 @@
     }
   }
 
+  // Small utility: debounce frequent input events to avoid excessive API calls
+  function debounce(fn, delay) {
+    let t;
+    return function(...args) {
+      clearTimeout(t);
+      t = setTimeout(() => fn.apply(this, args), delay);
+    };
+  }
+
   // Simple pass-through reload that ensures AirportFlights renders arrivals and departures for the station
   function runTimetableReloadUsingThisPageInputs() {
     const airportEl = document.getElementById("airportCodeInput");
@@ -88,6 +97,20 @@
       // Short delay to avoid clashing with any other handlers
       setTimeout(runTimetableReloadUsingThisPageInputs, 0);
     });
+
+    // Instant filter for Airline Code: live-update on input with a short debounce
+    const operatorInput = document.getElementById("operatorCodeInput");
+    if (operatorInput) {
+      const handler = debounce(() => {
+        if (typeof window.reloadTimetableAllFlights === 'function') {
+          window.reloadTimetableAllFlights();
+        } else {
+          runTimetableReloadUsingThisPageInputs();
+        }
+      }, 400);
+      operatorInput.addEventListener('input', handler);
+      operatorInput.addEventListener('change', handler);
+    }
 
     // Optional global utility for manual triggering
     window.reloadTimetableAllFlights = runTimetableReloadUsingThisPageInputs;

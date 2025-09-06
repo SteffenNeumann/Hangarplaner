@@ -76,12 +76,28 @@ window.globalInitialization = {
 		// 3. ServerSync/StorageBrowser sicherstellen (nur Fallback wenn nicht vorhanden)
 		if (!window.serverSync && !window.storageBrowser) {
 			console.warn("⚠️ ServerSync nicht verfügbar, erstelle Dummy-Fallback");
+			// Minimaler, fehlertoleranter Fallback, damit die UI nicht crasht,
+			// falls das eigentliche storage-browser.js nicht geladen wurde.
 			window.serverSync = {
+				// Basisstatus
+				serverSyncUrl: null,
+				serverSyncInterval: null,
+				slaveCheckInterval: null,
+				isMaster: false,
+				isSlaveActive: false,
+				isApplyingServerData: false,
+				// No-Op/Stub Methoden
 				syncWithServer: () => Promise.resolve(false),
+				manualSync: () => Promise.resolve(false),
 				loadFromServer: () => Promise.resolve(null),
-				getStatus: () => ({ serverUrl: null, isActive: false }),
 				applyServerData: () => Promise.resolve(false),
 				testServerConnection: () => Promise.resolve(false),
+				getServerUrl: () => null,
+				startPeriodicSync: () => { /* noop fallback */ },
+				stopPeriodicSync: () => { /* noop fallback */ },
+				startMasterMode: () => { window.serverSync.isMaster = true; window.serverSync.isSlaveActive = false; },
+				startSlaveMode: () => { window.serverSync.isMaster = false; window.serverSync.isSlaveActive = true; },
+				getStatus: () => ({ serverUrl: null, isActive: false, isApplyingData: false }),
 			};
 			window.storageBrowser = window.serverSync;
 		} else {

@@ -169,11 +169,25 @@ class SharingManager {
 
 			// ServerSync komplett stoppen
 			if (window.serverSync) {
-				window.serverSync.stopPeriodicSync();
+				try {
+					if (typeof window.serverSync.stopPeriodicSync === 'function') {
+						window.serverSync.stopPeriodicSync();
+					}
+				} catch (e) { /* noop */ }
 
 				if (window.serverSync.slaveCheckInterval) {
 					clearInterval(window.serverSync.slaveCheckInterval);
 					window.serverSync.slaveCheckInterval = null;
+				}
+
+				// Beende evtl. von uns angelegte Legacy-Intervalle
+				if (this.legacySlaveInterval) {
+					clearInterval(this.legacySlaveInterval);
+					this.legacySlaveInterval = null;
+				}
+				if (this.legacyMasterInterval) {
+					clearInterval(this.legacyMasterInterval);
+					this.legacyMasterInterval = null;
 				}
 
 				window.serverSync.isMaster = false;
@@ -214,16 +228,29 @@ class SharingManager {
 
 				// ERWEITERT: Explicit Slave-Modus starten mit Error-Handling
 				console.log("🔄 Starte Slave-Polling für Read-Modus...");
-				await window.serverSync.startSlaveMode();
+				if (typeof window.serverSync.startSlaveMode === 'function') {
+					await window.serverSync.startSlaveMode();
+				} else {
+					console.warn("⚠️ startSlaveMode() nicht verfügbar – nutze Fallback-Polling");
+					// Fallback: eigenständiges Polling über SharingManager
+					if (this.legacySlaveInterval) clearInterval(this.legacySlaveInterval);
+					this.legacySlaveInterval = setInterval(() => {
+						try { this.loadServerDataImmediately(); } catch (e) { /* noop */ }
+					}, 15000);
+				}
 
 				// ZUSÄTZLICH: Verify dass Polling läuft
-				if (window.serverSync.slaveCheckInterval) {
+				if (window.serverSync.slaveCheckInterval || this.legacySlaveInterval) {
 					console.log("✅ Slave-Polling-Intervall erfolgreich gestartet");
 				} else {
 					console.warn("⚠️ Slave-Polling-Intervall nicht gestartet - Retry...");
 					// Retry nach kurzer Verzögerung
 					setTimeout(async () => {
-						await window.serverSync.startSlaveMode();
+						if (typeof window.serverSync.startSlaveMode === 'function') {
+							await window.serverSync.startSlaveMode();
+						} else {
+							try { this.loadServerDataImmediately(); } catch (e) {}
+						}
 						console.log("🔄 Slave-Polling Retry ausgeführt");
 					}, 2000);
 				}
@@ -270,7 +297,18 @@ class SharingManager {
 				window.serverSync.isSlaveActive = false;
 
 				// Starte Master-Sync
-				await window.serverSync.startMasterMode();
+				if (typeof window.serverSync.startMasterMode === 'function') {
+					await window.serverSync.startMasterMode();
+				} else if (typeof window.serverSync.startPeriodicSync === 'function') {
+					console.warn("⚠️ startMasterMode() nicht verfügbar – starte periodische Sync als Fallback");
+					window.serverSync.startPeriodicSync();
+				} else {
+					console.warn("⚠️ startMasterMode()/startPeriodicSync nicht verfügbar – nutze Legacy-Fallback");
+					if (this.legacyMasterInterval) clearInterval(this.legacyMasterInterval);
+					this.legacyMasterInterval = setInterval(() => {
+						try { window.serverSync.syncWithServer?.(); } catch (e) { /* noop */ }
+					}, 120000);
+				}
 
 				// Lokale Flags setzen
 				this.syncMode = "master";

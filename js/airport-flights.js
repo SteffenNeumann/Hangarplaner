@@ -306,6 +306,9 @@ const AirportFlights = (() => {
 
 			flightInfoContainer.appendChild(flightDataContainer);
 
+			// Background backfill: periodically try to resolve a small batch of missing registrations
+			try { scheduleRegistrationBackfill(); } catch (e) {}
+
 			// CSS-Stile für die Tabellen hinzufügen
 			const styleElement = document.createElement("style");
 			styleElement.textContent = `
@@ -796,7 +799,7 @@ const AirportFlights = (() => {
 			<td>
 				${hasReg
 					? `<button class=\"text-green-600 hover:text-green-800\" onclick=\"AirportFlights.useInHangar('${registration}','${arrHHMM}','${depHHMM}')\" title=\"In HangarPlanner verwenden\">\n\t\t\t\t\t\t<svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">\n\t\t\t\t\t\t\t<path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 6v6m0 0v6m0-6h6m-6 0H6\"></path>\n\t\t\t\t\t\t</svg>\n\t\t\t\t\t</button>`
-					: `<button class=\"text-blue-600 hover:text-blue-800\" onclick=\"AirportFlights.resolveRegistration('${flightNumNorm}','${dateStrForLookup}', this)\" title=\"Resolve registration\">🔍</button>`}
+					: `<div class=\"flex gap-2 items-center\">\n\t\t\t\t\t\t<button class=\"text-blue-600 hover:text-blue-800\" onclick=\"AirportFlights.resolveRegistration('${flightNumNorm}','${dateStrForLookup}', this)\" title=\"Resolve registration\">🔍</button>\n\t\t\t\t\t\t<button class=\"text-gray-600 hover:text-gray-800\" onclick=\"AirportFlights.setRegistrationManual('${flightNumNorm}','${dateStrForLookup}', this)\" title=\"Manual registration\">✍️</button>\n\t\t\t\t\t</div>`}
 			</td>
 		`;
 
@@ -829,6 +832,71 @@ const AirportFlights = (() => {
 			btn.textContent = '🔍';
 		}
 	};
+
+	// Manual set: prompt and persist registration for a row
+	const setRegistrationManual = async (flightNumber, dateStr, btn) => {
+		try {
+			const value = prompt(`Enter registration for ${flightNumber} on ${dateStr}`);
+			if (!value) return;
+			const reg = String(value).trim().toUpperCase();
+			if (!/^[A-Z0-9-]{4,10}$/.test(reg)) return alert('Invalid format');
+			if (window.FlightRegistrationLookup?.putCachedRegistration) {
+				window.FlightRegistrationLookup.putCachedRegistration(flightNumber, dateStr, reg, 'manual');
+			}
+			const tr = btn.closest('tr');
+			const regCell = tr ? tr.querySelector('.flight-reg') : null;
+			if (regCell) regCell.textContent = reg;
+			btn.textContent = '✓';
+			btn.classList.remove('text-blue-600');
+			btn.classList.add('text-green-600');
+		} catch (e) {}
+	};
+
+	// Background backfill scheduler (small batches, limited attempts)
+	function scheduleRegistrationBackfill() {
+		let attempts = 0;
+		const MAX_ATTEMPTS = 3;
+		const INTERVAL_MS = 60000; // 60s
+		const runOnce = async () => {
+			try {
+				const container = document.getElementById('airport-flights-container');
+				if (!container) return;
+				const rows = Array.from(container.querySelectorAll('table tbody tr'));
+				const tasks = [];
+				for (const tr of rows) {
+					const regCell = tr.querySelector('.flight-reg');
+					if (!regCell) continue;
+					const text = (regCell.textContent || '').trim();
+					if (text && text !== '-----' && text !== '—') continue;
+					const numEl = tr.querySelector('.flight-number');
+					if (!numEl) continue;
+					const flightNumber = (numEl.textContent || '').replace(/\s+/g,'');
+					const timeCell = tr.querySelector('.flight-time');
+					let dateStr = (document.getElementById('flightDateInput')?.value)|| new Date().toISOString().substring(0,10);
+					// Use cached if available
+					const cached = window.FlightRegistrationLookup?.getCachedRegistration?.(flightNumber, dateStr);
+					if (cached) {
+						regCell.textContent = cached;
+						continue;
+					}
+					tasks.push({ tr, flightNumber, dateStr });
+					if (tasks.length >= 10) break; // small batch
+				}
+				await Promise.all(tasks.map(async t => {
+					try {
+						const btn = t.tr.querySelector('button[title="Resolve registration"]');
+						if (btn) await resolveRegistration(t.flightNumber, t.dateStr, btn);
+					} catch (e) {}
+				}));
+			} catch (e) {}
+		};
+		const timer = setInterval(() => {
+			if (attempts++ >= MAX_ATTEMPTS) return clearInterval(timer);
+			runOnce();
+		}, INTERVAL_MS);
+		// also run first cycle quickly after render
+		setTimeout(runOnce, 1500);
+	}
 
 	// Aktion: Flugzeug im HangarPlanner verwenden (wie Fleet Database)
 	// ERWEITERT: Arr/Dep Zeiten an die Hauptseite übergeben
@@ -960,6 +1028,7 @@ const AirportFlights = (() => {
 		init,
 		useInHangar,
 		resolveRegistration,
+		setRegistrationManual,
 	};
 })();
 

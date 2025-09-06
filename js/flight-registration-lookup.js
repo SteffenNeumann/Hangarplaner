@@ -1887,6 +1887,15 @@ const FlightRegistrationLookup = (() => {
 		} catch (e) { return null; }
 	};
 
+	const putCachedRegistration = (flightNumber, flightDate, registration, source='manual') => {
+		try {
+			const key = `${String(flightNumber || '').toUpperCase()}_${String(flightDate || '')}`;
+			if (!registration) return false;
+			cacheResult(key, String(registration).toUpperCase(), source);
+			return true;
+		} catch (e) { return false; }
+	};
+
 	return {
 		lookupRegistration,
 		lookupForHangarplaner, // NEUE Hauptfunktion für Hangarplaner
@@ -1895,6 +1904,7 @@ const FlightRegistrationLookup = (() => {
 		testLookup,
 		getCacheStats,
 		getCachedRegistration,
+		putCachedRegistration,
 		clearCache: () => registrationCache.clear(),
 		setDebugMode: (enabled) => {
 			config.debugMode = enabled;

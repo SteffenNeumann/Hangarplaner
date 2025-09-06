@@ -181,7 +181,7 @@ body.header-loose {
 }
 
 .time-display-row .time-label {
-	font-weight: 800; /* kräftiger, wie im Screenshot */
+	font-weight: 500; /* reduced for lighter title weight */
 	color: #334155; /* etwas dunkler/blauer Ton */
 	font-size: 0.95rem; /* Kompakter: zuvor 1rem */
 	min-width: 40px;
@@ -270,7 +270,7 @@ body.header-loose {
 }
 #status-widget .modern-toggle-switch { transform: scale(0.85); transform-origin: right center; }
 .status-label {
-	font-weight: 700;
+	font-weight: 500; /* reduced for lighter title weight */
 	color: #334155;
 	font-size: 0.95rem;
 	justify-self: start;

@@ -48,7 +48,7 @@
 
 /* Airport Code */
 .weather-airport {
-	font-weight: 700;
+	font-weight: 500; /* reduced for lighter title weight */
 	color: #3a4354;
 	font-size: 0.95rem; /* Kompakter: zuvor 1rem */
 	min-width: 40px;

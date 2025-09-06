@@ -143,6 +143,17 @@ Back
             </div>
             <p class="text-xs text-gray-500 mt-2">Enter an ICAO/IATA code to filter by airline</p>
             <div class="text-sm text-gray-600 mt-2">Ready to load flight data…</div>
+
+            <!-- Seed Registration Cache (CSV) -->
+            <div class="mt-4 p-3 rounded border border-gray-200 bg-white/60">
+              <div class="flex items-center gap-3 flex-wrap">
+                <span class="text-sm font-medium text-gray-800">Seed Registration Cache (CSV)</span>
+                <input id="seedCsvInput" type="file" accept=".csv,text/csv" class="text-sm" />
+                <button id="downloadCsvTemplate" class="px-2 py-1 text-sm rounded bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-300">Template</button>
+                <span id="seedCsvStatus" class="text-xs text-gray-600"></span>
+              </div>
+              <p class="text-xs text-gray-500 mt-2">CSV columns: flightNumber,date,registration (header optional). Example: LH1917,2025-09-06,D-AILD</p>
+            </div>
           </div>
 
         </div>
@@ -214,6 +225,82 @@ Back
       } else {
         observeTargetInit();
       }
+
+      // CSV seeding logic
+      (function setupCsvSeeding(){
+        const statusEl = () => document.getElementById('seedCsvStatus');
+        const setStatus = (msg, ok=true) => { const el=statusEl(); if (el){ el.textContent=msg; el.className= ok? 'text-xs text-green-700' : 'text-xs text-red-700'; } };
+        function downloadTemplate(){
+          const csv = 'flightNumber,date,registration\nLH1917,2025-09-06,D-AILD\nLH118,2025-09-06,D-AILB\n';
+          const blob = new Blob([csv], { type: 'text/csv' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = 'tail-cache-template.csv'; a.click();
+          setTimeout(() => URL.revokeObjectURL(url), 500);
+        }
+        function parseCsv(text){
+          const lines = text.split(/\r?\n/).filter(l=>l.trim().length>0);
+          if (!lines.length) return [];
+          const sep = lines[0].includes(';') && !lines[0].includes(',') ? ';' : ',';
+          let start = 0; let idxFlight=0, idxDate=1, idxReg=2;
+          const header = lines[0].split(sep).map(s=>s.trim().toLowerCase());
+          if (header.some(h=>['flight','flightnumber','number'].includes(h)) || header.includes('date') || header.includes('registration')){
+            idxFlight = header.findIndex(h=>['flight','flightnumber','number'].includes(h));
+            idxDate = header.findIndex(h=>h==='date');
+            idxReg = header.findIndex(h=>['registration','reg','tail'].includes(h));
+            start = 1;
+          }
+          const out=[];
+          for (let i=start;i<lines.length;i++){
+            const parts = lines[i].split(sep);
+            const flight = (parts[idxFlight]||'').replace(/\s+/g,'').toUpperCase();
+            const date = (parts[idxDate]||'').trim();
+            const reg = (parts[idxReg]||'').trim().toUpperCase();
+            if (flight && date && reg) out.push({flight, date, reg});
+          }
+          return out;
+        }
+        function applyToRenderedTable(){
+          try{
+            const container = document.getElementById('airport-flights-container');
+            if (!container) return;
+            const rows = container.querySelectorAll('table tbody tr');
+            rows.forEach(tr=>{
+              const numEl = tr.querySelector('.flight-number');
+              const regCell = tr.querySelector('.flight-reg');
+              if (!numEl || !regCell) return;
+              const flight = (numEl.textContent||'').replace(/\s+/g,'').toUpperCase();
+              const date = (document.getElementById('flightDateInput')?.value)|| new Date().toISOString().substring(0,10);
+              const cached = window.FlightRegistrationLookup?.getCachedRegistration?.(flight, date);
+              if (cached && (regCell.textContent||'').trim().length===0 || (regCell.textContent||'')==='-----' || (regCell.textContent||'')==='—'){
+                regCell.textContent = cached;
+              }
+            });
+          }catch(e){}
+        }
+        async function onCsvSelected(ev){
+          try{
+            const file = ev.target.files && ev.target.files[0];
+            if (!file) return;
+            const text = await file.text();
+            const rows = parseCsv(text);
+            if (!rows.length) { setStatus('No valid rows found', false); return; }
+            let added=0;
+            rows.forEach(r=>{
+              const ok = window.FlightRegistrationLookup?.putCachedRegistration?.(r.flight, r.date, r.reg, 'csv');
+              if (ok) added++;
+            });
+            setStatus(`Cached ${added}/${rows.length} entries`);
+            applyToRenderedTable();
+          } catch (e) {
+            setStatus(`CSV import failed: ${e?.message||e}`, false);
+          } finally {
+            ev.target.value = '';
+          }
+        }
+        document.getElementById('seedCsvInput')?.addEventListener('change', onCsvSelected);
+        document.getElementById('downloadCsvTemplate')?.addEventListener('click', downloadTemplate);
+      })();
     </script>
   </body>
 </html>

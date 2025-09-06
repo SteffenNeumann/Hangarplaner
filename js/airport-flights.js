@@ -130,7 +130,10 @@ const AirportFlights = (() => {
 				);
             }
 
-            // Prefill missing registrations before rendering
+            // Zero-API enrichment: extract registration from existing fields and cross-fill by flight number
+            enrichRegistrationsFromLocalData(arrivals, departures);
+
+            // Prefill missing registrations before rendering (capped + fast path)
             await prefillMissingRegistrations(arrivals, true, startDateTime);
             await prefillMissingRegistrations(departures, false, startDateTime);
 
@@ -461,6 +464,60 @@ const AirportFlights = (() => {
 			}
 		}
 	};
+
+	/**
+	 * Zero-API enrichment: extract registrations from various fields and cross-fill by flight number
+	 */
+	function enrichRegistrationsFromLocalData(arrivals, departures) {
+		try {
+			const norm = (n) => String(n || '').replace(/\s+/g, '').toUpperCase();
+			const getReg = (f) => {
+				const paths = [
+					f?.aircraft?.reg,
+					f?.aircraft?.registration,
+					f?.aircraft?.tail,
+					f?.aircraftRegistration,
+					f?.registration,
+					f?.leg?.aircraft?.registration,
+					f?.movement?.aircraft?.registration,
+				];
+				for (const v of paths) {
+					if (v && typeof v === 'string' && v.trim()) return v.trim().toUpperCase();
+				}
+				return null;
+			};
+			const setReg = (f, reg) => {
+				if (!f.aircraft) f.aircraft = {};
+				if (!f.aircraft.reg) f.aircraft.reg = reg;
+				if (!f.aircraftRegistration) f.aircraftRegistration = reg;
+			};
+
+			const all = [...(Array.isArray(arrivals) ? arrivals : []), ...(Array.isArray(departures) ? departures : [])];
+			const byNumber = new Map(); // flightNumber -> reg
+
+			// Pass 1: extract directly present registrations and seed map
+			for (const f of all) {
+				const existing = getReg(f);
+				if (existing) {
+					setReg(f, existing);
+					const num = norm(f?.number);
+					if (num && !byNumber.has(num)) byNumber.set(num, existing);
+				}
+			}
+
+			// Pass 2: fill missing regs from map by flight number
+			for (const f of all) {
+				const has = getReg(f);
+				if (has) continue;
+				const num = norm(f?.number);
+				if (!num) continue;
+				const reg = byNumber.get(num);
+				if (reg) setReg(f, reg);
+			}
+		} catch (e) {
+			console.warn('[AirportFlights] enrichRegistrationsFromLocalData failed:', e?.message || e);
+		}
+	}
 
 	/**
 	 * Prefill missing registrations by flight number before rendering the table.

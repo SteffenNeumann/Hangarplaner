@@ -2480,6 +2480,26 @@ body.dark-mode {
 
 /* Users list truncation and layout */
 #presenceNames { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-.presence-user { display: inline-flex; align-items: center; gap: 6px; }
-.presence-sep { color: #94a3b8; }
-.dark-mode .presence-sep { color: var(--text-secondary); opacity: 0.6; }
+
+/* Presence chips: match Sync Mode chip style */
+.presence-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px !important;
+  border-radius: 4px !important;
+  border: 1px solid transparent !important;
+  min-width: 0 !important;
+  text-align: right;
+  font-weight: 400;
+  font-size: 0.875rem;
+  margin-right: 6px;
+}
+/* Light theme variants */
+.presence-chip.master { background: #ecfdf5 !important; border-color: #a7f3d0 !important; color: #065f46 !important; }
+.presence-chip.sync { background: #eff6ff !important; border-color: #bfdbfe !important; color: #1d4ed8 !important; }
+.presence-chip.standalone { background: #f3f4f6 !important; border-color: #e5e7eb !important; color: #475569 !important; }
+/* Dark theme variants */
+.dark-mode .presence-chip.master { background: rgba(16,185,129,0.15) !important; border-color: #065f46 !important; color: #a7f3d0 !important; }
+.dark-mode .presence-chip.sync { background: rgba(59,130,246,0.15) !important; border-color: #1d4ed8 !important; color: #93c5fd !important; }
+.dark-mode .presence-chip.standalone { background: var(--bg-secondary) !important; border-color: var(--border-color) !important; color: var(--text-secondary) !important; }

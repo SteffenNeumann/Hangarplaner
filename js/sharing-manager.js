@@ -1277,11 +1277,11 @@ default: // "standalone"
 				const roleLabel = roleMap[r] || 'Standalone';
 				const roleClass = r === 'master' ? 'mode-master' : (r === 'sync' ? 'mode-sync' : 'standalone');
 				if (name.length > 0) {
-					htmlParts.push(`<span class="presence-user"><span class="presence-username">${name}</span> <span class="currentSyncMode ${roleClass}">${roleLabel}</span></span>`);
+	htmlParts.push(`<span class=\"presence-chip ${r}\">${name}</span>`);
 					titleParts.push(`${name} (${roleLabel})`);
 				}
 			});
-			namesEl.innerHTML = htmlParts.join('<span class="presence-sep">, </span>');
+			namesEl.innerHTML = htmlParts.join(' ');
 			namesEl.title = titleParts.join(', ');
 			}
 			// Update my role label and input value

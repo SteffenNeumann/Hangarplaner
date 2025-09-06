@@ -222,9 +222,16 @@ async init() {
 
 				if (data && data.settings && data.settings.displayOptions) {
 					this.current = { ...this.defaults, ...data.settings.displayOptions };
+					// WICHTIG: DarkMode nie vom Server übernehmen – lokale Präferenz erzwingen
+					try {
+						const persisted = (localStorage.getItem('hangar.theme') || '').toLowerCase();
+						if (persisted === 'dark') this.current.darkMode = true;
+						else if (persisted === 'light') this.current.darkMode = false;
+						else if (document.documentElement.classList.contains('dark-mode') || document.body.classList.contains('dark-mode')) this.current.darkMode = true;
+					} catch (e) {}
 					// Setze auch die letzten gespeicherten Werte um unnötige Saves zu vermeiden
 					this.lastSavedSettings = { ...this.current };
-					console.log("📥 Display Options vom Server geladen:", this.current);
+					console.log("📥 Display Options vom Server geladen (theme preserved locally):", this.current);
 					return true;
 				}
 			}
@@ -244,9 +251,16 @@ async init() {
 			// Display Options aus den Einstellungen extrahieren
 			if (data.settings && data.settings.displayOptions) {
 				this.current = { ...this.defaults, ...data.settings.displayOptions };
+				// WICHTIG: DarkMode nie vom Server übernehmen – lokale Präferenz erzwingen
+				try {
+					const persisted = (localStorage.getItem('hangar.theme') || '').toLowerCase();
+					if (persisted === 'dark') this.current.darkMode = true;
+					else if (persisted === 'light') this.current.darkMode = false;
+					else if (document.documentElement.classList.contains('dark-mode') || document.body.classList.contains('dark-mode')) this.current.darkMode = true;
+				} catch (e) {}
 				// Setze auch die letzten gespeicherten Werte um unnötige Saves zu vermeiden
 				this.lastSavedSettings = { ...this.current };
-				console.log("📥 Display Options vom Server geladen:", this.current);
+				console.log("📥 Display Options vom Server geladen (theme preserved locally):", this.current);
 				return true;
 			} else {
 				console.warn("⚠️ Keine Display Options in den Serverdaten gefunden");
@@ -905,16 +919,16 @@ onDarkModeChange() {
 		const lastSettings = this.lastSavedSettings;
 
 		// Deep comparison der wichtigsten Einstellungen
-		const hasChanged =
-			currentSettings.tilesCount !== lastSettings.tilesCount ||
-			currentSettings.secondaryTilesCount !==
-				lastSettings.secondaryTilesCount ||
-			currentSettings.layout !== lastSettings.layout ||
-			currentSettings.darkMode !== lastSettings.darkMode ||
-			currentSettings.viewMode !== lastSettings.viewMode ||
-			currentSettings.zoomLevel !== lastSettings.zoomLevel ||
-			currentSettings.showWeatherWidget !== lastSettings.showWeatherWidget ||
-			currentSettings.showTimeWidget !== lastSettings.showTimeWidget;
+			const hasChanged =
+				currentSettings.tilesCount !== lastSettings.tilesCount ||
+				currentSettings.secondaryTilesCount !==
+					lastSettings.secondaryTilesCount ||
+				currentSettings.layout !== lastSettings.layout ||
+				/* darkMode intentionally ignored for server sync */ false ||
+				currentSettings.viewMode !== lastSettings.viewMode ||
+				currentSettings.zoomLevel !== lastSettings.zoomLevel ||
+				currentSettings.showWeatherWidget !== lastSettings.showWeatherWidget ||
+				currentSettings.showTimeWidget !== lastSettings.showTimeWidget;
 
 		if (hasChanged) {
 			console.log("📊 Einstellungsänderung erkannt:", {

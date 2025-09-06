@@ -390,18 +390,20 @@ class ServerSync {
 				const data = window.hangarData.collectAllHangarData();
 
 				// *** NEU: Display Options ergänzen ***
-				if (window.displayOptions) {
-					// Sammle aktuelle UI-Werte
-					window.displayOptions.collectFromUI();
+					if (window.displayOptions) {
+						// Sammle aktuelle UI-Werte
+						window.displayOptions.collectFromUI();
 
-					// Füge Display Options zu den Einstellungen hinzu
-					if (!data.settings) data.settings = {};
-					data.settings.displayOptions = { ...window.displayOptions.current };
-
-					console.log(
-						"🎛️ Display Options zu Server-Daten hinzugefügt:",
-						data.settings.displayOptions
-					);
+						// Füge Display Options zu den Einstellungen hinzu (ohne darkMode – Thema bleibt lokal)
+						if (!data.settings) data.settings = {};
+						const opts = { ...window.displayOptions.current };
+						delete opts.darkMode;
+						data.settings.displayOptions = opts;
+						console.log(
+							"🎛️ Display Options zu Server-Daten hinzugefügt (darkMode ausgelassen):",
+							data.settings.displayOptions
+						);
+					}
 				}
 
 				return data;

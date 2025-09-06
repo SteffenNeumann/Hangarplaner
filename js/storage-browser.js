@@ -574,15 +574,29 @@ class ServerSync {
 						secondaryTilesCount: serverData.settings.secondaryTilesCount || 4,
 						layout: serverData.settings.layout || 4,
 					};
+					// Preserve local theme preference, never override from server
+					let preferredDark = null;
+					try {
+						const persisted = (localStorage.getItem('hangar.theme') || '').toLowerCase();
+						if (persisted === 'dark') preferredDark = true;
+						if (persisted === 'light') preferredDark = false;
+					} catch (e) {}
+					if (preferredDark === null) {
+						try {
+							const domDark = document.documentElement.classList.contains('dark-mode') || (document.body && document.body.classList.contains('dark-mode'));
+							preferredDark = !!domDark;
+						} catch (e) { preferredDark = null; }
+					}
 					window.displayOptions.current = {
 						...window.displayOptions.defaults,
 						...legacySettings,
+						...(preferredDark === null ? {} : { darkMode: preferredDark })
 					};
 					window.displayOptions.updateUI();
 					window.displayOptions.applySettings();
 					console.log(
-						"🎛️ Legacy-Einstellungen vom Server angewendet:",
-						legacySettings
+						"🎛️ Legacy-Einstellungen vom Server angewendet (theme preserved)",
+						{...legacySettings, darkMode: preferredDark}
 					);
 				}
 			}
@@ -707,14 +721,14 @@ class ServerSync {
 			const tileId = tileData.tileId || (isSecondary ? 101 + index : 1 + index);
 			console.log(`🔄 Verarbeite Kachel ${tileId}:`, tileData);
 
-			// Aircraft ID
-			if (tileData.aircraftId) {
+			// Aircraft ID (apply even when empty string to allow clearing)
+			if (Object.prototype.hasOwnProperty.call(tileData, 'aircraftId')) {
 				const aircraftInput = document.getElementById(`aircraft-${tileId}`);
 				if (aircraftInput) {
 					const oldValue = aircraftInput.value;
-					aircraftInput.value = tileData.aircraftId;
+					aircraftInput.value = tileData.aircraftId ?? '';
 					console.log(
-						`✈️ Aircraft ID gesetzt: ${tileId} = ${oldValue} → ${tileData.aircraftId}`
+						`✈️ Aircraft ID gesetzt: ${tileId} = ${oldValue} → ${tileData.aircraftId ?? ''}`
 					);
 					successfullyApplied++;
 				} else {
@@ -723,16 +737,16 @@ class ServerSync {
 				}
 			}
 
-			// Position
-			if (tileData.position) {
+			// Position (apply even when empty to clear)
+			if (Object.prototype.hasOwnProperty.call(tileData, 'position')) {
 				const positionInput =
 					document.getElementById(`hangar-position-${tileId}`) ||
 					document.getElementById(`position-${tileId}`);
 				if (positionInput) {
 					const oldValue = positionInput.value;
-					positionInput.value = tileData.position;
+					positionInput.value = tileData.position ?? '';
 					console.log(
-						`📍 Position gesetzt: ${tileId} = ${oldValue} → ${tileData.position}`
+						`📍 Position gesetzt: ${tileId} = ${oldValue} → ${tileData.position ?? ''}`
 					);
 					successfullyApplied++;
 				} else {
@@ -743,27 +757,27 @@ class ServerSync {
 				}
 			}
 
-			// Notes
-			if (tileData.notes) {
+			// Notes (apply even when empty to clear)
+			if (Object.prototype.hasOwnProperty.call(tileData, 'notes')) {
 				const notesInput = document.getElementById(`notes-${tileId}`);
 				if (notesInput) {
-					notesInput.value = tileData.notes;
-					console.log(`📝 Notizen gesetzt: ${tileId} = ${tileData.notes}`);
+					notesInput.value = tileData.notes ?? '';
+					console.log(`📝 Notizen gesetzt: ${tileId} = ${tileData.notes ?? ''}`);
 				}
 			}
 
-			// Arrival Time
-			if (tileData.arrivalTime) {
+			// Arrival Time (apply even when empty to clear)
+			if (Object.prototype.hasOwnProperty.call(tileData, 'arrivalTime')) {
 				const arrivalInput = document.getElementById(`arrival-time-${tileId}`);
 				if (arrivalInput) {
-					let toSet = tileData.arrivalTime;
-					if (arrivalInput.type === 'datetime-local' && window.helpers) {
+					let toSet = tileData.arrivalTime ?? '';
+					if (toSet && arrivalInput.type === 'datetime-local' && window.helpers) {
 						const h = window.helpers;
-						if (h.isDateTimeLocal && h.isDateTimeLocal(tileData.arrivalTime)) {
-							toSet = tileData.arrivalTime;
-						} else if (h.isHHmm && h.isHHmm(tileData.arrivalTime) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
+						if (h.isDateTimeLocal && h.isDateTimeLocal(toSet)) {
+							// keep
+						} else if (h.isHHmm && h.isHHmm(toSet) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
 							const bases = h.getBaseDates();
-							toSet = h.coerceHHmmToDateTimeLocalUtc(tileData.arrivalTime, bases.arrivalBase || '');
+							toSet = h.coerceHHmmToDateTimeLocalUtc(toSet, bases.arrivalBase || '');
 						}
 					}
 					arrivalInput.value = toSet || '';
@@ -773,20 +787,20 @@ class ServerSync {
 				}
 			}
 
-			// Departure Time
-			if (tileData.departureTime) {
+			// Departure Time (apply even when empty to clear)
+			if (Object.prototype.hasOwnProperty.call(tileData, 'departureTime')) {
 				const departureInput = document.getElementById(
 					`departure-time-${tileId}`
 				);
 				if (departureInput) {
-					let toSet = tileData.departureTime;
-					if (departureInput.type === 'datetime-local' && window.helpers) {
+					let toSet = tileData.departureTime ?? '';
+					if (toSet && departureInput.type === 'datetime-local' && window.helpers) {
 						const h = window.helpers;
-						if (h.isDateTimeLocal && h.isDateTimeLocal(tileData.departureTime)) {
-							toSet = tileData.departureTime;
-						} else if (h.isHHmm && h.isHHmm(tileData.departureTime) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
+						if (h.isDateTimeLocal && h.isDateTimeLocal(toSet)) {
+							// keep
+						} else if (h.isHHmm && h.isHHmm(toSet) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
 							const bases = h.getBaseDates();
-							toSet = h.coerceHHmmToDateTimeLocalUtc(tileData.departureTime, bases.departureBase || '');
+							toSet = h.coerceHHmmToDateTimeLocalUtc(toSet, bases.departureBase || '');
 						}
 					}
 					departureInput.value = toSet || '';
@@ -796,23 +810,23 @@ class ServerSync {
 				}
 			}
 
-			// Status
-			if (tileData.status) {
+			// Status (apply even when neutral/empty)
+			if (Object.prototype.hasOwnProperty.call(tileData, 'status')) {
 				const statusSelect = document.getElementById(`status-${tileId}`);
 				if (statusSelect) {
-					statusSelect.value = tileData.status;
-					console.log(`🚦 Status gesetzt: ${tileId} = ${tileData.status}`);
+					statusSelect.value = (tileData.status ?? 'neutral');
+					console.log(`🚦 Status gesetzt: ${tileId} = ${tileData.status ?? 'neutral'}`);
 				}
 			}
 
-			// Tow Status
-			if (tileData.towStatus) {
+			// Tow Status (apply even when neutral/empty)
+			if (Object.prototype.hasOwnProperty.call(tileData, 'towStatus')) {
 				const towStatusSelect = document.getElementById(`tow-status-${tileId}`);
 				if (towStatusSelect) {
 					const oldValue = towStatusSelect.value;
-					towStatusSelect.value = tileData.towStatus;
+					towStatusSelect.value = (tileData.towStatus ?? 'neutral');
 					console.log(
-						`🚚 Tow Status gesetzt: ${tileId} = ${oldValue} → ${tileData.towStatus}`
+						`🚚 Tow Status gesetzt: ${tileId} = ${oldValue} → ${tileData.towStatus ?? 'neutral'}`
 					);
 					successfullyApplied++;
 				} else {

@@ -2468,14 +2468,15 @@ body.dark-mode {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: #f1f5f9;
-  color: #374151;
-  border: 1px solid #cbd5e1;
+  background: transparent;
+  color: #64748b; /* slate-500 */
+  border: 1px solid transparent;
   border-radius: 9999px;
   padding: 2px 8px;
   font-size: 12px;
   user-select: none;
 }
+.presence-badge:hover { background: rgba(100,116,139,0.08); }
 .presence-popover {
   position: fixed;
   top: 64px; /* below header */
@@ -2506,7 +2507,8 @@ body.dark-mode {
 }
 .presence-btn:hover { background: #e2e8f0; }
 
-.dark-mode .presence-badge { background: var(--bg-secondary); color: var(--text-primary); border-color: var(--border-color); }
+.dark-mode .presence-badge { background: transparent; color: var(--text-secondary); border-color: transparent; }
+.dark-mode .presence-badge:hover { background: rgba(255,255,255,0.06); }
 .dark-mode .presence-popover { background: var(--bg-primary); color: var(--text-primary); border-color: var(--border-color); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
 .dark-mode .presence-age { color: var(--text-secondary); opacity: 0.8; }
 .dark-mode .presence-btn { background: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary); }

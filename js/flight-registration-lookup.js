@@ -32,6 +32,62 @@ const FlightRegistrationLookup = (() => {
 	// Cache für bereits aufgelöste Registrierungen
 	let registrationCache = new Map();
 
+	// Persistenter Cache in localStorage
+	const LS_KEY = 'flightRegCache_v1';
+	const MAX_PERSISTED = 1000;
+	let __saveTimer = null;
+
+	function __now() { return Date.now(); }
+
+	function loadPersistedCache() {
+		try {
+			const raw = localStorage.getItem(LS_KEY);
+			if (!raw) return;
+			const data = JSON.parse(raw);
+			if (!data || !Array.isArray(data.entries)) return;
+			const t = __now();
+			for (const e of data.entries) {
+				if (!e || !e.key || !e.registration || !e.timestamp) continue;
+				if (t - e.timestamp < config.cacheExpiry) {
+					registrationCache.set(e.key, {
+						registration: e.registration,
+						source: e.source || 'persisted',
+						timestamp: e.timestamp,
+					});
+				}
+			}
+		} catch (e) {
+			// ignore
+		}
+	}
+
+	function savePersistedCacheDebounced() {
+		clearTimeout(__saveTimer);
+		__saveTimer = setTimeout(savePersistedCache, 300);
+	}
+
+	function savePersistedCache() {
+		try {
+			const t = __now();
+			const entries = [];
+			for (const [key, val] of registrationCache.entries()) {
+				if (val && val.registration && t - val.timestamp < config.cacheExpiry) {
+					entries.push({ key, registration: val.registration, source: val.source || 'cache', timestamp: val.timestamp });
+				}
+			}
+			if (entries.length > MAX_PERSISTED) {
+				entries.sort((a, b) => b.timestamp - a.timestamp);
+				entries.length = MAX_PERSISTED;
+			}
+			localStorage.setItem(LS_KEY, JSON.stringify({ entries }));
+		} catch (e) {
+			// ignore
+		}
+	}
+
+	// Start by loading any persisted entries
+	try { loadPersistedCache(); } catch (e) {}
+
 	// Lokale Datenbank mit bekannten Flugnummer → Registration Mappings
 	const knownMappings = new Map([
 		// Lufthansa
@@ -895,6 +951,7 @@ const FlightRegistrationLookup = (() => {
 				source: source,
 				timestamp: Date.now(),
 			});
+			try { savePersistedCacheDebounced(); } catch (e) {}
 		}
 	};
 
@@ -1821,6 +1878,15 @@ const FlightRegistrationLookup = (() => {
 	};
 
 	// Public API
+	const getCachedRegistration = (flightNumber, flightDate) => {
+		try {
+			const key = `${String(flightNumber || '').toUpperCase()}_${String(flightDate || '')}`;
+			const v = registrationCache.get(key);
+			if (v && v.registration && (__now() - v.timestamp) < config.cacheExpiry) return v.registration;
+			return null;
+		} catch (e) { return null; }
+	};
+
 	return {
 		lookupRegistration,
 		lookupForHangarplaner, // NEUE Hauptfunktion für Hangarplaner

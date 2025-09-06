@@ -10,6 +10,7 @@ class ServerSync {
 		this.serverSyncInterval = null;
 		this.isApplyingServerData = false;
 		this.lastDataChecksum = null;
+		this.lastServerDataChecksum = null; // Fallback checksum when timestamp API is unavailable
 		this.autoSaveTimeout = null;
 
 		// NEUE Master-Slave Eigenschaften
@@ -262,6 +263,11 @@ class ServerSync {
 				if (serverData && !serverData.error) {
 					await this.applyServerData(serverData);
 					this.lastServerTimestamp = currentServerTimestamp;
+					// Zusätzlich: Checksumme speichern für Fallback-Vergleiche
+					try {
+						const cmp = this._safeDataChecksum(serverData);
+						this.lastServerDataChecksum = cmp;
+					} catch (e) {}
 					console.log(
 						"✅ Slave: Server-Daten erfolgreich geladen und angewendet"
 					);
@@ -272,6 +278,25 @@ class ServerSync {
 					}
 				} else {
 					console.warn("⚠️ Slave: Server-Daten konnten nicht geladen werden");
+				}
+			} else if (!currentServerTimestamp || currentServerTimestamp === 0) {
+				// Fallback: Server unterstützt keine Timestamp-API → lade und vergleiche Checksummen
+				console.warn("⚠️ Timestamp-API nicht verfügbar – Fallback: direkte Load+Checksum");
+				const serverData = await this.loadFromServer();
+				if (serverData && !serverData.error) {
+					const cmp = this._safeDataChecksum(serverData);
+					if (cmp !== this.lastServerDataChecksum) {
+						console.log("🔄 Fallback: Änderungen erkannt (Checksum), wende Daten an...");
+						await this.applyServerData(serverData);
+						this.lastServerDataChecksum = cmp;
+						if (window.showNotification) {
+							window.showNotification("Server-Updates empfangen", "info");
+						}
+					} else {
+						console.log("⏸️ Fallback: Keine Änderungen (Checksum unverändert)");
+					}
+				} else {
+					console.warn("⚠️ Fallback: Server-Daten konnten nicht geladen werden");
 				}
 			} else {
 				console.log("⏸️ Slave: Keine neuen Änderungen auf Server");
@@ -470,6 +495,23 @@ class ServerSync {
 		} catch (error) {
 			console.error("❌ Server-Load Fehler:", error);
 			return null;
+		}
+	}
+
+	/**
+	 * Erzeugt eine stabile Checksumme der Serverdaten, ignoriert flüchtige Felder
+	 */
+	_safeDataChecksum(data) {
+		try {
+			const clone = JSON.parse(JSON.stringify(data || {}));
+			if (clone?.metadata) {
+				delete clone.metadata.lastModified;
+				delete clone.metadata.lastSaved;
+				delete clone.metadata.lastSync;
+			}
+			return this.generateChecksum(JSON.stringify(clone));
+		} catch (e) {
+			return this.generateChecksum(String(Date.now()));
 		}
 	}
 

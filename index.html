@@ -2986,10 +2986,42 @@ type="datetime-local"
 					// Starte sequentielle Ausführung
 					executeNextInit();
 				});
-			</script>
+            </script>
 
-			<!-- Zeit-Update Script für Info Widget -->
-			<script>
+            <!-- Final late restore to override any late resets (theme + tiles) -->
+            <script>
+            (function(){
+              function lateRestore(){
+                try {
+                  if (window.hangarData && typeof window.hangarData.loadFromLocalAutosave === 'function') {
+                    window.hangarData.loadFromLocalAutosave();
+                  }
+                } catch(e){}
+                try {
+                  var t = (localStorage.getItem('hangar.theme')||'').toLowerCase();
+                  var isDark = false;
+                  if (t==='dark') isDark = true; else if (t==='light') isDark = false; else {
+                    try {
+                      var raw = localStorage.getItem('displayOptions');
+                      if (raw) { var parsed = JSON.parse(raw); if (parsed && parsed.darkMode) isDark = true; }
+                    } catch(e){}
+                  }
+                  document.documentElement.classList.toggle('dark-mode', !!isDark);
+                  if (document.body) document.body.classList.toggle('dark-mode', !!isDark);
+                  var toggle = document.getElementById('darkModeToggle');
+                  if (toggle) toggle.checked = !!isDark;
+                  if (window.displayOptions && window.displayOptions.current) {
+                    window.displayOptions.current.darkMode = !!isDark;
+                  }
+                } catch(e){}
+              }
+              window.addEventListener('pageshow', function(){ setTimeout(lateRestore, 300); setTimeout(lateRestore, 1200); });
+              document.addEventListener('DOMContentLoaded', function(){ setTimeout(lateRestore, 600); });
+            })();
+            </script>
+
+            <!-- Zeit-Update Script für Info Widget -->
+            <script>
 				// Zeit-Update Funktionen für Info Widget
 				function updateTimeDisplay() {
 					const now = new Date();

@@ -325,10 +325,11 @@ body.header-loose {
 
 /* Tow reminder */
 #towing-reminder-widget #towingReminderActiveBadge.active {
-	background: #fff7ed !important; /* orange */
-	border-color: #fed7aa !important;
-	color: #9a3412 !important;
-	border-left: 2px solid #f59e0b !important;
+	/* Match Auto Update ACTIVE (green) style */
+	background: #ecfdf5 !important; /* green */
+	border-color: #a7f3d0 !important;
+	color: #065f46 !important;
+	border-left: 2px solid #10b981 !important;
 }
 #towing-reminder-widget #towingReminderActiveBadge.inactive {
 	background: #f3f4f6 !important; /* gray */
@@ -377,10 +378,11 @@ body.header-loose {
 	border-left: 2px solid #64748b !important;
 }
 .dark-mode #towing-reminder-widget #towingReminderActiveBadge.active {
-	background: rgba(245, 158, 11, 0.15) !important;
-	border-color: #b45309 !important;
-	color: #fdba74 !important;
-	border-left: 2px solid #f59e0b !important;
+	/* Match Auto Update ACTIVE (green) style for dark mode */
+	background: rgba(16, 185, 129, 0.15) !important;
+	border-color: #065f46 !important;
+	color: #a7f3d0 !important;
+	border-left: 2px solid #10b981 !important;
 }
 .dark-mode #towing-reminder-widget #towingReminderActiveBadge.inactive {
 	background: var(--bg-secondary) !important;

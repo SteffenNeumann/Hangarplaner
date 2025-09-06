@@ -169,9 +169,11 @@ class HangarEventManager {
 		try {
 			// Prüfe ob Server-Sync verfügbar ist
 			if (!window.storageBrowser || !window.storageBrowser.serverSyncUrl) {
-				console.warn(
-					"⚠️ Server-Sync nicht konfiguriert - nur lokale Speicherung"
-				);
+				console.info("ℹ️ Server-Sync noch nicht konfiguriert – versuche später zu synchronisieren");
+				// Versuche kurze Zeit später einen vollständigen Sync (falls inzwischen initialisiert)
+				setTimeout(() => {
+					try { window.serverSync?.syncWithServer?.(); } catch (e) {}
+				}, 1200);
 				return;
 			}
 

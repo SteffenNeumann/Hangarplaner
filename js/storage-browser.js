@@ -235,7 +235,7 @@ class ServerSync {
 		}, this.slavePollMs); // Polling-Intervall (konfigurierbar)
 
 		console.log(
-			"👤 Slave-Modus gestartet - Polling für Updates alle 15 Sekunden aktiv"
+			`👤 Slave-Modus gestartet - Polling für Updates alle ${Math.round((this.slavePollMs||15000)/1000)} Sekunden aktiv`
 		);
 		// HINWEIS: Initialer Load erfolgt bereits in initSync()
 
@@ -1220,7 +1220,7 @@ setTimeout(async () => {
 
 	const serverUrl =
 		localStorage.getItem("hangarServerSyncUrl") ||
-		"https://hangarplanner.de/sync/data.php";
+		(window.location.origin + "/sync/data.php");
 	const isServerReachable = await window.serverSync.testServerConnection(
 		serverUrl
 	);

@@ -763,6 +763,137 @@
 })();
 </script>
 
+<!-- Presence Client (frontend-only) -->
+<script>
+(function(){
+  function initPresenceClient(){
+    try {
+      // Elements
+      const namesEl = document.getElementById('presenceNames');
+      const nameInput = document.getElementById('presenceNameInput');
+      if (!namesEl || !nameInput) {
+        console.warn('Presence: widget elements not found');
+        return;
+      }
+
+      // Resolve presence endpoint from serverSync (fallback to same-origin)
+      function getPresenceUrl(){
+        try {
+          let base = (window.serverSync && typeof window.serverSync.getServerUrl === 'function' && window.serverSync.getServerUrl()) || (window.serverSync && window.serverSync.serverSyncUrl) || (window.location.origin + '/sync/data.php');
+          if (typeof base !== 'string' || !base.length) base = window.location.origin + '/sync/data.php';
+          const url = base.replace(/data\.php(?:\?.*)?$/i, 'presence.php');
+          return /presence\.php/i.test(url) ? url : (window.location.origin + '/sync/presence.php');
+        } catch(e){
+          return window.location.origin + '/sync/presence.php';
+        }
+      }
+
+      const presence = {
+        url: getPresenceUrl(),
+        sessionId: '',
+        displayName: '',
+        heartbeatId: null,
+        listId: null,
+      };
+
+      // Stable sessionId
+      try {
+        presence.sessionId = localStorage.getItem('presence.sessionId');
+        if (!presence.sessionId) {
+          presence.sessionId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+          localStorage.setItem('presence.sessionId', presence.sessionId);
+        }
+      } catch(e){
+        presence.sessionId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+      }
+
+      // Load/save display name
+      try { presence.displayName = localStorage.getItem('presence.displayName') || ''; } catch(e){ presence.displayName = ''; }
+      nameInput.value = presence.displayName || '';
+      const saveName = () => {
+        presence.displayName = (nameInput.value || '').trim().slice(0, 64);
+        try { localStorage.setItem('presence.displayName', presence.displayName); } catch(e){}
+        heartbeat().catch(()=>{});
+        fetchList().catch(()=>{});
+      };
+      nameInput.addEventListener('change', saveName);
+      nameInput.addEventListener('blur', saveName);
+      nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); nameInput.blur(); } });
+
+      function currentRole(){
+        try {
+          const read = !!document.getElementById('readDataToggle')?.checked;
+          const write = !!document.getElementById('writeDataToggle')?.checked;
+          if (write) return 'master';
+          if (read) return 'sync';
+          return 'standalone';
+        } catch(e){ return 'standalone'; }
+      }
+
+      async function heartbeat(){
+        try {
+          const body = { action: 'heartbeat', sessionId: presence.sessionId, displayName: presence.displayName || '', role: currentRole(), page: location.pathname };
+          await fetch(presence.url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        } catch(e){}
+      }
+
+      async function fetchList(){
+        try {
+          const res = await fetch(presence.url + '?action=list', { method: 'GET', headers: { 'Accept': 'application/json' } });
+          if (!res.ok) return;
+          const data = await res.json();
+          if (!data || !Array.isArray(data.users)) return;
+          renderList(data.users);
+        } catch(e){}
+      }
+
+      function renderList(users){
+        try {
+          const me = presence.sessionId;
+          const roleMap = { master: 'Master', sync: 'Sync', standalone: 'Standalone' };
+          const parts = [];
+          const others = (users || []).filter(u => u && u.sessionId !== me);
+          others.forEach(u => {
+            const name = (u.displayName || '').replace(/[<>]/g, '');
+            const r = (u.role || 'standalone').toLowerCase();
+            const label = roleMap[r] || 'Standalone';
+            const css = r === 'master' ? 'mode-master' : (r === 'sync' ? 'mode-sync' : 'standalone');
+            if (name.length) parts.push(`<span class="presence-chip ${css}" title="${label}">${name}</span>`);
+          });
+          namesEl.innerHTML = parts.join(' ');
+          namesEl.title = others.map(u => `${(u.displayName||'').replace(/[<>]/g, '')} (${roleMap[(u.role||'standalone').toLowerCase()]||'Standalone'})`).join(', ');
+        } catch(e){}
+      }
+
+      // Start loops
+      heartbeat();
+      fetchList();
+      if (presence.heartbeatId) clearInterval(presence.heartbeatId);
+      presence.heartbeatId = setInterval(heartbeat, 30000);
+      if (presence.listId) clearInterval(presence.listId);
+      presence.listId = setInterval(fetchList, 30000);
+
+      // Refresh on tab visible
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { heartbeat(); fetchList(); } });
+
+      // Best-effort leave notification
+      window.addEventListener('beforeunload', () => {
+        try {
+          const payload = JSON.stringify({ action: 'leave', sessionId: presence.sessionId, displayName: presence.displayName || '', role: currentRole(), page: location.pathname });
+          navigator.sendBeacon(presence.url, new Blob([payload], { type: 'application/json' }));
+        } catch(e){}
+      });
+
+      console.log('👥 Presence client initialized:', presence.url);
+    } catch(e){ console.warn('Presence init failed', e); }
+  }
+
+  // Queue via central init
+  window.hangarInitQueue = window.hangarInitQueue || [];
+  window.hangarInitQueue.push(initPresenceClient);
+})();
+</script>
+
 <!-- Towing Reminder Logic (UTC-based time comparison) -->
 <script>
 (function(){

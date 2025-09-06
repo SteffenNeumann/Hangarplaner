@@ -53,6 +53,7 @@ body.header-loose {
 .dark-mode .time-display-row .time-label,
 .dark-mode .time-display-row .time-value { color: var(--dark-text) !important; }
 .dark-mode #status-widget .status-label { color: var(--dark-text) !important; }
+.dark-mode #presence-widget .status-label { color: var(--dark-text) !important; }
 .dark-mode .mode-display,
 .dark-mode .mode-display > span { color: var(--dark-text) !important; }
 

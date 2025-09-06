@@ -1277,20 +1277,14 @@ default: // "standalone"
 				const roleLabel = roleMap[r] || 'Standalone';
 				const roleClass = r === 'master' ? 'mode-master' : (r === 'sync' ? 'mode-sync' : 'standalone');
 				if (name.length > 0) {
-	htmlParts.push(`<span class=\"presence-chip ${r}\">${name}</span>`);
+htmlParts.push(`<span class=\"presence-chip ${r}\" title=\"${roleLabel}\">${name}</span>`);
 					titleParts.push(`${name} (${roleLabel})`);
 				}
 			});
 			namesEl.innerHTML = htmlParts.join(' ');
 			namesEl.title = titleParts.join(', ');
 			}
-			// Update my role label and input value
-			const roleEl = document.getElementById('presenceRole');
-			if (roleEl) {
-				const map = { master: 'Master', sync: 'Sync', standalone: 'Standalone' };
-				const r = (this.getRoleForPresence() || '').toLowerCase();
-				roleEl.textContent = map[r] || 'Standalone';
-			}
+			// Update my input value only
 			const nameInput = document.getElementById('presenceNameInput');
 			if (nameInput && nameInput !== document.activeElement) {
 				if ((nameInput.value || '') !== (this.presence.displayName || '')) {

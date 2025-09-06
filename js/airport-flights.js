@@ -181,7 +181,7 @@ const AirportFlights = (() => {
 				arrivalsTitle.style.fontWeight = "500";
 				arrivalsTitle.style.color = "#3A4354";
 				arrivalsTitle.style.marginBottom = "0.75rem";
-				arrivalsTitle.textContent = `Ankünfte (${arrivals.length})`;
+				arrivalsTitle.textContent = `Arrivals (${arrivals.length})`;
 				flightDataContainer.appendChild(arrivalsTitle);
 
 				// Sortieren der Ankünfte nach Zeit
@@ -208,12 +208,12 @@ const AirportFlights = (() => {
 				const tableHead = document.createElement("thead");
 				tableHead.innerHTML = `
 					<tr>
-						<th>Registrierung</th>
-						<th>Flug</th>
-						<th>Ankunftszeit</th>
-						<th>Von</th>
+						<th>Registration</th>
+						<th>Flight</th>
+						<th>Time (UTC)</th>
+						<th>From</th>
 						<th>Status</th>
-						<th>Aktionen</th>
+						<th>Actions</th>
 					</tr>
 				`;
 				arrivalsTable.appendChild(tableHead);
@@ -235,7 +235,7 @@ const AirportFlights = (() => {
 				departuresTitle.style.fontWeight = "500";
 				departuresTitle.style.color = "#3A4354";
 				departuresTitle.style.marginBottom = "0.75rem";
-				departuresTitle.textContent = `Abflüge (${departures.length})`;
+				departuresTitle.textContent = `Departures (${departures.length})`;
 				flightDataContainer.appendChild(departuresTitle);
 
 				// Sortieren der Abflüge nach Zeit
@@ -261,12 +261,12 @@ const AirportFlights = (() => {
 				const tableHead = document.createElement("thead");
 				tableHead.innerHTML = `
 					<tr>
-						<th>Registrierung</th>
-						<th>Flug</th>
-						<th>Abflugszeit</th>
-						<th>Nach</th>
+						<th>Registration</th>
+						<th>Flight</th>
+						<th>Time (UTC)</th>
+						<th>To</th>
 						<th>Status</th>
-						<th>Aktionen</th>
+						<th>Actions</th>
 					</tr>
 				`;
 				departuresTable.appendChild(tableHead);
@@ -483,22 +483,23 @@ const AirportFlights = (() => {
 			? flight.departure?.airport?.iata || "---"
 			: flight.arrival?.airport?.iata || "---";
 
-		// Zeitformatierung
+		// Zeitformatierung (display in UTC)
 		let timeText = "--:--";
 		if (pointData && pointData.scheduledTime) {
 			if (
 				typeof pointData.scheduledTime === "object" &&
-				pointData.scheduledTime.local
+				pointData.scheduledTime.utc
 			) {
-				const timePart = pointData.scheduledTime.local.match(/\d{2}:\d{2}/);
-				if (timePart) timeText = timePart[0];
+				// Extract HH:MM from UTC ISO string
+				const utcStr = String(pointData.scheduledTime.utc);
+				const hhmm = utcStr.substring(11, 16);
+				if (/^\d{2}:\d{2}$/.test(hhmm)) timeText = hhmm;
 			} else if (typeof pointData.scheduledTime === "string") {
-				const dateObj = new Date(pointData.scheduledTime);
-				if (!isNaN(dateObj.getTime())) {
-					timeText = dateObj.toLocaleTimeString("de-DE", {
-						hour: "2-digit",
-						minute: "2-digit",
-					});
+				const d = new Date(pointData.scheduledTime);
+				if (!isNaN(d.getTime())) {
+					const hh = String(d.getUTCHours()).padStart(2, "0");
+					const mm = String(d.getUTCMinutes()).padStart(2, "0");
+					timeText = `${hh}:${mm}`;
 				}
 			}
 		}
@@ -506,12 +507,12 @@ const AirportFlights = (() => {
 		// Status bestimmen
 		const status =
 			pointData && pointData.actualRunway
-				? "Gelandet"
+				? "Landed"
 				: pointData && pointData.actualTime
-				? "In der Luft"
+				? "Airborne"
 				: pointData && pointData.estimatedRunway
-				? "Verspätet"
-				: "Geplant";
+				? "Delayed"
+				: "Scheduled";
 
 		// CSS-Klasse für den Status
 		const statusClass =
@@ -637,7 +638,7 @@ const AirportFlights = (() => {
 					const operatorHint = document.createElement("p");
 					operatorHint.className = "text-xs text-gray-500 mt-1";
 					operatorHint.textContent =
-						"Geben Sie einen ICAO/IATA-Code ein, um nach Fluggesellschaft zu filtern";
+						"Enter an ICAO/IATA code to filter by airline";
 
 					// Falls ein Platzhalter-Container existiert, dort einfügen
 					const placeholder = document.getElementById("operatorFilterContainer");

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -109,27 +109,27 @@ Back
               <!-- Airport -->
               <div>
                 <label for="airportCodeInput" class="block text-sm font-medium text-gray-800 mb-1 whitespace-nowrap">Airport (IATA)</label>
-                <input id="airportCodeInput" type="text" maxlength="3" value="MUC" placeholder="z.B. MUC" class="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 uppercase focus:ring-2 focus:ring-industrial-accent focus:border-industrial-accent" style="text-transform: uppercase" />
+                <input id="airportCodeInput" type="text" maxlength="3" value="MUC" placeholder="e.g., MUC" class="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 uppercase focus:ring-2 focus:ring-industrial-accent focus:border-industrial-accent" style="text-transform: uppercase" />
               </div>
               <!-- Date -->
               <div>
-                <label for="flightDateInput" class="block text-sm font-medium text-gray-800 mb-1 whitespace-nowrap">Datum</label>
+                <label for="flightDateInput" class="block text-sm font-medium text-gray-800 mb-1 whitespace-nowrap">Date</label>
                 <input id="flightDateInput" type="date" class="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 focus:ring-2 focus:ring-industrial-accent focus:border-industrial-accent" />
               </div>
               <!-- Registration filter -->
               <div>
-                <label for="flightRegFilter" class="block text-sm font-medium text-gray-800 mb-1 whitespace-nowrap">Registrierung</label>
-                <input id="flightRegFilter" type="text" placeholder="z.B. D-AIZZ" class="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 placeholder-gray-600 focus:ring-2 focus:ring-industrial-accent focus:border-industrial-accent" />
+                <label for="flightRegFilter" class="block text-sm font-medium text-gray-800 mb-1 whitespace-nowrap">Registration</label>
+                <input id="flightRegFilter" type="text" placeholder="e.g., D-AIZZ" class="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 placeholder-gray-600 focus:ring-2 focus:ring-industrial-accent focus:border-industrial-accent" />
               </div>
               <!-- Flight number filter -->
               <div>
-                <label for="flightNumberFilter" class="block text-sm font-medium text-gray-800 mb-1 whitespace-nowrap">Flugnummer</label>
-                <input id="flightNumberFilter" type="text" placeholder="z.B. LH1234" class="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 placeholder-gray-600 focus:ring-2 focus:ring-industrial-accent focus:border-industrial-accent" />
+                <label for="flightNumberFilter" class="block text-sm font-medium text-gray-800 mb-1 whitespace-nowrap">Flight number</label>
+                <input id="flightNumberFilter" type="text" placeholder="e.g., LH1234" class="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 placeholder-gray-600 focus:ring-2 focus:ring-industrial-accent focus:border-industrial-accent" />
               </div>
               <!-- Airline Code (optional) -->
               <div id="operatorFilterContainer">
                 <label for="operatorCodeInput" class="block text-sm font-medium text-gray-800 mb-1 whitespace-nowrap">Airline Code (optional)</label>
-                <input id="operatorCodeInput" type="text" maxlength="3" placeholder="z.B. LH, DLH" class="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 uppercase placeholder-gray-600 focus:ring-2 focus:ring-industrial-accent focus:border-industrial-accent" style="text-transform: uppercase" />
+                <input id="operatorCodeInput" type="text" maxlength="3" placeholder="e.g., LH, DLH" class="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 uppercase placeholder-gray-600 focus:ring-2 focus:ring-industrial-accent focus:border-industrial-accent" style="text-transform: uppercase" />
               </div>
               <!-- Action -->
               <div class="flex items-end justify-end">
@@ -141,8 +141,8 @@ Back
                 </button>
               </div>
             </div>
-            <p class="text-xs text-gray-500 mt-2">Geben Sie einen ICAO/IATA-Code ein, um nach Fluggesellschaft zu filtern</p>
-            <div class="text-sm text-gray-600 mt-2">Bereit zum Laden der Flugdaten…</div>
+            <p class="text-xs text-gray-500 mt-2">Enter an ICAO/IATA code to filter by airline</p>
+            <div class="text-sm text-gray-600 mt-2">Ready to load flight data…</div>
           </div>
 
         </div>

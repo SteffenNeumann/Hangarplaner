@@ -621,6 +621,16 @@ const AirportFlights = (() => {
 				const timeMs = getTimeMsFromSched(sched);
 				const flightNumber = toNormFlight(flightNumRaw);
 				const key = `${flightNumber}_${dateStr}`;
+				// If cached from persisted store, apply immediately and skip adding as candidate
+				try {
+					const cached = window.FlightRegistrationLookup?.getCachedRegistration?.(flightNumber, dateStr);
+					if (cached) {
+						if (!f.aircraft) f.aircraft = {};
+						if (!f.aircraft.reg) f.aircraft.reg = cached;
+						if (!f.aircraftRegistration) f.aircraftRegistration = cached;
+						continue;
+					}
+				} catch (e) {}
 				if (!candidateMap.has(key)) {
 					candidateMap.set(key, { flightNumber, dateStr, timeMs, flights: [] });
 				}

@@ -1894,6 +1894,7 @@ const FlightRegistrationLookup = (() => {
 		lookupMultiple,
 		testLookup,
 		getCacheStats,
+		getCachedRegistration,
 		clearCache: () => registrationCache.clear(),
 		setDebugMode: (enabled) => {
 			config.debugMode = enabled;

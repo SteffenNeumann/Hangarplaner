@@ -131,6 +131,9 @@ class SharingManager {
 	async updateSyncMode(readEnabled, writeEnabled) {
 		console.log(`🔄 Sync-Modus wird geändert: Read=${readEnabled}, Write=${writeEnabled}`);
 
+		// Stelle sicher, dass ServerSync bereit ist, bevor Modi umgeschaltet werden
+		await this.ensureServerSyncReady(5000);
+
 		// 4 mögliche Kombinationen:
 		if (!readEnabled && !writeEnabled) {
 			// Beide AUS -> Standalone Mode
@@ -138,17 +141,15 @@ class SharingManager {
 		} else if (readEnabled && !writeEnabled) {
 			// Nur Read -> Sync Mode (Read-Only)
 			await this.enableSyncMode();
-			
-			// HINZUGEFÜGT: Sofortige Server-Datenladung wenn Read aktiviert wird
+			// Sofortige Server-Datenladung wenn Read aktiviert wird
 			await this.loadServerDataImmediately();
 		} else if (!readEnabled && writeEnabled) {
-			// Nur Write -> Master Mode (Write-Only) - ungewöhnlich, aber möglich
+			// Nur Write -> Master Mode (Write-Only)
 			await this.enableMasterMode();
 		} else {
 			// Beide AN -> Master Mode mit Read-Write
 			await this.enableMasterMode();
-			
-			// HINZUGEFÜGT: Sofortige Server-Datenladung wenn Read+Write aktiviert wird
+			// Sofortige Server-Datenladung bei Read+Write
 			await this.loadServerDataImmediately();
 		}
 
@@ -1002,14 +1003,14 @@ updateWidgetSyncDisplay(status, isActive) {
 					case "sync":
 						readToggle.checked = true;
 						writeToggle.checked = false;
-						setTimeout(() => this.enableSyncMode(), 100);
+						setTimeout(async () => { await this.ensureServerSyncReady(); await this.enableSyncMode(); }, 100);
 						break;
 					case "master":
 						readToggle.checked = true;
 						writeToggle.checked = true;
-						setTimeout(() => this.enableMasterMode(), 100);
+						setTimeout(async () => { await this.ensureServerSyncReady(); await this.enableMasterMode(); }, 100);
 						break;
-default: // "standalone"
+					default: // "standalone"
 						readToggle.checked = false;
 						writeToggle.checked = false;
 						this.updateAllSyncDisplays();
@@ -1135,6 +1136,37 @@ default: // "standalone"
 	}
 
 	/**
+	 * Sicherstellen, dass ServerSync initialisiert ist und serverSyncUrl gesetzt ist
+	 */
+	async ensureServerSyncReady(timeoutMs = 5000) {
+		const getCandidateUrl = () => {
+			let candidate = '';
+			try { candidate = localStorage.getItem('hangarServerSyncUrl') || ''; } catch (e) { candidate = ''; }
+			if (!candidate) {
+				const origin = (window.location && window.location.origin) || '';
+				if (/^https?:/.test(origin)) candidate = origin + '/sync/data.php';
+				else candidate = 'https://hangarplaner.de/sync/data.php';
+			}
+			return candidate;
+		};
+		const start = Date.now();
+		while (Date.now() - start < timeoutMs) {
+			try {
+				if (window.serverSync) {
+					// If real init is available and URL not set, initialize now
+					if (typeof window.serverSync.initSync === 'function' && !window.serverSync.serverSyncUrl) {
+						try { window.serverSync.initSync(getCandidateUrl()); } catch (e) { /* noop */ }
+					}
+					if (window.serverSync.serverSyncUrl) return true;
+				}
+			} catch (e) { /* noop */ }
+			await new Promise(r => setTimeout(r, 100));
+		}
+		console.warn('⚠️ Server-URL nicht bereit innerhalb des Zeitlimits');
+		return !!(window.serverSync && window.serverSync.serverSyncUrl);
+	}
+
+	/**
 	 * NEU: Lädt Server-Daten sofort (für Read-Modus und Master-Modus)
 	 */
 	async loadServerDataImmediately() {
@@ -1146,38 +1178,11 @@ default: // "standalone"
 			return false;
 		}
 
-		// Prüfe ob Server-URL konfiguriert ist; falls nicht, initialisiere proaktiv mit Fallback
-		if (!window.serverSync.serverSyncUrl) {
-			console.warn("⚠️ Server-URL nicht konfiguriert - versuche Initialisierung...");
-			try {
-				// Bevorzugt gespeicherte URL, sonst gleiches Origin
-				let candidate = null;
-				try { candidate = localStorage.getItem('hangarServerSyncUrl'); } catch (e) { candidate = null; }
-				if (!candidate || typeof candidate !== 'string' || candidate.length === 0) {
-					candidate = window.location.origin + '/sync/data.php';
-				}
-				if (typeof window.serverSync.initSync === 'function') {
-					// Nicht awaiten – initSync setzt serverSyncUrl synchron zu Beginn
-					window.serverSync.initSync(candidate);
-				}
-			} catch (e) { /* noop */ }
-
-			// Warte kurz auf Initialisierung (falls noch ausstehend)
-			const ready = await new Promise((resolve) => {
-				let waited = 0;
-				const iv = setInterval(() => {
-					if (window.serverSync && window.serverSync.serverSyncUrl) {
-						clearInterval(iv);
-						resolve(true);
-					}
-					waited += 100;
-					if (waited >= 2500) { clearInterval(iv); resolve(false); }
-				}, 100);
-			});
-			if (!ready) {
-				console.warn("⚠️ Server-URL weiterhin nicht konfiguriert - überspringe sofortige Ladung");
-				return false;
-			}
+		// Stelle sicher, dass serverSyncUrl bereit ist
+		const ready = await this.ensureServerSyncReady(5000);
+		if (!ready) {
+			console.warn("⚠️ Server-URL weiterhin nicht konfiguriert - überspringe sofortige Ladung");
+			return false;
 		}
 
 		try {

@@ -858,7 +858,7 @@
             const r = (u.role || 'standalone').toLowerCase();
             const label = roleMap[r] || 'Standalone';
             const css = r === 'master' ? 'mode-master' : (r === 'sync' ? 'mode-sync' : 'standalone');
-            if (name.length) parts.push(`<span class="presence-chip ${css}" title="${label}">${name}</span>`);
+            if (name.length) parts.push(`<span class=\"sync-mode-badge compact presence-chip ${css}\" title=\"${label}\">${name}</span>`);
           });
           namesEl.innerHTML = parts.join(' ');
           namesEl.title = others.map(u => `${(u.displayName||'').replace(/[<>]/g, '')} (${roleMap[(u.role||'standalone').toLowerCase()]||'Standalone'})`).join(', ');

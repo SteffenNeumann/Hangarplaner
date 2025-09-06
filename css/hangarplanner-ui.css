@@ -1386,7 +1386,7 @@ body.dark-mode {
 	) !important; /* Forciere einheitlichen Hintergrund */
 	color: var(--text-primary);
 	border: 1px solid transparent;
-	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+	box-shadow: none; /* unify tiles, remove glow differences */
 }
 .dark-mode .hangar-cell:hover {
 	border-color: var(--border-color);
@@ -1415,6 +1415,11 @@ body.dark-mode {
 	background-color: var(
 		--card-bg
 	) !important; /* Überschreibe ALLE Status-Hintergründe */
+}
+/* Ensure inner content wrapper matches tile bg (primary and secondary) */
+.dark-mode #hangarGrid .hangar-cell > .p-4,
+.dark-mode #secondaryHangarGrid .hangar-cell > .p-4 {
+	background-color: var(--card-bg) !important;
 }
 
 .dark-mode .card-header {

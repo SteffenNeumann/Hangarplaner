@@ -130,13 +130,6 @@ const AirportFlights = (() => {
 				);
             }
 
-            // Zero-API enrichment: extract registration from existing fields and cross-fill by flight number
-            enrichRegistrationsFromLocalData(arrivals, departures);
-
-            // Prefill missing registrations before rendering (capped + fast path)
-            await prefillMissingRegistrations(arrivals, true, startDateTime);
-            await prefillMissingRegistrations(departures, false, startDateTime);
-
             // Suche den Container für die Anzeige
 			const mainContent = document.querySelector("main") || document.body;
 
@@ -306,8 +299,6 @@ const AirportFlights = (() => {
 
 			flightInfoContainer.appendChild(flightDataContainer);
 
-			// Background backfill: periodically try to resolve a small batch of missing registrations
-			try { scheduleRegistrationBackfill(); } catch (e) {}
 
 			// CSS-Stile für die Tabellen hinzufügen
 			const styleElement = document.createElement("style");

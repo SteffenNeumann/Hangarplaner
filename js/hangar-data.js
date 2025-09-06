@@ -2037,7 +2037,7 @@ window.hangarData.saveCurrentStateToLocalStorage = function () {
 // Lädt lokalen Autosave und wendet ihn an (falls verfügbar)
 window.hangarData.loadFromLocalAutosave = function(){
 	try {
-		if (window.isApplyingServerData || window.isLoadingServerData) return false;
+		// Always attempt to restore local autosave (server data may override later if available)
 		const raw = localStorage.getItem('hangarPlanner.autosave.v1');
 		if (!raw) return false;
 		const data = JSON.parse(raw);
@@ -2074,6 +2074,9 @@ window.hangarData.loadFromLocalAutosave = function(){
 	window.hangarInitQueue.push(function(){ install(); /* frühes Restore, falls gewünscht */ try { window.hangarData.loadFromLocalAutosave(); } catch(e){} });
 	// Auch beim BFCache zurück (Safari/Firefox) die UI synchron halten
 	window.addEventListener('pageshow', function(){ try { window.hangarData.loadFromLocalAutosave(); } catch(e){} });
+	// Vor dem Verlassen zuverlässig speichern (Anklick-Navigation, Refresh, Back)
+	window.addEventListener('beforeunload', function(){ try { window.hangarData.saveCurrentStateToLocalStorage(); } catch(e){} });
+	document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'hidden') { try { window.hangarData.saveCurrentStateToLocalStorage(); } catch(e){} } });
 })();
 
 /**

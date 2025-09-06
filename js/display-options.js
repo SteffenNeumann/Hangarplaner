@@ -514,17 +514,23 @@ async init() {
 	 * Dark Mode anwenden
 	 */
 applyDarkMode(enabled) {
+		// Respect a locally persisted theme preference as the single source of truth
+		try {
+			const persisted = (localStorage.getItem('hangar.theme')||'').toLowerCase();
+			if (persisted === 'dark') enabled = true;
+			else if (persisted === 'light') enabled = false;
+		} catch (e) { /* noop */ }
 		const body = document.body;
 		const html = document.documentElement;
 		if (enabled) {
 			if (html) html.classList.add("dark-mode");
 			if (body) body.classList.add("dark-mode");
-			try { localStorage.setItem('hangar.theme', 'dark'); } catch (e) {}
 		} else {
 			if (body) body.classList.remove("dark-mode");
 			if (html) html.classList.remove("dark-mode");
-			try { localStorage.setItem('hangar.theme', 'light'); } catch (e) {}
 		}
+		// Keep internal state consistent, but do not overwrite hangar.theme here
+		try { this.current.darkMode = !!enabled; } catch (e) {}
 	},
 
 	/**

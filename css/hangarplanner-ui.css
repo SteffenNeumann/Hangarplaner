@@ -2407,6 +2407,11 @@ body.dark-mode {
 #submenu-update .modern-toggle-slider:before { width: 18px; height: 18px; left: -1px; top: 50%; transform: translateY(-50%); }
 #submenu-update .modern-toggle-switch input:checked + .modern-toggle-slider:before { transform: translateX(15px) translateY(-50%); }
 
+/* Match standard background for other submenus in light mode */
+#submenu-project, #submenu-display, #submenu-export { background: #f9f9f9; border-right: 1px solid #e6e6e6; }
+/* Dark mode overrides */
+.dark-mode #submenu-project, .dark-mode #submenu-display, .dark-mode #submenu-export { background: var(--bg-primary); border-right-color: var(--border-color); }
+
 /* Project submenu description and divider */
 #submenu-project .sync-mode-description {
   color: #6b6b6b;

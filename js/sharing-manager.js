@@ -1199,10 +1199,13 @@ default: // "standalone"
 			this.presence.heartbeatId = setInterval(doHeartbeat, this.presenceHeartbeatMs);
 
 			// List polling
-			const pollList = async () => { try { await this.fetchPresenceList(); } catch (e) {} };
-			pollList();
-			if (this.presence.listPollId) clearInterval(this.presence.listPollId);
-			this.presence.listPollId = setInterval(pollList, this.presenceListPollMs);
+		const pollList = async () => { try { await this.fetchPresenceList(); } catch (e) {} };
+		pollList();
+		if (this.presence.listPollId) clearInterval(this.presence.listPollId);
+		this.presence.listPollId = setInterval(pollList, this.presenceListPollMs);
+
+		// Initial render: fill role/name immediately
+		this.renderPresence(this.presence.lastUsers || []);
 
 			// Visibility: send heartbeat when tab becomes active
 			document.addEventListener('visibilitychange', () => {

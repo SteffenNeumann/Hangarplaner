@@ -1259,31 +1259,14 @@ default: // "standalone"
 
 	renderPresence(users) {
 		try {
-			const countEl = document.getElementById('presence-count');
+			// Header widget rows
+			const countEl = document.getElementById('presenceCount');
 			if (countEl) countEl.textContent = String(users?.length || 0);
-			const pop = document.getElementById('presence-popover');
-			if (pop) {
-				const roleIcon = (r) => r === 'master' ? '👑' : (r === 'sync' ? '📡' : '🏠');
-				const now = Date.now();
-				const html = [
-					'<div class="presence-list">',
-					...(users || []).map(u => {
-						const age = u.lastSeen ? Math.max(0, Math.round((now - (u.lastSeen * 1000)) / 1000)) : 0;
-						const safeName = (u.displayName || '').replace(/[<>]/g, '');
-						return `<div class="presence-item">${roleIcon(u.role)} <span class="presence-name">${safeName}</span><span class="presence-age">${age}s</span></div>`;
-					}),
-					'<div class="presence-actions"><button id="presence-set-name" class="presence-btn">Set my name</button></div>',
-					'</div>'
-				].join('');
-				pop.innerHTML = html;
-				const btn = document.getElementById('presence-set-name');
-				if (btn) btn.addEventListener('click', () => {
-					const current = this.presence.displayName || '';
-					const name = prompt('Your display name', current);
-					if (name !== null) {
-						this.setDisplayName((name || '').trim());
-					}
-				});
+			const namesEl = document.getElementById('presenceNames');
+			if (namesEl) {
+				const names = (users || []).map(u => (u?.displayName || '').replace(/[<>]/g, ''))
+					.filter(n => n.length > 0);
+				namesEl.textContent = names.join(', ');
 			}
 		} catch (e) { /* ignore */ }
 	}

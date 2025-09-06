@@ -604,8 +604,16 @@
 							</div>
 
 
-    <div id="presence-badge" class="presence-badge" title="Active users">Users: <span id="presence-count">0</span></div>
-    <div id="presence-popover" class="presence-popover hidden" aria-hidden="true"></div>
+    <div id="presence-widget">
+      <div class="status-row" title="Active users">
+        <span class="status-label">Users:</span>
+        <span class="status-label-value" id="presenceCount">0</span>
+      </div>
+      <div class="status-row" title="User list">
+        <span class="status-label"></span>
+        <span class="status-label-value" id="presenceNames"></span>
+      </div>
+    </div>
 </header>
 
 <!-- Header Status-Widget Initialisierung -->

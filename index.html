@@ -3255,35 +3255,5 @@ type="datetime-local"
 			setTimeout(function(){ try { fallbackInit(); wireControls(); } catch(e){} }, 800);
 		})();
 		</script>
-
-		<!-- Centralized init queue runner: executes functions pushed to window.hangarInitQueue -->
-		<script>
-		(function(){
-			// Ensure queue exists
-			window.hangarInitQueue = window.hangarInitQueue || [];
-			function runHangarInitQueue(){
-				if (runHangarInitQueue.__ran) return;
-				runHangarInitQueue.__ran = true;
-				try {
-					var q = window.hangarInitQueue || [];
-					if (!Array.isArray(q)) q = [];
-					try { console.log('🧰 Running hangarInitQueue with', q.length, 'functions...'); } catch (e){}
-					for (var i=0; i<q.length; i++){
-						var fn = q[i];
-						try { if (typeof fn === 'function') fn(); } catch (e) { try { console.warn('Init fn failed', e); } catch(e2){} }
-					}
-				} catch (e) { try { console.warn('Init queue run failed', e); } catch(e2){} }
-			}
-			if (document.readyState === 'loading') {
-				document.addEventListener('DOMContentLoaded', runHangarInitQueue, { once: true });
-			} else {
-				setTimeout(runHangarInitQueue, 0);
-			}
-			// Safety: run once more after a short delay to catch late pushers
-			setTimeout(runHangarInitQueue, 1500);
-			// Expose helper to enqueue and run immediately after queue has run
-			window.enqueueHangarInit = function(fn){ try { window.hangarInitQueue.push(fn); if (runHangarInitQueue.__ran && typeof fn === 'function') setTimeout(fn, 0); } catch(e){} };
-		})();
-		</script>
 	</body>
 </html>

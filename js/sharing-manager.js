@@ -12,19 +12,6 @@ class SharingManager {
 		this.isMasterMode = false;
 		this.initialized = false;
 
-		// Presence state
-		this.presence = {
-			url: null,
-			sessionId: null,
-			displayName: null,
-			heartbeatId: null,
-			listPollId: null,
-			lastUsers: []
-		};
-		this.presenceTTLSeconds = 90;
-		this.presenceHeartbeatMs = 30000; // 30s
-		this.presenceListPollMs = 30000; // 30s
-
 		// Singleton Pattern
 		if (SharingManager.instance) {
 			return SharingManager.instance;
@@ -46,9 +33,6 @@ class SharingManager {
 
 		// Initial-Status setzen basierend auf gespeicherten Einstellungen
 		this.updateAllSyncDisplays();
-
-		// Start presence heartbeat/listener
-		this.initPresence();
 
 		this.initialized = true;
 
@@ -131,9 +115,6 @@ class SharingManager {
 	async updateSyncMode(readEnabled, writeEnabled) {
 		console.log(`🔄 Sync-Modus wird geändert: Read=${readEnabled}, Write=${writeEnabled}`);
 
-		// Stelle sicher, dass ServerSync bereit ist, bevor Modi umgeschaltet werden
-		await this.ensureServerSyncReady(5000);
-
 		// 4 mögliche Kombinationen:
 		if (!readEnabled && !writeEnabled) {
 			// Beide AUS -> Standalone Mode
@@ -141,15 +122,17 @@ class SharingManager {
 		} else if (readEnabled && !writeEnabled) {
 			// Nur Read -> Sync Mode (Read-Only)
 			await this.enableSyncMode();
-			// Sofortige Server-Datenladung wenn Read aktiviert wird
+			
+			// HINZUGEFÜGT: Sofortige Server-Datenladung wenn Read aktiviert wird
 			await this.loadServerDataImmediately();
 		} else if (!readEnabled && writeEnabled) {
-			// Nur Write -> Master Mode (Write-Only)
+			// Nur Write -> Master Mode (Write-Only) - ungewöhnlich, aber möglich
 			await this.enableMasterMode();
 		} else {
 			// Beide AN -> Master Mode mit Read-Write
 			await this.enableMasterMode();
-			// Sofortige Server-Datenladung bei Read+Write
+			
+			// HINZUGEFÜGT: Sofortige Server-Datenladung wenn Read+Write aktiviert wird
 			await this.loadServerDataImmediately();
 		}
 
@@ -170,25 +153,11 @@ class SharingManager {
 
 			// ServerSync komplett stoppen
 			if (window.serverSync) {
-				try {
-					if (typeof window.serverSync.stopPeriodicSync === 'function') {
-						window.serverSync.stopPeriodicSync();
-					}
-				} catch (e) { /* noop */ }
+				window.serverSync.stopPeriodicSync();
 
 				if (window.serverSync.slaveCheckInterval) {
 					clearInterval(window.serverSync.slaveCheckInterval);
 					window.serverSync.slaveCheckInterval = null;
-				}
-
-				// Beende evtl. von uns angelegte Legacy-Intervalle
-				if (this.legacySlaveInterval) {
-					clearInterval(this.legacySlaveInterval);
-					this.legacySlaveInterval = null;
-				}
-				if (this.legacyMasterInterval) {
-					clearInterval(this.legacyMasterInterval);
-					this.legacyMasterInterval = null;
 				}
 
 				window.serverSync.isMaster = false;
@@ -229,39 +198,17 @@ class SharingManager {
 
 				// ERWEITERT: Explicit Slave-Modus starten mit Error-Handling
 				console.log("🔄 Starte Slave-Polling für Read-Modus...");
-				if (typeof window.serverSync.startSlaveMode === 'function') {
-					await window.serverSync.startSlaveMode();
-				} else {
-					console.warn("⚠️ startSlaveMode() nicht verfügbar – nutze Fallback-Polling");
-					// Fallback: eigenständiges Polling über SharingManager
-					if (this.legacySlaveInterval) clearInterval(this.legacySlaveInterval);
-					this.legacySlaveInterval = setInterval(() => {
-						try { this.loadServerDataImmediately(); } catch (e) { /* noop */ }
-					}, 15000);
-				}
+				await window.serverSync.startSlaveMode();
 
 				// ZUSÄTZLICH: Verify dass Polling läuft
-				if (window.serverSync.slaveCheckInterval || this.legacySlaveInterval) {
+				if (window.serverSync.slaveCheckInterval) {
 					console.log("✅ Slave-Polling-Intervall erfolgreich gestartet");
 				} else {
 					console.warn("⚠️ Slave-Polling-Intervall nicht gestartet - Retry...");
 					// Retry nach kurzer Verzögerung
 					setTimeout(async () => {
-						if (typeof window.serverSync.startSlaveMode === 'function') {
-							await window.serverSync.startSlaveMode();
-						}
-						// Falls nach Retry weiterhin kein Intervall läuft, starte hartes Fallback
-						setTimeout(() => {
-							if (!window.serverSync.slaveCheckInterval && !this.legacySlaveInterval) {
-								console.warn("⚠️ Kein Slave-Intervall aktiv – starte Fallback-Polling (15s)");
-								this.legacySlaveInterval = setInterval(() => {
-									try { this.loadServerDataImmediately(); } catch (e) {}
-								}, 15000);
-							} else {
-								console.log("✅ Slave-Polling nach Retry aktiv");
-							}
-							console.log("🔄 Slave-Polling Retry ausgeführt");
-						}, 300);
+						await window.serverSync.startSlaveMode();
+						console.log("🔄 Slave-Polling Retry ausgeführt");
 					}, 2000);
 				}
 
@@ -307,18 +254,7 @@ class SharingManager {
 				window.serverSync.isSlaveActive = false;
 
 				// Starte Master-Sync
-				if (typeof window.serverSync.startMasterMode === 'function') {
-					await window.serverSync.startMasterMode();
-				} else if (typeof window.serverSync.startPeriodicSync === 'function') {
-					console.warn("⚠️ startMasterMode() nicht verfügbar – starte periodische Sync als Fallback");
-					window.serverSync.startPeriodicSync();
-				} else {
-					console.warn("⚠️ startMasterMode()/startPeriodicSync nicht verfügbar – nutze Legacy-Fallback");
-					if (this.legacyMasterInterval) clearInterval(this.legacyMasterInterval);
-					this.legacyMasterInterval = setInterval(() => {
-						try { window.serverSync.syncWithServer?.(); } catch (e) { /* noop */ }
-					}, 120000);
-				}
+				await window.serverSync.startMasterMode();
 
 				// Lokale Flags setzen
 				this.syncMode = "master";
@@ -475,41 +411,16 @@ class SharingManager {
 		}
 
 		// Manual Sync button enable/disable based on mode
-			try {
-				const manualSyncBtn = document.getElementById("manualSyncBtn");
-				if (manualSyncBtn) {
-					const enable = !!(readEnabled || writeEnabled); // enabled if either Read or Write is ON
-					manualSyncBtn.disabled = !enable;
-					manualSyncBtn.style.opacity = enable ? "" : "0.6";
-					manualSyncBtn.style.cursor = enable ? "" : "not-allowed";
-					if (!enable) {
-						manualSyncBtn.title = "Enable Read or Write to allow manual refresh";
-					} else if (writeEnabled) {
-						manualSyncBtn.title = "Trigger a one-time sync (send changes to server)";
-					} else {
-						manualSyncBtn.title = "Fetch latest data from server now";
-					}
-				}
-			} catch (e) {}
-
-			// Update polling info line
-			try {
-				const infoEl = document.getElementById('syncPollingInfo');
-				if (infoEl) {
-					const slaveMs = (window.serverSync && window.serverSync.slavePollMs) ? window.serverSync.slavePollMs : 15000;
-					const masterMs = (window.serverSync && window.serverSync.masterCheckMs) ? window.serverSync.masterCheckMs : 30000;
-					if (readEnabled && !writeEnabled) {
-						infoEl.textContent = `Receiving updates every ${Math.round(slaveMs/1000)}s`;
-						infoEl.style.display = '';
-					} else if (readEnabled && writeEnabled) {
-						infoEl.textContent = `Sending changes automatically; checking server every ${Math.round(masterMs/1000)}s`;
-						infoEl.style.display = '';
-					} else {
-						infoEl.textContent = 'Sync disabled';
-						infoEl.style.display = '';
-					}
-				}
-			} catch (e) {}
+		try {
+			const manualSyncBtn = document.getElementById("manualSyncBtn");
+			if (manualSyncBtn) {
+				const enable = !!writeEnabled; // only enabled when Write is ON (Master)
+				manualSyncBtn.disabled = !enable;
+				manualSyncBtn.style.opacity = enable ? "" : "0.6";
+				manualSyncBtn.style.cursor = enable ? "" : "not-allowed";
+				manualSyncBtn.title = enable ? "Trigger a one-time sync now" : "Enable Write Data to allow manual sync";
+			}
+		} catch (e) {}
 
 		// Sync Status Button aktualisieren
 		if (syncStatusBtn) {
@@ -764,46 +675,41 @@ updateWidgetSyncDisplay(status, isActive) {
 	async performManualSync() {
 		const manualSyncBtn = document.getElementById("manualSyncBtn");
 
-		// Determine current toggles
-		let readOn = false, writeOn = false;
+		// Guard: disabled in read-only (Write OFF)
 		try {
-			const readToggle = document.getElementById("readDataToggle");
 			const writeToggle = document.getElementById("writeDataToggle");
-			readOn = !!(readToggle && readToggle.checked);
-			writeOn = !!(writeToggle && writeToggle.checked);
+			if (writeToggle && !writeToggle.checked) {
+				this.showNotification("Manual Sync is disabled in read-only mode", "warning");
+				return;
+			}
 		} catch (e) {}
 
-		if (!readOn && !writeOn) {
-			this.showNotification("Manual refresh requires Read or Write to be ON", "warning");
-			return;
-		}
-
-		// Button deaktivieren während Aktion
+		// Button deaktivieren während Sync
 		if (manualSyncBtn) {
 			manualSyncBtn.disabled = true;
-			manualSyncBtn.textContent = writeOn ? "Syncing..." : "Refreshing...";
+			manualSyncBtn.textContent = "Syncing...";
 		}
 
 		try {
-			let success = false;
-			if (writeOn && window.serverSync && typeof window.serverSync.manualSync === 'function') {
-				// Master mode: send changes
-				success = await window.serverSync.manualSync();
-			} else {
-				// Read-only manual refresh: fetch latest server data immediately
-				success = await this.loadServerDataImmediately();
-			}
+			if (window.serverSync && window.serverSync.manualSync) {
+				const success = await window.serverSync.manualSync();
 
-			if (success) {
-				this.showNotification(writeOn ? "Manuelle Synchronisation erfolgreich" : "Aktuelle Server-Daten geladen", "success");
-				this.updateSyncStatusIndicator("success");
+				if (success) {
+					this.showNotification(
+						"Manuelle Synchronisation erfolgreich",
+						"success"
+					);
+					this.updateSyncStatusIndicator("success");
+				} else {
+					this.showNotification("Synchronisation fehlgeschlagen", "error");
+					this.updateSyncStatusIndicator("error");
+				}
 			} else {
-				this.showNotification("Aktion fehlgeschlagen", "error");
-				this.updateSyncStatusIndicator("error");
+				this.showNotification("Server-Sync nicht verfügbar", "warning");
 			}
 		} catch (error) {
-			console.error("❌ Manueller Sync/Refresh Fehler:", error);
-			this.showNotification("Aktion fehlgeschlagen", "error");
+			console.error("❌ Manueller Sync Fehler:", error);
+			this.showNotification("Synchronisation fehlgeschlagen", "error");
 		} finally {
 			// Button wieder aktivieren
 			if (manualSyncBtn) {
@@ -1023,14 +929,14 @@ updateWidgetSyncDisplay(status, isActive) {
 					case "sync":
 						readToggle.checked = true;
 						writeToggle.checked = false;
-						setTimeout(async () => { await this.ensureServerSyncReady(); await this.enableSyncMode(); }, 100);
+						setTimeout(() => this.enableSyncMode(), 100);
 						break;
 					case "master":
 						readToggle.checked = true;
 						writeToggle.checked = true;
-						setTimeout(async () => { await this.ensureServerSyncReady(); await this.enableMasterMode(); }, 100);
+						setTimeout(() => this.enableMasterMode(), 100);
 						break;
-					default: // "standalone"
+default: // "standalone"
 						readToggle.checked = false;
 						writeToggle.checked = false;
 						this.updateAllSyncDisplays();
@@ -1156,53 +1062,6 @@ updateWidgetSyncDisplay(status, isActive) {
 	}
 
 	/**
-	 * Sicherstellen, dass ServerSync initialisiert ist und serverSyncUrl gesetzt ist
-	 */
-	async ensureServerSyncReady(timeoutMs = 5000) {
-		const getCandidateUrl = () => {
-			let candidate = '';
-			try { candidate = localStorage.getItem('hangarServerSyncUrl') || ''; } catch (e) { candidate = ''; }
-			if (!candidate) {
-				const origin = (window.location && window.location.origin) || '';
-				if (/^https?:/.test(origin)) candidate = origin + '/sync/data.php';
-				else candidate = 'https://hangarplaner.de/sync/data.php';
-			}
-			return candidate;
-		};
-		
-		// If ServerSync is missing or looks like a stub, try to load the real implementation dynamically
-		const looksLikeStub = (obj) => !obj || typeof obj.initSync !== 'function' || typeof obj.startSlaveMode !== 'function' || typeof obj.syncWithServer !== 'function';
-		if (looksLikeStub(window.serverSync)) {
-			try {
-				// Avoid double-injecting
-				if (!document.querySelector('script[data-dynamic="storage-browser"]')) {
-					const s = document.createElement('script');
-					s.src = 'js/storage-browser.js';
-					s.async = false; // preserve execution order
-					s.setAttribute('data-dynamic', 'storage-browser');
-					document.head.appendChild(s);
-				}
-			} catch (e) { /* noop */ }
-		}
-		
-		const start = Date.now();
-		while (Date.now() - start < timeoutMs) {
-			try {
-				if (window.serverSync) {
-					// If real init is available and URL not set, initialize now
-					if (typeof window.serverSync.initSync === 'function' && !window.serverSync.serverSyncUrl) {
-						try { window.serverSync.initSync(getCandidateUrl()); } catch (e) { /* noop */ }
-					}
-					if (window.serverSync.serverSyncUrl) return true;
-				}
-			} catch (e) { /* noop */ }
-			await new Promise(r => setTimeout(r, 100));
-		}
-		console.warn('⚠️ Server-URL nicht bereit innerhalb des Zeitlimits');
-		return !!(window.serverSync && window.serverSync.serverSyncUrl);
-	}
-
-	/**
 	 * NEU: Lädt Server-Daten sofort (für Read-Modus und Master-Modus)
 	 */
 	async loadServerDataImmediately() {
@@ -1214,10 +1073,9 @@ updateWidgetSyncDisplay(status, isActive) {
 			return false;
 		}
 
-		// Stelle sicher, dass serverSyncUrl bereit ist
-		const ready = await this.ensureServerSyncReady(5000);
-		if (!ready) {
-			console.warn("⚠️ Server-URL weiterhin nicht konfiguriert - überspringe sofortige Ladung");
+		// Prüfe ob Server-URL konfiguriert ist
+		if (!window.serverSync.serverSyncUrl) {
+			console.warn("⚠️ Server-URL nicht konfiguriert - keine Server-Datenladung möglich");
 			return false;
 		}
 
@@ -1276,157 +1134,6 @@ updateWidgetSyncDisplay(status, isActive) {
 		} finally {
 			window.isLoadingServerData = false;
 		}
-	}
-
-	/** Presence: initialize heartbeat + list polling */
-	initPresence() {
-		try {
-			// Derive endpoint URL from serverSync URL or fallback
-			let base = window.serverSync?.getServerUrl?.() || window.serverSync?.serverSyncUrl || '';
-			if (typeof base !== 'string' || base.length === 0) base = window.location.origin + '/sync/data.php';
-			this.presence.url = base.replace(/data\.php(?:\?.*)?$/i, 'presence.php');
-			if (!/presence\.php/i.test(this.presence.url)) {
-				// Fallback if replacement didn’t match
-				this.presence.url = window.location.origin + '/sync/presence.php';
-			}
-
-			// Stable sessionId
-			try {
-				const existing = localStorage.getItem('presence.sessionId');
-				this.presence.sessionId = existing && existing.length > 0 ? existing : (Math.random().toString(36).slice(2) + Date.now().toString(36));
-				localStorage.setItem('presence.sessionId', this.presence.sessionId);
-			} catch (e) {
-				this.presence.sessionId = (Math.random().toString(36).slice(2) + Date.now().toString(36));
-			}
-
-			// Display name
-			try {
-				this.presence.displayName = localStorage.getItem('presence.displayName') || '';
-			} catch (e) { this.presence.displayName = ''; }
-
-			// Hook up inline input to set name
-			const nameInput = document.getElementById('presenceNameInput');
-			if (nameInput) {
-				nameInput.value = this.presence.displayName || '';
-				const save = () => {
-					this.setDisplayName((nameInput.value || '').trim());
-					this.heartbeatPresence();
-					this.fetchPresenceList().catch(()=>{});
-				};
-				nameInput.addEventListener('change', save);
-				nameInput.addEventListener('blur', save);
-				nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); nameInput.blur(); } });
-			}
-
-			// Heartbeat loop
-			const doHeartbeat = async () => { try { await this.heartbeatPresence(); } catch (e) {} };
-			doHeartbeat();
-			if (this.presence.heartbeatId) clearInterval(this.presence.heartbeatId);
-			this.presence.heartbeatId = setInterval(doHeartbeat, this.presenceHeartbeatMs);
-
-			// List polling
-		const pollList = async () => { try { await this.fetchPresenceList(); } catch (e) {} };
-		pollList();
-		if (this.presence.listPollId) clearInterval(this.presence.listPollId);
-		this.presence.listPollId = setInterval(pollList, this.presenceListPollMs);
-
-		// Initial render: fill role/name immediately
-		this.renderPresence(this.presence.lastUsers || []);
-
-			// Visibility: send heartbeat when tab becomes active
-			document.addEventListener('visibilitychange', () => {
-				if (document.visibilityState === 'visible') doHeartbeat();
-			});
-
-			// Try to notify on unload (best-effort)
-			window.addEventListener('beforeunload', () => {
-				try {
-					const payload = JSON.stringify({ action: 'leave', sessionId: this.presence.sessionId, displayName: this.presence.displayName || '', role: this.getRoleForPresence(), page: location.pathname });
-					navigator.sendBeacon(this.presence.url, new Blob([payload], { type: 'application/json' }));
-				} catch (e) {}
-			});
-
-			console.log('👥 Presence initialized at', this.presence.url);
-		} catch (e) {
-			console.warn('⚠️ Presence init failed:', e);
-		}
-	}
-
-	getRoleForPresence() {
-		// Prefer syncMode property, fallback to toggles
-		switch ((this.syncMode || '').toLowerCase()) {
-			case 'master': return 'master';
-			case 'sync': return 'sync';
-			case 'standalone': default: return 'standalone';
-		}
-	}
-
-	async heartbeatPresence() {
-		if (!this.presence?.url) return;
-		const body = {
-			action: 'heartbeat',
-			sessionId: this.presence.sessionId,
-			displayName: this.presence.displayName || '',
-			role: this.getRoleForPresence(),
-			page: location.pathname
-		};
-		await fetch(this.presence.url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-	}
-
-	async fetchPresenceList() {
-		if (!this.presence?.url) return;
-		const res = await fetch(this.presence.url + '?action=list', { method: 'GET', headers: { 'Accept': 'application/json' } });
-		if (!res.ok) return;
-		const data = await res.json();
-		if (!data || !Array.isArray(data.users)) return;
-		// Only update UI if changed (shallow compare by sessionId and lastSeen)
-		const next = data.users;
-		const prev = this.presence.lastUsers || [];
-		const changed = next.length !== prev.length || next.some((u, i) => (u.sessionId !== (prev[i]?.sessionId) || u.lastSeen !== (prev[i]?.lastSeen)));
-		this.presence.lastUsers = next;
-		if (changed) this.renderPresence(next);
-	}
-
-	renderPresence(users) {
-		try {
-			// Header widget rows
-			const namesEl = document.getElementById('presenceNames');
-			if (namesEl) {
-			// Build colored labels per user (exclude myself) and truncate with title
-			const others = (users || []).filter(u => u && u.sessionId !== this.presence.sessionId);
-			const roleMap = { master: 'Master', sync: 'Sync', standalone: 'Standalone' };
-			const htmlParts = [];
-			const titleParts = [];
-			others.forEach((u, idx) => {
-				const name = (u.displayName || '').replace(/[<>]/g, '');
-				const r = (u.role || 'standalone').toLowerCase();
-				const roleLabel = roleMap[r] || 'Standalone';
-				const roleClass = r === 'master' ? 'mode-master' : (r === 'sync' ? 'mode-sync' : 'standalone');
-				if (name.length > 0) {
-htmlParts.push(`<span class=\"presence-chip ${r}\" title=\"${roleLabel}\">${name}</span>`);
-					titleParts.push(`${name} (${roleLabel})`);
-				}
-			});
-			namesEl.innerHTML = htmlParts.join(' ');
-			namesEl.title = titleParts.join(', ');
-			}
-			// Update my input value only
-			const nameInput = document.getElementById('presenceNameInput');
-			if (nameInput && nameInput !== document.activeElement) {
-				if ((nameInput.value || '') !== (this.presence.displayName || '')) {
-					nameInput.value = this.presence.displayName || '';
-				}
-			}
-		} catch (e) { /* ignore */ }
-	}
-
-	setDisplayName(name) {
-		try {
-			this.presence.displayName = String(name || '').slice(0, 64);
-			localStorage.setItem('presence.displayName', this.presence.displayName);
-			// Force immediate heartbeat to reflect new name
-			this.heartbeatPresence();
-		} catch (e) {}
 	}
 
 	/**

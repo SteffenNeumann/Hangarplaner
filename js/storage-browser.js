@@ -10,12 +10,7 @@ class ServerSync {
 		this.serverSyncInterval = null;
 		this.isApplyingServerData = false;
 		this.lastDataChecksum = null;
-		this.lastServerDataChecksum = null; // Fallback checksum when timestamp API is unavailable
 		this.autoSaveTimeout = null;
-
-		// Polling Intervalle
-		this.slavePollMs = 10000; // 10s für Read-Only
-		this.masterCheckMs = 30000; // 30s für Master Update-Checks
 
 		// NEUE Master-Slave Eigenschaften
 		this.isMaster = false;
@@ -201,7 +196,7 @@ class ServerSync {
 		// HINZUGEFÜGT: Auch Updates empfangen (längeres Intervall für Master)
 		this.slaveCheckInterval = setInterval(async () => {
 			await this.slaveCheckForUpdates();
-		}, this.masterCheckMs); // Master-Update-Check (konfigurierbar)
+		}, 30000); // 30 Sekunden für Master-Update-Check
 
 		// Sofort einen ersten Schreibversuch starten, damit andere Browser zeitnah Daten erhalten
 		try {
@@ -232,10 +227,10 @@ class ServerSync {
 		// Starte Slave-Polling (nur Laden bei Änderungen)
 		this.slaveCheckInterval = setInterval(async () => {
 			await this.slaveCheckForUpdates();
-		}, this.slavePollMs); // Polling-Intervall (konfigurierbar)
+		}, 15000); // 15 Sekunden Polling-Intervall
 
 		console.log(
-			`👤 Slave-Modus gestartet - Polling für Updates alle ${Math.round((this.slavePollMs||15000)/1000)} Sekunden aktiv`
+			"👤 Slave-Modus gestartet - Polling für Updates alle 15 Sekunden aktiv"
 		);
 		// HINWEIS: Initialer Load erfolgt bereits in initSync()
 
@@ -267,11 +262,6 @@ class ServerSync {
 				if (serverData && !serverData.error) {
 					await this.applyServerData(serverData);
 					this.lastServerTimestamp = currentServerTimestamp;
-					// Zusätzlich: Checksumme speichern für Fallback-Vergleiche
-					try {
-						const cmp = this._safeDataChecksum(serverData);
-						this.lastServerDataChecksum = cmp;
-					} catch (e) {}
 					console.log(
 						"✅ Slave: Server-Daten erfolgreich geladen und angewendet"
 					);
@@ -282,25 +272,6 @@ class ServerSync {
 					}
 				} else {
 					console.warn("⚠️ Slave: Server-Daten konnten nicht geladen werden");
-				}
-			} else if (!currentServerTimestamp || currentServerTimestamp === 0) {
-				// Fallback: Server unterstützt keine Timestamp-API → lade und vergleiche Checksummen
-				console.warn("⚠️ Timestamp-API nicht verfügbar – Fallback: direkte Load+Checksum");
-				const serverData = await this.loadFromServer();
-				if (serverData && !serverData.error) {
-					const cmp = this._safeDataChecksum(serverData);
-					if (cmp !== this.lastServerDataChecksum) {
-						console.log("🔄 Fallback: Änderungen erkannt (Checksum), wende Daten an...");
-						await this.applyServerData(serverData);
-						this.lastServerDataChecksum = cmp;
-						if (window.showNotification) {
-							window.showNotification("Server-Updates empfangen", "info");
-						}
-					} else {
-						console.log("⏸️ Fallback: Keine Änderungen (Checksum unverändert)");
-					}
-				} else {
-					console.warn("⚠️ Fallback: Server-Daten konnten nicht geladen werden");
 				}
 			} else {
 				console.log("⏸️ Slave: Keine neuen Änderungen auf Server");
@@ -419,20 +390,18 @@ class ServerSync {
 				const data = window.hangarData.collectAllHangarData();
 
 				// *** NEU: Display Options ergänzen ***
-					if (window.displayOptions) {
-						// Sammle aktuelle UI-Werte
-						window.displayOptions.collectFromUI();
+				if (window.displayOptions) {
+					// Sammle aktuelle UI-Werte
+					window.displayOptions.collectFromUI();
 
-						// Füge Display Options zu den Einstellungen hinzu (ohne darkMode – Thema bleibt lokal)
-						if (!data.settings) data.settings = {};
-						const opts = { ...window.displayOptions.current };
-						delete opts.darkMode;
-						data.settings.displayOptions = opts;
-						console.log(
-							"🎛️ Display Options zu Server-Daten hinzugefügt (darkMode ausgelassen):",
-							data.settings.displayOptions
-						);
-					}
+					// Füge Display Options zu den Einstellungen hinzu
+					if (!data.settings) data.settings = {};
+					data.settings.displayOptions = { ...window.displayOptions.current };
+
+					console.log(
+						"🎛️ Display Options zu Server-Daten hinzugefügt:",
+						data.settings.displayOptions
+					);
 				}
 
 				return data;
@@ -499,23 +468,6 @@ class ServerSync {
 		} catch (error) {
 			console.error("❌ Server-Load Fehler:", error);
 			return null;
-		}
-	}
-
-	/**
-	 * Erzeugt eine stabile Checksumme der Serverdaten, ignoriert flüchtige Felder
-	 */
-	_safeDataChecksum(data) {
-		try {
-			const clone = JSON.parse(JSON.stringify(data || {}));
-			if (clone?.metadata) {
-				delete clone.metadata.lastModified;
-				delete clone.metadata.lastSaved;
-				delete clone.metadata.lastSync;
-			}
-			return this.generateChecksum(JSON.stringify(clone));
-		} catch (e) {
-			return this.generateChecksum(String(Date.now()));
 		}
 	}
 
@@ -622,29 +574,15 @@ class ServerSync {
 						secondaryTilesCount: serverData.settings.secondaryTilesCount || 4,
 						layout: serverData.settings.layout || 4,
 					};
-					// Preserve local theme preference, never override from server
-					let preferredDark = null;
-					try {
-						const persisted = (localStorage.getItem('hangar.theme') || '').toLowerCase();
-						if (persisted === 'dark') preferredDark = true;
-						if (persisted === 'light') preferredDark = false;
-					} catch (e) {}
-					if (preferredDark === null) {
-						try {
-							const domDark = document.documentElement.classList.contains('dark-mode') || (document.body && document.body.classList.contains('dark-mode'));
-							preferredDark = !!domDark;
-						} catch (e) { preferredDark = null; }
-					}
 					window.displayOptions.current = {
 						...window.displayOptions.defaults,
 						...legacySettings,
-						...(preferredDark === null ? {} : { darkMode: preferredDark })
 					};
 					window.displayOptions.updateUI();
 					window.displayOptions.applySettings();
 					console.log(
-						"🎛️ Legacy-Einstellungen vom Server angewendet (theme preserved)",
-						{...legacySettings, darkMode: preferredDark}
+						"🎛️ Legacy-Einstellungen vom Server angewendet:",
+						legacySettings
 					);
 				}
 			}
@@ -769,14 +707,14 @@ class ServerSync {
 			const tileId = tileData.tileId || (isSecondary ? 101 + index : 1 + index);
 			console.log(`🔄 Verarbeite Kachel ${tileId}:`, tileData);
 
-			// Aircraft ID (apply even when empty string to allow clearing)
-			if (Object.prototype.hasOwnProperty.call(tileData, 'aircraftId')) {
+			// Aircraft ID
+			if (tileData.aircraftId) {
 				const aircraftInput = document.getElementById(`aircraft-${tileId}`);
 				if (aircraftInput) {
 					const oldValue = aircraftInput.value;
-					aircraftInput.value = tileData.aircraftId ?? '';
+					aircraftInput.value = tileData.aircraftId;
 					console.log(
-						`✈️ Aircraft ID gesetzt: ${tileId} = ${oldValue} → ${tileData.aircraftId ?? ''}`
+						`✈️ Aircraft ID gesetzt: ${tileId} = ${oldValue} → ${tileData.aircraftId}`
 					);
 					successfullyApplied++;
 				} else {
@@ -785,16 +723,16 @@ class ServerSync {
 				}
 			}
 
-			// Position (apply even when empty to clear)
-			if (Object.prototype.hasOwnProperty.call(tileData, 'position')) {
+			// Position
+			if (tileData.position) {
 				const positionInput =
 					document.getElementById(`hangar-position-${tileId}`) ||
 					document.getElementById(`position-${tileId}`);
 				if (positionInput) {
 					const oldValue = positionInput.value;
-					positionInput.value = tileData.position ?? '';
+					positionInput.value = tileData.position;
 					console.log(
-						`📍 Position gesetzt: ${tileId} = ${oldValue} → ${tileData.position ?? ''}`
+						`📍 Position gesetzt: ${tileId} = ${oldValue} → ${tileData.position}`
 					);
 					successfullyApplied++;
 				} else {
@@ -805,27 +743,27 @@ class ServerSync {
 				}
 			}
 
-			// Notes (apply even when empty to clear)
-			if (Object.prototype.hasOwnProperty.call(tileData, 'notes')) {
+			// Notes
+			if (tileData.notes) {
 				const notesInput = document.getElementById(`notes-${tileId}`);
 				if (notesInput) {
-					notesInput.value = tileData.notes ?? '';
-					console.log(`📝 Notizen gesetzt: ${tileId} = ${tileData.notes ?? ''}`);
+					notesInput.value = tileData.notes;
+					console.log(`📝 Notizen gesetzt: ${tileId} = ${tileData.notes}`);
 				}
 			}
 
-			// Arrival Time (apply even when empty to clear)
-			if (Object.prototype.hasOwnProperty.call(tileData, 'arrivalTime')) {
+			// Arrival Time
+			if (tileData.arrivalTime) {
 				const arrivalInput = document.getElementById(`arrival-time-${tileId}`);
 				if (arrivalInput) {
-					let toSet = tileData.arrivalTime ?? '';
-					if (toSet && arrivalInput.type === 'datetime-local' && window.helpers) {
+					let toSet = tileData.arrivalTime;
+					if (arrivalInput.type === 'datetime-local' && window.helpers) {
 						const h = window.helpers;
-						if (h.isDateTimeLocal && h.isDateTimeLocal(toSet)) {
-							// keep
-						} else if (h.isHHmm && h.isHHmm(toSet) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
+						if (h.isDateTimeLocal && h.isDateTimeLocal(tileData.arrivalTime)) {
+							toSet = tileData.arrivalTime;
+						} else if (h.isHHmm && h.isHHmm(tileData.arrivalTime) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
 							const bases = h.getBaseDates();
-							toSet = h.coerceHHmmToDateTimeLocalUtc(toSet, bases.arrivalBase || '');
+							toSet = h.coerceHHmmToDateTimeLocalUtc(tileData.arrivalTime, bases.arrivalBase || '');
 						}
 					}
 					arrivalInput.value = toSet || '';
@@ -835,20 +773,20 @@ class ServerSync {
 				}
 			}
 
-			// Departure Time (apply even when empty to clear)
-			if (Object.prototype.hasOwnProperty.call(tileData, 'departureTime')) {
+			// Departure Time
+			if (tileData.departureTime) {
 				const departureInput = document.getElementById(
 					`departure-time-${tileId}`
 				);
 				if (departureInput) {
-					let toSet = tileData.departureTime ?? '';
-					if (toSet && departureInput.type === 'datetime-local' && window.helpers) {
+					let toSet = tileData.departureTime;
+					if (departureInput.type === 'datetime-local' && window.helpers) {
 						const h = window.helpers;
-						if (h.isDateTimeLocal && h.isDateTimeLocal(toSet)) {
-							// keep
-						} else if (h.isHHmm && h.isHHmm(toSet) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
+						if (h.isDateTimeLocal && h.isDateTimeLocal(tileData.departureTime)) {
+							toSet = tileData.departureTime;
+						} else if (h.isHHmm && h.isHHmm(tileData.departureTime) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
 							const bases = h.getBaseDates();
-							toSet = h.coerceHHmmToDateTimeLocalUtc(toSet, bases.departureBase || '');
+							toSet = h.coerceHHmmToDateTimeLocalUtc(tileData.departureTime, bases.departureBase || '');
 						}
 					}
 					departureInput.value = toSet || '';
@@ -858,23 +796,23 @@ class ServerSync {
 				}
 			}
 
-			// Status (apply even when neutral/empty)
-			if (Object.prototype.hasOwnProperty.call(tileData, 'status')) {
+			// Status
+			if (tileData.status) {
 				const statusSelect = document.getElementById(`status-${tileId}`);
 				if (statusSelect) {
-					statusSelect.value = (tileData.status ?? 'neutral');
-					console.log(`🚦 Status gesetzt: ${tileId} = ${tileData.status ?? 'neutral'}`);
+					statusSelect.value = tileData.status;
+					console.log(`🚦 Status gesetzt: ${tileId} = ${tileData.status}`);
 				}
 			}
 
-			// Tow Status (apply even when neutral/empty)
-			if (Object.prototype.hasOwnProperty.call(tileData, 'towStatus')) {
+			// Tow Status
+			if (tileData.towStatus) {
 				const towStatusSelect = document.getElementById(`tow-status-${tileId}`);
 				if (towStatusSelect) {
 					const oldValue = towStatusSelect.value;
-					towStatusSelect.value = (tileData.towStatus ?? 'neutral');
+					towStatusSelect.value = tileData.towStatus;
 					console.log(
-						`🚚 Tow Status gesetzt: ${tileId} = ${oldValue} → ${tileData.towStatus ?? 'neutral'}`
+						`🚚 Tow Status gesetzt: ${tileId} = ${oldValue} → ${tileData.towStatus}`
 					);
 					successfullyApplied++;
 				} else {
@@ -1181,28 +1119,19 @@ window.hangarInitQueue = window.hangarInitQueue || [];
 window.hangarInitQueue.push(async function () {
 	console.log("🔄 Server-Sync wird über zentrale Initialisierung gestartet...");
 
-	// PRODUKTIONS-Server-URL (korrekte Domain)
-	const productionServerUrl = "https://hangarplaner.de/sync/data.php";
+	// PRODUKTIONS-Server-URL für hangarplanner.de
+	const productionServerUrl = "https://hangarplanner.de/sync/data.php";
 
-	// Bevorzugt: gleiches Origin (vermeidet CORS)
+	// Fallback für lokale Entwicklung
 	const localServerUrl = window.location.origin + "/sync/data.php";
 
-	// Prüfe auf Server-Konfiguration oder wähle sinnvolle Defaults
-	let serverUrl = localStorage.getItem("hangarServerSyncUrl") || "";
+	// Prüfe auf Server-Konfiguration oder verwende Produktions-URL
+	let serverUrl = localStorage.getItem("hangarServerSyncUrl");
 
-	// Legacy-Korrektur: falsche Domain automatisch auf aktuellen Host korrigieren
-	try {
-		const host = window.location.hostname || "";
-		if (serverUrl.includes("hangarplanner.de") && host.includes("hangarplaner.de")) {
-			serverUrl = localServerUrl;
-			console.log("🔧 Korrigiere gespeicherte Server-URL auf lokalen Host:", serverUrl);
-		}
-	} catch (e) { /* noop */ }
-
-	// Wenn keine URL gespeichert ist, verwende bevorzugt das gleiche Origin
+	// Wenn keine URL gespeichert ist, verwende Produktions-URL
 	if (!serverUrl) {
-		serverUrl = localServerUrl || productionServerUrl;
-		console.log("🌐 Verwende Server:", serverUrl);
+		serverUrl = productionServerUrl;
+		console.log("🌐 Verwende Produktions-Server:", productionServerUrl);
 	} else {
 		console.log("💾 Verwende gespeicherte Server-URL:", serverUrl);
 	}
@@ -1220,7 +1149,7 @@ setTimeout(async () => {
 
 	const serverUrl =
 		localStorage.getItem("hangarServerSyncUrl") ||
-		(window.location.origin + "/sync/data.php");
+		"https://hangarplanner.de/sync/data.php";
 	const isServerReachable = await window.serverSync.testServerConnection(
 		serverUrl
 	);

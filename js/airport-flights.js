@@ -668,10 +668,6 @@ const AirportFlights = (() => {
 		}
 	}
 
-	function createUseButtonHTML(reg, arrHHMM, depHHMM) {
-		return `<button class=\"text-green-600 hover:text-green-800\" onclick=\"AirportFlights.useInHangar('${reg}','${arrHHMM || ''}','${depHHMM || ''}')\" title=\"In HangarPlanner verwenden\">\n\t\t\t\t\t\t<svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">\n\t\t\t\t\t\t\t<path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 6v6m0 0v6m0-6h6m-6 0H6\"></path>\n\t\t\t\t\t\t</svg>\n\t\t\t\t\t</button>`;
-	}
-
 	/**
 	 * Erstellt eine Tabellenzeile für einen Flug
 	 * @param {Object} flight - Flugdaten
@@ -820,23 +816,13 @@ const AirportFlights = (() => {
 			btn.disabled = true;
 			const prev = btn.textContent;
 			btn.textContent = '…';
-			let usedCache = false;
 			let reg = window.FlightRegistrationLookup.getCachedRegistration?.(flightNumber, dateStr) || null;
-			if (reg) usedCache = true;
 			if (!reg) reg = await window.FlightRegistrationLookup.lookupRegistration(flightNumber, dateStr);
 			if (reg && regCell) {
 				regCell.textContent = reg;
-				regCell.title = usedCache ? 'Resolved (cached)' : 'Resolved (lookup)';
-				// Replace actions cell with "+" button to use in Hangar
-				const t = tr.closest('table');
-				const isArrival = t && t.classList.contains('arrivals-table');
-				const timeText = (tr.querySelector('.flight-time')?.textContent || '').trim();
-				const arrHHMM = isArrival ? timeText : '';
-				const depHHMM = isArrival ? '' : timeText;
-				const actionsTd = tr.querySelector('td:last-child');
-				if (actionsTd) {
-					actionsTd.innerHTML = createUseButtonHTML(reg, arrHHMM, depHHMM);
-				}
+				btn.textContent = '✓';
+				btn.classList.remove('text-blue-600');
+				btn.classList.add('text-green-600');
 			} else {
 				btn.textContent = prev;
 				btn.disabled = false;
@@ -859,17 +845,10 @@ const AirportFlights = (() => {
 			}
 			const tr = btn.closest('tr');
 			const regCell = tr ? tr.querySelector('.flight-reg') : null;
-			if (regCell) { regCell.textContent = reg; regCell.title = 'Set manually'; }
-			// Replace actions cell with "+" button to use in Hangar
-			const t = tr.closest('table');
-			const isArrival = t && t.classList.contains('arrivals-table');
-			const timeText = (tr.querySelector('.flight-time')?.textContent || '').trim();
-			const arrHHMM = isArrival ? timeText : '';
-			const depHHMM = isArrival ? '' : timeText;
-			const actionsTd = tr.querySelector('td:last-child');
-			if (actionsTd) {
-				actionsTd.innerHTML = createUseButtonHTML(reg, arrHHMM, depHHMM);
-			}
+			if (regCell) regCell.textContent = reg;
+			btn.textContent = '✓';
+			btn.classList.remove('text-blue-600');
+			btn.classList.add('text-green-600');
 		} catch (e) {}
 	};
 

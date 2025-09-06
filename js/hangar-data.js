@@ -1546,6 +1546,18 @@ window.generateDefaultProjectName = generateDefaultProjectName;
 	function createOrUpdateLastUpdateBadge(cellId, source = 'api', timestampMs = null, options = {}){
 		try {
 			const persist = options.persist !== false; // default true
+
+			// Guard: if no Aircraft ID is present in this tile, remove any existing badge and skip
+			try {
+				const aircraftEl = document.getElementById(`aircraft-${cellId}`);
+				const reg = (aircraftEl && aircraftEl.value ? aircraftEl.value : '').trim();
+				if (!reg) {
+					if (window.LastUpdateBadges && typeof window.LastUpdateBadges.remove === 'function') {
+						window.LastUpdateBadges.remove(cellId);
+					}
+					return;
+				}
+			} catch (e) { /* ignore */ }
 			let tile = document.querySelector(`[data-cell-id="${cellId}"]`);
 			if (!tile && cellId >= 1 && cellId <= 100) {
 				tile = document.querySelector(`#hangarGrid .hangar-cell:nth-child(${cellId})`);
@@ -1641,10 +1653,26 @@ window.generateDefaultProjectName = generateDefaultProjectName;
 		reatachAll(){ this.reattachAll(); }, // backward-compat typo guard
 		reattachAll(){
 			const store = loadStore();
+			let changed = false;
 			Object.keys(store).forEach(k => {
+				const cellId = parseInt(k,10);
+				const aircraftEl = document.getElementById(`aircraft-${cellId}`);
+				const reg = (aircraftEl && aircraftEl.value ? aircraftEl.value : '').trim();
+				if (!reg) {
+					// No Aircraft ID: remove any existing DOM badge and clear persisted record
+					delete store[k];
+					changed = true;
+					const host = document.querySelector(`[data-cell-id="${cellId}"]`) || document.querySelector(`#hangarGrid .hangar-cell:nth-child(${cellId})`) || document.querySelector(`#secondaryHangarGrid .hangar-cell:nth-child(${cellId-100})`);
+					if (host) {
+						const b = host.querySelector('.last-update-badge');
+						if (b) b.remove();
+					}
+					return;
+				}
 				const meta = store[k] || {};
-				createOrUpdateLastUpdateBadge(parseInt(k,10), meta.source || 'api', meta.ts, { persist: false });
+				createOrUpdateLastUpdateBadge(cellId, meta.source || 'api', meta.ts, { persist: false });
 			});
+			if (changed) saveStore(store);
 			if (typeof window.refreshAllUpdateBadges === 'function') {
 				setTimeout(window.refreshAllUpdateBadges, 0);
 			}

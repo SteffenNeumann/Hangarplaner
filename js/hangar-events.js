@@ -566,15 +566,22 @@ function handleAircraftIdChange(aircraftInputId, newValue) {
 			console.log(`🧹 Position für Kachel ${cellId} gelöscht`);
 		}
 
-		// KORREKTUR: Auch localStorage aktualisieren
-		if (typeof saveFlightTimeValueToLocalStorage === "function") {
-			saveFlightTimeValueToLocalStorage(cellId, "arrivalTime", "");
-			saveFlightTimeValueToLocalStorage(cellId, "departureTime", "");
-			saveFlightTimeValueToLocalStorage(cellId, "position", "");
-			saveFlightTimeValueToLocalStorage(cellId, "aircraftId", "");
-			console.log(`💾 localStorage für Kachel ${cellId} gelöscht`);
-		}
-	} else {
+			// KORREKTUR: Auch localStorage aktualisieren
+			if (typeof saveFlightTimeValueToLocalStorage === "function") {
+				saveFlightTimeValueToLocalStorage(cellId, "arrivalTime", "");
+				saveFlightTimeValueToLocalStorage(cellId, "departureTime", "");
+				saveFlightTimeValueToLocalStorage(cellId, "position", "");
+				saveFlightTimeValueToLocalStorage(cellId, "aircraftId", "");
+				console.log(`💾 localStorage für Kachel ${cellId} gelöscht`);
+			}
+
+			// Entferne auch den Zeitstempel-Badge und seine Persistenz, wenn keine Aircraft ID vorhanden ist
+			try {
+				if (window.LastUpdateBadges && typeof window.LastUpdateBadges.remove === 'function') {
+					window.LastUpdateBadges.remove(parseInt(cellId, 10));
+				}
+			} catch (e) { /* noop */ }
+		} else {
 		// KORREKTUR: Bei gültiger Aircraft ID automatisch Flugdaten abrufen
 		console.log(
 			`✈️ Gültige Aircraft ID für Kachel ${cellId}: "${newValue.trim()}" - starte Datenabfrage`

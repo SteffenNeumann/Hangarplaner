@@ -988,8 +988,11 @@
       const depMs = parseISOAsUTC(iso);
       if (!isFinite(depMs)) return;
       if (depMs <= cutoffMs){
-        const hangarPos = (document.getElementById(`hangar-position-${cellId}`)?.value || '').trim();
-        result.push({ cellId, depMs, hhmm: formatHHmmUTC(depMs), hangarPos, overdue: depMs <= nowMs });
+        // Prefer Hangar Position, fall back to Pos field if empty
+        const hangarPosRaw = (document.getElementById(`hangar-position-${cellId}`)?.value || '').trim();
+        const posRaw = (document.getElementById(`position-${cellId}`)?.value || '').trim();
+        const displayPos = hangarPosRaw || posRaw;
+        result.push({ cellId, depMs, hhmm: formatHHmmUTC(depMs), hangarPos: displayPos, overdue: depMs <= nowMs });
       }
     });
     result.sort((a,b)=> a.depMs - b.depMs);
@@ -1068,7 +1071,8 @@
     updateActiveBadge(cfg.active);
     const eligibleAll = cfg.active ? collectEligible(cfg.minutes) : [];
     const overdueOnly = cfg.active ? eligibleAll.filter(x => x.overdue && x.hangarPos && x.hangarPos.length) : [];
-    renderHeader(overdueOnly);
+    // Show all eligible items (within window), not only overdue
+    renderHeader(eligibleAll);
     updateBadges(eligibleAll);
   }
   function start(){

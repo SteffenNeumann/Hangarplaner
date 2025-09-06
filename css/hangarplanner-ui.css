@@ -1239,6 +1239,11 @@ input:checked + .toggle-slider:before {
 	border-left: 2px solid #10b981;
 }
 
+/* Global tile spacing variables */
+:root { --tile-gap: 20px; --tile-grid-padding: 12px; }
+/* Fixed, user-friendly padding between tiles (overrides Tailwind gap-4) */
+#hangarGrid, #secondaryHangarGrid { gap: var(--tile-gap, 20px) !important; grid-gap: var(--tile-gap, 20px) !important; padding: var(--tile-grid-padding, 12px) !important; }
+
 /* Optimierte Grid-Layouts für verschiedene Kachelanzahlen */
 #secondaryHangarGrid.secondary-count-1 {
 	grid-template-columns: 1fr;

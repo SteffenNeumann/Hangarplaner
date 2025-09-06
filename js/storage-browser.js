@@ -13,6 +13,10 @@ class ServerSync {
 		this.lastServerDataChecksum = null; // Fallback checksum when timestamp API is unavailable
 		this.autoSaveTimeout = null;
 
+		// Polling Intervalle
+		this.slavePollMs = 10000; // 10s für Read-Only
+		this.masterCheckMs = 30000; // 30s für Master Update-Checks
+
 		// NEUE Master-Slave Eigenschaften
 		this.isMaster = false;
 		this.isSlaveActive = false;
@@ -197,7 +201,7 @@ class ServerSync {
 		// HINZUGEFÜGT: Auch Updates empfangen (längeres Intervall für Master)
 		this.slaveCheckInterval = setInterval(async () => {
 			await this.slaveCheckForUpdates();
-		}, 30000); // 30 Sekunden für Master-Update-Check
+		}, this.masterCheckMs); // Master-Update-Check (konfigurierbar)
 
 		// Sofort einen ersten Schreibversuch starten, damit andere Browser zeitnah Daten erhalten
 		try {
@@ -228,7 +232,7 @@ class ServerSync {
 		// Starte Slave-Polling (nur Laden bei Änderungen)
 		this.slaveCheckInterval = setInterval(async () => {
 			await this.slaveCheckForUpdates();
-		}, 15000); // 15 Sekunden Polling-Intervall
+		}, this.slavePollMs); // Polling-Intervall (konfigurierbar)
 
 		console.log(
 			"👤 Slave-Modus gestartet - Polling für Updates alle 15 Sekunden aktiv"

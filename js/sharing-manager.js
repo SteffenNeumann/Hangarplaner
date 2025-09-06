@@ -465,16 +465,35 @@ class SharingManager {
 		}
 
 		// Manual Sync button enable/disable based on mode
-		try {
-			const manualSyncBtn = document.getElementById("manualSyncBtn");
-			if (manualSyncBtn) {
-				const enable = !!writeEnabled; // only enabled when Write is ON (Master)
-				manualSyncBtn.disabled = !enable;
-				manualSyncBtn.style.opacity = enable ? "" : "0.6";
-				manualSyncBtn.style.cursor = enable ? "" : "not-allowed";
-				manualSyncBtn.title = enable ? "Trigger a one-time sync now" : "Enable Write Data to allow manual sync";
-			}
-		} catch (e) {}
+			try {
+				const manualSyncBtn = document.getElementById("manualSyncBtn");
+				if (manualSyncBtn) {
+					const enable = !!writeEnabled; // only enabled when Write is ON (Master)
+					manualSyncBtn.disabled = !enable;
+					manualSyncBtn.style.opacity = enable ? "" : "0.6";
+					manualSyncBtn.style.cursor = enable ? "" : "not-allowed";
+					manualSyncBtn.title = enable ? "Trigger a one-time sync now" : "Enable Write Data to allow manual sync";
+				}
+			} catch (e) {}
+
+			// Update polling info line
+			try {
+				const infoEl = document.getElementById('syncPollingInfo');
+				if (infoEl) {
+					const slaveMs = (window.serverSync && window.serverSync.slavePollMs) ? window.serverSync.slavePollMs : 15000;
+					const masterMs = (window.serverSync && window.serverSync.masterCheckMs) ? window.serverSync.masterCheckMs : 30000;
+					if (readEnabled && !writeEnabled) {
+						infoEl.textContent = `Receiving updates every ${Math.round(slaveMs/1000)}s`;
+						infoEl.style.display = '';
+					} else if (readEnabled && writeEnabled) {
+						infoEl.textContent = `Sending changes automatically; checking server every ${Math.round(masterMs/1000)}s`;
+						infoEl.style.display = '';
+					} else {
+						infoEl.textContent = 'Sync disabled';
+						infoEl.style.display = '';
+					}
+				}
+			} catch (e) {}
 
 		// Sync Status Button aktualisieren
 		if (syncStatusBtn) {

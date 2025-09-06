@@ -86,6 +86,9 @@ window.globalInitialization = {
 				isMaster: false,
 				isSlaveActive: false,
 				isApplyingServerData: false,
+				// Intervall-Defaults (Stub)
+				slavePollMs: 10000,
+				masterCheckMs: 30000,
 				// No-Op/Stub Methoden
 				syncWithServer: () => Promise.resolve(false),
 				manualSync: () => Promise.resolve(false),

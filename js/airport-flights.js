@@ -494,7 +494,11 @@ const AirportFlights = (() => {
 				console.log(`[AirportFlights] Missing registrations to resolve: ${targets.length}`);
 			}
 
-			const memo = new Map(); // key: FLIGHTNUMBER_YYYY-MM-DD -> registration or null
+			const memo = (function(){
+				// Share memo across arrivals + departures and multiple reloads
+				if (!window.__RegMemo) window.__RegMemo = new Map();
+				return window.__RegMemo;
+			})(); // key: FLIGHTNUMBER_YYYY-MM-DD -> registration or null
 
 			async function resolveRegistration(flightNumberRaw, dateStr) {
 				const flightNumber = toNormFlight(flightNumberRaw);
@@ -510,23 +514,7 @@ const AirportFlights = (() => {
 						console.warn('[AirportFlights] lookupRegistration failed:', e?.message || e);
 					}
 				}
-				// 2) Provider direct by date (fallback)
-				if (!reg && window.AeroDataBoxAPI?.getFlightByNumber) {
-					try {
-						const info = await window.AeroDataBoxAPI.getFlightByNumber(flightNumber, dateStr);
-						if (info?.registration) reg = info.registration;
-					} catch (e) { /* ignore */ }
-				}
-				// 3) Provider multi-day small forward search (helps for not-yet-assigned future flights)
-				if (!reg && window.AeroDataBoxAPI?.getFlightByNumberMultipleDays) {
-					try {
-						const many = await window.AeroDataBoxAPI.getFlightByNumberMultipleDays(flightNumber, dateStr, 3);
-						if (Array.isArray(many)) {
-							const withReg = many.find(x => x && x.registration);
-							if (withReg) reg = withReg.registration;
-						}
-					} catch (e) { /* ignore */ }
-				}
+				// Keep fast: rely on FlightRegistrationLookup's fast path only (no multi-day)
 
 				memo.set(key, reg || null);
 				return reg || null;
@@ -560,9 +548,7 @@ const AirportFlights = (() => {
 				if (!dateStr) dateStr = fallbackDate;
 
 				try {
-					window.AeroDataBoxAPI?.updateFetchStatus?.(`Resolving registrations… ${toNormFlight(flightNum)} ${dateStr}`, false);
 					const resolved = await resolveRegistration(flightNum, dateStr);
-					console.log(`[RegLookup] ${toNormFlight(flightNum)} ${dateStr} -> ${resolved || 'not found'}`);
 					if (resolved) {
 						// Ensure downstream code can read the registration consistently
 						if (!f.aircraft) f.aircraft = {};

@@ -14,14 +14,18 @@ const FlightRegistrationLookup = (() => {
 	const config = {
 		enableCaching: true,
 		cacheExpiry: 24 * 60 * 60 * 1000, // 24 Stunden
-		debugMode: true,
+		debugMode: false,
 			sources: {
 				aerodatabox: true, // PRIMÄRE QUELLE: AeroDataBox API
-				opensky: true,
-				faa: true,
+				opensky: false,
+				faa: false,
 				webScraping: false, // Disabled for reliability: use only API-backed sources
 				localDatabase: false, // DEAKTIVIERT: Flight numbers können verschiedene Aircraft an verschiedenen Daten verwenden
 			},
+		features: {
+			airportSearch: false,
+			fleetSearch: false,
+		},
 	};
 
 	// Cache für bereits aufgelöste Registrierungen
@@ -235,6 +239,11 @@ const FlightRegistrationLookup = (() => {
 			}
 			console.groupEnd();
 
+			// Fast path mode: optionally skip heavy strategies
+			if (!config.features.airportSearch) {
+				console.groupEnd();
+				return null;
+			}
 			// 2. STRATEGIE: Flughafen-Abfrage mit Flugnummer-Filter
 			console.group("🏢 Strategie 2: Airport Search");
 			try {
@@ -325,6 +334,10 @@ const FlightRegistrationLookup = (() => {
 			}
 			console.groupEnd();
 
+			if (!config.features.fleetSearch) {
+				console.groupEnd();
+				return null;
+			}
 			// 3. STRATEGIE: Bekannte Registration reverse lookup (wenn wir Flotte kennen)
 			console.group("✈️ Strategie 3: Fleet Search");
 			try {

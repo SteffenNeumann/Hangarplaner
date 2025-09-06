@@ -3338,9 +3338,11 @@ const AeroDataBoxAPI = (() => {
 										 flight.aircraftRegistration ||
 										 flight.registration;
 					const registration = normalizeRegForTiles(rawRegistration);
-					const flightNumber = flight.number;
-					const flightDate = flight.departure?.scheduledTime?.utc?.substring(0, 10) || 
-									   flight.arrival?.scheduledTime?.utc?.substring(0, 10);
+					// Be robust to different shapes for flight number in airport results
+					const flightNumber = flight.number || flight.departure?.flight?.number || flight.arrival?.flight?.number;
+					// Use dedicated dates for arrival vs departure (do NOT mix)
+					const depDate = flight.departure?.scheduledTime?.utc?.substring(0, 10) || null;
+					const arrDate = flight.arrival?.scheduledTime?.utc?.substring(0, 10) || null;
 					const arrivalAirport = flight.arrival?.airport?.iata || flight.arrival?.airport?.icao;
 					const departureAirport = flight.departure?.airport?.iata || flight.departure?.airport?.icao;
 					const arrivalTime = flight.arrival?.scheduledTime?.utc;
@@ -3349,8 +3351,8 @@ const AeroDataBoxAPI = (() => {
 					// FILTER: Only collect flights that could be overnight candidates
 					// 1. Arrivals to selected airport on day 1 (potential overnight start)
 					// 2. Departures from selected airport on day 2 (potential overnight end)
-					const isDay1Arrival = flightDate === startDate && arrivalAirport === selectedAirport && arrivalTime;
-					const isDay2Departure = flightDate === endDate && departureAirport === selectedAirport && departureTime;
+					const isDay1Arrival = (arrDate === startDate) && (arrivalAirport === selectedAirport) && !!arrivalTime;
+					const isDay2Departure = (depDate === endDate) && (departureAirport === selectedAirport) && !!departureTime;
 
 					if (isDay1Arrival || isDay2Departure) {
 						if (registration) {
@@ -3377,7 +3379,7 @@ const AeroDataBoxAPI = (() => {
 								flight,
 								isDay1Arrival,
 								isDay2Departure,
-								flightDate
+								flightDate: arrDate || depDate
 							});
 						}
 					}

@@ -128,9 +128,13 @@ const AirportFlights = (() => {
 						arrivals.length + departures.length
 					} von ${originalArrivalsCount + originalDeparturesCount} Flügen`
 				);
-			}
+            }
 
-			// Suche den Container für die Anzeige
+            // Prefill missing registrations before rendering
+            await prefillMissingRegistrations(arrivals, true, startDateTime);
+            await prefillMissingRegistrations(departures, false, startDateTime);
+
+            // Suche den Container für die Anzeige
 			const mainContent = document.querySelector("main") || document.body;
 
 			// Bestehende Fluginfos entfernen falls vorhanden
@@ -459,6 +463,122 @@ const AirportFlights = (() => {
 	};
 
 	/**
+	 * Prefill missing registrations by flight number before rendering the table.
+	 * Uses the existing FlightRegistrationLookup.lookupRegistration(flightNumber, date)
+	 * to resolve aircraft registrations for flights that don't include it.
+	 */
+	async function prefillMissingRegistrations(flights, isArrival, startDateTime) {
+		try {
+			if (!Array.isArray(flights) || flights.length === 0) return;
+
+			// Derive a fallback date from the provided window or UI date selector
+			const fallbackDate = (() => {
+				try {
+					if (startDateTime && typeof startDateTime === 'string' && startDateTime.includes('T')) {
+						return startDateTime.split('T')[0];
+					}
+					const di = document.getElementById('flightDateInput');
+					if (di && di.value) return di.value;
+				} catch (e) {}
+				return new Date().toISOString().split('T')[0];
+			})();
+
+			const toNormFlight = (n) => String(n || '').replace(/\s+/g, '').toUpperCase();
+
+			// Collect targets that need a lookup for better logging
+			const targets = flights.filter(f => {
+				const hasReg = !!(f?.aircraft?.reg || f?.aircraft?.registration || f?.aircraftRegistration || f?.registration);
+				return !hasReg && !!f?.number;
+			});
+			if (targets.length) {
+				console.log(`[AirportFlights] Missing registrations to resolve: ${targets.length}`);
+			}
+
+			const memo = new Map(); // key: FLIGHTNUMBER_YYYY-MM-DD -> registration or null
+
+			async function resolveRegistration(flightNumberRaw, dateStr) {
+				const flightNumber = toNormFlight(flightNumberRaw);
+				const key = `${flightNumber}_${dateStr}`;
+				if (memo.has(key)) return memo.get(key);
+
+				let reg = null;
+				// 1) Primary: use existing FlightRegistrationLookup service
+				if (window.FlightRegistrationLookup?.lookupRegistration) {
+					try {
+						reg = await window.FlightRegistrationLookup.lookupRegistration(flightNumber, dateStr);
+					} catch (e) {
+						console.warn('[AirportFlights] lookupRegistration failed:', e?.message || e);
+					}
+				}
+				// 2) Provider direct by date (fallback)
+				if (!reg && window.AeroDataBoxAPI?.getFlightByNumber) {
+					try {
+						const info = await window.AeroDataBoxAPI.getFlightByNumber(flightNumber, dateStr);
+						if (info?.registration) reg = info.registration;
+					} catch (e) { /* ignore */ }
+				}
+				// 3) Provider multi-day small forward search (helps for not-yet-assigned future flights)
+				if (!reg && window.AeroDataBoxAPI?.getFlightByNumberMultipleDays) {
+					try {
+						const many = await window.AeroDataBoxAPI.getFlightByNumberMultipleDays(flightNumber, dateStr, 3);
+						if (Array.isArray(many)) {
+							const withReg = many.find(x => x && x.registration);
+							if (withReg) reg = withReg.registration;
+						}
+					} catch (e) { /* ignore */ }
+				}
+
+				memo.set(key, reg || null);
+				return reg || null;
+			}
+
+			for (const f of flights) {
+				// Skip when registration is already present
+				const existingReg = (f && (
+					f.aircraft?.reg || f.aircraft?.registration || f.aircraftRegistration || f.registration
+				));
+				if (existingReg && String(existingReg).trim() !== '') continue;
+
+				const flightNum = f?.number;
+				if (!flightNum || String(flightNum).trim() === '') continue;
+
+				// Determine date for lookup from scheduled time (prefer UTC), with sensible fallback
+				let dateStr = null;
+				const sched = isArrival ? f?.arrival?.scheduledTime : f?.departure?.scheduledTime;
+				try {
+					if (sched && typeof sched === 'object') {
+						if (sched.utc && typeof sched.utc === 'string' && sched.utc.length >= 10) {
+							dateStr = sched.utc.substring(0, 10);
+						} else if (sched.local && typeof sched.local === 'string' && sched.local.length >= 10) {
+							dateStr = sched.local.substring(0, 10);
+						}
+					} else if (typeof sched === 'string') {
+						const d = new Date(sched);
+						if (!isNaN(d.getTime())) dateStr = d.toISOString().substring(0, 10);
+					}
+				} catch (e) {}
+				if (!dateStr) dateStr = fallbackDate;
+
+				try {
+					window.AeroDataBoxAPI?.updateFetchStatus?.(`Resolving registrations… ${toNormFlight(flightNum)} ${dateStr}`, false);
+					const resolved = await resolveRegistration(flightNum, dateStr);
+					console.log(`[RegLookup] ${toNormFlight(flightNum)} ${dateStr} -> ${resolved || 'not found'}`);
+					if (resolved) {
+						// Ensure downstream code can read the registration consistently
+						if (!f.aircraft) f.aircraft = {};
+						if (!f.aircraft.reg) f.aircraft.reg = resolved;
+						if (!f.aircraftRegistration) f.aircraftRegistration = resolved;
+					}
+				} catch (e) {
+					console.warn('[AirportFlights] Registration resolution failed:', e?.message || e);
+				}
+			}
+		} catch (e) {
+			console.warn('[AirportFlights] prefillMissingRegistrations failed:', e?.message || e);
+		}
+	}
+
+	/**
 	 * Erstellt eine Tabellenzeile für einen Flug
 	 * @param {Object} flight - Flugdaten
 	 * @param {boolean} isArrival - Handelt es sich um eine Ankunft
@@ -471,7 +591,12 @@ const AirportFlights = (() => {
 		const pointData = isArrival ? flight.arrival : flight.departure;
 		const otherPointData = isArrival ? flight.departure : flight.arrival;
 		const flightNumber = flight.number || "----";
-		const registration = flight.aircraft?.reg || "-----";
+		const registration =
+			flight.aircraft?.reg ||
+			flight.aircraft?.registration ||
+			flight.aircraftRegistration ||
+			flight.registration ||
+			"-----";
 
 		// Expose airline codes for client-side filtering (IATA/ICAO)
 		const airlineIata = (flight.airline && flight.airline.iata) ? flight.airline.iata : "";

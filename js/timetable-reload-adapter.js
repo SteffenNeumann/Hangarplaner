@@ -29,7 +29,7 @@
   }
 
   // Simple pass-through reload that ensures AirportFlights renders arrivals and departures for the station
-  function runTimetableReloadUsingThisPageInputs() {
+  async function runTimetableReloadUsingThisPageInputs() {
     const airportEl = document.getElementById("airportCodeInput");
     const dateEl = document.getElementById("flightDateInput");
     const operatorEl = document.getElementById("operatorCodeInput");
@@ -44,10 +44,22 @@
 
     const operatorCode = (operatorEl?.value || '').trim();
 
-    if (window.AirportFlights && typeof window.AirportFlights.displayAirportFlights === 'function') {
-      window.AirportFlights.displayAirportFlights(airport, startDateTime, endDateTime, operatorCode);
-    } else {
-      console.warn('[Timetable-Adapter] AirportFlights.displayAirportFlights nicht verfügbar');
+    // Guard: avoid duplicate reloads for the same key while a load is in-flight
+    try {
+      const key = `${airport}_${startDateTime}_${endDateTime}_${operatorCode}`;
+      if (window.__airportFlightsBusyKey === key) {
+        return; // skip duplicated request
+      }
+      window.__airportFlightsBusyKey = key;
+
+      if (window.AirportFlights && typeof window.AirportFlights.displayAirportFlights === 'function') {
+        await window.AirportFlights.displayAirportFlights(airport, startDateTime, endDateTime, operatorCode);
+      } else {
+        console.warn('[Timetable-Adapter] AirportFlights.displayAirportFlights nicht verfügbar');
+      }
+    } finally {
+      // Clear the busy flag after the render cycle
+      setTimeout(() => { if (window.__airportFlightsBusyKey) window.__airportFlightsBusyKey = null; }, 100);
     }
   }
 
@@ -95,7 +107,7 @@
     // Delegate to AirportFlights to render ALL flights (arrivals + departures)
     btn.addEventListener("click", () => {
       // Short delay to avoid clashing with any other handlers
-      setTimeout(runTimetableReloadUsingThisPageInputs, 0);
+      setTimeout(() => { runTimetableReloadUsingThisPageInputs(); }, 0);
     });
 
     // Instant filter for Airline Code: live-update on input with a short debounce

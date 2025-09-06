@@ -1178,17 +1178,18 @@ default: // "standalone"
 				this.presence.displayName = localStorage.getItem('presence.displayName') || '';
 			} catch (e) { this.presence.displayName = ''; }
 
-			// Click handler for badge
-			const badge = document.getElementById('presence-badge');
-			const pop = document.getElementById('presence-popover');
-			if (badge && pop) {
-				badge.addEventListener('click', (e) => {
-					e.preventDefault(); e.stopPropagation();
-					pop.classList.toggle('hidden');
-				});
-				document.addEventListener('click', (e) => {
-					if (!pop.contains(e.target) && !badge.contains(e.target)) pop.classList.add('hidden');
-				});
+			// Hook up inline input to set name
+			const nameInput = document.getElementById('presenceNameInput');
+			if (nameInput) {
+				nameInput.value = this.presence.displayName || '';
+				const save = () => {
+					this.setDisplayName((nameInput.value || '').trim());
+					this.heartbeatPresence();
+					this.fetchPresenceList().catch(()=>{});
+				};
+				nameInput.addEventListener('change', save);
+				nameInput.addEventListener('blur', save);
+				nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); nameInput.blur(); } });
 			}
 
 			// Heartbeat loop
@@ -1260,13 +1261,24 @@ default: // "standalone"
 	renderPresence(users) {
 		try {
 			// Header widget rows
-			const countEl = document.getElementById('presenceCount');
-			if (countEl) countEl.textContent = String(users?.length || 0);
 			const namesEl = document.getElementById('presenceNames');
 			if (namesEl) {
 				const names = (users || []).map(u => (u?.displayName || '').replace(/[<>]/g, ''))
 					.filter(n => n.length > 0);
 				namesEl.textContent = names.join(', ');
+			}
+			// Update my role label and input value
+			const roleEl = document.getElementById('presenceRole');
+			if (roleEl) {
+				const map = { master: 'Master', sync: 'Sync', standalone: 'Standalone' };
+				const r = (this.getRoleForPresence() || '').toLowerCase();
+				roleEl.textContent = map[r] || 'Standalone';
+			}
+			const nameInput = document.getElementById('presenceNameInput');
+			if (nameInput && nameInput !== document.activeElement) {
+				if ((nameInput.value || '') !== (this.presence.displayName || '')) {
+					nameInput.value = this.presence.displayName || '';
+				}
 			}
 		} catch (e) { /* ignore */ }
 	}

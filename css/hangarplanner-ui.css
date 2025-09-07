@@ -27,8 +27,8 @@
 	--menu-text: #6b6b6b; /* font & icon color */
 	--control-muted: #b1b5b1; /* sliders inactive */
 	/* Unified paddings */
-	--tile-grid-padding: 12px;
-	--tile-inner-padding: 12px;
+	--tile-grid-padding: 16px;
+	--tile-inner-padding: 16px;
 
 	/* Sync chip palette (adjust here to tune colors/weights) */
 	--sync-chip-fw: 600;

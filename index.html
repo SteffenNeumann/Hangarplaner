@@ -1250,14 +1250,14 @@
 
 				<div class="flex-grow bg-white p-3 overflow-auto hangar-container">
 					<!-- Top Tabs -->
-					<div id="topTabs" class="flex gap-2 mb-2" style="position: sticky; top: 0; z-index: 20; background: #ffffff; padding-bottom: 4px;">
-						<button class="tab-btn px-3 py-1 rounded border" data-tab="planner" aria-selected="true" title="Hangar Planner">Planner</button>
-						<button class="tab-btn px-3 py-1 rounded border" data-tab="timetable" aria-selected="false" title="Timetable">Timetable</button>
-						<button class="tab-btn px-3 py-1 rounded border" data-tab="database" aria-selected="false" title="Database">Database</button>
+					<div id="topTabs" class="flex gap-2 mb-2" role="tablist" aria-label="Sections" style="position: sticky; top: 0; z-index: 20; background: #ffffff; padding-bottom: 4px;">
+						<button id="tab-planner" class="tab-btn px-3 py-1 rounded border" data-tab="planner" role="tab" aria-controls="panel-planner" aria-selected="true" title="Hangar Planner">Planner</button>
+						<button id="tab-timetable" class="tab-btn px-3 py-1 rounded border" data-tab="timetable" role="tab" aria-controls="panel-timetable" aria-selected="false" title="Timetable">Timetable</button>
+						<button id="tab-database" class="tab-btn px-3 py-1 rounded border" data-tab="database" role="tab" aria-controls="panel-database" aria-selected="false" title="Database">Database</button>
 					</div>
 
 					<!-- Panels -->
-					<div id="panel-planner" class="tab-panel">
+					<div id="panel-planner" class="tab-panel" role="tabpanel" aria-labelledby="tab-planner">
 					<!-- Abschnitt 1 Container -->
 					<div class="section-container">
 						<div id="hangarGrid" class="grid grid-cols-4 gap-4">
@@ -2425,13 +2425,13 @@ type="datetime-local"
 					</div> <!-- /panel-planner -->
 
 					<!-- Timetable Panel -->
-					<div id="panel-timetable" class="tab-panel hidden" style="height: calc(100vh - 60px);">
+					<div id="panel-timetable" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-timetable" style="height: calc(100vh - 60px);">
 						<iframe id="timetableFrame" src="timetable.html" title="Timetable"
 							style="width:100%; height:100%; border:0; background:#ffffff;"></iframe>
 					</div>
 
 					<!-- Database Panel -->
-					<div id="panel-database" class="tab-panel hidden" style="height: calc(100vh - 60px);">
+					<div id="panel-database" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-database" style="height: calc(100vh - 60px);">
 						<iframe id="databaseFrame" src="fleet-database.html" title="Fleet Database"
 							style="width:100%; height:100%; border:0; background:#ffffff;"></iframe>
 					</div>
@@ -3515,6 +3515,7 @@ type="datetime-local"
             (function(){
               function saveTab(tab){ try { localStorage.setItem('hangar.activeTab', tab); } catch(e){} }
               function loadTab(){ try { return localStorage.getItem('hangar.activeTab') || 'planner'; } catch(e){ return 'planner'; } }
+              function getOrder(){ return ['planner','timetable','database']; }
 
               function setActiveTab(tab){
                 var panels = {
@@ -3522,18 +3523,19 @@ type="datetime-local"
                   timetable: document.getElementById('panel-timetable'),
                   database: document.getElementById('panel-database')
                 };
-                var buttons = document.querySelectorAll('#topTabs .tab-btn');
-                // Toggle buttons
+                var buttons = document.querySelectorAll('#topTabs .tab-btn[role="tab"]');
+                // Toggle buttons (ARIA)
                 buttons.forEach(function(btn){
                   var isActive = btn.getAttribute('data-tab') === tab;
                   btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
                   btn.classList.toggle('bg-industrial-accent', isActive);
                 });
-                // Toggle panels (use hidden class to align with rest of app)
+                // Toggle panels
                 Object.keys(panels).forEach(function(k){
                   if (!panels[k]) return;
-                  if (k === tab){ panels[k].classList.remove('hidden'); }
-                  else { panels[k].classList.add('hidden'); }
+                  var active = (k === tab);
+                  panels[k].classList.toggle('hidden', !active);
+                  panels[k].setAttribute('aria-hidden', active ? 'false' : 'true');
                 });
                 saveTab(tab);
                 try {
@@ -3543,16 +3545,52 @@ type="datetime-local"
                 } catch(e){}
               }
 
+              function cycleTab(dir, focus){
+                var order = getOrder();
+                var curr = loadTab();
+                var idx = order.indexOf(curr);
+                if (idx < 0) idx = 0;
+                var next = order[(idx + dir + order.length) % order.length];
+                setActiveTab(next);
+                if (focus !== false){
+                  var btn = document.querySelector('#topTabs .tab-btn[data-tab="'+next+'"][role="tab"]');
+                  if (btn) btn.focus();
+                }
+              }
+
+              function isTypingTarget(el){
+                if (!el) return false;
+                var tag = el.tagName;
+                return el.isContentEditable || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+              }
+
               function wireTabButtons(){
                 var container = document.getElementById('topTabs');
                 if (!container) return;
-                var buttons = container.querySelectorAll('.tab-btn');
+                var buttons = container.querySelectorAll('.tab-btn[role="tab"]');
                 buttons.forEach(function(btn){
                   if (btn.__wired) return;
                   btn.addEventListener('click', function(){ setActiveTab(btn.getAttribute('data-tab')); });
+                  // Arrow key navigation when a tab has focus
+                  btn.addEventListener('keydown', function(e){
+                    if (e.key === 'ArrowRight'){ e.preventDefault(); cycleTab(1); }
+                    else if (e.key === 'ArrowLeft'){ e.preventDefault(); cycleTab(-1); }
+                  });
                   btn.__wired = true;
                 });
               }
+
+              // Global keyboard shortcuts: Alt+1/2/3 and Alt+ArrowLeft/Right
+              document.addEventListener('keydown', function(e){
+                if (isTypingTarget(e.target)) return;
+                if (e.altKey && !e.ctrlKey && !e.metaKey){
+                  if (e.code === 'Digit1' || e.key === '1'){ e.preventDefault(); setActiveTab('planner'); return; }
+                  if (e.code === 'Digit2' || e.key === '2'){ e.preventDefault(); setActiveTab('timetable'); return; }
+                  if (e.code === 'Digit3' || e.key === '3'){ e.preventDefault(); setActiveTab('database'); return; }
+                  if (e.code === 'ArrowRight'){ e.preventDefault(); cycleTab(1, false); return; }
+                  if (e.code === 'ArrowLeft'){ e.preventDefault(); cycleTab(-1, false); return; }
+                }
+              });
 
               document.addEventListener('DOMContentLoaded', function(){
                 try { wireTabButtons(); setActiveTab(loadTab()); } catch(e){}

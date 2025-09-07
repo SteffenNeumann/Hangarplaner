@@ -2571,3 +2571,35 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 .dark-mode .presence-chip.mode-master { background: rgba(16,185,129,0.15) !important; border-color: #065f46 !important; color: #a7f3d0 !important; }
 .dark-mode .presence-chip.mode-sync { background: rgba(59,130,246,0.15) !important; border-color: #1d4ed8 !important; color: #93c5fd !important; }
 .dark-mode .presence-chip.standalone { background: var(--bg-secondary) !important; border-color: var(--border-color) !important; color: var(--text-secondary) !important; }
+
+/* === Top Tabs styling === */
+#topTabs { border-bottom: 1px solid var(--menu-border); }
+#topTabs .tab-btn {
+  background: #ffffff;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-bottom-width: 2px;
+  border-radius: 8px 8px 0 0;
+  padding: 6px 12px;
+  font-weight: 600;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+#topTabs .tab-btn + .tab-btn { margin-left: 4px; }
+#topTabs .tab-btn:hover { background: #f9fafb; }
+#topTabs .tab-btn[aria-selected="true"] {
+  background: #111827;
+  color: #ffffff;
+  border-color: #111827;
+}
+.dark-mode #topTabs { border-bottom-color: var(--border-color); background: var(--bg-primary); }
+.dark-mode #topTabs .tab-btn {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+}
+.dark-mode #topTabs .tab-btn:hover { background: rgba(255,255,255,0.06); }
+.dark-mode #topTabs .tab-btn[aria-selected="true"] {
+  background: #374151;
+  color: #ffffff;
+  border-color: #4b5563;
+}

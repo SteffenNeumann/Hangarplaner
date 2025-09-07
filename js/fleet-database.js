@@ -1245,16 +1245,17 @@ const FleetDatabase = (function () {
 	 * Flugzeug im HangarPlanner verwenden
 	 */
 	function useInHangar(registration) {
-		// Registrierung in localStorage speichern für Übergabe an HangarPlanner
-		localStorage.setItem("selectedAircraft", registration);
-
-		// Zurück zum HangarPlanner
-		if (
-			confirm(
-				`Möchten Sie ${registration} im HangarPlanner verwenden?\n\nSie werden zur Hauptseite weitergeleitet.`
-			)
-		) {
-			window.location.href = "index.html";
+		try {
+			const reg = String(registration || '').trim();
+			if (!reg) return;
+			localStorage.setItem('selectedAircraft', reg);
+			localStorage.setItem('selectedAircraftPrompt', 'true');
+			const params = new URLSearchParams();
+			params.set('selectedAircraft', reg);
+			params.set('prompt', '1');
+			window.location.href = `index.html?${params.toString()}`;
+		} catch (e) {
+			window.location.href = 'index.html';
 		}
 	}
 

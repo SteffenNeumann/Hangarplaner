@@ -3636,6 +3636,14 @@ type="datetime-local"
                   if (tab === 'planner' && window.displayOptions && typeof window.displayOptions.updateUI === 'function'){
                     window.displayOptions.updateUI();
                   }
+                  if (tab === 'timetable') {
+                    try {
+                      var f = document.getElementById('timetableFrame');
+                      if (f && f.contentWindow) {
+                        f.contentWindow.postMessage({ type: 'reloadTimetable' }, '*');
+                      }
+                    } catch(_e){}
+                  }
                 } catch(e){}
               }
 

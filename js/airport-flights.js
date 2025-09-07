@@ -393,36 +393,24 @@ const AirportFlights = (() => {
 			`;
 			document.head.appendChild(styleElement);
 
-			// Hauptbereich finden und den Container einfügen - Breite an Container anpassen
-			const hangarContainer = document.querySelector(".hangar-container");
-			if (hangarContainer) {
-				// Container-Breite auslesen und anwenden
-				const hangarContainerStyle = window.getComputedStyle(hangarContainer);
-				const contentWidth = hangarContainerStyle.width;
+			// Hauptbereich finden und den Container einfügen - priorisiere Host im Timetable-Subpage
+			const host =
+				document.getElementById('airport-flights-host') ||
+				document.querySelector('.content-container') ||
+				document.querySelector('.hangar-container') ||
+				document.body;
 
-				// Padding des Containers berücksichtigen
-				const containerPadding =
-					parseFloat(hangarContainerStyle.paddingLeft) +
-					parseFloat(hangarContainerStyle.paddingRight);
-
-				// Breite abzüglich des internen Paddings setzen
-				if (contentWidth) {
-					flightInfoContainer.style.width = contentWidth;
-					// Padding des Flight-Containers berücksichtigen
-					flightInfoContainer.style.boxSizing = "border-box";
-				}
-
-				hangarContainer.appendChild(flightInfoContainer);
-
-				// Nach dem Einfügen zum Container scrollen
-				flightInfoContainer.scrollIntoView({
-					behavior: "smooth",
-					block: "start",
-				});
-			} else {
-				// Fallback: an den Body anhängen
-				document.body.appendChild(flightInfoContainer);
+			// Wenn dedizierter Host vorhanden ist, vorher leeren
+			if (host && host.id === 'airport-flights-host') {
+				try { host.innerHTML = ''; } catch (e) {}
 			}
+
+			host.appendChild(flightInfoContainer);
+
+			// Nach dem Einfügen zum Container scrollen
+			try {
+				flightInfoContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+			} catch (e) {}
 
 			let statusMessage = `Flugdaten für ${airportCode} geladen (${arrivals.length} Ankünfte, ${departures.length} Abflüge)`;
 			if (operatorCode.trim() !== "") {

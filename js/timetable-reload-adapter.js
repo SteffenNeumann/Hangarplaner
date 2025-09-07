@@ -124,9 +124,22 @@
       operatorInput.addEventListener('change', handler);
     }
 
-    // Optional global utility for manual triggering
-    window.reloadTimetableAllFlights = runTimetableReloadUsingThisPageInputs;
-  }
+  // Optional global utility for manual triggering
+  window.reloadTimetableAllFlights = runTimetableReloadUsingThisPageInputs;
+}
+
+  // Listen for reload requests from parent (tab activation)
+  window.addEventListener('message', function(e){
+    try {
+      if (e && e.data && e.data.type === 'reloadTimetable') {
+        if (typeof window.reloadTimetableAllFlights === 'function') {
+          window.reloadTimetableAllFlights();
+        } else {
+          runTimetableReloadUsingThisPageInputs();
+        }
+      }
+    } catch(_) {}
+  });
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", function(){

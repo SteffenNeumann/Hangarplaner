@@ -173,7 +173,7 @@
 			.dark-mode #towingReminderList { color: #ef4444 !important; }
 		</style>
 	</head>
-	<body class="bg-industrial-dark text-white font-sans edit-mode">
+<body class="bg-industrial-dark text-white font-sans edit-mode with-tabs">
 		<div class="flex h-screen">
 			<!-- Neue linke Hauptnavigation -->
 			<nav id="leftMenu" class="left-menu">
@@ -1134,6 +1134,115 @@
     try { initControls(); } catch(e){}
     try { initHeaderWidget(); } catch(e){}
   });
+})();
+</script>
+
+<!-- Per-tile header delete button (hover-only) -->
+<script>
+(function(){
+  function isReadOnlySync(){
+    try {
+      const read = !!document.getElementById('readDataToggle')?.checked;
+      const write = !!document.getElementById('writeDataToggle')?.checked;
+      return read && !write; // Sync (read-only)
+    } catch(e){ return false; }
+  }
+  function getCellIdFromTile(tile){
+    if (!tile) return null;
+    // Prefer status select id pattern
+    const sel = tile.querySelector('select[id^="status-"]');
+    if (sel) { const m = sel.id.match(/^(?:status|tow-status)-(\d+)$/) || sel.id.match(/-(\d+)$/); if (m) return parseInt(m[1],10); }
+    // Fallback: hangar-position input in header
+    const pos = tile.querySelector('input[id^="hangar-position-"]');
+    if (pos) { const m = pos.id.match(/-(\d+)$/); if (m) return parseInt(m[1],10); }
+    // Final fallback: any field id with trailing number
+    const any = tile.querySelector('[id*="-"]');
+    if (any) { const m = any.id.match(/-(\d+)$/); if (m) return parseInt(m[1],10); }
+    return null;
+  }
+  function clearSingleTile(cellId){
+    try {
+      if (!cellId && cellId !== 0) return false;
+      // Locate the tile host (primary or secondary)
+      let tile = document.querySelector(`[data-cell-id="${cellId}"]`);
+      if (!tile) {
+        // Try by proximity to known inputs
+        const aircraft = document.getElementById(`aircraft-${cellId}`);
+        tile = aircraft?.closest('.hangar-cell') || null;
+      }
+      // Clear Aircraft ID
+      const ac = document.getElementById(`aircraft-${cellId}`);
+      if (ac) ac.value = '';
+      // Clear times + dataset.iso
+      const arr = document.getElementById(`arrival-time-${cellId}`);
+      if (arr) { arr.value = ''; try { delete arr.dataset.iso; } catch(e){} }
+      const dep = document.getElementById(`departure-time-${cellId}`);
+      if (dep) { dep.value = ''; try { delete dep.dataset.iso; } catch(e){} }
+      // Clear Pos (route Position in info grid)
+      const posInfo = document.getElementById(`position-${cellId}`);
+      if (posInfo) posInfo.value = '';
+      // Keep Hangar Position (header) untouched intentionally
+      // Clear Notes
+      const notes = document.getElementById(`notes-${cellId}`);
+      if (notes) notes.value = '';
+      // Tow -> neutral + styling
+      const tow = document.getElementById(`tow-status-${cellId}`);
+      if (tow) { tow.value = 'neutral'; if (typeof updateTowStatusStyles === 'function') updateTowStatusStyles(tow); }
+      // Status -> neutral + status light
+      const status = document.getElementById(`status-${cellId}`);
+      if (status) { status.value = 'neutral'; if (typeof updateStatusLight === 'function') updateStatusLight(status); }
+      // Remove Last Update badge (and persisted record)
+      try { if (window.LastUpdateBadges && typeof window.LastUpdateBadges.remove === 'function') { window.LastUpdateBadges.remove(parseInt(cellId,10)); } } catch(e){}
+      return true;
+    } catch(e){ console.warn('clearSingleTile failed', e); return false; }
+  }
+  function injectDeleteIntoTile(tile){
+    try {
+      if (!tile || tile.__deleteInjected) return;
+      const header = tile.querySelector('.card-header');
+      if (!header) return;
+      const cellId = getCellIdFromTile(tile);
+      if (!cellId && cellId !== 0) return;
+      const btn = document.createElement('button');
+      btn.className = 'tile-delete-btn';
+      btn.type = 'button';
+      btn.title = 'Clear tile';
+      btn.setAttribute('aria-label','Clear tile');
+      // Trash icon (stroke currentColor)
+      btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
+      const applyReadonly = ()=>{ if (isReadOnlySync()) { btn.setAttribute('aria-disabled','true'); } else { btn.removeAttribute('aria-disabled'); } };
+      applyReadonly();
+      btn.addEventListener('click', (e)=>{
+        e.preventDefault(); e.stopPropagation();
+        if (isReadOnlySync()) return; // No action in read-only
+        clearSingleTile(cellId);
+      });
+      header.appendChild(btn);
+      tile.__deleteInjected = true;
+    } catch(e){ console.warn('injectDeleteIntoTile failed', e); }
+  }
+  function injectAll(){
+    document.querySelectorAll('#hangarGrid .hangar-cell, #secondaryHangarGrid .hangar-cell').forEach(injectDeleteIntoTile);
+  }
+  function hookSyncToggles(){
+    const r = document.getElementById('readDataToggle');
+    const w = document.getElementById('writeDataToggle');
+    const apply = ()=>{
+      const ro = isReadOnlySync();
+      document.querySelectorAll('.tile-delete-btn').forEach(btn=>{
+        if (ro) btn.setAttribute('aria-disabled','true'); else btn.removeAttribute('aria-disabled');
+      });
+    };
+    if (r) r.addEventListener('change', apply);
+    if (w) w.addEventListener('change', apply);
+    apply();
+  }
+  function init(){ injectAll(); hookSyncToggles(); }
+  window.hangarInitQueue = window.hangarInitQueue || [];
+  window.hangarInitQueue.push(init);
+  document.addEventListener('secondaryTilesCreated', function(){ setTimeout(injectAll, 50); setTimeout(hookSyncToggles, 60); });
+  // Expose for potential reuse
+  window.clearSingleTile = clearSingleTile;
 })();
 </script>
 

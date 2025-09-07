@@ -131,7 +131,7 @@ const AirportFlights = (() => {
             }
 
             // Suche den Container für die Anzeige
-			const mainContent = document.querySelector("main") || document.body;
+			const mainContent = document.getElementById('airport-flights-host') || document.querySelector("main") || document.body;
 
 			// Bestehende Fluginfos entfernen falls vorhanden
 			const existingFlightInfo = document.getElementById(

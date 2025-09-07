@@ -318,6 +318,8 @@ body {
 }
 
 /* === END TIMETABLE STYLES === */
+/* Reduce gap between header and tab bar when tabs are present */
+.with-tabs .hangar-container { padding-top: 8px; }
 .hangar-cell[style*="background"],
 .hangar-cell[class*="orange"],
 .hangar-cell[class*="status"],
@@ -1260,6 +1262,33 @@ input:checked + .toggle-slider:before {
 }
 
 /* Standardwert für 4+ Kacheln bleibt unverändert */
+
+/* Subtle tile delete button (hover-only in header) */
+.card-header { position: relative; }
+.tile-delete-btn {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: #9ca3af; /* slate-400 */
+  opacity: 0;
+  transform: scale(0.98);
+  transition: opacity 120ms ease, transform 120ms ease, color 120ms ease;
+  cursor: pointer;
+  padding: 0;
+}
+.hangar-cell:hover .tile-delete-btn { opacity: 1; transform: scale(1); }
+.tile-delete-btn:hover { color: #ef4444; }
+.tile-delete-btn[aria-disabled="true"] { opacity: 0 !important; pointer-events: none; }
+
+.dark-mode .tile-delete-btn { color: #6b7280; }
+.dark-mode .tile-delete-btn:hover { color: #f87171; }
 
 /* Dark Mode Styles */
 .dark-mode {
@@ -2573,7 +2602,7 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 .dark-mode .presence-chip.standalone { background: var(--bg-secondary) !important; border-color: var(--border-color) !important; color: var(--text-secondary) !important; }
 
 /* === Top Tabs styling (lightweight, Postman-like) === */
-#topTabs { border-bottom: 1px solid var(--menu-border); padding: 0 4px; background: transparent; }
+#topTabs { border-bottom: 1px solid var(--menu-border); padding: 0 4px; background: #ffffff; }
 #topTabs .tab-btn {
   background: transparent;
   color: #6b7280; /* slate-500 */
@@ -2591,7 +2620,7 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   border-bottom-color: var(--menu-accent);
   color: #111827;
 }
-.dark-mode #topTabs { border-bottom-color: var(--border-color); background: transparent; }
+.dark-mode #topTabs { border-bottom-color: var(--border-color); background: var(--bg-primary); }
 .dark-mode #topTabs .tab-btn { color: var(--text-secondary); }
 .dark-mode #topTabs .tab-btn:hover { color: #ffffff; background: transparent; }
 .dark-mode #topTabs .tab-btn[aria-selected="true"] { border-bottom-color: var(--menu-accent); color: #ffffff; }

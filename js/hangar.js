@@ -1078,6 +1078,22 @@ function setupFlightDataEventHandlers() {
 		});
 	}
 
+// Per-tile clear helper (keeps Hangar Position)
+window.clearSingleTile = window.clearSingleTile || function(cellId){
+  try {
+    if (!cellId && cellId !== 0) return false;
+    const ac = document.getElementById(`aircraft-${cellId}`); if (ac) ac.value = '';
+    const arr = document.getElementById(`arrival-time-${cellId}`); if (arr) { arr.value=''; try { delete arr.dataset.iso; } catch(e){} }
+    const dep = document.getElementById(`departure-time-${cellId}`); if (dep) { dep.value=''; try { delete dep.dataset.iso; } catch(e){} }
+    const posInfo = document.getElementById(`position-${cellId}`); if (posInfo) posInfo.value='';
+    const notes = document.getElementById(`notes-${cellId}`); if (notes) notes.value='';
+    const tow = document.getElementById(`tow-status-${cellId}`); if (tow) { tow.value='neutral'; if (window.updateTowStatusStyles) window.updateTowStatusStyles(tow); }
+    const status = document.getElementById(`status-${cellId}`); if (status) { status.value='neutral'; if (window.updateStatusLight) window.updateStatusLight(status); }
+    try { if (window.LastUpdateBadges && typeof window.LastUpdateBadges.remove === 'function') window.LastUpdateBadges.remove(parseInt(cellId,10)); } catch(e){}
+    return true;
+  } catch(e) { console.warn('clearSingleTile failed:', e); return false; }
+};
+
 // Wire Display submenu: Reset screen (confirm and clear all tile inputs except Hangar Position)
 const resetScreenBtn = document.getElementById('resetScreenBtn');
 if (resetScreenBtn) {

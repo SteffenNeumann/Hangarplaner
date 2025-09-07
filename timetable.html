@@ -101,7 +101,7 @@
       })();
     </script>
   </head>
-  <body class="bg-industrial-dark text-white font-sans">
+  <body class="font-sans">
     <div class="flex h-screen">
       <!-- Hauptbereich im gleichen Stil wie Fleet Database -->
       <div class="flex-grow flex flex-col content-container">
@@ -110,7 +110,7 @@
         <!-- Content container (transparent background to inherit from parent) -->
         <div class="flex-grow p-3 overflow-auto">
           <!-- Airport Flights Controls (im Fleet-Filter-Stil) -->
-          <div class="mb-6 bg-gray-50 p-4 rounded-lg fleet-filters-enhanced">
+          <div class="mb-3 bg-gray-50 p-3 rounded-lg fleet-filters-enhanced">
             <h2 id="airportFlightsHeading" class="text-lg font-semibold text-industrial-dark mb-3">Flights on Station MUC</h2>
             <div class="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
               <!-- Airport -->
@@ -151,6 +151,9 @@
             <p class="text-xs text-gray-500 mt-2">Enter an ICAO/IATA code to filter by airline</p>
             <div class="text-sm text-gray-600 mt-2">Ready to load flight data…</div>
           </div>
+
+          <!-- Host container for dynamic timetable content -->
+          <div id="airport-flights-host" class="mt-2"></div>
 
         </div>
       </div>

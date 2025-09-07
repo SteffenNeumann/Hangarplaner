@@ -1586,6 +1586,49 @@ body.dark-mode {
 	font-style: italic;
 }
 
+/* Light mode: borderless inputs and dropdowns with subtle hover */
+body:not(.dark-mode) #hangarGrid .hangar-cell .aircraft-id,
+body:not(.dark-mode) #hangarGrid .hangar-cell .info-input,
+body:not(.dark-mode) #hangarGrid .hangar-cell .position-input,
+body:not(.dark-mode) #hangarGrid .hangar-cell .notes-textarea,
+body:not(.dark-mode) #hangarGrid .hangar-cell .status-selector,
+body:not(.dark-mode) #hangarGrid .hangar-cell select.status-selector,
+body:not(.dark-mode) #hangarGrid .hangar-cell .tow-status-selector,
+body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .aircraft-id,
+body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .info-input,
+body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .position-input,
+body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .notes-textarea,
+body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .status-selector,
+body:not(.dark-mode) #secondaryHangarGrid .hangar-cell select.status-selector,
+body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector {
+	border: 1px solid transparent !important;
+	box-shadow: none !important;
+}
+
+/* Remove auxiliary left status border for tow select in light mode to meet borderless look */
+body:not(.dark-mode) #hangarGrid .hangar-cell .tow-status-selector,
+body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector {
+	border-left: 0 !important;
+}
+
+/* Subtle hover background to indicate interactivity */
+body:not(.dark-mode) #hangarGrid .hangar-cell .aircraft-id:hover,
+body:not(.dark-mode) #hangarGrid .hangar-cell .info-input:hover,
+body:not(.dark-mode) #hangarGrid .hangar-cell .position-input:hover,
+body:not(.dark-mode) #hangarGrid .hangar-cell .notes-textarea:hover,
+body:not(.dark-mode) #hangarGrid .hangar-cell .status-selector:hover,
+body:not(.dark-mode) #hangarGrid .hangar-cell select.status-selector:hover,
+body:not(.dark-mode) #hangarGrid .hangar-cell .tow-status-selector:hover,
+body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .aircraft-id:hover,
+body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .info-input:hover,
+body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .position-input:hover,
+body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .notes-textarea:hover,
+body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .status-selector:hover,
+body:not(.dark-mode) #secondaryHangarGrid .hangar-cell select.status-selector:hover,
+body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hover {
+	background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
 /* Header und andere UI-Elemente */
 .dark-mode header {
 	background-color: var(--bg-tertiary);

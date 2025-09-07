@@ -1245,9 +1245,9 @@ input:checked + .toggle-slider:before {
 }
 
 /* Global tile spacing variables */
-:root { --tile-gap: 20px; }
+:root { --tile-gap: 24px; }
 /* Fixed, user-friendly padding between tiles (overrides Tailwind gap-4) */
-#hangarGrid, #secondaryHangarGrid { gap: var(--tile-gap, 20px) !important; grid-gap: var(--tile-gap, 20px) !important; padding: var(--tile-grid-padding, 12px) !important; }
+#hangarGrid, #secondaryHangarGrid { gap: var(--tile-gap, 24px) !important; grid-gap: var(--tile-gap, 24px) !important; padding: var(--tile-grid-padding, 16px) !important; }
 /* Make tile inner content padding equal to grid padding */
 .hangar-cell .p-4 { padding: var(--tile-inner-padding, var(--tile-grid-padding, 12px)) !important; }
 /* Ensure timetable/fleet containers use same padding baseline */

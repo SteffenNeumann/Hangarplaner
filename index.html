@@ -3476,6 +3476,10 @@ type="datetime-local"
                     try { fallbackInit(); wireControls(); log('✅ Fallback display init applied'); } catch(e){ log('Fallback init error', e); }
                 });
                 setTimeout(function(){ try { fallbackInit(); wireControls(); } catch(e){} }, 800);
+                // Ensure settings are re-applied when navigating back via bfcache
+                window.addEventListener('pageshow', function(){
+                    setTimeout(function(){ try { fallbackInit(); } catch(e){} }, 120);
+                });
             })();
             </script>
 	</body>

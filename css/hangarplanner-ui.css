@@ -360,8 +360,9 @@ body {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	padding: 6px 32px 6px 8px; /* extra right padding for delete icon */
-	min-height: 36px; /* a bit taller for comfortable spacing */
+	/* Use same horizontal padding as content for a cleaner look */
+	padding: 6px var(--tile-inner-padding);
+	min-height: 32px;
 }
 
 #hangarGrid,
@@ -1275,7 +1276,7 @@ input:checked + .toggle-slider:before {
 .tile-delete-btn {
   position: absolute;
   top: 6px;
-  right: 8px;
+  right: calc(var(--tile-inner-padding) - 2px);
   width: 18px;
   height: 18px;
   display: inline-flex;

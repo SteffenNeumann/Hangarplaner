@@ -319,7 +319,7 @@ body {
 
 /* === END TIMETABLE STYLES === */
 /* Reduce gap between header and tab bar when tabs are present */
-.with-tabs .hangar-container { padding-top: 8px; }
+.with-tabs .hangar-container { padding-top: 0px; }
 .hangar-cell[style*="background"],
 .hangar-cell[class*="orange"],
 .hangar-cell[class*="status"],
@@ -357,8 +357,8 @@ body {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	padding: 0.25rem 0.5rem;
-	min-height: 32px;
+	padding: 6px 32px 6px 8px; /* extra right padding for delete icon */
+	min-height: 36px; /* a bit taller for comfortable spacing */
 }
 
 #hangarGrid,
@@ -1267,8 +1267,8 @@ input:checked + .toggle-slider:before {
 .card-header { position: relative; }
 .tile-delete-btn {
   position: absolute;
-  top: 4px;
-  right: 6px;
+  top: 6px;
+  right: 8px;
   width: 18px;
   height: 18px;
   display: inline-flex;
@@ -1787,7 +1787,7 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 	border-radius: 8px 0 0 8px !important;
 	display: flex;
 	align-items: center;
-	padding: 0 0.5rem;
+	padding: 0 32px 0 0.5rem; /* leave space on right for the icon */
 	margin-right: 0.5rem;
 }
 

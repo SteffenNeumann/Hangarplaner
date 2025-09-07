@@ -1175,6 +1175,10 @@
 						if(!panels[key]) return;
 						hideAll();
 						panels[key].classList.remove('hidden');
+						// Ensure display submenu reflects current persisted settings
+						if (key === 'display' && window.displayOptions && typeof window.displayOptions.updateUI === 'function'){
+							try { window.displayOptions.updateUI(); } catch(e){}
+						}
 						buttons.forEach(btn => { if(btn.getAttribute('data-menu')===key){ btn.classList.add('active'); btn.setAttribute('aria-expanded','true'); } });
 						current = key;
 					}
@@ -1245,6 +1249,15 @@
 				</script>
 
 				<div class="flex-grow bg-white p-3 overflow-auto hangar-container">
+					<!-- Top Tabs -->
+					<div id="topTabs" class="flex gap-2 mb-2" style="position: sticky; top: 0; z-index: 20; background: #ffffff; padding-bottom: 4px;">
+						<button class="tab-btn px-3 py-1 rounded border" data-tab="planner" aria-selected="true" title="Hangar Planner">Planner</button>
+						<button class="tab-btn px-3 py-1 rounded border" data-tab="timetable" aria-selected="false" title="Timetable">Timetable</button>
+						<button class="tab-btn px-3 py-1 rounded border" data-tab="database" aria-selected="false" title="Database">Database</button>
+					</div>
+
+					<!-- Panels -->
+					<div id="panel-planner" class="tab-panel">
 					<!-- Abschnitt 1 Container -->
 					<div class="section-container">
 						<div id="hangarGrid" class="grid grid-cols-4 gap-4">
@@ -2409,6 +2422,20 @@ type="datetime-local"
 						</div>
 					</div>
 
+					</div> <!-- /panel-planner -->
+
+					<!-- Timetable Panel -->
+					<div id="panel-timetable" class="tab-panel hidden" style="height: calc(100vh - 60px);">
+						<iframe id="timetableFrame" src="timetable.html" title="Timetable"
+							style="width:100%; height:100%; border:0; background:#ffffff;"></iframe>
+					</div>
+
+					<!-- Database Panel -->
+					<div id="panel-database" class="tab-panel hidden" style="height: calc(100vh - 60px);">
+						<iframe id="databaseFrame" src="fleet-database.html" title="Fleet Database"
+							style="width:100%; height:100%; border:0; background:#ffffff;"></iframe>
+					</div>
+
 				</div>
 			</div>
 
@@ -3480,6 +3507,59 @@ type="datetime-local"
                 window.addEventListener('pageshow', function(){
                     setTimeout(function(){ try { fallbackInit(); } catch(e){} }, 120);
                 });
+            })();
+            </script>
+
+            <!-- Tabs wiring -->
+            <script>
+            (function(){
+              function saveTab(tab){ try { localStorage.setItem('hangar.activeTab', tab); } catch(e){} }
+              function loadTab(){ try { return localStorage.getItem('hangar.activeTab') || 'planner'; } catch(e){ return 'planner'; } }
+
+              function setActiveTab(tab){
+                var panels = {
+                  planner: document.getElementById('panel-planner'),
+                  timetable: document.getElementById('panel-timetable'),
+                  database: document.getElementById('panel-database')
+                };
+                var buttons = document.querySelectorAll('#topTabs .tab-btn');
+                // Toggle buttons
+                buttons.forEach(function(btn){
+                  var isActive = btn.getAttribute('data-tab') === tab;
+                  btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                  btn.classList.toggle('bg-industrial-accent', isActive);
+                });
+                // Toggle panels (use hidden class to align with rest of app)
+                Object.keys(panels).forEach(function(k){
+                  if (!panels[k]) return;
+                  if (k === tab){ panels[k].classList.remove('hidden'); }
+                  else { panels[k].classList.add('hidden'); }
+                });
+                saveTab(tab);
+                try {
+                  if (tab === 'planner' && window.displayOptions && typeof window.displayOptions.updateUI === 'function'){
+                    window.displayOptions.updateUI();
+                  }
+                } catch(e){}
+              }
+
+              function wireTabButtons(){
+                var container = document.getElementById('topTabs');
+                if (!container) return;
+                var buttons = container.querySelectorAll('.tab-btn');
+                buttons.forEach(function(btn){
+                  if (btn.__wired) return;
+                  btn.addEventListener('click', function(){ setActiveTab(btn.getAttribute('data-tab')); });
+                  btn.__wired = true;
+                });
+              }
+
+              document.addEventListener('DOMContentLoaded', function(){
+                try { wireTabButtons(); setActiveTab(loadTab()); } catch(e){}
+              });
+              window.addEventListener('pageshow', function(){
+                try { setActiveTab(loadTab()); } catch(e){}
+              });
             })();
             </script>
 	</body>

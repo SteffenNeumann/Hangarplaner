@@ -3228,205 +3228,255 @@ type="datetime-local"
 
 		<script src="js/flight-data-status.js"></script>
 
-		<!-- Minimal fallback: ensure Display Settings defaults and handlers work even if main init didn't run -->
-		<script>
-		(function(){
-			function log(){ try { console.log.apply(console, arguments);} catch(e){} }
+            <!-- Minimal fallback: ensure Display Settings defaults and handlers work even if main init didn't run -->
+            <script>
+            (function(){
+                function log(){ try { console.log.apply(console, arguments);} catch(e){} }
 
-			function showPrimaryTiles(count){
-				const grid = document.getElementById('hangarGrid');
-				if (!grid) return;
-				const cells = grid.querySelectorAll('.hangar-cell');
-				cells.forEach((cell, idx) => {
-					cell.style.display = idx < count ? '' : 'none';
-					cell.style.visibility = idx < count ? 'visible' : 'hidden';
-				});
-			}
+                function getPersistedDisplay(){
+                    try {
+                        if (window.displayOptions && window.displayOptions.current && Object.keys(window.displayOptions.current).length){
+                            return { ...window.displayOptions.current };
+                        }
+                    } catch(e){}
+                    try {
+                        const raw = localStorage.getItem('displayOptions');
+                        if (!raw) return null;
+                        const parsed = JSON.parse(raw);
+                        if (parsed && typeof parsed === 'object') return parsed;
+                    } catch(e){}
+                    return null;
+                }
 
-			function ensureSecondaryTiles(count, layout){
-				const secGrid = document.getElementById('secondaryHangarGrid');
-				if (!secGrid) return;
-				const current = secGrid.querySelectorAll('.hangar-cell').length;
-				if (typeof window.updateSecondaryTiles === 'function'){
-					window.updateSecondaryTiles(count, layout || 4);
-					return;
-				}
-				if (window.hangarUI && typeof window.hangarUI.updateSecondaryTiles === 'function'){
-					window.hangarUI.updateSecondaryTiles(count, layout || 4);
-					return;
-				}
-				// Manual minimal clone fallback
-				if (current < count){
-					const template = document.querySelector('#hangarGrid .hangar-cell');
-					if (!template) return;
-					for (let i=current; i<count; i++){
-						const cellId = 101 + i;
-						const clone = template.cloneNode(true);
-						if (typeof window.updateCellAttributes === 'function'){
-							window.updateCellAttributes(clone, cellId);
-						}
-						clone.querySelectorAll('input, textarea, select').forEach(el => {
-							if (el.tagName === 'SELECT') el.selectedIndex = 0;
-							else el.value = '';
-						});
-						secGrid.appendChild(clone);
-					}
-				}
-				// Hide extras if more than count exist
-				const cells = secGrid.querySelectorAll('.hangar-cell');
-				cells.forEach((cell, idx) => {
-					cell.style.display = idx < count ? '' : 'none';
-					cell.style.visibility = idx < count ? 'visible' : 'hidden';
-				});
-			}
+                function showPrimaryTiles(count){
+                    const grid = document.getElementById('hangarGrid');
+                    if (!grid) return;
+                    const cells = grid.querySelectorAll('.hangar-cell');
+                    cells.forEach((cell, idx) => {
+                        if (idx < count){
+                            cell.classList.remove('hidden');
+                            cell.style.display = '';
+                            cell.style.visibility = 'visible';
+                        } else {
+                            cell.classList.add('hidden');
+                            cell.style.display = 'none';
+                            cell.style.visibility = 'hidden';
+                        }
+                    });
+                }
 
-			function applyLayoutColumns(layout){
-				const updateClasses = (el) => {
-					if (!el) return;
-					const cls = el.classList;
-					for (let i = 1; i <= 12; i++) { cls.remove(`grid-cols-${i}`); }
-					cls.add(`grid-cols-${layout}`);
-				};
-				const apply = (el) => {
-					if (!el) return;
-					el.style.display = 'grid';
-					try {
-						el.style.setProperty('grid-template-columns', `repeat(${layout}, minmax(240px, 1fr))`, 'important');
-					} catch (e) {
-						el.style.gridTemplateColumns = `repeat(${layout}, minmax(240px, 1fr))`;
-					}
-					updateClasses(el);
-				};
-				apply(document.getElementById('hangarGrid'));
-				apply(document.getElementById('secondaryHangarGrid'));
-				try { console.log(`📐 Layout set to ${layout} columns`); } catch(e){}
-			}
+                function ensureSecondaryTiles(count, layout){
+                    const secGrid = document.getElementById('secondaryHangarGrid');
+                    if (!secGrid) return;
+                    const current = secGrid.querySelectorAll('.hangar-cell').length;
+                    if (typeof window.updateSecondaryTiles === 'function'){
+                        window.updateSecondaryTiles(count, layout || 4);
+                        return;
+                    }
+                    if (window.hangarUI && typeof window.hangarUI.updateSecondaryTiles === 'function'){
+                        window.hangarUI.updateSecondaryTiles(count, layout || 4);
+                        return;
+                    }
+                    // Manual minimal clone fallback
+                    if (current < count){
+                        const template = document.querySelector('#hangarGrid .hangar-cell');
+                        if (!template) return;
+                        for (let i=current; i<count; i++){
+                            const cellId = 101 + i;
+                            const clone = template.cloneNode(true);
+                            if (typeof window.updateCellAttributes === 'function'){
+                                window.updateCellAttributes(clone, cellId);
+                            }
+                            clone.querySelectorAll('input, textarea, select').forEach(el => {
+                                if (el.tagName === 'SELECT') el.selectedIndex = 0;
+                                else el.value = '';
+                            });
+                            secGrid.appendChild(clone);
+                        }
+                    }
+                    // Hide extras if more than count exist
+                    const cells = secGrid.querySelectorAll('.hangar-cell');
+                    cells.forEach((cell, idx) => {
+                        if (idx < count){
+                            cell.classList.remove('hidden');
+                            cell.style.display = '';
+                            cell.style.visibility = 'visible';
+                        } else {
+                            cell.classList.add('hidden');
+                            cell.style.display = 'none';
+                            cell.style.visibility = 'hidden';
+                        }
+                    });
+                }
 
-			function wireControls(){
-				const darkToggle = document.getElementById('darkModeToggle');
-				if (darkToggle && !darkToggle.__wired){
-					darkToggle.addEventListener('change', function(){
-						if (this.checked){
-							document.body.classList.add('dark-mode');
-							document.documentElement.classList.add('dark-mode');
-							try { localStorage.setItem('hangar.theme','dark'); } catch(e){}
-						} else {
-							document.body.classList.remove('dark-mode');
-							document.documentElement.classList.remove('dark-mode');
-							try { localStorage.setItem('hangar.theme','light'); } catch(e){}
-						}
-					});
-					darkToggle.__wired = true;
-				}
+                function applyLayoutColumns(layout){
+                    const updateClasses = (el) => {
+                        if (!el) return;
+                        const cls = el.classList;
+                        for (let i = 1; i <= 12; i++) { cls.remove(`grid-cols-${i}`); }
+                        cls.add(`grid-cols-${layout}`);
+                    };
+                    const apply = (el) => {
+                        if (!el) return;
+                        el.style.display = 'grid';
+                        try {
+                            el.style.setProperty('grid-template-columns', `repeat(${layout}, minmax(240px, 1fr))`, 'important');
+                        } catch (e) {
+                            el.style.gridTemplateColumns = `repeat(${layout}, minmax(240px, 1fr))`;
+                        }
+                        updateClasses(el);
+                    };
+                    apply(document.getElementById('hangarGrid'));
+                    apply(document.getElementById('secondaryHangarGrid'));
+                    try { console.log(`📐 Layout set to ${layout} columns`); } catch(e){}
+                }
 
-				const viewToggle = document.getElementById('viewModeToggle');
-				if (viewToggle && !viewToggle.__wired){
-					viewToggle.addEventListener('change', function(){
-						if (this.checked){
-							document.body.classList.add('table-view');
-							document.body.classList.remove('tile-view');
-						} else {
-							document.body.classList.add('tile-view');
-							document.body.classList.remove('table-view');
-						}
-					});
-					viewToggle.__wired = true;
-				}
+                function wireControls(){
+                    const darkToggle = document.getElementById('darkModeToggle');
+                    if (darkToggle && !darkToggle.__wired){
+                        darkToggle.addEventListener('change', function(){
+                            if (this.checked){
+                                document.body.classList.add('dark-mode');
+                                document.documentElement.classList.add('dark-mode');
+                                try { localStorage.setItem('hangar.theme','dark'); } catch(e){}
+                            } else {
+                                document.body.classList.remove('dark-mode');
+                                document.documentElement.classList.remove('dark-mode');
+                                try { localStorage.setItem('hangar.theme','light'); } catch(e){}
+                            }
+                        });
+                        darkToggle.__wired = true;
+                    }
 
-				// New: Weather & Time widget toggles (fallback wiring)
-				const weatherToggle = document.getElementById('weatherWidgetToggle');
-				if (weatherToggle && !weatherToggle.__wired){
-					const applyWeather = function(){
-						const show = !!weatherToggle.checked;
-						document.body.classList.toggle('hide-weather-widget', !show);
-						var el = document.getElementById('weather-widget');
-						if (el){
-							el.classList.toggle('hidden', !show);
-							el.style.display = show ? '' : 'none';
-							if (show) { el.removeAttribute('hidden'); } else { el.setAttribute('hidden',''); }
-						}
-					};
-					// initial apply
-					applyWeather();
-					weatherToggle.addEventListener('change', applyWeather);
-					weatherToggle.addEventListener('input', applyWeather);
-					weatherToggle.__wired = true;
-				}
+                    const viewToggle = document.getElementById('viewModeToggle');
+                    if (viewToggle && !viewToggle.__wired){
+                        viewToggle.addEventListener('change', function(){
+                            if (this.checked){
+                                document.body.classList.add('table-view');
+                                document.body.classList.remove('tile-view');
+                            } else {
+                                document.body.classList.add('tile-view');
+                                document.body.classList.remove('table-view');
+                            }
+                        });
+                        viewToggle.__wired = true;
+                    }
 
-				const timeToggle = document.getElementById('timeWidgetToggle');
-				if (timeToggle && !timeToggle.__wired){
-					const applyTime = function(){
-						const show = !!timeToggle.checked;
-						document.body.classList.toggle('hide-time-widget', !show);
-						var el = document.getElementById('time-widget');
-						if (el){
-							el.classList.toggle('hidden', !show);
-							el.style.display = show ? '' : 'none';
-							if (show) { el.removeAttribute('hidden'); } else { el.setAttribute('hidden',''); }
-						}
-					};
-					applyTime();
-					timeToggle.addEventListener('change', applyTime);
-					timeToggle.addEventListener('input', applyTime);
-					timeToggle.__wired = true;
-				}
+                    // New: Weather & Time widget toggles (fallback wiring)
+                    const weatherToggle = document.getElementById('weatherWidgetToggle');
+                    if (weatherToggle && !weatherToggle.__wired){
+                        // if persisted exists, sync the checkbox before applying
+                        const persisted = getPersistedDisplay();
+                        if (persisted && typeof persisted.showWeatherWidget !== 'undefined'){
+                            weatherToggle.checked = !!persisted.showWeatherWidget;
+                        }
+                        const applyWeather = function(){
+                            const show = !!weatherToggle.checked;
+                            document.body.classList.toggle('hide-weather-widget', !show);
+                            var el = document.getElementById('weather-widget');
+                            if (el){
+                                el.classList.toggle('hidden', !show);
+                                el.style.display = show ? '' : 'none';
+                                if (show) { el.removeAttribute('hidden'); } else { el.setAttribute('hidden',''); }
+                            }
+                        };
+                        // initial apply
+                        applyWeather();
+                        weatherToggle.addEventListener('change', applyWeather);
+                        weatherToggle.addEventListener('input', applyWeather);
+                        weatherToggle.__wired = true;
+                    }
 
-				const tilesInput = document.getElementById('tilesCount');
-				if (tilesInput && !tilesInput.__wired){
-					tilesInput.addEventListener('change', function(){
-						const v = parseInt(this.value) || 8;
-						showPrimaryTiles(v);
-					});
-					tilesInput.__wired = true;
-				}
+                    const timeToggle = document.getElementById('timeWidgetToggle');
+                    if (timeToggle && !timeToggle.__wired){
+                        const persisted = getPersistedDisplay();
+                        if (persisted && typeof persisted.showTimeWidget !== 'undefined'){
+                            timeToggle.checked = !!persisted.showTimeWidget;
+                        }
+                        const applyTime = function(){
+                            const show = !!timeToggle.checked;
+                            document.body.classList.toggle('hide-time-widget', !show);
+                            var el = document.getElementById('time-widget');
+                            if (el){
+                                el.classList.toggle('hidden', !show);
+                                el.style.display = show ? '' : 'none';
+                                if (show) { el.removeAttribute('hidden'); } else { el.setAttribute('hidden',''); }
+                            }
+                        };
+                        applyTime();
+                        timeToggle.addEventListener('change', applyTime);
+                        timeToggle.addEventListener('input', applyTime);
+                        timeToggle.__wired = true;
+                    }
 
-				const secTilesInput = document.getElementById('secondaryTilesCount');
-				if (secTilesInput && !secTilesInput.__wired){
-					secTilesInput.addEventListener('change', function(){
-						const v = parseInt(this.value) || 4;
-						ensureSecondaryTiles(v, parseInt(document.getElementById('layoutType')?.value||'4'));
-					});
-					secTilesInput.__wired = true;
-				}
+                    const tilesInput = document.getElementById('tilesCount');
+                    if (tilesInput && !tilesInput.__wired){
+                        tilesInput.addEventListener('change', function(){
+                            const v = parseInt(this.value) || 8;
+                            showPrimaryTiles(v);
+                        });
+                        tilesInput.__wired = true;
+                    }
 
-				const layoutSelect = document.getElementById('layoutType');
-				if (layoutSelect && !layoutSelect.__wired){
-					layoutSelect.addEventListener('change', function(){
-						const v = parseInt(this.value) || 4;
-						applyLayoutColumns(v);
-						// reflow secondary grid to match layout
-						const secCnt = parseInt(document.getElementById('secondaryTilesCount')?.value||'4');
-						ensureSecondaryTiles(secCnt, v);
-					});
-					layoutSelect.__wired = true;
-				}
-			}
+                    const secTilesInput = document.getElementById('secondaryTilesCount');
+                    if (secTilesInput && !secTilesInput.__wired){
+                        secTilesInput.addEventListener('change', function(){
+                            const v = parseInt(this.value) || 4;
+                            ensureSecondaryTiles(v, parseInt(document.getElementById('layoutType')?.value||'4'));
+                        });
+                        secTilesInput.__wired = true;
+                    }
 
-			function fallbackInit(){
-				const defaultPrimary = 8;
-				const defaultSecondary = 4;
-				// defaults in controls
-				const tilesInput = document.getElementById('tilesCount');
-				if (tilesInput) tilesInput.value = defaultPrimary;
-				const secTilesInput = document.getElementById('secondaryTilesCount');
-				if (secTilesInput) secTilesInput.value = defaultSecondary;
-				const layoutSelect = document.getElementById('layoutType');
-				if (layoutSelect) layoutSelect.value = '4';
+                    const layoutSelect = document.getElementById('layoutType');
+                    if (layoutSelect && !layoutSelect.__wired){
+                        layoutSelect.addEventListener('change', function(){
+                            const v = parseInt(this.value) || 4;
+                            applyLayoutColumns(v);
+                            // reflow secondary grid to match layout
+                            const secCnt = parseInt(document.getElementById('secondaryTilesCount')?.value||'4');
+                            ensureSecondaryTiles(secCnt, v);
+                        });
+                        layoutSelect.__wired = true;
+                    }
+                }
 
-				// apply visuals
-				showPrimaryTiles(defaultPrimary);
-				ensureSecondaryTiles(defaultSecondary, 4);
-				applyLayoutColumns(4);
-				// default view mode
-				document.body.classList.add('tile-view');
-			}
+                function fallbackInit(){
+                    const persisted = getPersistedDisplay();
+                    let primary = 8, secondary = 4, layout = 4, tableView = false;
+                    if (persisted){
+                        primary = parseInt(persisted.tilesCount) || 8;
+                        secondary = parseInt(persisted.secondaryTilesCount) || 4;
+                        layout = parseInt(persisted.layout) || 4;
+                        tableView = !!persisted.viewMode;
+                    }
+                    const tilesInput = document.getElementById('tilesCount');
+                    if (tilesInput) tilesInput.value = primary;
+                    const secTilesInput = document.getElementById('secondaryTilesCount');
+                    if (secTilesInput) secTilesInput.value = secondary;
+                    const layoutSelect = document.getElementById('layoutType');
+                    if (layoutSelect) layoutSelect.value = String(layout);
 
-			// Run after DOM is ready (and also as a setTimeout safety)
-			document.addEventListener('DOMContentLoaded', function(){
-				try { fallbackInit(); wireControls(); log('✅ Fallback display init applied'); } catch(e){ log('Fallback init error', e); }
-			});
-			setTimeout(function(){ try { fallbackInit(); wireControls(); } catch(e){} }, 800);
-		})();
-		</script>
+                    // apply visuals using persisted or defaults
+                    showPrimaryTiles(primary);
+                    ensureSecondaryTiles(secondary, layout);
+                    applyLayoutColumns(layout);
+
+                    // view mode from persisted
+                    if (tableView){
+                        document.body.classList.add('table-view');
+                        document.body.classList.remove('tile-view');
+                    } else {
+                        document.body.classList.add('tile-view');
+                        document.body.classList.remove('table-view');
+                    }
+                }
+
+                // Run after DOM is ready (and also as a setTimeout safety)
+                document.addEventListener('DOMContentLoaded', function(){
+                    try { fallbackInit(); wireControls(); log('✅ Fallback display init applied'); } catch(e){ log('Fallback init error', e); }
+                });
+                setTimeout(function(){ try { fallbackInit(); wireControls(); } catch(e){} }, 800);
+            })();
+            </script>
 	</body>
 </html>

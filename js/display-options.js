@@ -990,7 +990,7 @@ onDarkModeChange() {
 		const grid = document.getElementById("hangarGrid");
 		if (!grid) return;
 
-		const tiles = grid.querySelectorAll(".hangar-tile");
+		const tiles = grid.querySelectorAll(".hangar-cell");
 		const targetCount = this.current.tilesCount;
 
 		tiles.forEach((tile, index) => {
@@ -1038,14 +1038,18 @@ onDarkModeChange() {
 		}
 
 		// Bestehende sekundäre Kacheln zählen
-		const existingTiles = secondaryGrid.querySelectorAll(".hangar-tile");
+		const existingTiles = secondaryGrid.querySelectorAll(".hangar-cell");
 		const targetCount = this.current.secondaryTilesCount;
 
 		// Zeige/verstecke bestehende Kacheln
 		existingTiles.forEach((tile, index) => {
 			if (index < targetCount) {
+				// Sichtbar: hidden-Klasse entfernen und display zurücksetzen
+				tile.classList.remove("hidden");
 				tile.style.display = "";
 			} else {
+				// Versteckt: hidden-Klasse setzen und display none
+				tile.classList.add("hidden");
 				tile.style.display = "none";
 			}
 		});

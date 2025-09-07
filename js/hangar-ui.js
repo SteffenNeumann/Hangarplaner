@@ -1070,9 +1070,13 @@ function updateTiles(count) {
 		// Zeige/verstecke Kacheln basierend auf count
 		tiles.forEach((tile, index) => {
 			if (index < count) {
+				// Wichtig: hidden-Klasse entfernen, sonst bleibt display:none aus der Initialisierung
+				tile.classList.remove("hidden");
 				tile.style.display = "";
 				tile.style.visibility = "visible";
 			} else {
+				// Konsistent zur Initialisierung: hidden hinzufügen
+				tile.classList.add("hidden");
 				tile.style.display = "none";
 				tile.style.visibility = "hidden";
 			}

@@ -372,14 +372,12 @@ body {
 /* WICHTIG: Grid Layout Fix - Direkte CSS Grid Styles */
 #hangarGrid {
 	display: grid !important;
-	grid-template-columns: repeat(4, minmax(300px, 1fr)) !important;
 	gap: 1rem !important;
 	width: 100% !important;
 }
 
 #secondaryHangarGrid {
 	display: grid !important;
-	grid-template-columns: repeat(4, minmax(300px, 1fr)) !important;
 	gap: 1rem !important;
 	width: 100% !important;
 }

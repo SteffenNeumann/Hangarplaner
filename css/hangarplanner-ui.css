@@ -57,16 +57,16 @@ body {
 	border-color: #ff7043;
 }
 
-.hangar-cell {
+ .hangar-cell {
 	transition: all 0.3s ease;
-	width: auto;
+	width: 100%; /* fill the grid track width */
 	min-width: var(--card-min-width) !important;
-	max-width: 250px !important;
-	flex-basis: var(--card-base-width) !important;
-	margin: 0 auto;
+	max-width: none !important;
+	flex-basis: auto !important;
+	margin: 0; /* left-align inside grid track */
 	box-sizing: border-box;
 	transform-origin: center center;
-	justify-self: center;
+	justify-self: stretch; /* stretch within grid area */
 	box-shadow: none !important;
 	border: 1px solid var(--border-light);
 	border-radius: 12px;
@@ -366,7 +366,8 @@ body {
 	width: 100%;
 	transition: all 0.3s ease;
 	transform-origin: top left;
-	justify-content: center;
+	justify-content: start; /* align grid tracks to the left */
+	justify-items: stretch; /* tiles fill their grid columns */
 }
 
 /* WICHTIG: Grid Layout Fix - Direkte CSS Grid Styles */

@@ -94,34 +94,10 @@
 		<div class="flex h-screen">
 			<!-- Hauptbereich mit Flotten-Datenbank -->
 			<div class="flex-grow flex flex-col content-container">
-				<!-- Header mit Navigation -->
-				<header class="bg-white p-4 shadow-md">
-					<!-- Navigation zurück zur Hauptseite -->
-					<div class="flex items-center space-x-4">
-						<button
-							id="backToMain"
-							class="bg-industrial-accent text-white px-4 py-2 rounded hover:bg-industrial-medium transition-colors flex items-center">
-							<svg
-								class="w-4 h-4 mr-2"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-							</svg>
-Back
-						</button>
-						<h1 class="text-xl font-bold text-industrial-dark">
-							Fleet Database
-						</h1>
-					</div>
-				</header>
+				<!-- Header removed when embedded as iframe -->
 
-				<!-- Hauptinhalt -->
-				<div class="flex-grow bg-white p-4 overflow-auto">
+				<!-- Hauptinhalt (transparent background) -->
+				<div class="flex-grow p-3 overflow-auto">
 					<!-- Filter und Steuerungsbereich -->
 					<div class="mb-6 bg-gray-50 p-4 rounded-lg fleet-filters-enhanced">
 						<div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
@@ -400,12 +376,28 @@ Back
 				}
 			}
 
-			// Navigation zurück zur Hauptseite
-			document
-				.getElementById("backToMain")
-				.addEventListener("click", function () {
-					window.location.href = "index.html";
+			// Listen for theme broadcasts and storage updates to sync dark mode immediately
+			(function(){
+				function apply(dark){
+					try {
+						document.documentElement.classList.toggle('dark-mode', !!dark);
+						if (document.body) document.body.classList.toggle('dark-mode', !!dark);
+					} catch(e){}
+				}
+				window.addEventListener('message', function(e){
+					try { if (e && e.data && e.data.type === 'theme') apply(!!e.data.dark); } catch(_e){}
 				});
+				window.addEventListener('storage', function(ev){
+					if (!ev) return;
+					if (ev.key === 'hangar.theme' || ev.key === 'displayOptions') {
+						try {
+							var t = (localStorage.getItem('hangar.theme')||'').toLowerCase();
+							var isDark = (t === 'dark') || (t !== 'light' && (function(){ try { var raw = localStorage.getItem('displayOptions'); if (raw) { var p = JSON.parse(raw); return !!p.darkMode; } } catch(e){} return false; })());
+							apply(isDark);
+						} catch(e){}
+					}
+				});
+			})();
 
 			// Zeit-Update starten
 			updateTimeDisplay();

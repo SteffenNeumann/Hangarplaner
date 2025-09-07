@@ -221,20 +221,6 @@
 					</svg>
 					<span class="menu-label">Export</span>
 				</button>
-				<a href="timetable.html" class="menu-item" title="Timetable">
-					<svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3M5 8h14M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-					</svg>
-					<span class="menu-label">Timetable</span>
-				</a>
-				<a href="fleet-database.html" class="menu-item" title="Database">
-					<svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M4 7l8-3 8 3-8 3-8-3z" />
-						<path stroke-linecap="round" stroke-linejoin="round" d="M4 12l8 3 8-3" />
-						<path stroke-linecap="round" stroke-linejoin="round" d="M4 17l8 3 8-3" />
-					</svg>
-					<span class="menu-label">Database</span>
-				</a>
 			</nav>
 
 			<!-- Click-blocking scrim for submenu drawer -->
@@ -1250,10 +1236,10 @@
 
 				<div class="flex-grow bg-white p-3 overflow-auto hangar-container">
 					<!-- Top Tabs -->
-					<div id="topTabs" class="flex gap-2 mb-2" role="tablist" aria-label="Sections" style="position: sticky; top: 0; z-index: 20; background: #ffffff; padding-bottom: 4px;">
-						<button id="tab-planner" class="tab-btn px-3 py-1 rounded border" data-tab="planner" role="tab" aria-controls="panel-planner" aria-selected="true" title="Hangar Planner">Planner</button>
-						<button id="tab-timetable" class="tab-btn px-3 py-1 rounded border" data-tab="timetable" role="tab" aria-controls="panel-timetable" aria-selected="false" title="Timetable">Timetable</button>
-						<button id="tab-database" class="tab-btn px-3 py-1 rounded border" data-tab="database" role="tab" aria-controls="panel-database" aria-selected="false" title="Database">Database</button>
+					<div id="topTabs" class="flex gap-2 mb-1" role="tablist" aria-label="Sections" style="position: sticky; top: 0; z-index: 20;">
+						<button id="tab-planner" class="tab-btn" data-tab="planner" role="tab" aria-controls="panel-planner" aria-selected="true" title="Hangar Planner">Planner</button>
+						<button id="tab-timetable" class="tab-btn" data-tab="timetable" role="tab" aria-controls="panel-timetable" aria-selected="false" title="Timetable">Timetable</button>
+						<button id="tab-database" class="tab-btn" data-tab="database" role="tab" aria-controls="panel-database" aria-selected="false" title="Database">Database</button>
 					</div>
 
 					<!-- Panels -->
@@ -2427,13 +2413,13 @@ type="datetime-local"
 					<!-- Timetable Panel -->
 					<div id="panel-timetable" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-timetable" style="height: calc(100vh - 60px);">
 						<iframe id="timetableFrame" src="timetable.html" title="Timetable"
-							style="width:100%; height:100%; border:0; background:#ffffff;"></iframe>
+							style="width:100%; height:100%; border:0; background: transparent;"></iframe>
 					</div>
 
 					<!-- Database Panel -->
 					<div id="panel-database" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-database" style="height: calc(100vh - 60px);">
 						<iframe id="databaseFrame" src="fleet-database.html" title="Fleet Database"
-							style="width:100%; height:100%; border:0; background:#ffffff;"></iframe>
+							style="width:100%; height:100%; border:0; background: transparent;"></iframe>
 					</div>
 
 				</div>
@@ -3523,12 +3509,11 @@ type="datetime-local"
                   timetable: document.getElementById('panel-timetable'),
                   database: document.getElementById('panel-database')
                 };
-                var buttons = document.querySelectorAll('#topTabs .tab-btn[role="tab"]');
+					var buttons = document.querySelectorAll('#topTabs .tab-btn[role="tab"]');
                 // Toggle buttons (ARIA)
                 buttons.forEach(function(btn){
                   var isActive = btn.getAttribute('data-tab') === tab;
                   btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
-                  btn.classList.toggle('bg-industrial-accent', isActive);
                 });
                 // Toggle panels
                 Object.keys(panels).forEach(function(k){
@@ -3598,6 +3583,34 @@ type="datetime-local"
               window.addEventListener('pageshow', function(){
                 try { setActiveTab(loadTab()); } catch(e){}
               });
+            })();
+            </script>
+
+            <!-- Broadcast theme to iframes on changes and on load -->
+            <script>
+            (function(){
+              function computeDark(){
+                try {
+                  var t = (localStorage.getItem('hangar.theme')||'').toLowerCase();
+                  if (t === 'dark') return true; if (t === 'light') return false;
+                  var raw = localStorage.getItem('displayOptions');
+                  if (raw) { var parsed = JSON.parse(raw); if (parsed && parsed.darkMode) return true; }
+                } catch(e){}
+                var toggle = document.getElementById('darkModeToggle');
+                if (toggle) return !!toggle.checked;
+                return document.documentElement.classList.contains('dark-mode') || document.body.classList.contains('dark-mode');
+              }
+              function send(){
+                var msg = { type: 'theme', dark: !!computeDark() };
+                try { var f = document.getElementById('timetableFrame'); if (f && f.contentWindow) f.contentWindow.postMessage(msg, '*'); } catch(e){}
+                try { var g = document.getElementById('databaseFrame'); if (g && g.contentWindow) g.contentWindow.postMessage(msg, '*'); } catch(e){}
+              }
+              document.addEventListener('DOMContentLoaded', function(){
+                try { var t = document.getElementById('darkModeToggle'); if (t) t.addEventListener('change', send); } catch(e){}
+                setTimeout(send, 250);
+              });
+              window.addEventListener('pageshow', function(){ setTimeout(send, 0); });
+              window.addEventListener('load', function(){ setTimeout(send, 0); });
             })();
             </script>
 	</body>

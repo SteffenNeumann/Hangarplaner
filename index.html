@@ -3639,8 +3639,25 @@ type="datetime-local"
                   if (tab === 'timetable') {
                     try {
                       var f = document.getElementById('timetableFrame');
-                      if (f && f.contentWindow) {
-                        f.contentWindow.postMessage({ type: 'reloadTimetable' }, '*');
+                      if (f) {
+                        // ensure correct page if iframe got navigated by subpage actions
+                        if ((f.getAttribute('src')||'').indexOf('timetable.html') === -1) {
+                          f.setAttribute('src', 'timetable.html');
+                        }
+                        if (f.contentWindow) {
+                          f.contentWindow.postMessage({ type: 'reloadTimetable' }, '*');
+                        }
+                      }
+                    } catch(_e){}
+                  }
+                  if (tab === 'database') {
+                    try {
+                      var g = document.getElementById('databaseFrame');
+                      if (g) {
+                        // ensure the correct DB page if it was replaced by a subpage redirect
+                        if ((g.getAttribute('src')||'').indexOf('fleet-database.html') === -1) {
+                          g.setAttribute('src', 'fleet-database.html');
+                        }
                       }
                     } catch(_e){}
                   }

@@ -1253,9 +1253,12 @@ const FleetDatabase = (function () {
 			const params = new URLSearchParams();
 			params.set('selectedAircraft', reg);
 			params.set('prompt', '1');
-			window.location.href = `index.html?${params.toString()}`;
+			// Navigate top-level (not the iframe) so Planner opens correctly
+			try { window.top.location.href = `index.html?${params.toString()}`; }
+			catch(_e){ window.location.href = `index.html?${params.toString()}`; }
 		} catch (e) {
-			window.location.href = 'index.html';
+			try { window.top.location.href = 'index.html'; }
+			catch(_e){ window.location.href = 'index.html'; }
 		}
 	}
 

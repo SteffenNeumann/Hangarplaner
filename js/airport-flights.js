@@ -905,10 +905,13 @@ const AirportFlights = (() => {
 			if (arrTime && arrTime.trim()) params.set("arr", arrTime.trim());
 			if (depTime && depTime.trim()) params.set("dep", depTime.trim());
 			params.set("prompt", "1");
-			window.location.href = `index.html?${params.toString()}`;
+			// Navigate top-level (not iframe)
+			try { window.top.location.href = `index.html?${params.toString()}`; }
+			catch(_e){ window.location.href = `index.html?${params.toString()}`; }
 		} catch (e) {
-			// Fallback redirect without params
-			window.location.href = "index.html";
+			// Fallback redirect without params, top-level if possible
+			try { window.top.location.href = "index.html"; }
+			catch(_e){ window.location.href = "index.html"; }
 		}
 	};
 

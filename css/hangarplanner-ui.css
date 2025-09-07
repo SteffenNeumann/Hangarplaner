@@ -28,7 +28,7 @@
 	--control-muted: #b1b5b1; /* sliders inactive */
 	/* Unified paddings */
 	--tile-grid-padding: 16px;
-	--tile-inner-padding: 16px;
+	--tile-inner-padding: 24px;
 
 	/* Sync chip palette (adjust here to tune colors/weights) */
 	--sync-chip-fw: 600;

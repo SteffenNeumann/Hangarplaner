@@ -586,6 +586,7 @@
 								<div class="status-value-group">
 									<span id="headerUpdateStatus" class="status-label-value" title="Scheduled Update">Inactive</span>
 									<span id="headerUpdateMeta" class="status-meta" title="Schedule details"></span>
+									<span id="headerLastLoad" class="status-meta" title="Last data load" style="display:none"></span>
 								</div>
 							</div>
 							</div>
@@ -611,6 +612,35 @@
 	function initHeaderStatusWidget(){
 		const container = document.getElementById('status-widget');
 		if(!container) return;
+
+		// Utility: detect Read-only Sync mode
+		function isReadOnlySync(){
+			try {
+				const read = !!document.getElementById('readDataToggle')?.checked;
+				const write = !!document.getElementById('writeDataToggle')?.checked;
+				return read && !write;
+			} catch(e){ return false; }
+		}
+		function fmtHHmm(ts){
+			try {
+				const d = (typeof ts === 'number') ? new Date(ts) : (ts instanceof Date ? ts : null);
+				if (!d) return '';
+				return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+			} catch(e){ return ''; }
+		}
+		function updateHeaderLastLoad(){
+			const el = document.getElementById('headerLastLoad');
+			if (!el) return;
+			if (!isReadOnlySync()) { el.textContent=''; el.style.display='none'; return; }
+			const loadedAt = (window.serverSync && window.serverSync.lastLoadedAt) ? window.serverSync.lastLoadedAt : null;
+			if (loadedAt) {
+				el.textContent = `loaded ${fmtHHmm(loadedAt)}`;
+				el.style.display='';
+			} else {
+				el.textContent='';
+				el.style.display='none';
+			}
+		}
 
 		// Öffne linke Submenüs bei Klick auf Status-Zeilen
 		container.querySelectorAll('.status-row[data-open-submenu]').forEach(row => {
@@ -676,6 +706,14 @@
 			updateHeaderUpdateMeta();
 			intervalInput.addEventListener('change', updateHeaderUpdateMeta);
 		}
+
+		// Keep last-load timestamp updated
+		document.addEventListener('serverDataLoaded', updateHeaderLastLoad);
+		const readToggleForLoad = document.getElementById('readDataToggle');
+		const writeToggleForLoad = document.getElementById('writeDataToggle');
+		if (readToggleForLoad) readToggleForLoad.addEventListener('change', updateHeaderLastLoad);
+		if (writeToggleForLoad) writeToggleForLoad.addEventListener('change', updateHeaderLastLoad);
+		setTimeout(updateHeaderLastLoad, 0);
 
 		// Optional coupling retained (no project label to update); guard for missing elements.
 		let couplingInProgress = false;

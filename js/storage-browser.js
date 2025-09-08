@@ -630,6 +630,7 @@ class ServerSync {
 				console.log("🔄 Verwende dataCoordinator für Server-Daten...");
 				window.dataCoordinator.loadProject(serverData, "server");
 				console.log("✅ Server-Daten über Datenkoordinator angewendet");
+				try { this.lastLoadedAt = Date.now(); document.dispatchEvent(new CustomEvent('serverDataLoaded', { detail: { loadedAt: this.lastLoadedAt } })); } catch(e){}
 				return true;
 			}
 
@@ -646,6 +647,7 @@ class ServerSync {
 					"✅ Server-Daten über hangarData angewendet (Fallback), Ergebnis:",
 					result
 				);
+				if (result) { try { this.lastLoadedAt = Date.now(); document.dispatchEvent(new CustomEvent('serverDataLoaded', { detail: { loadedAt: this.lastLoadedAt } })); } catch(e){} }
 				return result;
 			}
 
@@ -683,6 +685,7 @@ class ServerSync {
 
 			if (applied) {
 				console.log("✅ Server-Daten über direkten Fallback angewendet");
+				try { this.lastLoadedAt = Date.now(); document.dispatchEvent(new CustomEvent('serverDataLoaded', { detail: { loadedAt: this.lastLoadedAt } })); } catch(e){}
 				return true;
 			} else {
 				console.warn("⚠️ Keine Server-Daten konnten angewendet werden");

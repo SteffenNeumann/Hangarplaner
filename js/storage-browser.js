@@ -854,6 +854,25 @@ class ServerSync {
 					console.log(
 						`🚚 Tow Status gesetzt: ${tileId} = ${oldValue} → ${tileData.towStatus}`
 					);
+					// WICHTIG: Styling der Tow-Status-Selects nach programmatischer Änderung aktualisieren
+					try {
+						if (typeof window.updateTowStatusStyles === 'function') {
+							window.updateTowStatusStyles(towStatusSelect);
+						} else if (typeof updateTowStatusStyles === 'function') {
+							updateTowStatusStyles(towStatusSelect);
+						} else {
+							// Fallback: Klassen direkt setzen, keine Inline-Farben
+							const v = (towStatusSelect.value || 'neutral').trim();
+							towStatusSelect.classList.remove('tow-neutral','tow-initiated','tow-ongoing','tow-on-position');
+							towStatusSelect.classList.add(`tow-${v}`);
+							towStatusSelect.style.backgroundColor = '';
+							towStatusSelect.style.color = '';
+							towStatusSelect.style.borderColor = '';
+							towStatusSelect.style.borderLeftColor = '';
+						}
+					} catch(e) {
+						console.warn('⚠️ Tow-Status Styling-Aktualisierung fehlgeschlagen:', e);
+					}
 					successfullyApplied++;
 				} else {
 					console.warn(
@@ -1081,22 +1100,47 @@ class ServerSync {
 			}, 200);
 		}
 
-		// Status-Indikatoren und UI-Updates
-		setTimeout(() => {
-			const statusElements = document.querySelectorAll('[id^="status-"]');
-			statusElements.forEach((element) => {
-				if (element.value && window.updateStatusLights) {
-					const cellId = parseInt(element.id.replace("status-", ""));
-					if (!isNaN(cellId)) {
-						window.updateStatusLights(cellId);
+			// Status-Indikatoren und UI-Updates
+			setTimeout(() => {
+				const statusElements = document.querySelectorAll('[id^="status-"]');
+				statusElements.forEach((element) => {
+					if (element.value && window.updateStatusLights) {
+						const cellId = parseInt(element.id.replace("status-", ""));
+						if (!isNaN(cellId)) {
+							window.updateStatusLights(cellId);
+						}
 					}
-				}
-			});
-			console.log(
-				`✅ ${statusElements.length} Status-Indikatoren aktualisiert`
-			);
-		}, 300);
-	}
+				});
+				console.log(
+					`✅ ${statusElements.length} Status-Indikatoren aktualisiert`
+				);
+			}, 300);
+
+			// Tow-Status Styling nach Server-Load sicher aktualisieren
+			setTimeout(() => {
+				const towElements = document.querySelectorAll('.tow-status-selector');
+				towElements.forEach((select) => {
+					try {
+						if (typeof window.updateTowStatusStyles === 'function') {
+							window.updateTowStatusStyles(select);
+						} else if (typeof updateTowStatusStyles === 'function') {
+							updateTowStatusStyles(select);
+						} else {
+							const v = (select.value || 'neutral').trim();
+							select.classList.remove('tow-neutral','tow-initiated','tow-ongoing','tow-on-position');
+							select.classList.add(`tow-${v}`);
+							select.style.backgroundColor = '';
+							select.style.color = '';
+							select.style.borderColor = '';
+							select.style.borderLeftColor = '';
+						}
+					} catch(e) {
+						console.warn('⚠️ Tow-Status Styling-Refresh fehlgeschlagen:', e);
+					}
+				});
+				console.log(`✅ ${towElements.length} Tow-Status Styles aktualisiert`);
+			}, 400);
+		}
 
 	/**
 	 * Debug-Funktion: Zeigt aktuellen Sync-Status

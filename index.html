@@ -573,11 +573,12 @@
 
 						<!-- Neuer Status-Widget: gebündelte Einstellungen -->
 						<div id="status-widget">
-							<!-- Row 1: Mode label only (no pill) -->
+							<!-- Row 1: Mode label with last-load time (pill) in read-only -->
 							<div class="status-row" data-open-submenu="sync" title="Open Sync settings">
 								<span class="status-label">Mode:</span>
 								<div class="status-value-group">
 									<span id="sync-mode" class="status-label-value">Standalone</span>
+									<span id="headerLastLoad" class="header-time-badge" title="Last data load" style="display:none"></span>
 								</div>
 							</div>
 							<!-- Row 2: Update status label from submenu settings (no pill) -->
@@ -586,7 +587,6 @@
 								<div class="status-value-group">
 									<span id="headerUpdateStatus" class="status-label-value" title="Scheduled Update">Inactive</span>
 									<span id="headerUpdateMeta" class="status-meta" title="Schedule details"></span>
-									<span id="headerLastLoad" class="status-meta" title="Last data load" style="display:none"></span>
 								</div>
 							</div>
 							</div>
@@ -631,10 +631,12 @@
 		function updateHeaderLastLoad(){
 			const el = document.getElementById('headerLastLoad');
 			if (!el) return;
+			// Ensure correct class for pill styling
+			el.className = 'header-time-badge';
 			if (!isReadOnlySync()) { el.textContent=''; el.style.display='none'; return; }
 			const loadedAt = (window.serverSync && window.serverSync.lastLoadedAt) ? window.serverSync.lastLoadedAt : null;
 			if (loadedAt) {
-				el.textContent = `loaded ${fmtHHmm(loadedAt)}`;
+				el.textContent = fmtHHmm(loadedAt);
 				el.style.display='';
 			} else {
 				el.textContent='';

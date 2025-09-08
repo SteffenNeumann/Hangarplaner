@@ -572,251 +572,484 @@ function setupFlightDataEventHandlers() {
 			// Debug-Log
 			console.log("*** UPDATE DATA BUTTON WURDE GEKLICKT ***");
 
-			// Force the new airport-first overnight processing for the Update action
-			// Rationale: This path includes the robust "flight number → registration" lookup and tile clearing logic
-			const selectedProvider = "overnight-flights";
-			console.log(`🔍 Selected API Provider forced to: ${selectedProvider}`);
-			// If a provider dropdown exists, reflect it visually but do not change behavior
-			try {
-				const apiProviderSelect = document.getElementById("apiProviderSelect");
-				if (apiProviderSelect) apiProviderSelect.value = selectedProvider;
-			} catch (e) { /* ignore */ }
+			// Rebuilt: Use the same per-tile pipeline as the Aircraft ID blur handler
+			// Rationale: The overnight airport-first path rarely yields results for the planner tiles.
+			// We now iterate tiles with a non-empty Aircraft ID and invoke the blur-path logic that is known to work.
 
-			// Route to appropriate processing based on provider selection
-			if (selectedProvider === "overnight-flights") {
-				console.log("🏨 *** OVERNIGHT FLIGHTS PROCESSING MODE SELECTED ***");
-				console.log("🔄 Bypassing API facade and using direct AeroDataBox overnight processing...");
-				
-				// Show status panel (shared with dedicated overnight button)
-				const statusPanel = document.getElementById("overnightFlightsStatus");
-				const statusMessage = document.getElementById("overnightFlightsMessage");
-				if (statusPanel) {
-					statusPanel.style.display = "block";
-					if (statusMessage) {
-						statusMessage.textContent = "Starting overnight flights analysis...";
-					}
-				}
-				
-				// Get airport and date parameters
-				const airportCodeInput = document.getElementById("airportCodeInput");
-				const currentDateInput = document.getElementById("currentDateInput");
-				const nextDateInput = document.getElementById("nextDateInput");
-				
-				const airportCode = airportCodeInput?.value.trim().toUpperCase() || "MUC";
-				const currentDate = currentDateInput?.value || new Date().toISOString().split("T")[0];
-				// Compute next day strictly based on currentDate if provided; otherwise fallback to tomorrow from now
-				const nextDate = (function(){
-					if (nextDateInput?.value) return nextDateInput.value;
-					if (currentDate) {
-						const d = new Date(currentDate);
-						// Handle potential timezone offset by using UTC components when available
-						d.setUTCDate(d.getUTCDate() + 1);
-						return d.toISOString().split("T")[0];
-					}
-					return new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-				})();
+			// Collect all aircraft ID inputs (primary and secondary)
+			const inputs = document.querySelectorAll('#hangarGrid .hangar-cell input[id^="aircraft-"], #secondaryHangarGrid .hangar-cell input[id^="aircraft-"]');
+			const filled = Array.from(inputs)
+				.map(inp => ({ id: inp.id, value: (inp.value || '').trim(), cellId: (inp.id.match(/aircraft-(\d+)/) || [null, ''])[1] }))
+				.filter(x => x.value.length > 0);
 
-				// Helper to hide panel after delay
-				const hideStatusPanelSoon = () => {
-					setTimeout(() => { if (statusPanel) statusPanel.style.display = 'none'; }, 5000);
-				};
-
-				console.log(`🏨 Parameters: Airport=${airportCode}, StartDate=${currentDate}, EndDate=${nextDate}`);
-
-				// Call the new correct overnight processing function DIRECTLY
-				if (window.AeroDataBoxAPI && window.AeroDataBoxAPI.processOvernightFlightsCorrectly) {
-					console.log("✅ AeroDataBoxAPI.processOvernightFlightsCorrectly found, calling...");
-					try {
-						const result = await window.AeroDataBoxAPI.processOvernightFlightsCorrectly(
-							airportCode,
-							currentDate,
-							nextDate
-						);
-
-						console.log("📋 Overnight processing result:", result);
-
-						if (result && result.success) {
-							console.log("✅ Overnight processing completed successfully!");
-							if (statusMessage) {
-								statusMessage.textContent = `Processing completed: ${result.overnightAircraft} overnight aircraft found, ${result.tilesMatched} tiles updated`;
-							}
-							if (window.showNotification) {
-								window.showNotification(
-									`Overnight processing complete: ${result.overnightAircraft} aircraft found, ${result.tilesMatched} tiles updated`,
-									"success"
-								);
-							}
-							hideStatusPanelSoon();
-						} else {
-							console.error("❌ Overnight processing failed, result:", result);
-							if (window.showNotification) {
-								const errorMsg = result && result.error 
-									? `Overnight processing failed: ${result.error}`
-									: "Overnight processing failed. Check console for details.";
-								window.showNotification(errorMsg, "error");
-							}
-							hideStatusPanelSoon();
-						}
-					} catch (error) {
-						console.error("❌ Error during overnight processing:", error);
-						if (window.showNotification) {
-							window.showNotification(
-								`❌ Overnight processing error: ${error.message}`,
-								"error"
-							);
-						}
-						hideStatusPanelSoon();
-					}
-				} else {
-					console.error("❌ AeroDataBoxAPI.processOvernightFlightsCorrectly not available!");
-					console.log("Available AeroDataBoxAPI methods:", window.AeroDataBoxAPI ? Object.keys(window.AeroDataBoxAPI) : "AeroDataBoxAPI not found");
-					if (window.showNotification) {
-						window.showNotification(
-							"❌ Overnight processing function not available. Check console for details.",
-							"error"
-						);
-					}
-					hideStatusPanelSoon();
-				}
-				console.log("🏨 *** OVERNIGHT PROCESSING COMPLETE - EXITING EARLY ***");
-				return; // Exit early for overnight processing
-			}
-
-			// DEFAULT BEHAVIOR: Individual aircraft processing (aerodatabox)
-			console.log("🛫 Using standard individual aircraft processing...");
-
-			// Sammle alle Aircraft IDs aus den Kacheln (primäre und sekundäre)
-			const primaryTiles = document.querySelectorAll(
-				'#hangarGrid .hangar-cell input[id^="aircraft-"]'
-			);
-			const secondaryTiles = document.querySelectorAll(
-				'#secondaryHangarGrid .hangar-cell input[id^="aircraft-"]'
-			);
-			const allAircraftInputs = [...primaryTiles, ...secondaryTiles];
-
-			// Sammle alle nicht-leeren Aircraft IDs
-			const aircraftIds = [];
-			allAircraftInputs.forEach((input) => {
-				const value = input.value.trim();
-				if (value) {
-					aircraftIds.push({
-						id: value,
-						element: input,
-						cellId: input.id.split("-")[1],
-					});
-				}
-			});
-
-			console.log(`Gefundene Aircraft IDs in Kacheln: ${aircraftIds.length}`);
-			aircraftIds.forEach((aircraft) => {
-				console.log(`- ${aircraft.id} (Kachel ${aircraft.cellId})`);
-			});
-
-			const currentDateInput = document.getElementById("currentDateInput");
-			const nextDateInput = document.getElementById("nextDateInput");
-			const airportCodeInput = document.getElementById("airportCodeInput");
-
-			console.log("Eingabefelder gefunden:", {
-				aircraftIds: aircraftIds.length,
-				currentDateInput: !!currentDateInput,
-				nextDateInput: !!nextDateInput,
-				airportCodeInput: !!airportCodeInput,
-			});
-
-			const currentDate = currentDateInput?.value;
-			const nextDate = nextDateInput?.value;
-			const airportCode =
-				airportCodeInput?.value?.trim().toUpperCase() || "MUC";
-
-			if (aircraftIds.length === 0) {
-				console.warn("❌ Keine Aircraft IDs in den Kacheln gefunden");
-				alert("Bitte geben Sie mindestens eine Flugzeug-ID in eine Kachel ein");
+			if (filled.length === 0) {
+				console.warn('❌ Keine Aircraft IDs in den Kacheln gefunden');
+				alert('Bitte geben Sie mindestens eine Flugzeug-ID in eine Kachel ein');
 				return;
 			}
 
-			// Verarbeite alle gefundenen Aircraft IDs
-			for (const aircraft of aircraftIds) {
-				console.log(
-					`\n🛫 Verarbeite Aircraft ID: ${aircraft.id} (Kachel ${aircraft.cellId})`
-				);
-
-				console.log("Eingabewerte:", {
-					aircraftId: aircraft.id,
-					currentDate,
-					nextDate,
-					airportCode,
-				});
-				console.log(
-					`API-Fassade wird verwendet für: ${aircraft.id}, Flughafen: ${airportCode}`
-				);
-
-				console.log("Prüfe FlightDataAPI Verfügbarkeit...");
-				if (window.FlightDataAPI) {
-					console.log("✅ FlightDataAPI ist verfügbar");
-					try {
-						// Zusätzliches Debug-Log für die Anfrage
-						console.log("Anfrage-Parameter:", {
-							aircraftId: aircraft.id,
-							currentDate,
-							nextDate,
-							airportCode,
-						});
-
-						// API-Fassade aufrufen und Ergebnis speichern
-						const result = await window.FlightDataAPI.updateAircraftData(
-							aircraft.id,
-							currentDate,
-							nextDate
-						);
-
-						console.log(
-							`API-Fassade Aufruf für ${aircraft.id} erfolgreich abgeschlossen`
-						);
-						console.log("Empfangene Daten:", result);
-
-						// ✅ WICHTIG: Ergebnisse in die UI übertragen
-						if (
-							result &&
-							window.HangarData &&
-							typeof window.HangarData.updateAircraftFromFlightData ===
-								"function"
-						) {
-							// Aktualisiere die UI-Kacheln mit den Flugdaten (async)
-							await window.HangarData.updateAircraftFromFlightData(
-								aircraft.id,
-								result
-							);
-							console.log(
-								`✅ UI-Kacheln für ${aircraft.id} erfolgreich aktualisiert`
-							);
-						} else if (result) {
-							console.warn(
-								"❌ HangarData.updateAircraftFromFlightData nicht verfügbar - UI wird nicht aktualisiert"
-							);
-						}
-
-						// Optional: Überprüfen, ob die Daten zum gewünschten Flughafen gehören
-						if (
-							result &&
-							(result.originCode === airportCode ||
-								result.destCode === airportCode)
-						) {
-							console.log(`✅ Daten für Flughafen ${airportCode} gefunden.`);
-						} else if (result) {
-							console.warn(
-								`⚠️ Daten enthalten nicht den gewünschten Flughafen ${airportCode}.`
-							);
-						}
-					} catch (error) {
-						console.error(
-							`❌ Fehler beim API-Fassaden-Aufruf für ${aircraft.id}:`,
-							error
-						);
-					}
-				} else {
-					console.error("❌ FlightDataAPI nicht verfügbar!");
-				}
+			console.log(`🔁 Running per-tile update for ${filled.length} Aircraft IDs via blur-handler...`);
+			if (window.showNotification) {
+				try { window.showNotification(`Updating ${filled.length} aircraft via per-tile update...`, 'info'); } catch(e){}
 			}
+
+			// Process sequentially to avoid API rate limits; reuse the same logic as blur handler
+			for (let i = 0; i < filled.length; i++) {
+				const { id: fieldId, value, cellId } = filled[i];
+				console.log(`→ [${i+1}/${filled.length}] Trigger update for ${value} (cell ${cellId})`);
+				try {
+					if (window.hangarEvents && typeof window.hangarEvents.handleAircraftIdChange === 'function') {
+						window.hangarEvents.handleAircraftIdChange(fieldId, value);
+					} else {
+						// Fallback: dispatch blur event to trigger any attached handler on the input itself
+						const el = document.getElementById(fieldId);
+						if (el) el.dispatchEvent(new Event('blur', { bubbles: true }));
+					}
+				} catch (err) {
+					console.warn(`⚠️ Failed to trigger update for ${value} (cell ${cellId})`, err);
+				}
+				// Throttle between tiles so the underlying API calls don't spike
+				await new Promise(r => setTimeout(r, 700));
+			}
+
+			if (window.showNotification) {
+				try { window.showNotification(`✅ Updated ${filled.length} aircraft via per-tile update`, 'success'); } catch(e){}
+			}
+			console.log('✅ Per-tile update completed');
+			return; // done
+			
+			// (Legacy code path removed: overnight-first processing and direct facade loop)
+			// If needed in the future, we can reintroduce provider-based bulk processing behind a feature flag.
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
 		};
 
 		console.log(

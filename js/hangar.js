@@ -1097,59 +1097,70 @@ window.clearSingleTile = window.clearSingleTile || function(cellId){
 // Wire Display submenu: Reset screen (confirm and clear all tile inputs except Hangar Position)
 const resetScreenBtn = document.getElementById('resetScreenBtn');
 if (resetScreenBtn) {
-	resetScreenBtn.addEventListener('click', function(e){
-		e.preventDefault();
-		const ok = window.confirm('Reset screen?\n\nThis will:\n• clear all per-tile update timestamps\n• reset all tile inputs (Aircraft, Arr/Dep, Pos/Route, Notes, Tow, Status)\n• keep Hangar Position inputs unchanged');
-		if (!ok) return;
-		try {
-			// Cancel any pending local rehydrate and suppress near-term runs
+	resetScreenBtn.addEventListener('click', async function(e){
+			e.preventDefault();
+			const ok = window.confirm('Reset screen?\n\nThis will:\n• clear all per-tile update timestamps\n• reset all tile inputs (Aircraft, Arr/Dep, Pos/Route, Notes, Tow, Status)\n• keep Hangar Position inputs unchanged');
+			if (!ok) return;
+			let resetSucceeded = false;
 			try {
-				if (window.__localRehydrateTimer) { clearTimeout(window.__localRehydrateTimer); window.__localRehydrateTimer = null; }
-				window.__skipLocalRehydrateUntil = Date.now() + 10000; // 10s guard
-			} catch (e) { /* noop */ }
+				// Cancel any pending local rehydrate and suppress near-term runs
+				try {
+					if (window.__localRehydrateTimer) { clearTimeout(window.__localRehydrateTimer); window.__localRehydrateTimer = null; }
+					window.__skipLocalRehydrateUntil = Date.now() + 10000; // 10s guard
+				} catch (e) { /* noop */ }
 
-			// 1) Clear all update badges and persisted meta
-			if (window.LastUpdateBadges && typeof window.LastUpdateBadges.clearAll === 'function') {
-				window.LastUpdateBadges.clearAll();
+				// 1) Clear all update badges and persisted meta
+				if (window.LastUpdateBadges && typeof window.LastUpdateBadges.clearAll === 'function') {
+					window.LastUpdateBadges.clearAll();
+				}
+
+				// 2) Reset inputs for all tiles (primary and secondary), except Hangar Position
+				const tiles = document.querySelectorAll('#hangarGrid .hangar-cell, #secondaryHangarGrid .hangar-cell');
+				tiles.forEach(tile => {
+					// Clear aircraft id
+					tile.querySelectorAll('input[id^="aircraft-"]').forEach(el => { el.value = ''; });
+					// Clear times (also remove any ISO dataset)
+					tile.querySelectorAll('input[id^="arrival-time-"]').forEach(el => { el.value = ''; try { delete el.dataset.iso; } catch(e){} });
+					tile.querySelectorAll('input[id^="departure-time-"]').forEach(el => { el.value = ''; try { delete el.dataset.iso; } catch(e){} });
+					// Clear route/position (Pos in info grid)
+					tile.querySelectorAll('input[id^="position-"]').forEach(el => { el.value = ''; });
+					// Notes
+					tile.querySelectorAll('textarea[id^="notes-"]').forEach(el => { el.value = ''; });
+					// Tow status -> neutral
+					tile.querySelectorAll('select[id^="tow-status-"]').forEach(sel => {
+						sel.value = 'neutral';
+						if (window.updateTowStatusStyles) window.updateTowStatusStyles(sel);
+					});
+				});
+
+				// 3) Reset tile status selectors and lights to neutral
+				if (typeof resetAllTilesToNeutral === 'function') {
+					resetAllTilesToNeutral();
+				} else {
+					// Fallback
+					document.querySelectorAll('.status-selector').forEach(sel => {
+						sel.value = 'neutral';
+						if (window.updateStatusLight) window.updateStatusLight(sel);
+					});
+				}
+
+				// 4) Inform user
+				if (window.showNotification) window.showNotification('Screen reset completed', 'success');
+				resetSucceeded = true;
+			} catch (err) {
+				console.warn('Reset screen failed:', err);
+				if (window.showNotification) window.showNotification('Reset failed', 'error');
 			}
 
-			// 2) Reset inputs for all tiles (primary and secondary), except Hangar Position
-			const tiles = document.querySelectorAll('#hangarGrid .hangar-cell, #secondaryHangarGrid .hangar-cell');
-			tiles.forEach(tile => {
-				// Clear aircraft id
-				tile.querySelectorAll('input[id^="aircraft-"]').forEach(el => { el.value = ''; });
-				// Clear times (also remove any ISO dataset)
-				tile.querySelectorAll('input[id^="arrival-time-"]').forEach(el => { el.value = ''; try { delete el.dataset.iso; } catch(e){} });
-				tile.querySelectorAll('input[id^="departure-time-"]').forEach(el => { el.value = ''; try { delete el.dataset.iso; } catch(e){} });
-				// Clear route/position (Pos in info grid)
-				tile.querySelectorAll('input[id^="position-"]').forEach(el => { el.value = ''; });
-				// Notes
-				tile.querySelectorAll('textarea[id^="notes-"]').forEach(el => { el.value = ''; });
-				// Tow status -> neutral
-				tile.querySelectorAll('select[id^="tow-status-"]').forEach(sel => {
-					sel.value = 'neutral';
-					if (window.updateTowStatusStyles) window.updateTowStatusStyles(sel);
-				});
-			});
-
-			// 3) Reset tile status selectors and lights to neutral
-			if (typeof resetAllTilesToNeutral === 'function') {
-				resetAllTilesToNeutral();
-			} else {
-				// Fallback
-				document.querySelectorAll('.status-selector').forEach(sel => {
-					sel.value = 'neutral';
-					if (window.updateStatusLight) window.updateStatusLight(sel);
-				});
+			// 5) If write is enabled (Master), persist cleared state to server immediately
+			if (resetSucceeded && window.serverSync?.isMaster) {
+				try {
+					await window.serverSync.syncWithServer();
+				} catch (syncErr) {
+					console.warn('Reset screen sync failed:', syncErr);
+				}
 			}
-
-			// 4) Inform user
-			if (window.showNotification) window.showNotification('Screen reset completed', 'success');
-		} catch (err) {
-			console.warn('Reset screen failed:', err);
-			if (window.showNotification) window.showNotification('Reset failed', 'error');
-		}
-	});
+		});
 }
 
 // Rehydrate badges from localStorage on load

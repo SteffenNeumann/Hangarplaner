@@ -1210,48 +1210,59 @@ input:checked + .toggle-slider:before {
 }
 
 /* Styling für die neuen Towing-Status-Selektoren */
-/* Dezente Styling für Towing-Status mit reinen Symbolen */
+/* Überarbeitet: pill design, bessere Sichtbarkeit im Light Mode (wie Header Chips) */
 .tow-status-container {
 	width: 100%;
 }
 
 .tow-status-selector {
-	width: auto;
-	min-width: 40px;
-	padding: 2px 6px;
-	border-radius: 3px;
-	font-size: 12px;
-	text-align: center;
-	background-color: transparent !important;
-	border: 1px solid #e5e7eb;
 	appearance: none;
+	width: auto;
+	min-width: 90px;
+	height: 26px; /* gleiche Höhe wie .status-selector */
+	padding: 2px 10px;
+	border-radius: 9999px; /* pill */
+	font-size: 12px;
+	font-weight: 600;
+	text-align: center;
+	background-color: #f3f4f6; /* base for neutral */
+	color: #475569;
+	border: 1px solid #e5e7eb;
 	cursor: pointer;
-	height: 26px; /* Gleiche Höhe wie .status-selector */
+	transition: background-color .15s ease, color .15s ease, border-color .15s ease;
 }
 
 /* Dropdown-Symbol unauffälliger machen */
-.tow-status-selector::-ms-expand {
-	display: none;
+.tow-status-selector::-ms-expand { display: none; }
+
+/* Dropdown options: ensure good contrast in light menus */
+.tow-status-selector option { font-size: 0.9rem; padding: 2px; color: #111827; }
+
+/* Light mode chip colors (match header indicators) */
+body:not(.dark-mode) .tow-status-selector.tow-neutral {
+	background: #f3f4f6;
+	color: #475569;
+	border-color: #e5e7eb;
+}
+body:not(.dark-mode) .tow-status-selector.tow-initiated {
+	background: #FEF3C7;
+	color: #92400E;
+	border-color: #FCD34D;
+}
+body:not(.dark-mode) .tow-status-selector.tow-ongoing {
+	background: #DBEAFE;
+	color: #1D4ED8;
+	border-color: #BFDBFE;
+}
+body:not(.dark-mode) .tow-status-selector.tow-on-position {
+	background: #D1FAE5;
+	color: #065F46;
+	border-color: #A7F3D0;
 }
 
-/* Symbole etwas kleiner machen */
-.tow-status-selector option {
-	font-size: 0.9rem;
-	padding: 2px;
-}
-
-/* Dezente Unterscheidungen durch Rahmenfarbe statt Hintergrund */
-.tow-status-selector.tow-initiated {
-	border-left: 2px solid #f59e0b;
-}
-
-.tow-status-selector.tow-ongoing {
-	border-left: 2px solid #3b82f6;
-}
-
-.tow-status-selector.tow-on-position {
-	border-left: 2px solid #10b981;
-}
+/* Hover/focus cues */
+body:not(.dark-mode) .tow-status-selector:hover { border-color: #cbd5e1; }
+body:not(.dark-mode) .tow-status-selector:focus { outline: none; border-color: #94a3b8; box-shadow: 0 0 0 2px rgba(148,163,184,.25); }
 
 /* Global tile spacing variables */
 :root { --tile-gap: 24px; }

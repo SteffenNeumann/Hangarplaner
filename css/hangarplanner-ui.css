@@ -1240,40 +1240,49 @@ input:checked + .toggle-slider:before {
 
 /* Light mode base: left accent border and small radius */
 body:not(.dark-mode) .tow-status-selector {
-	border-left: 3px solid #cbd5e1; /* subtle accent, base */
-	border-radius: 2px;
+	border-left: 3px solid #cbd5e1 !important; /* base */
+	border-radius: 2px !important;
+	border-color: #e5e7eb !important;
 }
 
 /* Light mode chip colors (match header indicators) */
 /* Light mode: match header Sync mode chip palette */
 body:not(.dark-mode) .tow-status-selector.tow-neutral {
-	background: #f3f4f6;           /* gray-100 */
-	color: #475569;                /* slate-600 */
-	border-color: #e5e7eb;         /* gray-200 */
-	border-left-color: #94a3b8;    /* slate-400 */
+	background: #f3f4f6 !important;           /* gray-100 */
+	color: #475569 !important;                /* slate-600 */
+	border-color: #e5e7eb !important;         /* gray-200 */
+	border-left-color: #94a3b8 !important;    /* slate-400 */
 }
 body:not(.dark-mode) .tow-status-selector.tow-initiated {
-	background: #fff7ed;           /* orange-50 */
-	color: #9a3412;                /* orange-800 */
-	border-color: #fed7aa;         /* orange-200 */
-	border-left-color: #f59e0b;    /* orange-500 */
+	background: #fff7ed !important;           /* orange-50 */
+	color: #9a3412 !important;                /* orange-800 */
+	border-color: #fed7aa !important;         /* orange-200 */
+	border-left-color: #f59e0b !important;    /* orange-500 */
 }
 body:not(.dark-mode) .tow-status-selector.tow-ongoing {
-	background: #eff6ff;           /* blue-50 */
-	color: #1d4ed8;                /* blue-700 */
-	border-color: #bfdbfe;         /* blue-200 */
-	border-left-color: #3b82f6;    /* blue-500 */
+	background: #eff6ff !important;           /* blue-50 */
+	color: #1d4ed8 !important;                /* blue-700 */
+	border-color: #bfdbfe !important;         /* blue-200 */
+	border-left-color: #3b82f6 !important;    /* blue-500 */
 }
 body:not(.dark-mode) .tow-status-selector.tow-on-position {
-	background: #ecfdf5;           /* emerald-50 */
-	color: #065f46;                /* emerald-800 */
-	border-color: #a7f3d0;         /* emerald-200 */
-	border-left-color: #10b981;    /* emerald-500 */
+	background: #ecfdf5 !important;           /* emerald-50 */
+	color: #065f46 !important;                /* emerald-800 */
+	border-color: #a7f3d0 !important;         /* emerald-200 */
+	border-left-color: #10b981 !important;    /* emerald-500 */
 }
 
 /* Hover/focus cues */
-body:not(.dark-mode) .tow-status-selector:hover { border-color: #cbd5e1; }
-body:not(.dark-mode) .tow-status-selector:focus { outline: none; border-color: #94a3b8; box-shadow: 0 0 0 2px rgba(148,163,184,.25); }
+body:not(.dark-mode) .tow-status-selector:hover { border-color: #cbd5e1 !important; }
+body:not(.dark-mode) .tow-status-selector:focus { outline: none; border-color: #94a3b8 !important; box-shadow: 0 0 0 2px rgba(148,163,184,.25); }
+
+/* Default to neutral if no state class present */
+body:not(.dark-mode) .tow-status-selector:not(.tow-initiated):not(.tow-ongoing):not(.tow-on-position) {
+	background: #f3f4f6 !important;
+	color: #475569 !important;
+	border-color: #e5e7eb !important;
+	border-left-color: #94a3b8 !important;
+}
 
 /* Dark mode: match header chip palette */
 .dark-mode .tow-status-selector {
@@ -1700,14 +1709,12 @@ body:not(.dark-mode) #hangarGrid .hangar-cell .position-input,
 body:not(.dark-mode) #hangarGrid .hangar-cell .notes-textarea,
 body:not(.dark-mode) #hangarGrid .hangar-cell .status-selector,
 body:not(.dark-mode) #hangarGrid .hangar-cell select.status-selector,
-body:not(.dark-mode) #hangarGrid .hangar-cell .tow-status-selector,
 body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .aircraft-id,
 body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .info-input,
 body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .position-input,
 body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .notes-textarea,
 body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .status-selector,
-body:not(.dark-mode) #secondaryHangarGrid .hangar-cell select.status-selector,
-body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector {
+body:not(.dark-mode) #secondaryHangarGrid .hangar-cell select.status-selector {
 	border: 1px solid transparent !important;
 	box-shadow: none !important;
 }

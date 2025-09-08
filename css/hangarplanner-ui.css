@@ -572,6 +572,8 @@ select.status-selector {
 	flex-direction: column;
 	margin-top: 0.25rem;
 	margin-bottom: 0.25rem;
+	margin-left: 0 !important;
+	padding-left: 0 !important;
 }
 
 .notes-textarea,
@@ -582,7 +584,8 @@ textarea.notes-textarea {
 	max-height: 22px !important;
 	border: 1px solid transparent;
 	border-radius: 3px;
-	padding: 2px 8px !important;
+	padding: 2px 0 !important; /* remove left/right padding so text aligns flush-left */
+	margin-left: 0 !important;
 	font-size: 0.8rem;
 	color: var(--text-dark);
 	overflow-y: hidden !important;
@@ -591,6 +594,7 @@ textarea.notes-textarea {
 	line-height: 18px !important;
 	display: flex !important;
 	align-items: center !important;
+	text-indent: 0;
 }
 
 .aircraft-id {

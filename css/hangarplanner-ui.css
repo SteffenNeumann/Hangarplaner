@@ -1240,7 +1240,7 @@ input:checked + .toggle-slider:before {
 
 /* Light mode base: left accent border and small radius */
 body:not(.dark-mode) .tow-status-selector {
-	border-left: 2px solid #cbd5e1; /* subtle accent */
+	border-left: 3px solid #cbd5e1; /* subtle accent, base */
 	border-radius: 2px;
 }
 
@@ -1249,25 +1249,25 @@ body:not(.dark-mode) .tow-status-selector.tow-neutral {
 	background: #f3f4f6;
 	color: #475569;
 	border-color: #e5e7eb;
-	border-left-color: #94a3b8; /* darker accent */
+	border-left-color: #64748b; /* darker accent */
 }
 body:not(.dark-mode) .tow-status-selector.tow-initiated {
 	background: #FEF3C7;
 	color: #92400E;
 	border-color: #FCD34D;
-	border-left-color: #d97706; /* subtle darker */
+	border-left-color: #b45309; /* darker accent */
 }
 body:not(.dark-mode) .tow-status-selector.tow-ongoing {
 	background: #DBEAFE;
 	color: #1D4ED8;
 	border-color: #BFDBFE;
-	border-left-color: #1E40AF;
+	border-left-color: #1E3A8A; /* blue-800 */
 }
 body:not(.dark-mode) .tow-status-selector.tow-on-position {
 	background: #D1FAE5;
 	color: #065F46;
 	border-color: #A7F3D0;
-	border-left-color: #10B981;
+	border-left-color: #047857; /* green-700 */
 }
 
 /* Hover/focus cues */

@@ -765,8 +765,8 @@ const AeroDataBoxAPI = (() => {
 			let overnightArrival = null;
 			let overnightDeparture = null;
 
-			// Suche letzten Ankunftsflug am Tag 1 zum gewählten Flughafen
-			const currentDayFlightsToAirport = currentDayFlights
+			// Suche letzten Ankunftsflug am Tag 1 zum gewählten Flughafen (verwende strikt tagesgefilterte Flüge)
+			const currentDayFlightsToAirport = filteredCurrentDayFlights
 				.filter((flight) => {
 					const arrivalPoint = flight.flightPoints?.find((p) => p.arrivalPoint);
 					return arrivalPoint && arrivalPoint.iataCode === selectedAirport;
@@ -789,7 +789,7 @@ const AeroDataBoxAPI = (() => {
 					lastArrivalFlight.flightPoints.find((p) => p.arrivalPoint)
 				);
 
-				const sameDayDeparturesAfterArrival = currentDayFlights.filter(
+				const sameDayDeparturesAfterArrival = filteredCurrentDayFlights.filter(
 					(flight) => {
 						const departurePoint = flight.flightPoints?.find(
 							(p) => p.departurePoint
@@ -843,8 +843,8 @@ const AeroDataBoxAPI = (() => {
 				);
 			}
 
-			// Schritt 3: Finde den ersten Abflug am Tag 2 vom gewählten Flughafen (unabhängig von Ankunft)
-			const nextDayDeparturesFromAirport = nextDayFlights
+			// Schritt 3: Finde den ersten Abflug am Tag 2 vom gewählten Flughafen (verwende strikt tagesgefilterte Flüge)
+			const nextDayDeparturesFromAirport = filteredNextDayFlights
 				.filter((flight) => {
 					const departurePoint = flight.flightPoints?.find(
 						(p) => p.departurePoint

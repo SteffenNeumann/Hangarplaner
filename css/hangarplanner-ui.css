@@ -722,6 +722,10 @@ input:checked + .toggle-slider:before {
 	width: 100%;
 	column-gap: 8px;
 }
+/* Explicit column placement so right block stays put even if no badge exists */
+.header-elements .status-dropdown-container { grid-column: 1; }
+.header-elements .last-update-badge { grid-column: 2; }
+.header-elements .position-container { grid-column: 3; justify-self: end; }
 
 .section-divider {
 	width: 100%;

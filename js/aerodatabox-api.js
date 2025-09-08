@@ -1038,14 +1038,26 @@ const AeroDataBoxAPI = (() => {
 				}
 			}
 
-			// Erfolgreiche Übernachtungs-Zusammenfassung
-			console.log(
-				`🏨 Übernachtung bestätigt für ${aircraftId}: ${currentDate} → ${nextDate}`
-			);
-			updateFetchStatus(
-				`${aircraftId} übernachtet in ${selectedAirport}: ${result.positionText}`,
-				false
-			);
+			// Statusmeldung kontextsensitiv ausgeben
+			if (lastArrival && firstDeparture) {
+				console.log(`🏨 Übernachtung bestätigt für ${aircraftId}: ${currentDate} → ${nextDate}`);
+				updateFetchStatus(
+					`${aircraftId} übernachtet in ${selectedAirport}: ${result.positionText}`,
+					false
+				);
+			} else if (lastArrival) {
+				console.log(`🛬 Letzte Ankunft für ${aircraftId} in ${selectedAirport} am ${currentDate}`);
+				updateFetchStatus(
+					`${aircraftId} Ankunft in ${selectedAirport}: ${result.positionText}`,
+					false
+				);
+			} else if (firstDeparture) {
+				console.log(`🛫 Abflug für ${aircraftId} von ${selectedAirport} am ${nextDate}`);
+				updateFetchStatus(
+					`${aircraftId} Abflug von ${selectedAirport}: ${result.positionText}`,
+					false
+				);
+			}
 
 			return result;
 		} catch (error) {

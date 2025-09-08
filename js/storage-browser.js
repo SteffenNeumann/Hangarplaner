@@ -33,9 +33,17 @@ class ServerSync {
 		console.log("🔄 Server-Sync initialisiert:", serverUrl);
 
 		// ENTFERNT: Automatische Master-Slave-Erkennung (wird jetzt über Toggles gesteuert)
-		// WICHTIG: Erststart-Load für alle Modi
-		console.log("📥 Lade Server-Daten beim Erststart...");
-		await this.loadInitialServerData();
+		// Geändert: Erststart-Load NUR wenn Lesen erlaubt ist (Read Data = ON)
+		try {
+			if (this.canReadFromServer()) {
+				console.log("📥 Lade Server-Daten beim Erststart (Read enabled)...");
+				await this.loadInitialServerData();
+			} else {
+				console.log("⏭️ Überspringe Erststart-Load (Read disabled)");
+			}
+		} catch (e) {
+			console.warn("⚠️ Erststart-Load Prüfung fehlgeschlagen:", e?.message || e);
+		}
 
 		// ENTFERNT: Automatische Modi-Aktivierung
 		// Modi werden jetzt ausschließlich über SharingManager-Toggles gesteuert
@@ -124,6 +132,23 @@ class ServerSync {
 	}
 
 	/**
+	 * Prüft, ob Lesen vom Server aktuell erlaubt ist (Read Data Toggle)
+	 */
+	canReadFromServer() {
+		try {
+			// Prefer explicit toggles when present
+			const readToggle = document.getElementById('readDataToggle');
+			if (readToggle) return !!readToggle.checked;
+			// Fall back to sharingManager state if available
+			if (window.sharingManager && typeof window.sharingManager.syncMode === 'string') {
+				return window.sharingManager.syncMode === 'sync' || window.sharingManager.syncMode === 'master';
+			}
+		} catch (e) { /* noop */ }
+		// Safe default: do not read unless explicitly enabled
+		return false;
+	}
+
+	/**
 	 * NEUE METHODE: Bestimmt Master oder Slave Rolle
 	 */
 	async determineMasterSlaveRole() {
@@ -181,7 +206,8 @@ class ServerSync {
 	 */
 	startMasterMode() {
 		this.isMaster = true;
-		this.isSlaveActive = true; // GEÄNDERT: Master empfängt auch Updates
+		// Respect Read toggle: only receive if reading is enabled
+		this.isSlaveActive = this.canReadFromServer();
 
 		// Stoppe bestehende Intervalle
 		if (this.slaveCheckInterval) {
@@ -190,13 +216,18 @@ class ServerSync {
 		}
 		this.stopPeriodicSync();
 
-		// Starte bidirektionale Master-Synchronisation
+		// Starte Master-Synchronisation fürs Senden
 		this.startPeriodicSync(); // Für das Senden von Daten
 
-		// HINZUGEFÜGT: Auch Updates empfangen (längeres Intervall für Master)
-		this.slaveCheckInterval = setInterval(async () => {
-			await this.slaveCheckForUpdates();
-		}, 30000); // 30 Sekunden für Master-Update-Check
+		// Nur wenn Lesen erlaubt ist, zusätzlich Updates empfangen (längeres Intervall)
+		if (this.isSlaveActive) {
+			this.slaveCheckInterval = setInterval(async () => {
+				await this.slaveCheckForUpdates();
+			}, 30000); // 30 Sekunden für Master-Update-Check
+			console.log("👑 Master-Modus: Empfange zusätzlich Updates (Read ON)");
+		} else {
+			console.log("👑 Master-Modus: Write-only aktiv (Read OFF) – kein Server-Read");
+		}
 
 		// Sofort einen ersten Schreibversuch starten, damit andere Browser zeitnah Daten erhalten
 		try {
@@ -205,7 +236,7 @@ class ServerSync {
 			console.warn("⚠️ Sofortiger Master-Sync fehlgeschlagen:", e?.message || e);
 		}
 
-		console.log("👑 Master-Modus gestartet - bidirektionale Synchronisation aktiv (Senden + Empfangen)");
+		console.log("👑 Master-Modus gestartet – Senden aktiv, Empfangen:", this.isSlaveActive ? 'AN' : 'AUS');
 	}
 
 	/**

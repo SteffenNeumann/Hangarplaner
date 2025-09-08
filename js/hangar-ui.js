@@ -1405,24 +1405,35 @@ document.addEventListener("DOMContentLoaded", function () {
 	// Phase 4: Server-Sync einrichten (3000ms)
 	setTimeout(() => {
 		// console.log("🌐 Phase 4: Server-Sync wird eingerichtet...");
-		if (window.storageBrowser) {
-			// Versuche Server-Daten zu laden
-			window.storageBrowser
-				.loadFromServer()
-				.then((serverData) => {
-					if (serverData) {
-						// console.log("📥 Server-Daten verfügbar, wende an...");
-						window.storageBrowser.applyServerData(serverData);
-					} else {
-						// console.log(
-						//	"ℹ️ Keine Server-Daten verfügbar, verwende lokale Daten"
-						// );
-					}
-				})
-				.catch((error) => {
-					console.warn("⚠️ Fehler beim Laden der Server-Daten:", error);
-				});
-		}
+		if (!window.storageBrowser) return;
+		try {
+			// Gate initial server load by Read toggle
+			const readOn = (window.serverSync && typeof window.serverSync.canReadFromServer === 'function')
+				? window.serverSync.canReadFromServer()
+				: !!document.getElementById('readDataToggle')?.checked;
+			if (!readOn) {
+				// Skip initial read when Read is off (Standalone or Write-only)
+				// console.log("⏭️ Phase 4: Read OFF – überspringe initialen Server-Load");
+				return;
+			}
+		} catch (e) { /* noop */ }
+
+		// Versuche Server-Daten zu laden (Read enabled)
+		window.storageBrowser
+			.loadFromServer()
+			.then((serverData) => {
+				if (serverData) {
+					// console.log("📥 Server-Daten verfügbar, wende an...");
+					window.storageBrowser.applyServerData(serverData);
+				} else {
+					// console.log(
+					//	"ℹ️ Keine Server-Daten verfügbar, verwende lokale Daten"
+					// );
+				}
+			})
+			.catch((error) => {
+				console.warn("⚠️ Fehler beim Laden der Server-Daten:", error);
+			});
 	}, 3000);
 
 	// Phase 5: Validierung und Status-Check (5000ms)

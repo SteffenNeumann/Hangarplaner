@@ -1102,6 +1102,12 @@ if (resetScreenBtn) {
 		const ok = window.confirm('Reset screen?\n\nThis will:\n• clear all per-tile update timestamps\n• reset all tile inputs (Aircraft, Arr/Dep, Pos/Route, Notes, Tow, Status)\n• keep Hangar Position inputs unchanged');
 		if (!ok) return;
 		try {
+			// Cancel any pending local rehydrate and suppress near-term runs
+			try {
+				if (window.__localRehydrateTimer) { clearTimeout(window.__localRehydrateTimer); window.__localRehydrateTimer = null; }
+				window.__skipLocalRehydrateUntil = Date.now() + 10000; // 10s guard
+			} catch (e) { /* noop */ }
+
 			// 1) Clear all update badges and persisted meta
 			if (window.LastUpdateBadges && typeof window.LastUpdateBadges.clearAll === 'function') {
 				window.LastUpdateBadges.clearAll();
@@ -1112,9 +1118,9 @@ if (resetScreenBtn) {
 			tiles.forEach(tile => {
 				// Clear aircraft id
 				tile.querySelectorAll('input[id^="aircraft-"]').forEach(el => { el.value = ''; });
-				// Clear times
-				tile.querySelectorAll('input[id^="arrival-time-"]').forEach(el => { el.value = ''; });
-				tile.querySelectorAll('input[id^="departure-time-"]').forEach(el => { el.value = ''; });
+				// Clear times (also remove any ISO dataset)
+				tile.querySelectorAll('input[id^="arrival-time-"]').forEach(el => { el.value = ''; try { delete el.dataset.iso; } catch(e){} });
+				tile.querySelectorAll('input[id^="departure-time-"]').forEach(el => { el.value = ''; try { delete el.dataset.iso; } catch(e){} });
 				// Clear route/position (Pos in info grid)
 				tile.querySelectorAll('input[id^="position-"]').forEach(el => { el.value = ''; });
 				// Notes
@@ -1770,6 +1776,10 @@ async function checkForSelectedAircraft() {
 (function setupLocalRehydrate(){
 	function rehydrateLocalFieldsIfEmpty(){
 		try {
+			// Skip if a recent Reset screen requested suppression
+			if (window.__skipLocalRehydrateUntil && Date.now() < window.__skipLocalRehydrateUntil) {
+				return;
+			}
 			const raw = localStorage.getItem('hangarPlannerData');
 			if (!raw) return;
 			const data = JSON.parse(raw);
@@ -1811,7 +1821,13 @@ async function checkForSelectedAircraft() {
 	}
 	// Schedule after initial app setup so we don't override server-applied values; only empties are filled
 	window.hangarInitQueue = window.hangarInitQueue || [];
-	window.hangarInitQueue.push(function(){ setTimeout(rehydrateLocalFieldsIfEmpty, 2400); });
+	window.hangarInitQueue.push(function(){
+		try {
+			window.__localRehydrateTimer = setTimeout(() => {
+				try { rehydrateLocalFieldsIfEmpty(); } finally { try { window.__localRehydrateTimer = null; } catch(e){} }
+			}, 2400);
+		} catch(e){}
+	});
 })();
 
 /**

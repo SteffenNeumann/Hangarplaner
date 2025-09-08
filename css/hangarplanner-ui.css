@@ -1468,7 +1468,9 @@ body.dark-mode {
 }
 /* Ensure inner content wrapper matches tile bg (primary and secondary) */
 .dark-mode #hangarGrid .hangar-cell > .p-4,
-.dark-mode #secondaryHangarGrid .hangar-cell > .p-4 {
+.dark-mode #secondaryHangarGrid .hangar-cell > .p-4,
+.dark-mode #hangarGrid .hangar-cell > .p-3,
+.dark-mode #secondaryHangarGrid .hangar-cell > .p-3 {
 	background-color: var(--card-bg) !important;
 }
 
@@ -1816,6 +1818,13 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 }
 
 .table-view .p-4 {
+	padding: 0.5rem !important;
+	display: flex !important;
+	flex-direction: row !important;
+	align-items: center !important;
+	width: 100%;
+}
+.table-view .p-3 {
 	padding: 0.5rem !important;
 	display: flex !important;
 	flex-direction: row !important;

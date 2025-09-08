@@ -1245,34 +1245,65 @@ body:not(.dark-mode) .tow-status-selector {
 }
 
 /* Light mode chip colors (match header indicators) */
+/* Light mode: match header Sync mode chip palette */
 body:not(.dark-mode) .tow-status-selector.tow-neutral {
-	background: #f3f4f6;
-	color: #475569;
-	border-color: #e5e7eb;
-	border-left-color: #64748b; /* darker accent */
+	background: #f3f4f6;           /* gray-100 */
+	color: #475569;                /* slate-600 */
+	border-color: #e5e7eb;         /* gray-200 */
+	border-left-color: #94a3b8;    /* slate-400 */
 }
 body:not(.dark-mode) .tow-status-selector.tow-initiated {
-	background: #FEF3C7;
-	color: #92400E;
-	border-color: #FCD34D;
-	border-left-color: #b45309; /* darker accent */
+	background: #fff7ed;           /* orange-50 */
+	color: #9a3412;                /* orange-800 */
+	border-color: #fed7aa;         /* orange-200 */
+	border-left-color: #f59e0b;    /* orange-500 */
 }
 body:not(.dark-mode) .tow-status-selector.tow-ongoing {
-	background: #DBEAFE;
-	color: #1D4ED8;
-	border-color: #BFDBFE;
-	border-left-color: #1E3A8A; /* blue-800 */
+	background: #eff6ff;           /* blue-50 */
+	color: #1d4ed8;                /* blue-700 */
+	border-color: #bfdbfe;         /* blue-200 */
+	border-left-color: #3b82f6;    /* blue-500 */
 }
 body:not(.dark-mode) .tow-status-selector.tow-on-position {
-	background: #D1FAE5;
-	color: #065F46;
-	border-color: #A7F3D0;
-	border-left-color: #047857; /* green-700 */
+	background: #ecfdf5;           /* emerald-50 */
+	color: #065f46;                /* emerald-800 */
+	border-color: #a7f3d0;         /* emerald-200 */
+	border-left-color: #10b981;    /* emerald-500 */
 }
 
 /* Hover/focus cues */
 body:not(.dark-mode) .tow-status-selector:hover { border-color: #cbd5e1; }
 body:not(.dark-mode) .tow-status-selector:focus { outline: none; border-color: #94a3b8; box-shadow: 0 0 0 2px rgba(148,163,184,.25); }
+
+/* Dark mode: match header chip palette */
+.dark-mode .tow-status-selector {
+	border-left-width: 3px;
+	border-radius: 2px;
+}
+.dark-mode .tow-status-selector.tow-neutral {
+	background: var(--bg-secondary) !important;
+	border-color: var(--border-color) !important;
+	color: var(--text-secondary) !important;
+	border-left-color: #64748b !important; /* slate-500 */
+}
+.dark-mode .tow-status-selector.tow-initiated {
+	background: rgba(245, 158, 11, 0.15) !important; /* orange */
+	border-color: #b45309 !important;
+	color: #fdba74 !important; /* orange-300 */
+	border-left-color: #f59e0b !important;
+}
+.dark-mode .tow-status-selector.tow-ongoing {
+	background: rgba(59, 130, 246, 0.15) !important; /* blue */
+	border-color: #1d4ed8 !important;
+	color: #93c5fd !important; /* blue-300 */
+	border-left-color: #3b82f6 !important;
+}
+.dark-mode .tow-status-selector.tow-on-position {
+	background: rgba(16, 185, 129, 0.15) !important; /* emerald */
+	border-color: #065f46 !important;
+	color: #a7f3d0 !important; /* emerald-200 */
+	border-left-color: #10b981 !important;
+}
 
 /* Global tile spacing variables */
 :root { --tile-gap: 24px; }

@@ -136,20 +136,11 @@ window.globalInitialization = {
 					const value = select.value;
 					select.classList.add(`tow-${value}`);
 
-					// Hintergrundfarbe direkt setzen
-					if (value === "neutral") {
-						select.style.backgroundColor = "white";
-						select.style.color = "#333333";
-					} else if (value === "initiated") {
-						select.style.backgroundColor = "#FEF3C7"; // Hellgelb
-						select.style.color = "#92400E";
-					} else if (value === "ongoing") {
-						select.style.backgroundColor = "#DBEAFE"; // Hellblau
-						select.style.color = "#1E40AF";
-					} else if (value === "on-position") {
-						select.style.backgroundColor = "#D1FAE5"; // Hellgrün
-						select.style.color = "#065F46";
-					}
+					// Keine Inline-Farben setzen – Styling kommt aus CSS (vermeidet Konflikt mit Klassen)
+					select.style.backgroundColor = '';
+					select.style.color = '';
+					select.style.borderColor = '';
+					select.style.borderLeftColor = '';
 
 					// console.log(`🚚 Tow-Status aktualisiert: ${value}`);
 				} catch (error) {

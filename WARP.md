@@ -196,25 +196,37 @@ Flight number lookups frequently fail due to API limitations and data mapping ch
   - Standalone: local only; no server reads or writes
   - Sync (read-only): reads from server; client edits do not write to server
   - Master (read-write): reads + writes to server
-- Client-side write gating
-  - All server writes are centralized through `window.serverSync.syncWithServer()`
-  - Field-level direct POSTs are blocked unless Write mode is enabled
+  - Write-only (Master with Read OFF): writes to server; no server reads
+- Client-side gating
+  - Writes: All server writes are centralized through `window.serverSync.syncWithServer()`; header `X-Sync-Role: master` is sent only when Write is enabled
+  - Reads: All server reads are gated by the Read Data toggle. When Read is OFF, the app skips initial server load at startup and disables periodic read-back, even in Master mode
   - Display options in read-only mode save locally only and show “Saved locally (read-only mode)”
 - UI behavior in Sync (read-only)
   - Editing controls within `#hangarGrid` and `#secondaryHangarGrid` are temporarily disabled
   - A small banner “Read-Only: Changes are not saved to the server” is shown
   - Mode toggles and navigation remain usable
+- Write-only specifics
+  - Startup: no GET requests to `sync/data.php` (initial server load is skipped)
+  - No periodic reads: Master read-back loop is disabled when Read is OFF
+  - Manual Sync: triggers a POST-only sync (no reads) because only `syncWithServer()` runs
+  - Reset screen: clears UI values (Aircraft, Arr/Dep incl. dataset.iso, Pos/Route, Notes, Tow, Status) and keeps Hangar Position; does not purge localStorage; suppresses local rehydrate for ~10s to avoid repopulating just after reset
 - Server endpoint
-  - `sync/data.php` accepts GET/POST; client-side gating prevents writes in read-only
+  - `sync/data.php` accepts GET/POST; client-side gating prevents writes in read-only and prevents reads in write-only
 
 ### Manual test checklist (Sync system)
 1) Read-only mode (Sync)
    - Enable Read Data ON, Write Data OFF
    - Edit a tile field; expect no POST to `sync/data.php`
    - Server data not modified; UI shows read-only banner; inputs are disabled
-2) Master mode (Write)
+2) Master mode (Read+Write)
    - Enable Read Data ON, Write Data ON
    - Edit a tile field; a write occurs via `serverSync.syncWithServer()`
    - Changes persist and replicate to a read-only client
 3) Standalone
    - Disable both toggles; edits only affect local state; no server traffic
+4) Write-only (Master with Read OFF)
+   - Enable Read Data OFF, Write Data ON
+   - Reset screen from Display menu; tiles stay cleared and are not repopulated
+   - No GET requests to `sync/data.php` (at startup or after reset)
+   - Edits trigger POST with `X-Sync-Role: master` (verify via network tab)
+   - Manual Sync triggers POST-only (no GET)

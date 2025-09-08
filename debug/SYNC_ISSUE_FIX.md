@@ -128,3 +128,35 @@ If issues occur, previous version can be restored by:
 - Minimal: Only adds URL parameter processing
 - No additional network requests
 - Same caching and optimization strategies apply
+
+---
+
+## Addendum: Strict Write-only mode (Read OFF)
+
+### Summary
+To support a true Write-only configuration (Read OFF, Write ON), the client now strictly gates server reads by the Read Data toggle:
+- Startup initial load is skipped when Read is OFF
+- In Master mode, periodic read-back is disabled when Read is OFF
+- Manual Sync remains available in Write-only and performs POST-only syncs (no GET)
+- Reset screen does not purge localStorage; it clears UI fields (including Arr/Dep dataset.iso) and suppresses local rehydrate for ~10s to avoid immediate repopulation
+
+### Implementation
+- storage-browser.js
+  - Added `canReadFromServer()` to determine if reads are allowed
+  - `initSync()` only loads from server at startup if `canReadFromServer()` is true
+  - `startMasterMode()` enables the periodic read-back loop only when `canReadFromServer()` is true
+- hangar-ui.js
+  - Phase 4 initial load is skipped when Read is OFF
+- hangar.js
+  - Reset screen cancels pending local rehydrate and sets a short suppression window; clears Arr/Dep values and their `dataset.iso` attributes; resets Status/Tow to neutral; keeps Hangar Position
+
+### Verification
+1) Write-only (Read OFF, Write ON)
+   - Load app: no GET to `sync/data.php`
+   - Use Reset screen: tiles remain cleared after several seconds; no GETs fired
+   - Edit tiles: POSTs with `X-Sync-Role: master` appear; no GETs
+   - Manual Sync: sends POST-only
+2) Regression check
+   - Read-only (Read ON, Write OFF): still polls and loads; no POSTs
+   - Master (Read ON, Write ON): reads+posts as before
+   - Standalone (both OFF): no server traffic

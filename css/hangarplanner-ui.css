@@ -360,8 +360,8 @@ body {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	/* Use same horizontal padding as content for a cleaner look */
-	padding: 6px var(--tile-inner-padding);
+	/* Use same horizontal padding as content and increase top padding for consistency */
+	padding: var(--tile-inner-padding) var(--tile-inner-padding) 8px var(--tile-inner-padding);
 	min-height: 32px;
 }
 
@@ -1276,7 +1276,7 @@ input:checked + .toggle-slider:before {
 .tile-delete-btn {
   position: absolute;
   top: 6px;
-  right: calc(var(--tile-inner-padding) - 2px);
+  right: 8px;
   width: 18px;
   height: 18px;
   display: inline-flex;

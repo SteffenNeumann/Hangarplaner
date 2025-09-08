@@ -360,8 +360,8 @@ body {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	/* Use same horizontal padding as content and increase top padding for consistency */
-	padding: var(--tile-inner-padding) var(--tile-inner-padding) 8px var(--tile-inner-padding);
+	/* Halve the vertical and horizontal padding for a tighter header */
+	padding: calc(var(--tile-inner-padding) / 2) calc(var(--tile-inner-padding) / 2) 6px calc(var(--tile-inner-padding) / 2);
 	min-height: 32px;
 }
 
@@ -716,10 +716,11 @@ input:checked + .toggle-slider:before {
 }
 
 .header-elements {
-	display: flex;
+	display: grid;
+	grid-template-columns: auto 1fr auto; /* left (status), center (badge), right (position) */
 	align-items: center;
-	justify-content: space-between;
 	width: 100%;
+	column-gap: 8px;
 }
 
 .section-divider {
@@ -1295,6 +1296,14 @@ input:checked + .toggle-slider:before {
 .tile-delete-btn:hover { color: #ef4444; }
 .tile-delete-btn[aria-disabled="true"] { opacity: 0 !important; pointer-events: none; }
 
+/* Inline placement style for last-update badge when inside header */
+.header-elements .last-update-badge {
+  position: static !important;
+  transform: none !important;
+  justify-self: center;
+  margin: 0 auto;
+}
+
 .dark-mode .tile-delete-btn { color: #6b7280; }
 .dark-mode .tile-delete-btn:hover { color: #f87171; }
 
@@ -1800,7 +1809,9 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 }
 
 .table-view .hangar-cell .card-header .header-elements {
+	display: flex; /* restore flex layout for table view */
 	flex-direction: row;
+	justify-content: space-between;
 	width: 100%;
 }
 

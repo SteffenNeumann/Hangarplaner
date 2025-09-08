@@ -1587,10 +1587,7 @@ window.generateDefaultProjectName = generateDefaultProjectName;
 			badge.title = `Letztes Update: ${now.toLocaleString()} (${source})`;
 			badge.dataset.timestamp = String(now.getTime());
 			badge.dataset.source = source;
-			badge.style.position = 'absolute';
-			badge.style.top = '8px';
-			badge.style.left = '50%';
-			badge.style.transform = 'translateX(-50%)';
+			// Inline badge styles (colors are updated by refreshAllUpdateBadges)
 			badge.style.fontSize = '9px';
 			badge.style.padding = '2px 6px';
 			badge.style.borderRadius = '8px';
@@ -1605,11 +1602,20 @@ window.generateDefaultProjectName = generateDefaultProjectName;
 			badge.style.fontFamily = 'monospace';
 			badge.textContent = display;
 
-			// ensure relative tile
-			if (getComputedStyle(tile).position === 'static') {
-				tile.style.position = 'relative';
+			// Place badge inline within header (center)
+			const header = tile.querySelector('.card-header');
+			const headerEls = header ? header.querySelector('.header-elements') : null;
+			if (headerEls) {
+				const rightBlock = headerEls.querySelector('.position-container');
+				if (rightBlock) {
+					headerEls.insertBefore(badge, rightBlock);
+				} else {
+					headerEls.appendChild(badge);
+				}
+			} else {
+				// Fallback: append at top of tile if header missing
+				tile.appendChild(badge);
 			}
-			tile.appendChild(badge);
 
 			// persist
 			if (persist) {

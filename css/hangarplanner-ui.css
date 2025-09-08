@@ -1221,7 +1221,7 @@ input:checked + .toggle-slider:before {
 	min-width: 90px;
 	height: 26px; /* gleiche Höhe wie .status-selector */
 	padding: 2px 10px;
-	border-radius: 9999px; /* pill */
+	border-radius: 2px; /* small rounded corners */
 	font-size: 12px;
 	font-weight: 600;
 	text-align: center;
@@ -1238,26 +1238,36 @@ input:checked + .toggle-slider:before {
 /* Dropdown options: ensure good contrast in light menus */
 .tow-status-selector option { font-size: 0.9rem; padding: 2px; color: #111827; }
 
+/* Light mode base: left accent border and small radius */
+body:not(.dark-mode) .tow-status-selector {
+	border-left: 2px solid #cbd5e1; /* subtle accent */
+	border-radius: 2px;
+}
+
 /* Light mode chip colors (match header indicators) */
 body:not(.dark-mode) .tow-status-selector.tow-neutral {
 	background: #f3f4f6;
 	color: #475569;
 	border-color: #e5e7eb;
+	border-left-color: #94a3b8; /* darker accent */
 }
 body:not(.dark-mode) .tow-status-selector.tow-initiated {
 	background: #FEF3C7;
 	color: #92400E;
 	border-color: #FCD34D;
+	border-left-color: #d97706; /* subtle darker */
 }
 body:not(.dark-mode) .tow-status-selector.tow-ongoing {
 	background: #DBEAFE;
 	color: #1D4ED8;
 	border-color: #BFDBFE;
+	border-left-color: #1E40AF;
 }
 body:not(.dark-mode) .tow-status-selector.tow-on-position {
 	background: #D1FAE5;
 	color: #065F46;
 	border-color: #A7F3D0;
+	border-left-color: #10B981;
 }
 
 /* Hover/focus cues */
@@ -1672,10 +1682,7 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector {
 }
 
 /* Remove auxiliary left status border for tow select in light mode to meet borderless look */
-body:not(.dark-mode) #hangarGrid .hangar-cell .tow-status-selector,
-body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector {
-	border-left: 0 !important;
-}
+/* Left border accent enabled for Tow select in light mode (see newer styles above) */
 
 /* Subtle hover background to indicate interactivity */
 body:not(.dark-mode) #hangarGrid .hangar-cell .aircraft-id:hover,

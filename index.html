@@ -283,7 +283,7 @@
 							<div class="sync-toggle-desc">Choose Standalone, Sync (read-only), or Master</div>
 						</div>
 						<div class="sync-toggle-control">
-							<select id="syncModeControl" class="sidebar-form-select" aria-label="Sync Mode">
+							<select id="syncModeControl" class="sidebar-form-select" aria-label="Sync Mode" onchange="try{ if(window.sharingManager && typeof window.sharingManager.handleModeControlChange==='function'){ window.sharingManager.handleModeControlChange(this.value); } }catch(e){}">
 								<option value="standalone">Standalone</option>
 								<option value="sync">Sync (Read-Only)</option>
 								<option value="master">Master (Read+Write)</option>

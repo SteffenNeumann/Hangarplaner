@@ -1328,6 +1328,17 @@ console.log(
 	"📦 Server-Sync-Modul geladen (Performance-optimiert: Master 120s, Slave 15s Intervalle, Change-Detection, initSync mit Erststart-Load)"
 );
 
+// Kleine Debug-Hilfe: Server-Lock anzeigen
+window.debugServerLock = async function(){
+	try {
+		const u = (window.serverSync && typeof window.serverSync.getServerUrl==='function') ? window.serverSync.getServerUrl() : (window.serverSync?.serverSyncUrl || '');
+		if (!u) { console.log('No server URL'); return; }
+		const res = await fetch(u + (u.includes('?') ? '&' : '?') + 'action=lock');
+		const data = await res.json();
+		console.log('🔒 Server lock info:', data);
+	} catch(e){ console.warn('debugServerLock failed', e); }
+};
+
 // Globale Debug-Funktion für Synchronisations-Probleme
 window.debugSync = function () {
 	if (window.serverSync) {

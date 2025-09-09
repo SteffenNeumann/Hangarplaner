@@ -626,10 +626,10 @@ updateWidgetSyncDisplay(status, isActive) {
 			const ro = !!isReadOnly;
 			document.body.classList.toggle('read-only', ro);
 
-			// Toggle banner
+			// Hide legacy banner – we now use an on-demand modal only
 			try {
 				const banner = document.getElementById('readOnlyBanner');
-				if (banner) { banner.style.display = ro ? '' : 'none'; }
+				if (banner) { banner.style.display = 'none'; }
 			} catch(_e) {}
 
 			const containers = [
@@ -655,22 +655,57 @@ updateWidgetSyncDisplay(status, isActive) {
 				});
 			});
 
-			// Install a light interaction hint in read-only (rate-limited)
+			// Install an on-demand modal hint in read-only (rate-limited)
 			try {
 				const root = document;
-				if (ro && !this._roToastHandler) {
-					this._roToastLast = this._roToastLast || 0;
-					this._roToastHandler = (ev)=>{
-						const now = Date.now();
-						if (now - (this._roToastLast||0) > 2500) {
-							this._roToastLast = now;
-							this.showNotification('Read-Only: Changes won’t be saved to the server', 'info');
-						}
+				// Helper to create modal lazily
+				const ensureModal = () => {
+					let overlay = document.getElementById('readOnlyModalOverlay');
+					if (overlay) return overlay;
+					overlay = document.createElement('div');
+					overlay.id = 'readOnlyModalOverlay';
+					overlay.style.cssText = 'position:fixed;inset:0;display:none;background:rgba(0,0,0,0.45);z-index:10000;align-items:center;justify-content:center;padding:12px;';
+					const panel = document.createElement('div');
+					panel.id = 'readOnlyModalPanel';
+					panel.style.cssText = 'max-width:480px;width:100%;background:#ffffff;color:#1f2937;border-radius:10px;border:1px solid #e5e7eb;box-shadow:0 10px 24px rgba(0,0,0,0.15);padding:16px 18px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;';
+					panel.innerHTML = `
+					  <div style="display:flex;align-items:flex-start;gap:10px;">
+					    <div style="flex:1 1 auto;">
+					      <div style="font-weight:700;font-size:14px;margin-bottom:4px;">Read-Only Mode</div>
+					      <div style="font-size:13px;color:#4b5563;">This client is in Sync (read-only). Changes will not be saved to the server.</div>
+					    </div>
+					  </div>
+					  <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+					    <button id="roModalOk" type="button" style="background:#0ea5e9;color:#fff;border:1px solid #0284c7;border-radius:8px;padding:6px 12px;font-weight:600;">OK</button>
+					  </div>
+					`;
+					overlay.appendChild(panel);
+					document.body.appendChild(overlay);
+					panel.querySelector('#roModalOk').addEventListener('click', ()=>{ overlay.style.display='none'; });
+					overlay.addEventListener('click', (e)=>{ if (e.target===overlay) overlay.style.display='none'; });
+					return overlay;
+				};
+				const showModal = () => { const ov = ensureModal(); ov.style.display='flex'; };
+				if (ro && !this._roGuardHandler) {
+					this._roModalLast = this._roModalLast || 0;
+					this._roGuardHandler = (ev)=>{
+						try {
+							const tgt = ev.target;
+							if (!tgt) return;
+							const control = tgt.closest('input, textarea, select, button');
+							if (!control) return;
+							const blocked = control.disabled || control.getAttribute('aria-disabled') === 'true';
+							if (blocked) {
+								ev.preventDefault(); ev.stopPropagation();
+								const now = Date.now();
+								if (now - (this._roModalLast||0) > 3000) { this._roModalLast = now; showModal(); }
+							}
+						} catch(_err) {}
 					};
-					root.addEventListener('pointerdown', this._roToastHandler, true);
-				} else if (!ro && this._roToastHandler) {
-					root.removeEventListener('pointerdown', this._roToastHandler, true);
-					this._roToastHandler = null;
+					root.addEventListener('pointerdown', this._roGuardHandler, true);
+				} else if (!ro && this._roGuardHandler) {
+					root.removeEventListener('pointerdown', this._roGuardHandler, true);
+					this._roGuardHandler = null;
 				}
 			} catch(_e) {}
 

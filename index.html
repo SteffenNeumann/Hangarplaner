@@ -1319,7 +1319,25 @@
 						panels[key].classList.remove('hidden');
 						// Ensure display submenu reflects current persisted settings
 						if (key === 'display' && window.displayOptions && typeof window.displayOptions.updateUI === 'function'){
-							try { window.displayOptions.updateUI(); } catch(e){}
+							try {
+								window.displayOptions.updateUI();
+								// Ensure dark-mode class stays consistent on both <html> and <body>
+								try {
+									const html = document.documentElement;
+									const body = document.body;
+									const isDark = html.classList.contains('dark-mode') || body.classList.contains('dark-mode');
+									html.classList.toggle('dark-mode', !!isDark);
+									body.classList.toggle('dark-mode', !!isDark);
+								} catch(_e){}
+								// Refresh Tow select styling in case any UI updates affected class precedence
+								try {
+									const els = document.querySelectorAll('.tow-status-selector');
+									els.forEach((el)=>{
+										if (typeof window.updateTowStatusStyles === 'function') window.updateTowStatusStyles(el);
+										else if (typeof updateTowStatusStyles === 'function') updateTowStatusStyles(el);
+									});
+								} catch(_e){}
+							} catch(e){}
 						}
 						buttons.forEach(btn => { if(btn.getAttribute('data-menu')===key){ btn.classList.add('active'); btn.setAttribute('aria-expanded','true'); } });
 						current = key;

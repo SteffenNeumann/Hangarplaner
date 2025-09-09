@@ -136,11 +136,40 @@ window.globalInitialization = {
 					const value = select.value;
 					select.classList.add(`tow-${value}`);
 
-					// Keine Inline-Farben setzen – Styling kommt aus CSS (vermeidet Konflikt mit Klassen)
+					// Standard: CSS regelt das Styling
 					select.style.backgroundColor = '';
 					select.style.color = '';
 					select.style.borderColor = '';
 					select.style.borderLeftColor = '';
+
+					// Safari/UA fallback: in Dark Mode und wenn nicht disabled, setze Farben inline,
+					// damit Umschalten der Read/Write-Toggles kein helles UA-Select rendert
+					try {
+						const isDark = document.documentElement.classList.contains('dark-mode') || document.body.classList.contains('dark-mode');
+						if (isDark && !select.disabled) {
+							if (value === 'neutral') {
+								select.style.backgroundColor = 'var(--bg-secondary)';
+								select.style.borderColor = 'var(--border-color)';
+								select.style.color = 'var(--text-secondary)';
+								select.style.borderLeftColor = '#64748b';
+							} else if (value === 'initiated') {
+								select.style.backgroundColor = 'rgba(245, 158, 11, 0.15)';
+								select.style.borderColor = '#b45309';
+								select.style.color = '#fdba74';
+								select.style.borderLeftColor = '#f59e0b';
+							} else if (value === 'ongoing') {
+								select.style.backgroundColor = 'rgba(59, 130, 246, 0.15)';
+								select.style.borderColor = '#1d4ed8';
+								select.style.color = '#93c5fd';
+								select.style.borderLeftColor = '#3b82f6';
+							} else if (value === 'on-position') {
+								select.style.backgroundColor = 'rgba(16, 185, 129, 0.15)';
+								select.style.borderColor = '#065f46';
+								select.style.color = '#a7f3d0';
+								select.style.borderLeftColor = '#10b981';
+							}
+						}
+					} catch (e) { /* ignore */ }
 
 					// console.log(`🚚 Tow-Status aktualisiert: ${value}`);
 				} catch (error) {

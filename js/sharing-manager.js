@@ -556,21 +556,25 @@ updateWidgetSyncDisplay(status, isActive) {
 			containers.forEach((container) => {
 				if (!container) return;
 				const controls = container.querySelectorAll('input, textarea, select');
-				controls.forEach((el) => {
-					if (ro) {
-						// Nur temporär deaktivieren, Originalzustand merken
-						if (!el.disabled) {
-							el.setAttribute('data-readonly-disabled', 'true');
-							el.disabled = true;
+					controls.forEach((el) => {
+						if (ro) {
+							// Nur temporär deaktivieren, Originalzustand merken
+							if (!el.disabled) {
+								el.setAttribute('data-readonly-disabled', 'true');
+								el.disabled = true;
+							}
+						} else {
+							if (el.hasAttribute('data-readonly-disabled')) {
+								el.disabled = false;
+								el.removeAttribute('data-readonly-disabled');
+							}
 						}
-					} else {
-						if (el.hasAttribute('data-readonly-disabled')) {
-							el.disabled = false;
-							el.removeAttribute('data-readonly-disabled');
+						// Nach jeder Zustandsänderung Tow-Styling auffrischen (verhindert UA-White in Dark Mode)
+						if (el && /^tow-status-/.test(el.id) && typeof window.updateTowStatusStyles === 'function') {
+							try { window.updateTowStatusStyles(el); } catch (e) {}
 						}
-					}
+					});
 				});
-			});
 
 
 			console.log(`🔒 Read-only UI ${ro ? 'aktiviert' : 'deaktiviert'}`);

@@ -436,7 +436,35 @@ class ServerSync {
 				window.hangarData &&
 				typeof window.hangarData.collectAllHangarData === "function"
 			) {
-				const data = window.hangarData.collectAllHangarData();
+				let data = window.hangarData.collectAllHangarData();
+
+				// Normalize collector output to server schema if needed
+				try {
+					if (data && !data.primaryTiles && (Array.isArray(data.primary) || Array.isArray(data.secondary))) {
+						const mapTile = (row) => ({
+							tileId: row.id,
+							aircraftId: row.aircraft || '',
+							arrivalTime: row.arrival || '',
+							departureTime: row.departure || '',
+							position: row.position || '',
+							// keep hangarPosition as part of position data if present
+							hangarPosition: row.hangarPosition || '',
+							status: row.status || 'neutral',
+							towStatus: row.tow || 'neutral',
+							notes: row.notes || '',
+						});
+						data = {
+							metadata: data.metadata || {},
+							settings: data.settings || {},
+							primaryTiles: (data.primary || []).map(mapTile),
+							secondaryTiles: (data.secondary || []).map(mapTile),
+						};
+						console.log('🔁 Normalized collector output → server schema', {
+							primary: data.primaryTiles.length,
+							secondary: data.secondaryTiles.length,
+						});
+					}
+				} catch(e) { console.warn('Collector normalization failed', e); }
 
 				// *** NEU: Display Options ergänzen ***
 					if (window.displayOptions) {

@@ -236,11 +236,39 @@ class HangarEventManager {
 				};
 			}
 
+			// Normalize to server schema if needed
+			try {
+				if (allData && !allData.primaryTiles && (Array.isArray(allData.primary) || Array.isArray(allData.secondary))) {
+					const mapTile = (row) => ({
+						tileId: row.id,
+						aircraftId: row.aircraft || '',
+						arrivalTime: row.arrival || '',
+						departureTime: row.departure || '',
+						position: row.position || '',
+						hangarPosition: row.hangarPosition || '',
+						status: row.status || 'neutral',
+						towStatus: row.tow || 'neutral',
+						notes: row.notes || '',
+					});
+					allData = {
+						metadata: allData.metadata || {},
+						settings: allData.settings || {},
+						primaryTiles: (allData.primary || []).map(mapTile),
+						secondaryTiles: (allData.secondary || []).map(mapTile),
+						fieldUpdates: allData.fieldUpdates || {},
+						currentFields: allData.currentFields || {},
+					};
+				}
+			} catch(e) { /* noop */ }
+
 			// Server-Request mit allen Daten (Fallback, wenn zentrale Sync-Schicht nicht verfügbar ist)
 			const response = await fetch(window.storageBrowser.serverSyncUrl, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
+					"X-Sync-Role": "master",
+					"X-Sync-Session": (window.serverSync && typeof window.serverSync.getSessionId === 'function') ? window.serverSync.getSessionId() : (localStorage.getItem('serverSync.sessionId') || ''),
+					"X-Display-Name": (localStorage.getItem('presence.displayName') || ''),
 				},
 				body: JSON.stringify(allData),
 			});

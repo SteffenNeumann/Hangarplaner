@@ -1223,22 +1223,23 @@ input:checked + .toggle-slider:before {
 }
 
 .tow-status-selector {
-	-webkit-appearance: auto;
-	-moz-appearance: auto;
-	appearance: auto;
+	/* Neutral base; themed rules below handle colors */
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	appearance: none;
 	width: auto;
 	min-width: 90px;
-	height: 26px;
-	padding: 2px 6px;
-	border-radius: 3px;
+	height: 26px; /* same as status selector */
+	padding: 2px 10px;
+	border-radius: 2px;
 	font-size: 12px;
 	font-weight: 600;
 	text-align: center;
-	background-color: white;
-	color: #3a4354;
-	border: 1px solid #e5e7eb;
+	background: transparent;
+	color: inherit;
+	border: 1px solid transparent;
 	cursor: pointer;
-	transition: border-color .15s ease;
+	transition: background-color .15s ease, color .15s ease, border-color .15s ease;
 }
 
 /* Dropdown-Symbol unauffälliger machen */
@@ -1307,6 +1308,10 @@ body:not(.dark-mode) .tow-status-selector:not(.tow-initiated):not(.tow-ongoing):
 
 /* Dark mode: match header chip palette */
 .dark-mode .tow-status-selector {
+	/* Force custom painting in dark mode (avoid UA white backgrounds) */
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	appearance: none;
 	border-left-width: 3px;
 	border-radius: 2px;
 }
@@ -1315,6 +1320,13 @@ body:not(.dark-mode) .tow-status-selector:not(.tow-initiated):not(.tow-ongoing):
 	border-color: var(--border-color) !important;
 	color: var(--text-secondary) !important;
 	border-left-color: #64748b !important; /* slate-500 */
+}
+/* Dark mode: default to neutral look if no explicit tow-* class is present */
+.dark-mode .tow-status-selector:not(.tow-initiated):not(.tow-ongoing):not(.tow-on-position) {
+	background: var(--input-bg) !important;
+	color: var(--text-secondary) !important;
+	border: 1px solid transparent !important;
+	border-left-color: #64748b !important;
 }
 .dark-mode .tow-status-selector.tow-initiated {
 	background: rgba(245, 158, 11, 0.15) !important; /* orange */

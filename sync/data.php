@@ -17,7 +17,7 @@ if ($debug_mode) {
 // CORS-Header für die Entwicklung (bei Bedarf anpassen)
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, X-Sync-Role");
+header("Access-Control-Allow-Headers: Content-Type, X-Sync-Role, X-Sync-Session, X-Display-Name");
 header("Content-Type: application/json; charset=UTF-8");
 
 // Bei OPTIONS-Anfragen (CORS preflight) sofort beenden
@@ -43,6 +43,19 @@ if (isset($_GET['action']) && $_GET['action'] === 'timestamp') {
             'size' => 0,
             'success' => false
         ]);
+    }
+    exit(0);
+}
+
+// Optional: expose lock holder info for diagnostics
+if (isset($_GET['action']) && $_GET['action'] === 'lock') {
+    $lockFile = __DIR__ . '/master_lock.json';
+    if (file_exists($lockFile)) {
+        $lockRaw = @file_get_contents($lockFile);
+        $lock = json_decode($lockRaw, true);
+        echo json_encode([ 'success' => true, 'lock' => $lock ?: null ]);
+    } else {
+        echo json_encode([ 'success' => true, 'lock' => null ]);
     }
     exit(0);
 }
@@ -101,6 +114,41 @@ else if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
+        // Require session id for lock coordination
+        $sessionId = isset($_SERVER['HTTP_X_SYNC_SESSION']) ? trim($_SERVER['HTTP_X_SYNC_SESSION']) : '';
+        if ($sessionId === '') {
+            http_response_code(403);
+            echo json_encode([
+                'error' => 'Write not allowed: missing X-Sync-Session',
+                'success' => false
+            ]);
+            exit;
+        }
+        $displayName = isset($_SERVER['HTTP_X_DISPLAY_NAME']) ? trim($_SERVER['HTTP_X_DISPLAY_NAME']) : '';
+
+        // Enforce single-writer lock (hard no-takeover) with TTL
+        $lockFile = __DIR__ . '/master_lock.json';
+        $LOCK_TTL_SECONDS = 120; // 2 minutes
+        $now = time();
+        $lockRaw = file_exists($lockFile) ? @file_get_contents($lockFile) : '';
+        $lock = $lockRaw ? json_decode($lockRaw, true) : null;
+        $holder = is_array($lock) ? ($lock['sessionId'] ?? '') : '';
+        $lastSeen = is_array($lock) ? intval($lock['lastSeen'] ?? 0) : 0;
+        if ($holder && $holder !== $sessionId && $lastSeen >= ($now - $LOCK_TTL_SECONDS)) {
+            http_response_code(423); // Locked
+            echo json_encode([
+                'error' => 'Master lock held',
+                'holder' => [
+                    'sessionId' => $holder,
+                    'displayName' => $lock['displayName'] ?? '',
+                    'since' => $lock['since'] ?? null,
+                    'lastSeen' => $lastSeen * 1000
+                ],
+                'success' => false
+            ]);
+            exit;
+        }
+
         // JSON-Daten aus dem Request-Body lesen
         $jsonData = file_get_contents('php://input');
         
@@ -135,6 +183,16 @@ else if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // JSON neu formatieren für bessere Lesbarkeit
         $formattedJson = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+
+        // Update lock (or acquire if free/expired)
+        $newLock = [
+            'sessionId' => $sessionId,
+            'displayName' => $displayName,
+            'lastSeen' => $now,
+            'since' => (is_array($lock) && $holder === $sessionId && isset($lock['since'])) ? $lock['since'] : $now,
+        ];
+        @file_put_contents($lockFile, json_encode($newLock, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
+        @chmod($lockFile, 0664);
         
         // Daten in Datei speichern
         $result = file_put_contents($dataFile, $formattedJson, LOCK_EX);

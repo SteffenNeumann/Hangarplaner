@@ -279,26 +279,15 @@
 					<div class="sync-mode-description">Configure how your data syncs with the server</div>
 					<div class="sync-toggle-row">
 						<div class="sync-toggle-info">
-							<div class="sync-toggle-title">Read Data</div>
-							<div class="sync-toggle-desc">Receive updates from server</div>
+							<div class="sync-toggle-title">Mode</div>
+							<div class="sync-toggle-desc">Choose Standalone, Sync (read-only), or Master</div>
 						</div>
 						<div class="sync-toggle-control">
-							<label class="modern-toggle-switch" aria-label="Read Data">
-								<input type="checkbox" id="readDataToggle" />
-								<span class="modern-toggle-slider"></span>
-							</label>
-						</div>
-					</div>
-					<div class="sync-toggle-row">
-						<div class="sync-toggle-info">
-							<div class="sync-toggle-title">Write Data</div>
-							<div class="sync-toggle-desc">Send changes to server (Master mode)</div>
-						</div>
-						<div class="sync-toggle-control">
-							<label class="modern-toggle-switch" aria-label="Write Data">
-								<input type="checkbox" id="writeDataToggle" />
-								<span class="modern-toggle-slider"></span>
-							</label>
+							<select id="syncModeControl" class="sidebar-form-select" aria-label="Sync Mode">
+								<option value="standalone">Standalone</option>
+								<option value="sync">Sync (Read-Only)</option>
+								<option value="master">Master (Read+Write)</option>
+							</select>
 						</div>
 					</div>
 					<div class="panel-divider"></div>
@@ -581,6 +570,10 @@
 									<span id="headerLastLoad" class="header-time-badge" title="Last data load" style="display:none"></span>
 								</div>
 							</div>
+							<!-- Read-Only banner (shown only in Sync mode) -->
+							<div id="readOnlyBanner" class="read-only-banner" style="display:none;margin-top:6px;padding:6px 10px;border:1px solid #e2e8f0;background:#eff6ff;color:#1d4ed8;border-radius:6px;font-size:12px;">
+								Read-Only: Changes won’t be saved to the server
+							</div>
 							<!-- Row 2: Update status label from submenu settings (no pill) -->
 							<div class="status-row" data-open-submenu="update" title="Open Update settings">
 								<span class="status-label">Update:</span>
@@ -616,6 +609,9 @@
 		// Utility: detect Read-only Sync mode
 		function isReadOnlySync(){
 			try {
+				if (window.sharingManager && typeof window.sharingManager.syncMode === 'string') {
+					return window.sharingManager.syncMode === 'sync';
+				}
 				const read = !!document.getElementById('readDataToggle')?.checked;
 				const write = !!document.getElementById('writeDataToggle')?.checked;
 				return read && !write;
@@ -721,24 +717,30 @@
 		let couplingInProgress = false;
 		function updateProjectFromSync(){
 			if (couplingInProgress) return;
-			const readToggle = document.getElementById('readDataToggle');
-			const writeToggle = document.getElementById('writeDataToggle');
-			const read = !!(readToggle && readToggle.checked);
-			const write = !!(writeToggle && writeToggle.checked);
-			const isReadOnly = read && !write;
 			const modeToggle = document.getElementById('modeToggle');
-			if (modeToggle) {
-				if (isReadOnly && modeToggle.checked) {
-					couplingInProgress = true;
-					modeToggle.checked = false; // View
-					modeToggle.dispatchEvent(new Event('change', { bubbles: true }));
-					couplingInProgress = false;
-				} else if (!isReadOnly && !modeToggle.checked) {
-					couplingInProgress = true;
-					modeToggle.checked = true; // Edit
-					modeToggle.dispatchEvent(new Event('change', { bubbles: true }));
-					couplingInProgress = false;
+			if (!modeToggle) return;
+			let isReadOnly = false;
+			try {
+				if (window.sharingManager && typeof window.sharingManager.syncMode === 'string') {
+					isReadOnly = (window.sharingManager.syncMode === 'sync');
+				} else {
+					const readToggle = document.getElementById('readDataToggle');
+					const writeToggle = document.getElementById('writeDataToggle');
+					const read = !!(readToggle && readToggle.checked);
+					const write = !!(writeToggle && writeToggle.checked);
+					isReadOnly = read && !write;
 				}
+			} catch(e) {}
+			if (isReadOnly && modeToggle.checked) {
+				couplingInProgress = true;
+				modeToggle.checked = false; // View
+				modeToggle.dispatchEvent(new Event('change', { bubbles: true }));
+				couplingInProgress = false;
+			} else if (!isReadOnly && !modeToggle.checked) {
+				couplingInProgress = true;
+				modeToggle.checked = true; // Edit
+				modeToggle.dispatchEvent(new Event('change', { bubbles: true }));
+				couplingInProgress = false;
 			}
 		}
 		function updateSyncFromProject(){
@@ -748,23 +750,17 @@
 			const wantEdit = !!modeToggle.checked;
 			try {
 				couplingInProgress = true;
-				const readToggle = document.getElementById('readDataToggle');
-				const writeToggle = document.getElementById('writeDataToggle');
-				if (readToggle && writeToggle) {
+				const modeCtl = document.getElementById('syncModeControl');
+				if (window.sharingManager && typeof window.sharingManager.updateSyncMode === 'function' && modeCtl) {
 					if (!wantEdit) {
-						// View -> force read-only (read ON, write OFF)
-						readToggle.checked = true;
-						writeToggle.checked = false;
+						modeCtl.value = 'sync';
+						modeCtl.dispatchEvent(new Event('change', { bubbles: true }));
 					} else {
-						// Edit -> standalone (both OFF)
-						readToggle.checked = false;
-						writeToggle.checked = false;
+						modeCtl.value = 'standalone';
+						modeCtl.dispatchEvent(new Event('change', { bubbles: true }));
 					}
-					// Dispatch change so sharing-manager updates state/UI
-					readToggle.dispatchEvent(new Event('change', { bubbles: true }));
-					writeToggle.dispatchEvent(new Event('change', { bubbles: true }));
 				} else if (window.sharingManager && typeof window.sharingManager.enableSyncMode === 'function') {
-					// Fallback if toggles not present: call manager directly
+					// Fallback if mode control not present: call manager directly
 					if (!wantEdit) {
 						window.sharingManager.enableSyncMode();
 					} else if (typeof window.sharingManager.enableStandaloneMode === 'function') {
@@ -846,15 +842,18 @@
       nameInput.addEventListener('blur', saveName);
       nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); nameInput.blur(); } });
 
-      function currentRole(){
-        try {
-          const read = !!document.getElementById('readDataToggle')?.checked;
-          const write = !!document.getElementById('writeDataToggle')?.checked;
-          if (write) return 'master';
-          if (read) return 'sync';
-          return 'standalone';
-        } catch(e){ return 'standalone'; }
-      }
+		  function currentRole(){
+			try {
+			  if (window.sharingManager && typeof window.sharingManager.syncMode === 'string') {
+				  return window.sharingManager.syncMode;
+			  }
+			  const read = !!document.getElementById('readDataToggle')?.checked;
+			  const write = !!document.getElementById('writeDataToggle')?.checked;
+			  if (write) return 'master';
+			  if (read) return 'sync';
+			  return 'standalone';
+			} catch(e){ return 'standalone'; }
+		  }
 
       async function heartbeat(){
         try {
@@ -1182,6 +1181,9 @@
 (function(){
   function isReadOnlySync(){
     try {
+      if (window.sharingManager && typeof window.sharingManager.syncMode === 'string') {
+        return window.sharingManager.syncMode === 'sync';
+      }
       const read = !!document.getElementById('readDataToggle')?.checked;
       const write = !!document.getElementById('writeDataToggle')?.checked;
       return read && !write; // Sync (read-only)

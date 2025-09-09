@@ -67,6 +67,14 @@ class SharingManager {
 			});
 		}
 
+		// New single-mode control
+		const modeControl = document.getElementById("syncModeControl");
+		if (modeControl) {
+			modeControl.addEventListener("change", (e) => {
+				this.handleModeControlChange(e.target.value);
+			});
+		}
+
 		// Sync Status Button - Zeigt detaillierten Status
 		const syncStatusBtn = document.getElementById("syncStatusBtn");
 		if (syncStatusBtn) {
@@ -105,6 +113,78 @@ class SharingManager {
 
 		await this.updateSyncMode(isReadEnabled, enabled);
 		console.log(`📤 Write Data Toggle: ${enabled ? "AN" : "AUS"}`);
+	}
+
+	// New: single-mode control handler
+	handleModeControlChange(mode) {
+		if (!mode) return;
+		this.updateSyncModeByString(mode);
+	}
+
+	// New: centralized mode selection by string
+	async updateSyncModeByString(mode) {
+		try {
+			if (mode === 'standalone') {
+				await this.enableStandaloneMode();
+			} else if (mode === 'sync') {
+				await this.enableSyncMode();
+				await this.loadServerDataImmediately();
+			} else if (mode === 'master') {
+				const ok = await this.ensureNoActiveMaster();
+				if (!ok) {
+					this.showNotification('Another user is Master. Taking over is disabled.', 'warning');
+					this.setModeControlValue('sync');
+					await this.enableSyncMode();
+					return;
+				}
+				await this.enableMasterMode();
+				await this.loadServerDataImmediately();
+			}
+			this.saveSharingSettings();
+		} catch (e) {
+			console.error('updateSyncModeByString failed', e);
+		}
+	}
+
+	// Helper: presence pre-check for hard no-takeover
+	async ensureNoActiveMaster() {
+		try {
+			const presenceUrl = (function(){
+				try {
+					let base = (window.serverSync && typeof window.serverSync.getServerUrl === 'function' && window.serverSync.getServerUrl()) || (window.serverSync && window.serverSync.serverSyncUrl) || (window.location.origin + '/sync/data.php');
+					if (typeof base !== 'string' || !base.length) base = window.location.origin + '/sync/data.php';
+					const url = base.replace(/data\.php(?:\?.*)?$/i, 'presence.php');
+					return /presence\.php/i.test(url) ? url : (window.location.origin + '/sync/presence.php');
+				} catch(e){ return window.location.origin + '/sync/presence.php'; }
+			})();
+			const res = await fetch(presenceUrl + '?action=list', { headers: { 'Accept': 'application/json' } });
+			if (!res.ok) return true; // do not block on transient errors; server lock will enforce
+			const data = await res.json();
+			const users = Array.isArray(data?.users) ? data.users : [];
+			let mySession = '';
+			try { mySession = localStorage.getItem('presence.sessionId') || ''; } catch(e) {}
+			const otherMaster = users.find(u => (u?.role || '').toLowerCase() === 'master' && u.sessionId && u.sessionId !== mySession);
+			return !otherMaster;
+		} catch (e) { return true; }
+	}
+
+	// Helper: keep control UI in sync
+	setModeControlValue(mode) {
+		try {
+			const ctl = document.getElementById('syncModeControl');
+			if (ctl) ctl.value = mode;
+		} catch(e) {}
+	}
+
+	// Invoked when server denies Master (423)
+	handleMasterDeniedByServer(detail) {
+		try {
+			this.showNotification('Master denied by server. Switching to Sync.', 'warning');
+			this.syncMode = 'sync';
+			this.setModeControlValue('sync');
+			this.enableSyncMode();
+			this.saveSharingSettings();
+		} catch(e) { console.warn('handleMasterDeniedByServer failed', e); }
 	}
 
 	/**
@@ -248,6 +328,16 @@ class SharingManager {
 		try {
 			console.log("👑 Aktiviere Master-Modus...");
 
+			// Hard no-takeover: pre-check presence list
+			const ok = await this.ensureNoActiveMaster();
+			if (!ok) {
+				this.showNotification('Another user is Master. Taking over is disabled.', 'warning');
+				this.syncMode = 'sync';
+				this.setModeControlValue('sync');
+				await this.enableSyncMode();
+				return;
+			}
+
 			if (window.serverSync) {
 				// Master-Rolle setzen
 				window.serverSync.isMaster = true;
@@ -373,32 +463,18 @@ class SharingManager {
 	 * NEUE: Sync-Status-Anzeige für Dual-Toggle-UI
 	 */
 	updateSyncStatusDisplayNew() {
-		const readToggle = document.getElementById("readDataToggle");
-		const writeToggle = document.getElementById("writeDataToggle");
 		const modeSpans = document.querySelectorAll('#currentSyncMode, #currentSyncModeSidebar, .currentSyncMode');
 		const syncStatusBtn = document.getElementById("syncStatusBtn");
 
-		// Toggle-Zustände auslesen
-		const readEnabled = readToggle?.checked || false;
-		const writeEnabled = writeToggle?.checked || false;
-
-		// Aktuellen Modus bestimmen und anzeigen
+		// Derive from single mode
+		let readEnabled = false, writeEnabled = false;
 		let modeText = "Standalone";
 		let modeEmoji = "🏠";
 		let cssClass = "standalone";
-
-		if (readEnabled && writeEnabled) {
-			modeText = "Master";
-			modeEmoji = "👑";
-			cssClass = "mode-master";
-		} else if (readEnabled && !writeEnabled) {
-			modeText = "Sync";
-			modeEmoji = "📡";
-			cssClass = "mode-sync";
-		} else if (!readEnabled && writeEnabled) {
-			modeText = "Write-Only";
-			modeEmoji = "📤";
-			cssClass = "mode-write";
+		if (this.syncMode === 'master') {
+			readEnabled = true; writeEnabled = true; modeText = 'Master'; modeEmoji = '👑'; cssClass = 'mode-master';
+		} else if (this.syncMode === 'sync') {
+			readEnabled = true; writeEnabled = false; modeText = 'Sync'; modeEmoji = '📡'; cssClass = 'mode-sync';
 		}
 
 		// Modus-Anzeige aktualisieren (unterstützt mehrere Anzeigen)
@@ -414,11 +490,11 @@ class SharingManager {
 		try {
 			const manualSyncBtn = document.getElementById("manualSyncBtn");
 			if (manualSyncBtn) {
-				const enable = !!writeEnabled; // only enabled when Write is ON (Master)
+				const enable = (this.syncMode === 'master');
 				manualSyncBtn.disabled = !enable;
 				manualSyncBtn.style.opacity = enable ? "" : "0.6";
 				manualSyncBtn.style.cursor = enable ? "" : "not-allowed";
-				manualSyncBtn.title = enable ? "Trigger a one-time sync now" : "Enable Write Data to allow manual sync";
+				manualSyncBtn.title = enable ? "Trigger a one-time sync now" : "Switch to Master to allow manual sync";
 			}
 		} catch (e) {}
 
@@ -549,6 +625,13 @@ updateWidgetSyncDisplay(status, isActive) {
 		try {
 			const ro = !!isReadOnly;
 			document.body.classList.toggle('read-only', ro);
+
+			// Toggle banner
+			try {
+				const banner = document.getElementById('readOnlyBanner');
+				if (banner) { banner.style.display = ro ? '' : 'none'; }
+			} catch(_e) {}
+
 			const containers = [
 				document.getElementById('hangarGrid'),
 				document.getElementById('secondaryHangarGrid'),
@@ -556,28 +639,46 @@ updateWidgetSyncDisplay(status, isActive) {
 			containers.forEach((container) => {
 				if (!container) return;
 				const controls = container.querySelectorAll('input, textarea, select');
-					controls.forEach((el) => {
-						if (ro) {
-							// Nur temporär deaktivieren, Originalzustand merken
-							if (!el.disabled) {
-								el.setAttribute('data-readonly-disabled', 'true');
-								el.disabled = true;
-							}
-						} else {
-							if (el.hasAttribute('data-readonly-disabled')) {
-								el.disabled = false;
-								el.removeAttribute('data-readonly-disabled');
-							}
+				controls.forEach((el) => {
+					if (ro) {
+						// Nur temporär deaktivieren, Originalzustand merken
+						if (!el.disabled) {
+							el.setAttribute('data-readonly-disabled', 'true');
+							el.disabled = true;
 						}
-						// Nach jeder Zustandsänderung Tow-Styling auffrischen (verhindert UA-White in Dark Mode)
-						if (el && /^tow-status-/.test(el.id) && typeof window.updateTowStatusStyles === 'function') {
-							try { window.updateTowStatusStyles(el); } catch (e) {}
+					} else {
+						if (el.hasAttribute('data-readonly-disabled')) {
+							el.disabled = false;
+							el.removeAttribute('data-readonly-disabled');
 						}
-					});
+					}
 				});
+			});
 
+			// Install a light interaction hint in read-only (rate-limited)
+			try {
+				const root = document;
+				if (ro && !this._roToastHandler) {
+					this._roToastLast = this._roToastLast || 0;
+					this._roToastHandler = (ev)=>{
+						const now = Date.now();
+						if (now - (this._roToastLast||0) > 2500) {
+							this._roToastLast = now;
+							this.showNotification('Read-Only: Changes won’t be saved to the server', 'info');
+						}
+					};
+					root.addEventListener('pointerdown', this._roToastHandler, true);
+				} else if (!ro && this._roToastHandler) {
+					root.removeEventListener('pointerdown', this._roToastHandler, true);
+					this._roToastHandler = null;
+				}
+			} catch(_e) {}
 
 			console.log(`🔒 Read-only UI ${ro ? 'aktiviert' : 'deaktiviert'}`);
+		} catch (e) {
+			console.warn('⚠️ applyReadOnlyUIState fehlgeschlagen:', e);
+		}
+	}
 		} catch (e) {
 			console.warn('⚠️ applyReadOnlyUIState fehlgeschlagen:', e);
 		}
@@ -679,14 +780,11 @@ updateWidgetSyncDisplay(status, isActive) {
 	async performManualSync() {
 		const manualSyncBtn = document.getElementById("manualSyncBtn");
 
-		// Guard: disabled in read-only (Write OFF)
-		try {
-			const writeToggle = document.getElementById("writeDataToggle");
-			if (writeToggle && !writeToggle.checked) {
-				this.showNotification("Manual Sync is disabled in read-only mode", "warning");
-				return;
-			}
-		} catch (e) {}
+		// Guard: disabled unless Master
+		if (this.syncMode !== 'master') {
+			this.showNotification("Manual Sync is only available in Master mode", "warning");
+			return;
+		}
 
 		// Button deaktivieren während Sync
 		if (manualSyncBtn) {
@@ -923,46 +1021,42 @@ updateWidgetSyncDisplay(status, isActive) {
 			this.isLiveSyncEnabled = settings.isLiveSyncEnabled || false;
 			this.isMasterMode = settings.isMasterMode || false;
 
-			// Setze Dual-Toggles basierend auf Modus
-			const readToggle = document.getElementById("readDataToggle");
-			const writeToggle = document.getElementById("writeDataToggle");
-
-			if (readToggle && writeToggle) {
-				// Toggle-Zustände basierend auf Sync-Modus setzen
-				switch (this.syncMode) {
-					case "sync":
-						readToggle.checked = true;
-						writeToggle.checked = false;
-						setTimeout(() => this.enableSyncMode(), 100);
-						break;
-					case "master":
-						readToggle.checked = true;
-						writeToggle.checked = true;
-						setTimeout(() => this.enableMasterMode(), 100);
-						break;
-default: // "standalone"
-						readToggle.checked = false;
-						writeToggle.checked = false;
-						this.updateAllSyncDisplays();
-						this.applyReadOnlyUIState(false);
+			// Single control preferred
+			const modeCtl = document.getElementById('syncModeControl');
+			if (modeCtl) {
+				modeCtl.value = this.syncMode;
+				setTimeout(() => this.updateSyncModeByString(this.syncMode), 100);
+			} else {
+				// Fallback: Dual-Toggles basierend auf Modus
+				const readToggle = document.getElementById("readDataToggle");
+				const writeToggle = document.getElementById("writeDataToggle");
+				if (readToggle && writeToggle) {
+					switch (this.syncMode) {
+						case "sync":
+							readToggle.checked = true;
+							writeToggle.checked = false;
+							setTimeout(() => this.enableSyncMode(), 100);
+							break;
+						case "master":
+							readToggle.checked = true;
+							writeToggle.checked = true;
+							setTimeout(() => this.enableMasterMode(), 100);
+							break;
+						default:
+							readToggle.checked = false;
+							writeToggle.checked = false;
+							this.updateAllSyncDisplays();
+							this.applyReadOnlyUIState(false);
+					}
 				}
 			}
 
 			console.log(
-				"📁 Gespeicherte Sync-Einstellungen für Dual-Toggle geladen:",
-				{
-					syncMode: this.syncMode,
-					readEnabled: readToggle?.checked,
-					writeEnabled: writeToggle?.checked,
-				}
+				"📁 Gespeicherte Sync-Einstellungen geladen:",
+				{ syncMode: this.syncMode }
 			);
 		} catch (error) {
 			console.error("❌ Fehler beim Laden der Sync-Einstellungen:", error);
-			// Fallback: Alle Toggles auf AUS
-			const readToggle = document.getElementById("readDataToggle");
-			const writeToggle = document.getElementById("writeDataToggle");
-			if (readToggle) readToggle.checked = false;
-			if (writeToggle) writeToggle.checked = false;
 			this.syncMode = "standalone";
 		}
 	}

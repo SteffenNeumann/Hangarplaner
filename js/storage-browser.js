@@ -18,6 +18,7 @@ class ServerSync {
 		this.serverTimestamp = null;
 		this.slaveCheckInterval = null;
 		this.lastServerTimestamp = 0;
+		this.sessionId = null; // stable session id cached
 
 		// Global verfügbar machen für Kompatibilität und Race Condition Prevention
 		window.isApplyingServerData = false;
@@ -371,6 +372,13 @@ class ServerSync {
 			if (this.isMaster) {
 				headers["X-Sync-Role"] = "master";
 			}
+			// Always provide a stable session for server lock coordination
+			try {
+				const sid = this.getSessionId();
+				if (sid) headers["X-Sync-Session"] = sid;
+				const dname = (localStorage.getItem('presence.displayName') || '').trim();
+				if (dname) headers["X-Display-Name"] = dname;
+			} catch(_e) {}
 			const response = await fetch(serverUrl, {
 				method: "POST",
 				headers,
@@ -387,6 +395,16 @@ class ServerSync {
 						window.HangarDataCoordinator.apiChangesPendingSync = false;
 					}
 					return true;
+				} else if (response.status === 423) {
+					let payload = null;
+					try { payload = await response.json(); } catch(_e) {}
+					console.warn("⛔ Server returned 423 Locked (master lock held)", payload);
+					if (window.showNotification) {
+						const holder = payload?.holder?.displayName ? ` by ${payload.holder.displayName}` : '';
+						window.showNotification(`Write denied: Master lock held${holder}`, 'error');
+					}
+					try { if (window.sharingManager && typeof window.sharingManager.handleMasterDeniedByServer === 'function') { window.sharingManager.handleMasterDeniedByServer(payload); } } catch(_e) {}
+					return false;
 				} else {
 				let detail = '';
 				try { detail = await response.text(); } catch (e) { /* noop */ }
@@ -395,7 +413,7 @@ class ServerSync {
 					window.showNotification(`Server-Sync fehlgeschlagen: ${response.status}${detail ? ' • ' + detail : ''}`, 'error');
 				}
 				return false;
-			}
+				}
 		} catch (error) {
 			if (error.name === "AbortError") {
 				console.warn("⚠️ Server-Sync Timeout (10s)");
@@ -977,6 +995,24 @@ class ServerSync {
 			hash = hash & hash; // Convert to 32-bit integer
 		}
 		return hash.toString();
+	}
+
+	// Provide stable session id for lock coordination with server
+	getSessionId() {
+		try {
+			let sid = localStorage.getItem('presence.sessionId') || localStorage.getItem('serverSync.sessionId');
+			if (!sid || typeof sid !== 'string' || !sid.length) {
+				sid = Math.random().toString(36).slice(2) + Date.now().toString(36);
+				try { localStorage.setItem('serverSync.sessionId', sid); } catch(_e) {}
+			}
+			this.sessionId = sid;
+			return sid;
+		} catch(e) {
+			if (!this.sessionId) {
+				this.sessionId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+			}
+			return this.sessionId;
+		}
 	}
 
 	/**

@@ -100,20 +100,23 @@ body.dark-mode {
 	color: var(--dark-text);
 }
 
-/* Tow-Status mit Dark Mode-angepassten Farben - Maximaler Kontrast mit weißer Schrift */
+/* LEGACY Tow-Status colors (kept for compatibility)
+   Note: Tow styling is centralized in css/hangarplanner-ui.css, which also defines
+   disabled behavior and uses !important. Do not add new Tow rules here.
+*/
 .dark-mode .tow-status-selector.tow-initiated {
-	background-color: #92400e; /* Dunkleres Orange-Braun für guten Kontrast */
-	color: #ffffff; /* Reine weiße Schrift für maximale Helligkeit */
+	background-color: #92400e; /* legacy */
+	color: #ffffff;
 }
 
 .dark-mode .tow-status-selector.tow-ongoing {
-	background-color: #1e40af; /* Tieferes Blau für besseren Kontrast */
-	color: #ffffff; /* Reine weiße Schrift für maximale Helligkeit */
+	background-color: #1e40af; /* legacy */
+	color: #ffffff;
 }
 
 .dark-mode .tow-status-selector.tow-on-position {
-	background-color: #166534; /* Dunkleres Grün für besseren Kontrast */
-	color: #ffffff; /* Reine weiße Schrift für maximale Helligkeit */
+	background-color: #166534; /* legacy */
+	color: #ffffff;
 }
 
 /* Sidebar im Dark Mode */

@@ -211,6 +211,8 @@ Flight number lookups frequently fail due to API limitations and data mapping ch
   - No periodic reads: Master read-back loop is disabled when Read is OFF
   - Manual Sync: triggers a POST-only sync (no reads) because only `syncWithServer()` runs
   - Reset screen: clears UI values (Aircraft, Arr/Dep incl. dataset.iso, Pos/Route, Notes, Tow, Status) and keeps Hangar Position; does not purge localStorage; suppresses local rehydrate for ~10s to avoid repopulating just after reset
+- Master (Read+Write) specifics
+  - Manual Sync: POSTs changes and then immediately reads from the server to refresh local state (if Read is ON)
 - Server endpoint
   - `sync/data.php` accepts GET/POST; client-side gating prevents writes in read-only and prevents reads in write-only
 

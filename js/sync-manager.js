@@ -110,12 +110,57 @@ class SharingManager {
     window.serverSync.isMaster = true; window.serverSync.isSlaveActive = false; await window.serverSync.startMasterMode(); this.syncMode = 'master'; this.isLiveSyncEnabled = true; this.isMasterMode = true; this.updateAllSyncDisplays('Master', true); this.applyReadOnlyUIState(false); this.showNotification('Master-Modus aktiviert - Sende Daten an Server', 'success'); console.log('✅ Master-Modus aktiviert');
   } catch(e){ console.error('❌ Fehler beim Aktivieren des Master-Modus:', e); this.showNotification('Fehler beim Aktivieren des Master-Modus','error'); await this.enableSyncMode(); } }
   async performLiveSync(){ if (!this.isLiveSyncEnabled) return; try { if (window.serverSync && window.serverSync.syncWithServer){ const success = await window.serverSync.syncWithServer(); if (success){ console.log('🔄 Live Sync erfolgreich'); this.updateSyncStatusIndicator('success'); } else { console.warn('⚠️ Live Sync teilweise fehlgeschlagen'); this.updateSyncStatusIndicator('warning'); } } } catch(e){ console.error('❌ Live Sync Fehler:', e); this.updateSyncStatusIndicator('error'); } }
-  async performManualSync(){ try { const manualSyncBtn = document.getElementById('manualSyncBtn'); if (this.syncMode !== 'master'){ this.showNotification('Manual Sync is only available in Master mode','warning'); return; } if (!window.serverSync || typeof window.serverSync.manualSync !== 'function'){ this.showNotification('ServerSync not available','error'); return; } if (manualSyncBtn){ manualSyncBtn.disabled = true; manualSyncBtn.textContent = 'Syncing...'; }
-    const success = await window.serverSync.manualSync();
-    if (success){ this.showNotification('Manual sync completed','success'); this.updateSyncStatusIndicator('success'); }
-    else { this.showNotification('Manual sync failed','error'); this.updateSyncStatusIndicator('error'); }
-  } catch(e){ console.error('❌ Manual Sync error:', e); this.showNotification('Manual sync failed','error'); this.updateSyncStatusIndicator('error'); }
-  finally { const manualSyncBtn = document.getElementById('manualSyncBtn'); if (manualSyncBtn){ manualSyncBtn.disabled = false; manualSyncBtn.textContent = 'Manual Sync'; } } }
+  async performManualSync(){
+    try {
+      const manualSyncBtn = document.getElementById('manualSyncBtn');
+      // Detect if read-back is enabled (prefer UI toggle). In Write-only (Read OFF), skip read.
+      const readToggleEl = document.getElementById('readDataToggle');
+      let readEnabled = false;
+      try {
+        if (readToggleEl) {
+          readEnabled = !!readToggleEl.checked;
+        } else if (window.serverSync && typeof window.serverSync.canReadFromServer === 'function') {
+          readEnabled = !!window.serverSync.canReadFromServer();
+        }
+      } catch(_) {}
+
+      if (this.syncMode !== 'master'){
+        this.showNotification('Manual Sync is only available in Master mode','warning');
+        return;
+      }
+      if (!window.serverSync || typeof window.serverSync.manualSync !== 'function'){
+        this.showNotification('ServerSync not available','error');
+        return;
+      }
+      if (manualSyncBtn){
+        manualSyncBtn.disabled = true;
+        manualSyncBtn.textContent = 'Syncing...';
+      }
+
+      const success = await window.serverSync.manualSync();
+      if (success){
+        this.showNotification('Manual sync completed','success');
+        this.updateSyncStatusIndicator('success');
+        // For Master with Read ON, immediately refresh from server
+        if (readEnabled){
+          try { await this.loadServerDataImmediately(); } catch(_e){}
+        }
+      } else {
+        this.showNotification('Manual sync failed','error');
+        this.updateSyncStatusIndicator('error');
+      }
+    } catch(e){
+      console.error('❌ Manual Sync error:', e);
+      this.showNotification('Manual sync failed','error');
+      this.updateSyncStatusIndicator('error');
+    } finally {
+      const manualSyncBtn = document.getElementById('manualSyncBtn');
+      if (manualSyncBtn){
+        manualSyncBtn.disabled = false;
+        manualSyncBtn.textContent = 'Manual Sync';
+      }
+    }
+  }
   updateAllSyncDisplays(status = null, isActive = null){ if (status !== null && isActive !== null){ this.updateSyncStatusDisplay(status, isActive); this.updateWidgetSyncDisplay(status, isActive); } this.updateSyncStatusDisplayNew(); console.log(`🔄 Alle Sync-Anzeigen aktualisiert${status ? ` (${status}, ${isActive})` : ''}`); }
   updateSyncStatusDisplayNew(){ const modeSpans = document.querySelectorAll('#currentSyncMode, #currentSyncModeSidebar, .currentSyncMode'); const syncStatusBtn = document.getElementById('syncStatusBtn'); let readEnabled=false, writeEnabled=false; let modeText='Standalone', modeEmoji='🏠', cssClass='standalone'; if (this.syncMode==='master'){ readEnabled=true; writeEnabled=true; modeText='Master'; modeEmoji='👑'; cssClass='mode-master'; } else if (this.syncMode==='sync'){ readEnabled=true; writeEnabled=false; modeText='Sync'; modeEmoji='📡'; cssClass='mode-sync'; } if (modeSpans && modeSpans.length){ modeSpans.forEach((el)=>{ const isCompact = el.classList.contains('compact'); el.textContent = modeText; el.className = `sync-mode-badge ${isCompact ? 'compact ' : ''}${cssClass}`; }); } try { const manualSyncBtn = document.getElementById('manualSyncBtn'); if (manualSyncBtn){ const enable = (this.syncMode==='master'); manualSyncBtn.disabled = !enable; manualSyncBtn.style.opacity = enable ? '' : '0.6'; manualSyncBtn.style.cursor = enable ? '' : 'not-allowed'; manualSyncBtn.title = enable ? 'Trigger a one-time sync now' : 'Switch to Master to allow manual sync'; } } catch(e){} if (syncStatusBtn){ syncStatusBtn.classList.remove('status-success','status-warning','status-error'); if (this.syncMode!=='standalone'){ syncStatusBtn.textContent = `${modeEmoji} ${modeText}`; syncStatusBtn.classList.add('status-success'); syncStatusBtn.title = `${modeText}-Modus aktiv - Klick für Details`; } else { syncStatusBtn.textContent = '📊 Status'; syncStatusBtn.title = 'Sync inaktiv - Klick für Details'; } } this.updateWidgetSyncDisplay(modeText, this.syncMode!=='standalone'); console.log(`🎯 UI aktualisiert: Read=${readEnabled}, Write=${writeEnabled}, Mode=${this.syncMode}`); }
   updateSyncStatusDisplay(status,isActive){ const syncStatusBtn = document.getElementById('syncStatusBtn'); if (!syncStatusBtn) return; syncStatusBtn.classList.remove('status-success','status-warning','status-error'); if (isActive){ let emoji='📊', cssClass='status-success', title='Sync Status'; if (status==='Master'){ emoji='👑'; cssClass='status-success'; title='Master-Modus aktiv - Klick für Modus-Wechsel, Rechtsklick für Details'; } else if (status==='Sync' || status==='Slave'){ cssClass='status-warning'; title='Sync-Modus aktiv - Klick für Modus-Wechsel, Rechtsklick für Details'; } syncStatusBtn.textContent = `${emoji} ${status}`; syncStatusBtn.classList.add(cssClass); syncStatusBtn.title = title; } else { syncStatusBtn.textContent = '📊 Status'; syncStatusBtn.title = 'Sync inaktiv - Klicken für Details'; } }

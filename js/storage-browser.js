@@ -1438,6 +1438,20 @@ window.hangarInitQueue.push(async function () {
 	}
 });
 
+// DOMContentLoaded fallback: ensure initSync runs even if queue processing is delayed/missing
+try {
+	document.addEventListener('DOMContentLoaded', function(){
+		try {
+			if (!window.serverSync) return;
+			if (!window.serverSync.serverSyncUrl) {
+				const u = localStorage.getItem("hangarServerSyncUrl") || (window.location.origin + "/sync/data.php");
+				console.log("🛠️ Fallback initSync on DOMContentLoaded:", u);
+				window.serverSync.initSync(u);
+			}
+		} catch(e){ console.warn('Fallback initSync failed', e); }
+	}, { once: true });
+} catch(_e){}
+
 // SERVER-VERBINDUNGSTEST (verzögert)
 setTimeout(async () => {
 	if (!window.serverSync) return;

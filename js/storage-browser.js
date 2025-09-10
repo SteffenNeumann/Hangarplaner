@@ -24,6 +24,12 @@ class ServerSync {
 		window.isApplyingServerData = false;
 		window.isLoadingServerData = false;
 		window.isSavingToServer = false;
+
+		// Bind critical instance methods so they are always present as own props
+		try {
+			this.applyServerData = this.applyServerData.bind(this);
+			this.applyTileData = this.applyTileData.bind(this);
+		} catch(_e){}
 	}
 
 	/**
@@ -766,14 +772,16 @@ class ServerSync {
 			// Direkte Anwendung der Kachel-Daten
 			if (serverData.primaryTiles && serverData.primaryTiles.length > 0) {
 				console.log("🔄 Wende primäre Kachel-Daten direkt an...");
-				this.applyTileData(serverData.primaryTiles, false);
-				applied = true;
+				const a = this.applyTileData(serverData.primaryTiles, false);
+				applied = !!(applied || a);
+				console.log("📊 Primäre Kacheln angewendet:", a);
 			}
 
 			if (serverData.secondaryTiles && serverData.secondaryTiles.length > 0) {
 				console.log("🔄 Wende sekundäre Kachel-Daten direkt an...");
-				this.applyTileData(serverData.secondaryTiles, true);
-				applied = true;
+				const b = this.applyTileData(serverData.secondaryTiles, true);
+				applied = !!(applied || b);
+				console.log("📊 Sekundäre Kacheln angewendet:", b);
 			}
 
 			// Basis-Fallback für Projektname

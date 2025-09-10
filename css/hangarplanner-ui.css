@@ -633,6 +633,16 @@ select.status-selector {
 	background: #f8fafc;
 	color: #475569; /* slate-600 for icon */
 	cursor: pointer;
+	/* hidden by default for cleaner look; revealed on hover/focus */
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity .15s ease;
+}
+/* reveal calendar button when wrapper is hovered/focused */
+.compact-dt-wrap:hover .compact-dt-btn,
+.compact-dt-wrap:focus-within .compact-dt-btn {
+	opacity: 1;
+	pointer-events: auto;
 }
 
 .notes-container {

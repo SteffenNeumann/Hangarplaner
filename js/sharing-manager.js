@@ -827,33 +827,76 @@ updateWidgetSyncDisplay(status, isActive) {
 			manualSyncBtn.textContent = "Syncing...";
 		}
 
+		let success = false;
 		try {
 			if (window.serverSync && window.serverSync.manualSync) {
-				const success = await window.serverSync.manualSync();
-
-				if (success) {
-					this.showNotification(
-						"Manuelle Synchronisation erfolgreich",
-						"success"
-					);
-					this.updateSyncStatusIndicator("success");
-				} else {
-					this.showNotification("Synchronisation fehlgeschlagen", "error");
-					this.updateSyncStatusIndicator("error");
-				}
-			} else {
-				this.showNotification("Server-Sync nicht verfügbar", "warning");
+				success = await window.serverSync.manualSync();
+			} else if (window.serverSync && typeof window.serverSync.syncWithServer === 'function') {
+				success = await window.serverSync.syncWithServer();
 			}
 		} catch (error) {
-			console.error("❌ Manueller Sync Fehler:", error);
-			this.showNotification("Synchronisation fehlgeschlagen", "error");
-		} finally {
-			// Button wieder aktivieren
-			if (manualSyncBtn) {
-				manualSyncBtn.disabled = false;
-				manualSyncBtn.textContent = "Manual Sync";
-			}
+			console.warn('Manual sync via central API failed, will try fallback', error);
+			success = false;
 		}
+
+		// Fallback: direct POST using DOM-collected tiles
+		if (!success) {
+			try {
+				console.warn('Manual sync falling back to direct POST');
+				success = await this._directPostFallback();
+			} catch(e){ console.warn('Direct POST fallback failed', e); success = false; }
+		}
+
+		if (success) {
+			this.showNotification("Manuelle Synchronisation erfolgreich", "success");
+			this.updateSyncStatusIndicator("success");
+			try { await this.loadServerDataImmediately(); } catch(_e){}
+		} else {
+			this.showNotification("Synchronisation fehlgeschlagen", "error");
+			this.updateSyncStatusIndicator("error");
+		}
+
+		// Button wieder aktivieren
+		if (manualSyncBtn) {
+			manualSyncBtn.disabled = false;
+			manualSyncBtn.textContent = "Manual Sync";
+		}
+	}
+
+	// Collect tiles from DOM for fallback POST
+	_collectTilesFromDom(){
+		const ids = new Set();
+		try {
+			document.querySelectorAll("[id^='aircraft-'], [id^='position-'], [id^='hangar-position-'], [id^='arrival-time-'], [id^='departure-time-'], [id^='status-'], [id^='tow-status-'], [id^='notes-']").forEach(el=>{ const m = el.id.match(/-(\d+)$/); if (m) ids.add(parseInt(m[1],10)); });
+		} catch(_e){}
+		const getVal = (prefix,id)=>{ const el = document.getElementById(`${prefix}${id}`); return el ? (el.value||'').trim() : ''; };
+		const toTile = (id)=>{
+			const aircraftId = getVal('aircraft-', id);
+			const position = getVal('position-', id);
+			const hangarPosition = getVal('hangar-position-', id);
+			const arrivalTime = getVal('arrival-time-', id);
+			const departureTime = getVal('departure-time-', id);
+			const status = getVal('status-', id) || 'neutral';
+			const towStatus = getVal('tow-status-', id) || 'neutral';
+			const notes = getVal('notes-', id);
+			const has = !!(aircraftId || position || hangarPosition || arrivalTime || departureTime || notes || (status && status!=='neutral') || (towStatus && towStatus!=='neutral'));
+			if (!has) return null;
+			return { tileId: id, aircraftId, position, hangarPosition, arrivalTime, departureTime, status, towStatus, notes };
+		};
+		const all = Array.from(ids).sort((a,b)=>a-b);
+		const primary = []; const secondary = [];
+		all.forEach(id=>{ const t = toTile(id); if (!t) return; if (id>=100) secondary.push(t); else primary.push(t); });
+		return { primary, secondary };
+	}
+
+	async _directPostFallback(){
+		const dom = this._collectTilesFromDom();
+		const url = (window.serverSync?.getServerUrl?.()) || (window.serverSync?.serverSyncUrl) || (window.storageBrowser?.serverSyncUrl) || (window.location.origin + '/sync/data.php');
+		const sid = (window.serverSync && typeof window.serverSync.getSessionId==='function') ? window.serverSync.getSessionId() : (localStorage.getItem('serverSync.sessionId') || '');
+		const dname = (localStorage.getItem('presence.displayName') || '').trim();
+		const body = { metadata: { timestamp: Date.now(), lastWriter: dname }, settings: {}, primaryTiles: dom.primary, secondaryTiles: dom.secondary };
+		const res = await fetch(url, { method:'POST', headers: { 'Content-Type':'application/json', 'X-Sync-Role':'master', 'X-Sync-Session': sid, 'X-Display-Name': dname }, body: JSON.stringify(body) });
+		return res.ok;
 	}
 
 	/**

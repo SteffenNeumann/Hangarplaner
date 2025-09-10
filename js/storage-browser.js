@@ -70,74 +70,54 @@ class ServerSync {
 			console.log("📥 Lade einmalige Server-Daten beim Erststart...");
 
 			const serverData = await this.loadFromServer();
-            if (serverData && !serverData.error) {
-                // Prüfe ob gültige Daten vorhanden sind
-                const hasValidData =
-                    (serverData.primaryTiles && serverData.primaryTiles.length > 0) ||
-                    (serverData.secondaryTiles && serverData.secondaryTiles.length > 0) ||
-                    (serverData.settings && Object.keys(serverData.settings).length > 0) ||
-                    (serverData.metadata && serverData.metadata.projectName);
+			if (serverData && !serverData.error) {
+				// Prüfe ob gültige Daten vorhanden sind
+				const hasValidData =
+					(serverData.primaryTiles && serverData.primaryTiles.length > 0) ||
+					(serverData.secondaryTiles && serverData.secondaryTiles.length > 0) ||
+					(serverData.settings && Object.keys(serverData.settings).length > 0) ||
+					(serverData.metadata && serverData.metadata.projectName);
 
-                if (hasValidData) {
-                    // Wende Server-Daten an
-                    const applied = await window.serverSync.applyServerData(serverData);
-                    
-                    if (applied) {
-                        console.log("✅ Server-Daten sofort geladen und angewendet");
-                        
-                        // Subtle author pills for tiles updated by server (multi-master)
-                        try {
-                            const allTiles = [];
-                            if (Array.isArray(serverData.primaryTiles)) allTiles.push(...serverData.primaryTiles);
-                            if (Array.isArray(serverData.secondaryTiles)) allTiles.push(...serverData.secondaryTiles);
-                            allTiles.forEach(t => {
-                                const id = parseInt(t?.tileId || 0, 10);
-                                const ts = Date.parse(t?.updatedAt || '') || null;
-                                const author = (t?.updatedBy || serverData?.metadata?.lastWriter || '').trim();
-                                if (id && ts && author && typeof window.createOrUpdateUpdateAuthorPill === 'function') {
-                                    window.createOrUpdateUpdateAuthorPill(id, author, ts, { source: 'server' });
-                                }
-                            });
-                        } catch(_e) {}
-                        
-                        // Benachrichtigung anzeigen falls verfügbar
-                        if (window.showNotification) {
-                            window.showNotification(
-                                `Server-Daten geladen (${this.syncMode} Modus)`,
-                                "success"
-                            );
-                        }
-                        
-                        return true;
-                    } else {
-                        console.warn("⚠️ Server-Daten konnten nicht angewendet werden");
-                        return false;
-                    }
-                } else {
-                    console.log("ℹ️ Keine gültigen Server-Daten gefunden");
-                    return false;
-                }
-            } else {
-                console.log("ℹ️ Keine Server-Daten verfügbar für sofortige Ladung");
-                return false;
-            }
-			// Nur synchronisieren wenn keine andere Sync-Operation läuft UND Daten geändert wurden
-			if (
-				!this.isApplyingServerData &&
-				!window.isApplyingServerData &&
-				!window.isLoadingServerData &&
-				!window.isSavingToServer &&
-				this.hasDataChanged()
-			) {
-				this.syncWithServer();
+				if (hasValidData) {
+					// Wende Server-Daten an
+					const applied = await window.serverSync.applyServerData(serverData);
+					if (applied) {
+						console.log("✅ Server-Daten sofort geladen und angewendet");
+						// Subtle author pills for tiles updated by server (multi-master)
+						try {
+							const allTiles = [];
+							if (Array.isArray(serverData.primaryTiles)) allTiles.push(...serverData.primaryTiles);
+							if (Array.isArray(serverData.secondaryTiles)) allTiles.push(...serverData.secondaryTiles);
+							allTiles.forEach(t => {
+								const id = parseInt(t?.tileId || 0, 10);
+								const ts = Date.parse(t?.updatedAt || '') || null;
+								const author = (t?.updatedBy || serverData?.metadata?.lastWriter || '').trim();
+								if (id && ts && author && typeof window.createOrUpdateUpdateAuthorPill === 'function') {
+									window.createOrUpdateUpdateAuthorPill(id, author, ts, { source: 'server' });
+								}
+							});
+						} catch(_e) {}
+						// Benachrichtigung anzeigen falls verfügbar
+						if (window.showNotification) {
+							window.showNotification(`Server-Daten geladen (${this.syncMode} Modus)`, "success");
+						}
+						return true;
+					} else {
+						console.warn("⚠️ Server-Daten konnten nicht angewendet werden");
+						return false;
+					}
+				} else {
+					console.log("ℹ️ Keine gültigen Server-Daten gefunden");
+					return false;
+				}
 			} else {
-				// console.log("⏸️ Periodische Sync übersprungen (keine Änderungen oder Sync aktiv)");
+				console.log("ℹ️ Keine Server-Daten verfügbar für sofortige Ladung");
+				return false;
 			}
-		}, 120000); // 120 Sekunden statt 60 für bessere Performance
-
-		console.log(
-			"⏰ Periodische Server-Sync gestartet (120s Intervall, Change-Detection)"
-		);
+		} catch (e) {
+			console.warn("⚠️ Erststart-Load fehlgeschlagen:", e?.message || e);
+			return false;
+		}
 	}
 
 	/**
@@ -148,6 +128,33 @@ class ServerSync {
 			clearInterval(this.serverSyncInterval);
 			this.serverSyncInterval = null;
 			console.log("⏹️ Periodische Server-Sync gestoppt");
+		}
+	}
+
+	/**
+	 * Startet die periodische Synchronisation (Master-Modus)
+	 */
+	startPeriodicSync() {
+		try {
+			if (this.serverSyncInterval) {
+				clearInterval(this.serverSyncInterval);
+			}
+			this.serverSyncInterval = setInterval(() => {
+				try {
+					if (
+						!this.isApplyingServerData &&
+						!window.isApplyingServerData &&
+						!window.isLoadingServerData &&
+						!window.isSavingToServer &&
+						this.hasDataChanged()
+					) {
+						this.syncWithServer();
+					}
+				} catch (_e) {}
+			}, 120000);
+			console.log("⏰ Periodische Server-Sync gestartet (120s Intervall, Change-Detection)");
+		} catch (e) {
+			console.warn('startPeriodicSync failed', e);
 		}
 	}
 

@@ -2721,6 +2721,10 @@ type="datetime-local"
 									syncWithServer: ()=> Promise.resolve(false)
 								};
 							}
+							// Ensure window.serverSync points to the active sync object
+							if (!window.serverSync && window.storageBrowser) {
+								window.serverSync = window.storageBrowser;
+							}
 						} catch(_e){}
 					}
 					function installFallbackManager(){

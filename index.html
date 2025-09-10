@@ -299,8 +299,8 @@
 					<div id="syncDebugPanel" class="text-xs" style="margin-top:6px; color:#64748b;">
 						<div>Server: <span id="syncDebugUrl" style="color:#334155;"></span></div>
 						<div class="flex gap-2" style="margin-top:6px;">
-							<button id="syncTestReadBtn" class="sidebar-btn sidebar-btn-secondary" style="min-height:28px; font-size:12px;">Test Read</button>
-							<button id="syncTestWriteBtn" class="sidebar-btn sidebar-btn-secondary" style="min-height:28px; font-size:12px;">Test Write</button>
+							<button id="syncTestReadBtn" class="sidebar-btn sidebar-btn-secondary" style="min-height:28px; font-size:12px;" onclick="try{ if(window.sharingManager && typeof window.sharingManager.debugTestRead==='function'){ window.sharingManager.debugTestRead(); } }catch(e){ console.warn(e); }">Test Read</button>
+							<button id="syncTestWriteBtn" class="sidebar-btn sidebar-btn-secondary" style="min-height:28px; font-size:12px;" onclick="try{ if(window.sharingManager && typeof window.sharingManager.debugTestWrite==='function'){ window.sharingManager.debugTestWrite(); } }catch(e){ console.warn(e); }">Test Write</button>
 						</div>
 						<pre id="syncDebugLog" style="margin-top:6px; background:#f8fafc; border:1px solid #e2e8f0; color:#334155; padding:6px; border-radius:6px; max-height:140px; overflow:auto;"></pre>
 					</div>
@@ -2698,7 +2698,20 @@ type="datetime-local"
 						}
 					} catch (e) { console.warn('SharingManager init failed', e); }
 				});
-			</script>
+						</script>
+
+						<!-- Ensure Sync Debug URL is shown after init -->
+						<script>
+						window.hangarInitQueue = window.hangarInitQueue || [];
+						window.hangarInitQueue.push(function(){
+							try{
+								var el = document.getElementById('syncDebugUrl');
+								if (el && window.sharingManager && typeof window.sharingManager._getServerUrlSafe==='function'){
+									el.textContent = window.sharingManager._getServerUrlSafe();
+								}
+							}catch(e){}
+						});
+						</script>
 
 			<!-- Timetable API Integration - NACH AeroDataBox API laden -->
 			<script src="js/timetable-api-integration.js"></script>

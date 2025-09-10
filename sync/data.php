@@ -248,7 +248,7 @@ else if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $serverSecondaryMap = $tiles_to_map($merged['secondaryTiles']);
                 $tileKeys = ['aircraftId','arrivalTime','departureTime','position','hangarPosition','status','towStatus','notes'];
 
-                $apply_tile_if_changed = function(&$map, $ptile) use ($tileKeys, $normalize_tile, &$appliedTiles) {
+                $apply_tile_if_changed = function(&$map, $ptile) use ($tileKeys, $normalize_tile, &$appliedTiles, $displayName) {
                     $ptile = $normalize_tile($ptile);
                     $id = intval($ptile['tileId'] ?? 0);
                     if (!$id) return;
@@ -265,6 +265,7 @@ else if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $map[$id] = array_merge($serverTile, $ptile);
                         $map[$id]['tileId'] = $id;
                         $map[$id]['updatedAt'] = date('c');
+                        if (!empty($displayName)) { $map[$id]['updatedBy'] = $displayName; }
                         $appliedTiles++;
                     }
                 };
@@ -286,11 +287,11 @@ else if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             if ($isSecondary) {
                                 if (!isset($serverSecondaryMap[$tid])) { $serverSecondaryMap[$tid] = ['tileId' => $tid]; }
                                 $old = $serverSecondaryMap[$tid][$field] ?? null;
-                                if ($old !== $val) { $serverSecondaryMap[$tid][$field] = $val; $serverSecondaryMap[$tid]['updatedAt'] = date('c'); $appliedTiles++; }
+                                if ($old !== $val) { $serverSecondaryMap[$tid][$field] = $val; $serverSecondaryMap[$tid]['updatedAt'] = date('c'); if (!empty($displayName)) { $serverSecondaryMap[$tid]['updatedBy'] = $displayName; } $appliedTiles++; }
                             } else {
                                 if (!isset($serverPrimaryMap[$tid])) { $serverPrimaryMap[$tid] = ['tileId' => $tid]; }
                                 $old = $serverPrimaryMap[$tid][$field] ?? null;
-                                if ($old !== $val) { $serverPrimaryMap[$tid][$field] = $val; $serverPrimaryMap[$tid]['updatedAt'] = date('c'); $appliedTiles++; }
+                                if ($old !== $val) { $serverPrimaryMap[$tid][$field] = $val; $serverPrimaryMap[$tid]['updatedAt'] = date('c'); if (!empty($displayName)) { $serverPrimaryMap[$tid]['updatedBy'] = $displayName; } $appliedTiles++; }
                             }
                         }
                     }

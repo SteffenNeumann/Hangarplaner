@@ -192,10 +192,16 @@ Flight number lookups frequently fail due to API limitations and data mapping ch
 - Provide clear troubleshooting steps for common problems
 
 ### Sync policy and read-only enforcement
+
+- Multi-master behavior
+  - Multiple clients may be write-enabled at the same time
+  - Server no longer enforces an exclusive master lock; writes require X-Sync-Role: master
+  - Conflict policy: last write wins at the field/tile level, with periodic read-back to converge
+  - Recommendation: keep Read ON for write-enabled clients to see other changes promptly
 - Modes
   - Standalone: local only; no server reads or writes
   - Sync (read-only): reads from server; client edits do not write to server
-  - Master (read-write): reads + writes to server
+  - Master (write-enabled): writes to server; multiple users can be write-enabled in parallel (multi-master)
   - Write-only (Master with Read OFF): writes to server; no server reads
 - Client-side gating
   - Writes: All server writes are centralized through `window.serverSync.syncWithServer()`; header `X-Sync-Role: master` is sent only when Write is enabled

@@ -126,28 +126,13 @@ else if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $displayName = isset($_SERVER['HTTP_X_DISPLAY_NAME']) ? trim($_SERVER['HTTP_X_DISPLAY_NAME']) : '';
 
-        // Enforce single-writer lock (hard no-takeover) with TTL
+        // Multi-master mode: no exclusive lock enforcement
         $lockFile = __DIR__ . '/master_lock.json';
-        $LOCK_TTL_SECONDS = 120; // 2 minutes
+        $LOCK_TTL_SECONDS = 120; // retained for diagnostics
         $now = time();
         $lockRaw = file_exists($lockFile) ? @file_get_contents($lockFile) : '';
         $lock = $lockRaw ? json_decode($lockRaw, true) : null;
-        $holder = is_array($lock) ? ($lock['sessionId'] ?? '') : '';
-        $lastSeen = is_array($lock) ? intval($lock['lastSeen'] ?? 0) : 0;
-        if ($holder && $holder !== $sessionId && $lastSeen >= ($now - $LOCK_TTL_SECONDS)) {
-            http_response_code(423); // Locked
-            echo json_encode([
-                'error' => 'Master lock held',
-                'holder' => [
-                    'sessionId' => $holder,
-                    'displayName' => $lock['displayName'] ?? '',
-                    'since' => $lock['since'] ?? null,
-                    'lastSeen' => $lastSeen * 1000
-                ],
-                'success' => false
-            ]);
-            exit;
-        }
+        // No 423 lock denial; proceed to write and update last writer info
 
         // JSON-Daten aus dem Request-Body lesen
         $jsonData = file_get_contents('php://input');

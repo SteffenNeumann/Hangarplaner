@@ -62,9 +62,8 @@ class SharingManager {
       if (mode === 'standalone') { await this.enableStandaloneMode(); }
       else if (mode === 'sync') { await this.enableSyncMode(); await this.loadServerDataImmediately(); }
       else if (mode === 'master') {
-        const ok = await this.ensureNoActiveMaster();
-        if (!ok) { this.showNotification('Another user is Master. Taking over is disabled.', 'warning'); this.setModeControlValue('sync'); await this.enableSyncMode(); return; }
-        await this.enableMasterMode(); await this.loadServerDataImmediately();
+        await this.enableMasterMode();
+        await this.loadServerDataImmediately();
       }
       this.saveSharingSettings();
     } catch(e){ console.error('updateSyncModeByString failed', e); }
@@ -105,7 +104,6 @@ class SharingManager {
   } catch(e){ console.error('❌ Fehler beim Aktivieren des Sync-Modus:', e); this.showNotification('Fehler beim Aktivieren der Synchronisation','error'); await this.enableStandaloneMode(); } }
   async enableMasterMode(){ try{
     console.log('👑 Aktiviere Master-Modus...');
-    const ok = await this.ensureNoActiveMaster(); if (!ok){ this.showNotification('Another user is Master. Taking over is disabled.', 'warning'); this.syncMode = 'sync'; this.setModeControlValue('sync'); await this.enableSyncMode(); return; }
     if (!window.serverSync) throw new Error('ServerSync nicht verfügbar');
     window.serverSync.isMaster = true; window.serverSync.isSlaveActive = false; await window.serverSync.startMasterMode(); this.syncMode = 'master'; this.isLiveSyncEnabled = true; this.isMasterMode = true; this.updateAllSyncDisplays('Master', true); this.applyReadOnlyUIState(false); this.showNotification('Master-Modus aktiviert - Sende Daten an Server', 'success'); console.log('✅ Master-Modus aktiviert');
   } catch(e){ console.error('❌ Fehler beim Aktivieren des Master-Modus:', e); this.showNotification('Fehler beim Aktivieren des Master-Modus','error'); await this.enableSyncMode(); } }

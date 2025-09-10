@@ -132,38 +132,36 @@ class SharingManager {
   async performManualSync(){
     try {
       const manualSyncBtn = document.getElementById('manualSyncBtn');
-      // Detect if read-back is enabled (prefer UI toggle). In Write-only (Read OFF), skip read.
-      const readToggleEl = document.getElementById('readDataToggle');
-      let readEnabled = false;
-      try {
-        if (readToggleEl) {
-          readEnabled = !!readToggleEl.checked;
-        } else if (window.serverSync && typeof window.serverSync.canReadFromServer === 'function') {
-          readEnabled = !!window.serverSync.canReadFromServer();
-        }
-      } catch(_) {}
-
       if (this.syncMode !== 'master'){
         this.showNotification('Manual Sync is only available in Master mode','warning');
         return;
       }
-      if (!window.serverSync || typeof window.serverSync.manualSync !== 'function'){
+      if (!window.serverSync){
         this.showNotification('ServerSync not available','error');
         return;
       }
-      if (manualSyncBtn){
-        manualSyncBtn.disabled = true;
-        manualSyncBtn.textContent = 'Syncing...';
+      if (manualSyncBtn){ manualSyncBtn.disabled = true; manualSyncBtn.textContent = 'Syncing...'; }
+
+      let success = false;
+      try {
+        if (typeof window.serverSync.manualSync === 'function'){
+          success = await window.serverSync.manualSync();
+        } else if (typeof window.serverSync.syncWithServer === 'function'){
+          success = await window.serverSync.syncWithServer();
+        } else {
+          this.showNotification('ServerSync not available','error');
+          return;
+        }
+      } catch(err){
+        console.error('Manual sync call failed', err);
+        success = false;
       }
 
-      const success = await window.serverSync.manualSync();
       if (success){
         this.showNotification('Manual sync completed','success');
         this.updateSyncStatusIndicator('success');
-        // For Master with Read ON, immediately refresh from server
-        if (readEnabled){
-          try { await this.loadServerDataImmediately(); } catch(_e){}
-        }
+        // Always perform immediate read-back to converge, regardless of Read toggle
+        try { await this.loadServerDataImmediately(); } catch(_e){}
       } else {
         this.showNotification('Manual sync failed','error');
         this.updateSyncStatusIndicator('error');
@@ -174,10 +172,7 @@ class SharingManager {
       this.updateSyncStatusIndicator('error');
     } finally {
       const manualSyncBtn = document.getElementById('manualSyncBtn');
-      if (manualSyncBtn){
-        manualSyncBtn.disabled = false;
-        manualSyncBtn.textContent = 'Manual Sync';
-      }
+      if (manualSyncBtn){ manualSyncBtn.disabled = false; manualSyncBtn.textContent = 'Manual Sync'; }
     }
   }
   updateAllSyncDisplays(status = null, isActive = null){ if (status !== null && isActive !== null){ this.updateSyncStatusDisplay(status, isActive); this.updateWidgetSyncDisplay(status, isActive); } this.updateSyncStatusDisplayNew(); console.log(`🔄 Alle Sync-Anzeigen aktualisiert${status ? ` (${status}, ${isActive})` : ''}`); }

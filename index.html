@@ -2690,7 +2690,7 @@ type="datetime-local"
 			<script src="js/storage-browser.js"></script>
 			<script src="js/sync-manager.js"></script>
 			<script src="js/fleet-database-manager.js"></script>
-			<script>
+						<script>
 				// Ensure Sharing Manager initializes (binds sync toggles and manual sync button)
 				window.hangarInitQueue = window.hangarInitQueue || [];
 				window.hangarInitQueue.push(function(){
@@ -2700,6 +2700,29 @@ type="datetime-local"
 						}
 					} catch (e) { console.warn('SharingManager init failed', e); }
 				});
+						</script>
+						<script>
+				// Minimal fallback if Sharing Manager script failed to load (ad blocker or network)
+				(function(){
+					function installFallbackManager(){
+						if (window.sharingManager) return;
+						console.warn('SharingManager missing; installing minimal fallback');
+						window.sharingManager = {
+							syncMode: 'standalone',
+							initialized: true,
+							updateAllSyncDisplays: function(){ try { const el = document.getElementById('sync-mode'); if (el){ const txt = this.syncMode==='master'?'Master':(this.syncMode==='sync'?'Sync':'Standalone'); el.textContent = txt; el.classList.remove('master','slave','standalone','write-only'); el.classList.add(this.syncMode==='master'?'master':(this.syncMode==='sync'?'slave':'standalone')); } } catch(e){} },
+							enableStandaloneMode: function(){ try{ if (window.serverSync){ window.serverSync.isMaster=false; window.serverSync.isSlaveActive=false; if (typeof window.serverSync.stopPeriodicSync==='function') window.serverSync.stopPeriodicSync(); } this.syncMode='standalone'; this.updateAllSyncDisplays(); } catch(e){ console.warn(e); } },
+							enableSyncMode: function(){ try{ if (window.serverSync){ window.serverSync.isMaster=false; window.serverSync.isSlaveActive=true; if (typeof window.serverSync.startSlaveMode==='function') window.serverSync.startSlaveMode(); } this.syncMode='sync'; this.updateAllSyncDisplays(); } catch(e){ console.warn(e); } },
+							enableMasterMode: function(){ try{ if (window.serverSync){ window.serverSync.isMaster=true; window.serverSync.isSlaveActive=false; if (typeof window.serverSync.startMasterMode==='function') window.serverSync.startMasterMode(); } this.syncMode='master'; this.updateAllSyncDisplays(); } catch(e){ console.warn(e); } },
+							handleModeControlChange: function(v){ if (v==='standalone') this.enableStandaloneMode(); else if (v==='sync') this.enableSyncMode(); else if (v==='master') this.enableMasterMode(); },
+							performManualSync: async function(){ try{ if (!window.serverSync) return false; if (typeof window.serverSync.manualSync==='function') return await window.serverSync.manualSync(); if (typeof window.serverSync.syncWithServer==='function') return await window.serverSync.syncWithServer(); return false; } catch(e){ console.warn(e); return false; } }
+						};
+						try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ modeCtl.addEventListener('change', (e)=>window.sharingManager.handleModeControlChange(e.target.value)); } } catch(_e){}
+						console.log('Minimal Sync Manager fallback installed');
+					}
+					window.hangarInitQueue = window.hangarInitQueue || [];
+					window.hangarInitQueue.push(function(){ setTimeout(installFallbackManager, 400); });
+				})();
 						</script>
 
 						<!-- Ensure Sync Debug URL is shown after init & add fallback debug helpers -->

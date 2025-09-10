@@ -114,7 +114,102 @@ class SharingManager {
   updateSyncStatusDisplayNew(){ const modeSpans = document.querySelectorAll('#currentSyncMode, #currentSyncModeSidebar, .currentSyncMode'); const syncStatusBtn = document.getElementById('syncStatusBtn'); let readEnabled=false, writeEnabled=false; let modeText='Standalone', modeEmoji='🏠', cssClass='standalone'; if (this.syncMode==='master'){ readEnabled=true; writeEnabled=true; modeText='Master'; modeEmoji='👑'; cssClass='mode-master'; } else if (this.syncMode==='sync'){ readEnabled=true; writeEnabled=false; modeText='Sync'; modeEmoji='📡'; cssClass='mode-sync'; } if (modeSpans && modeSpans.length){ modeSpans.forEach((el)=>{ const isCompact = el.classList.contains('compact'); el.textContent = modeText; el.className = `sync-mode-badge ${isCompact ? 'compact ' : ''}${cssClass}`; }); } try { const manualSyncBtn = document.getElementById('manualSyncBtn'); if (manualSyncBtn){ const enable = (this.syncMode==='master'); manualSyncBtn.disabled = !enable; manualSyncBtn.style.opacity = enable ? '' : '0.6'; manualSyncBtn.style.cursor = enable ? '' : 'not-allowed'; manualSyncBtn.title = enable ? 'Trigger a one-time sync now' : 'Switch to Master to allow manual sync'; } } catch(e){} if (syncStatusBtn){ syncStatusBtn.classList.remove('status-success','status-warning','status-error'); if (this.syncMode!=='standalone'){ syncStatusBtn.textContent = `${modeEmoji} ${modeText}`; syncStatusBtn.classList.add('status-success'); syncStatusBtn.title = `${modeText}-Modus aktiv - Klick für Details`; } else { syncStatusBtn.textContent = '📊 Status'; syncStatusBtn.title = 'Sync inaktiv - Klick für Details'; } } this.updateWidgetSyncDisplay(modeText, this.syncMode!=='standalone'); console.log(`🎯 UI aktualisiert: Read=${readEnabled}, Write=${writeEnabled}, Mode=${this.syncMode}`); }
   updateSyncStatusDisplay(status,isActive){ const syncStatusBtn = document.getElementById('syncStatusBtn'); if (!syncStatusBtn) return; syncStatusBtn.classList.remove('status-success','status-warning','status-error'); if (isActive){ let emoji='📊', cssClass='status-success', title='Sync Status'; if (status==='Master'){ emoji='👑'; cssClass='status-success'; title='Master-Modus aktiv - Klick für Modus-Wechsel, Rechtsklick für Details'; } else if (status==='Sync' || status==='Slave'){ cssClass='status-warning'; title='Sync-Modus aktiv - Klick für Modus-Wechsel, Rechtsklick für Details'; } syncStatusBtn.textContent = `${emoji} ${status}`; syncStatusBtn.classList.add(cssClass); syncStatusBtn.title = title; } else { syncStatusBtn.textContent = '📊 Status'; syncStatusBtn.title = 'Sync inaktiv - Klicken für Details'; } }
   updateWidgetSyncDisplay(status,isActive){ const el = document.getElementById('sync-mode'); if (!el) return; el.classList.remove('master','slave','standalone','write-only'); if (isActive){ if (status==='Master'){ el.textContent='Master'; el.classList.add('master'); } else if (status==='Sync' || status==='Slave'){ el.textContent='Sync Read only'; el.classList.add('slave'); } else if (status==='Write-Only'){ el.textContent='Write-only'; el.classList.add('write-only'); } else { el.textContent=status; el.classList.add('master'); } } else { el.textContent='Standalone'; el.classList.add('standalone'); } }
-  applyReadOnlyUIState(isReadOnly){ try{ const ro=!!isReadOnly; document.body.classList.toggle('read-only', ro); try{ const banner=document.getElementById('readOnlyBanner'); if (banner) banner.style.display = ro ? '' : 'none'; }catch(_e){} const containers=[ document.getElementById('hangarGrid'), document.getElementById('secondaryHangarGrid') ]; containers.forEach((container)=>{ if (!container) return; const controls = container.querySelectorAll('input, textarea, select'); controls.forEach((el)=>{ if (ro){ if (!el.disabled){ el.setAttribute('data-readonly-disabled','true'); el.disabled = true; } } else { if (el.hasAttribute('data-readonly-disabled')){ el.disabled = false; el.removeAttribute('data-readonly-disabled'); } } }); }); try{ const root=document; if (ro && !this._roToastHandler){ this._roToastLast = this._roToastLast || 0; this._roToastHandler = ()=>{ const now=Date.now(); if (now - (this._roToastLast||0) > 2500){ this._roToastLast = now; this.showNotification('Read-Only: Changes won’t be saved to the server','info'); } }; root.addEventListener('pointerdown', this._roToastHandler, true); } else if (!ro && this._roToastHandler){ root.removeEventListener('pointerdown', this._roToastHandler, true); this._roToastHandler = null; } } catch(_e){} console.log(`🔒 Read-only UI ${ro ? 'aktiviert' : 'deaktiviert'}`); } catch(e){ console.warn('⚠️ applyReadOnlyUIState fehlgeschlagen:', e); } }
+  applyReadOnlyUIState(isReadOnly){
+    try{
+      const ro = !!isReadOnly;
+      document.body.classList.toggle('read-only', ro);
+
+      // Always hide legacy banner – Option B (on-demand modal only)
+      try {
+        const banner = document.getElementById('readOnlyBanner');
+        if (banner) banner.style.display = 'none';
+      } catch(_e) {}
+
+      // Disable/enable inputs inside hangar grids
+      const containers = [
+        document.getElementById('hangarGrid'),
+        document.getElementById('secondaryHangarGrid'),
+      ];
+      containers.forEach((container) => {
+        if (!container) return;
+        const controls = container.querySelectorAll('input, textarea, select');
+        controls.forEach((el) => {
+          if (ro){
+            if (!el.disabled){
+              el.setAttribute('data-readonly-disabled','true');
+              el.disabled = true;
+            }
+          } else {
+            if (el.hasAttribute('data-readonly-disabled')){
+              el.disabled = false;
+              el.removeAttribute('data-readonly-disabled');
+            }
+          }
+        });
+      });
+
+      // Install an on-demand modal hint (rate-limited) when interacting with disabled controls
+      try {
+        const root = document;
+
+        // Helper to create modal lazily
+        const ensureModal = () => {
+          let overlay = document.getElementById('readOnlyModalOverlay');
+          if (overlay) return overlay;
+          overlay = document.createElement('div');
+          overlay.id = 'readOnlyModalOverlay';
+          overlay.style.cssText = 'position:fixed;inset:0;display:none;background:rgba(0,0,0,0.45);z-index:10000;align-items:center;justify-content:center;padding:12px;';
+          const panel = document.createElement('div');
+          panel.id = 'readOnlyModalPanel';
+          panel.style.cssText = 'max-width:480px;width:100%;background:#ffffff;color:#1f2937;border-radius:10px;border:1px solid #e5e7eb;box-shadow:0 10px 24px rgba(0,0,0,0.15);padding:16px 18px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;';
+          panel.innerHTML = `
+            <div style="display:flex;align-items:flex-start;gap:10px;">
+              <div style="flex:1 1 auto;">
+                <div style="font-weight:700;font-size:14px;margin-bottom:4px;">Read-Only Mode</div>
+                <div style="font-size:13px;color:#4b5563;">This client is in Sync (read-only). Changes will not be saved to the server.</div>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+              <button id="roModalOk" type="button" style="background:#0ea5e9;color:#fff;border:1px solid #0284c7;border-radius:8px;padding:6px 12px;font-weight:600;">OK</button>
+            </div>
+          `;
+          overlay.appendChild(panel);
+          document.body.appendChild(overlay);
+          panel.querySelector('#roModalOk').addEventListener('click', ()=>{ overlay.style.display='none'; });
+          overlay.addEventListener('click', (e)=>{ if (e.target===overlay) overlay.style.display='none'; });
+          return overlay;
+        };
+
+        const showModal = () => { const ov = ensureModal(); ov.style.display='flex'; };
+
+        if (ro && !this._roGuardHandler) {
+          this._roModalLast = this._roModalLast || 0;
+          this._roGuardHandler = (ev) => {
+            try {
+              const tgt = ev.target;
+              if (!tgt) return;
+              const control = tgt.closest('input, textarea, select, button');
+              if (!control) return;
+              const blocked = control.disabled || control.getAttribute('aria-disabled') === 'true';
+              if (blocked) {
+                ev.preventDefault(); ev.stopPropagation();
+                const now = Date.now();
+                if (now - (this._roModalLast||0) > 3000) { this._roModalLast = now; showModal(); }
+              }
+            } catch(_err) {}
+          };
+          root.addEventListener('pointerdown', this._roGuardHandler, true);
+        } else if (!ro && this._roGuardHandler) {
+          root.removeEventListener('pointerdown', this._roGuardHandler, true);
+          this._roGuardHandler = null;
+        }
+      } catch(_e) {}
+
+      console.log(`🔒 Read-only UI ${ro ? 'aktiviert' : 'deaktiviert'}`);
+    } catch(e){
+      console.warn('⚠️ applyReadOnlyUIState fehlgeschlagen:', e);
+    }
+  }
   showSyncStatus(){ try{ let statusInfo = "🔍 SYNCHRONISATION STATUS:\n\n"; statusInfo += `Aktueller Modus: ${this.syncMode.toUpperCase()}\n`; statusInfo += `Sync Toggle: ${this.isLiveSyncEnabled ? '✅ Aktiviert' : '❌ Deaktiviert'}\n\n`; alert(statusInfo); console.log(statusInfo);}catch(e){} }
   setModeControlValue(mode){ try { const ctl = document.getElementById('syncModeControl'); if (ctl) ctl.value = mode; } catch(e){} }
   updateSyncStatusIndicator(){}

@@ -203,7 +203,8 @@ Flight number lookups frequently fail due to API limitations and data mapping ch
   - Display options in read-only mode save locally only and show “Saved locally (read-only mode)”
 - UI behavior in Sync (read-only)
   - Editing controls within `#hangarGrid` and `#secondaryHangarGrid` are temporarily disabled
-  - A small banner “Read-Only: Changes are not saved to the server” is shown
+  - No persistent banner. An on-demand modal hint appears when the user attempts to edit (inputs remain disabled)
+  - A subtle status indicator remains (e.g., mode label and last-load time pill in header)
   - Mode toggles and navigation remain usable
 - Write-only specifics
   - Startup: no GET requests to `sync/data.php` (initial server load is skipped)

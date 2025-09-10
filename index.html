@@ -759,18 +759,20 @@
 				const modeCtl = document.getElementById('syncModeControl');
 				if (window.sharingManager && typeof window.sharingManager.updateSyncMode === 'function' && modeCtl) {
 					if (!wantEdit) {
+						// View mode → Sync (read-only)
 						modeCtl.value = 'sync';
 						modeCtl.dispatchEvent(new Event('change', { bubbles: true }));
 					} else {
-						modeCtl.value = 'standalone';
+						// Edit mode → Master (read+write)
+						modeCtl.value = 'master';
 						modeCtl.dispatchEvent(new Event('change', { bubbles: true }));
 					}
 				} else if (window.sharingManager && typeof window.sharingManager.enableSyncMode === 'function') {
 					// Fallback if mode control not present: call manager directly
 					if (!wantEdit) {
 						window.sharingManager.enableSyncMode();
-					} else if (typeof window.sharingManager.enableStandaloneMode === 'function') {
-						window.sharingManager.enableStandaloneMode();
+					} else if (typeof window.sharingManager.enableMasterMode === 'function') {
+						window.sharingManager.enableMasterMode();
 					}
 				}
 			} finally {

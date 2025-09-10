@@ -42,8 +42,22 @@ class SharingManager {
       syncStatusBtn.addEventListener("contextmenu", (e) => { e.preventDefault(); this.showSyncStatus(); });
       syncStatusBtn.addEventListener("click", () => { this.showSyncStatus(); });
     }
-    console.log("🎯 Dual-Toggle Event-Handler registriert");
-  }
+
+    // Debug panel wiring (optional)
+    try {
+      const urlEl = document.getElementById('syncDebugUrl');
+      if (urlEl) urlEl.textContent = this._getServerUrlSafe();
+      const testReadBtn = document.getElementById('syncTestReadBtn');
+      if (testReadBtn) testReadBtn.addEventListener('click', () => this.debugTestRead());
+      const testWriteBtn = document.getElementById('syncTestWriteBtn');
+      if (testWriteBtn) testWriteBtn.addEventListener('click', () => this.debugTestWrite());
+    } catch(_e){}
+
+  _getServerUrlSafe(){ try { return (window.serverSync && typeof window.serverSync.getServerUrl==='function' && window.serverSync.getServerUrl()) || (window.serverSync && window.serverSync.serverSyncUrl) || (window.location.origin + '/sync/data.php'); } catch(e){ return window.location.origin + '/sync/data.php'; } }
+  _debugLog(line){ try { const el = document.getElementById('syncDebugLog'); const ts = new Date().toLocaleTimeString(); if (el){ const msg = `[${ts}] ${line}`; el.textContent = (el.textContent ? el.textContent + "\n" : '') + msg; el.scrollTop = el.scrollHeight; } console.log(line); } catch(_e){} }
+  async debugTestRead(){ try { const url = this._getServerUrlSafe(); this._debugLog(`GET ${url}`); const res = await fetch(url + (url.includes('?') ? '&' : '?') + 'action=load', { headers: { 'Accept':'application/json' }}); this._debugLog(`GET status ${res.status}`); const text = await res.text(); this._debugLog(`Body (first 200): ${text.slice(0,200)}`); try { const json = JSON.parse(text); if (window.serverSync && typeof window.serverSync.applyServerData==='function'){ const applied = await window.serverSync.applyServerData(json); this._debugLog(`applyServerData: ${applied}`); } } catch(_e){} } catch(e){ this._debugLog(`READ error: ${e.message}`); } }
+  async debugTestWrite(){ try { const url = this._getServerUrlSafe(); const sid = (window.serverSync && typeof window.serverSync.getSessionId==='function') ? window.serverSync.getSessionId() : (localStorage.getItem('serverSync.sessionId') || ''); const dname = (localStorage.getItem('presence.displayName') || '').trim(); const body = { metadata: { debugPing: new Date().toISOString(), timestamp: Math.round(Date.now()) } }; this._debugLog(`POST ${url}`); const res = await fetch(url, { method:'POST', headers: { 'Content-Type':'application/json', 'X-Sync-Role':'master', 'X-Sync-Session': sid, 'X-Display-Name': dname }, body: JSON.stringify(body) }); this._debugLog(`POST status ${res.status}`); const text = await res.text(); this._debugLog(`Body (first 200): ${text.slice(0,200)}`); await this.debugTestRead(); } catch(e){ this._debugLog(`WRITE error: ${e.message}`); } }
+
   async handleReadDataToggle(enabled){
     const writeDataToggle = document.getElementById("writeDataToggle");
     const isWriteEnabled = writeDataToggle?.checked || false;

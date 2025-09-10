@@ -6,7 +6,12 @@
 
 class ServerSync {
 	constructor() {
-		this.serverSyncUrl = null;
+		// Set a safe default so sync is configured even if initSync is delayed
+		try {
+			this.serverSyncUrl = window.location.origin + "/sync/data.php";
+		} catch(_e) {
+			this.serverSyncUrl = "/sync/data.php";
+		}
 		this.serverSyncInterval = null;
 		this.isApplyingServerData = false;
 		this.lastDataChecksum = null;

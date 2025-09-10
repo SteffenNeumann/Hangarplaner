@@ -2745,7 +2745,7 @@ type="datetime-local"
 										// Tow
 										var towVal = (t.towStatus!==undefined? t.towStatus : t.tow);
 										if (towVal!==undefined) setField('tow-status-', towVal);
-										// Route (optional)
+										// Route (if present)
 										if (t.route!==undefined) setField('route-', t.route);
 									});
 									return applied>0;
@@ -2753,8 +2753,36 @@ type="datetime-local"
 								log('Polyfilled serverSync.applyTileData');
 							} catch(_e){}
 							}
+							// Debug-only: direct DOM apply if all other paths decline
+							function debugApplyTiles(data){
+								if (!data || (typeof data !== 'object')) return 0;
+								var count = 0;
+								function applyList(list, isSecondary){
+									if (!Array.isArray(list)) return;
+									list.forEach(function(t, idx){
+										var id = parseInt(t && (t.tileId || t.id || (isSecondary? (101+idx):(1+idx))),10);
+										if (!id) return;
+										function setField(prefix, val){ var el = document.getElementById(prefix+id); if (!el || val===undefined || val===null) return; if ('value' in el) el.value = String(val); else el.textContent = String(val); count++; }
+										var aircraftVal = (t.aircraftId ?? t.aircraft ?? t.aircraftName ?? t.registration);
+										if (aircraftVal!==undefined) setField('aircraft-', aircraftVal);
+										var posVal = (t.position ?? t.hangarPosition ?? t.pos);
+										if (posVal!==undefined){ var pel = document.getElementById('position-'+id) || document.getElementById('hangar-position-'+id); if (pel){ if ('value' in pel) pel.value = String(posVal); else pel.textContent = String(posVal); count++; } }
+										if (t.notes!==undefined) setField('notes-', t.notes);
+										var arrVal = (t.arrivalTime ?? t.arrTime ?? t.arrival);
+										var depVal = (t.departureTime ?? t.depTime ?? t.departure);
+										if (arrVal!==undefined) setField('arrival-time-', arrVal);
+										if (depVal!==undefined) setField('departure-time-', depVal);
+										if (t.status!==undefined) setField('status-', t.status);
+										var towVal = (t.towStatus ?? t.tow);
+										if (towVal!==undefined) setField('tow-status-', towVal);
+									});
+								}
+								applyList(data.primaryTiles, false);
+								applyList(data.secondaryTiles, true);
+								return count;
+							}
 							polyfillApplyTileData();
-							window.syncDebugRead = async function(){ try { var url = getServerUrl(); log('GET '+url); var res = await fetch(url + (url.includes('?') ? '&' : '?') + 'action=load', { headers:{'Accept':'application/json'} }); log('GET status '+res.status); var text = await res.text(); log('Body (first 200): '+ text.slice(0,200)); try { var json = JSON.parse(text); resetFlags(); if (window.serverSync && typeof window.serverSync.applyServerData==='function'){ var applied = await window.serverSync.applyServerData(json); if (!applied && typeof window.serverSync.applyTileData==='function'){ var a = window.serverSync.applyTileData(json.primaryTiles||[], false); var b = window.serverSync.applyTileData(json.secondaryTiles||[], true); applied = !!(a || b); } log('applyServerData: '+applied); } } catch(_e){} } catch(e){ log('READ error: '+e.message); } };
+							window.syncDebugRead = async function(){ try { var url = getServerUrl(); log('GET '+url); var res = await fetch(url + (url.includes('?') ? '&' : '?') + 'action=load', { headers:{'Accept':'application/json'} }); log('GET status '+res.status); var text = await res.text(); log('Body (first 200): '+ text.slice(0,200)); try { var json = JSON.parse(text); resetFlags(); var tAS = (window.serverSync && typeof window.serverSync.applyServerData); var tAT = (window.serverSync && typeof window.serverSync.applyTileData); log('serverSync types: applyServerData='+tAS+', applyTileData='+tAT); if (window.serverSync && typeof window.serverSync.applyServerData==='function'){ var applied = await window.serverSync.applyServerData(json); if (!applied && typeof window.serverSync.applyTileData==='function'){ var a = window.serverSync.applyTileData(json.primaryTiles||[], false); var b = window.serverSync.applyTileData(json.secondaryTiles||[], true); applied = !!(a || b); } if (!applied){ var c = debugApplyTiles(json); log('debugApplyTiles applied count: '+c); applied = c>0; } log('applyServerData: '+applied); } } catch(_e){} } catch(e){ log('READ error: '+e.message); } };
 							window.syncDebugWrite = async function(){ try { var url = getServerUrl(); var sid = ensureSession(); var dname = (localStorage.getItem('presence.displayName') || '').trim(); var body = { metadata:{ debugPing: new Date().toISOString(), timestamp: Math.round(Date.now()) } }; log('POST '+url); var res = await fetch(url, { method:'POST', headers:{ 'Content-Type':'application/json', 'X-Sync-Role':'master', 'X-Sync-Session': sid, 'X-Display-Name': dname }, body: JSON.stringify(body) }); log('POST status '+res.status); var text = await res.text(); log('Body (first 200): '+ text.slice(0,200)); await window.syncDebugRead(); } catch(e){ log('WRITE error: '+e.message); } };
 							window.syncManual = async function(){ try { var btn = document.getElementById('manualSyncBtn'); if (btn){ btn.disabled = true; btn.textContent = 'Syncing...'; } if (!window.serverSync){ log('ServerSync not available'); return; } var ok=false; try { if (typeof window.serverSync.manualSync==='function'){ ok = await window.serverSync.manualSync(); } else if (typeof window.serverSync.syncWithServer==='function'){ ok = await window.serverSync.syncWithServer(); } } catch(err){ log('manual sync call failed: '+err.message); ok=false; } if (ok){ log('Manual sync OK'); try { await window.syncDebugRead(); } catch(_e){} } else { log('Manual sync failed'); } } finally { if (btn){ btn.disabled=false; btn.textContent='Manual Sync'; } } };
 							window.hangarInitQueue = window.hangarInitQueue || [];

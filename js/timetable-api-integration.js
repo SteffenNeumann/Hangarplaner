@@ -52,9 +52,11 @@ class TimetableAPIManager {
 		this.sortSelect = document.getElementById("timetableSort");
 
 		if (!this.timetableBody) {
-			console.log(
-				"⚠️ Timetable DOM-Elemente nicht gefunden - retry in 2 Sekunden"
-			);
+			// Only warn once per session to reduce console noise
+			if (!window.__timetableDomWarned) {
+				console.log("⚠️ Timetable DOM-Elemente nicht gefunden - retry in 2 Sekunden");
+				window.__timetableDomWarned = true;
+			}
 			// Retry nach 2 Sekunden falls DOM noch nicht bereit
 			setTimeout(() => this.setupEventListeners(), 2000);
 			return;

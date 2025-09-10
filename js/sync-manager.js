@@ -122,9 +122,9 @@ class SharingManager {
       await window.serverSync.startMasterMode();
     } else {
       console.warn('⚠️ startMasterMode nicht verfügbar – aktiviere Fallback Write/Read');
+      // Always enable fallback write and read-back in Master for convergence
       this._startFallbackWriteTimer();
-      // If Read toggle is ON, also start read-back polling
-      try { const rd = document.getElementById('readDataToggle'); if (rd && rd.checked){ this._startFallbackReadPolling(); } } catch(_e){}
+      this._startFallbackReadPolling();
     }
     this.syncMode = 'master'; this.isLiveSyncEnabled = true; this.isMasterMode = true; this.updateAllSyncDisplays('Master', true); this.applyReadOnlyUIState(false); this.showNotification('Master-Modus aktiviert - Sende Daten an Server', 'success'); console.log('✅ Master-Modus aktiviert');
   } catch(e){ console.error('❌ Fehler beim Aktivieren des Master-Modus:', e); this.showNotification('Fehler beim Aktivieren des Master-Modus','error'); await this.enableSyncMode(); } }

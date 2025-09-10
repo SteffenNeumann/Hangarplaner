@@ -222,6 +222,20 @@ class SharingManager {
   async loadServerDataImmediately(){ try{ if (!window.serverSync || !window.serverSync.serverSyncUrl) return false; if (window.isApplyingServerData || window.isLoadingServerData) return false; window.isLoadingServerData = true; const serverData = await window.serverSync.loadFromServer(); if (serverData && !serverData.error){ const applied = await window.serverSync.applyServerData(serverData); return !!applied; } return false; } catch(e){ return false; } finally { window.isLoadingServerData = false; } }
   loadSavedSharingSettings(){ try{ const settings = JSON.parse(localStorage.getItem('hangarSyncSettings') || '{}'); this.syncMode = settings.syncMode || 'standalone'; this.isLiveSyncEnabled = settings.isLiveSyncEnabled || false; this.isMasterMode = settings.isMasterMode || false; const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ modeCtl.value = this.syncMode; setTimeout(() => this.updateSyncModeByString(this.syncMode), 100); } } catch(e){ this.syncMode = 'standalone'; } }
   saveSharingSettings(){ try{ const settings = { syncMode: this.syncMode, isLiveSyncEnabled: this.isLiveSyncEnabled, isMasterMode: this.isMasterMode, lastSaved: new Date().toISOString() }; localStorage.setItem('hangarSyncSettings', JSON.stringify(settings)); } catch(e){} }
+  showNotification(message, type = 'info'){
+    try {
+      if (typeof window.showNotification === 'function') {
+        window.showNotification(message, type);
+        return;
+      }
+      console.log(`${String(type || 'info').toUpperCase()}: ${message}`);
+      if (type === 'error') {
+        alert(`Error: ${message}`);
+      }
+    } catch(e) {
+      try { console.log('NOTIFY:', message); } catch(_e) {}
+    }
+  }
   destroy(){ try{ if (this.shareCheckInterval) clearInterval(this.shareCheckInterval); this.saveSharingSettings(); } catch(e){} }
 }
 window.sharingManager = new SharingManager();

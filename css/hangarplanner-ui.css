@@ -581,13 +581,38 @@ select.status-selector {
 #hangarGrid .hangar-cell input[type="datetime-local"]::-webkit-calendar-picker-indicator,
 #secondaryHangarGrid .hangar-cell input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 	opacity: 0 !important;
-	transition: opacity .15s ease;
+	width: 0 !important;
+	height: 0 !important;
+	pointer-events: none !important;
+	transition: opacity .15s ease, width .15s ease, height .15s ease;
 }
 #hangarGrid .hangar-cell input[type="datetime-local"]:hover::-webkit-calendar-picker-indicator,
 #hangarGrid .hangar-cell input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator,
 #secondaryHangarGrid .hangar-cell input[type="datetime-local"]:hover::-webkit-calendar-picker-indicator,
 #secondaryHangarGrid .hangar-cell input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
 	opacity: 1 !important;
+	width: 18px !important;
+	height: 18px !important;
+	pointer-events: auto !important;
+}
+/* Also hide other built-in buttons until hover/focus (spin/clear) */
+#hangarGrid .hangar-cell input[type="datetime-local"]::-webkit-inner-spin-button,
+#hangarGrid .hangar-cell input[type="datetime-local"]::-webkit-clear-button,
+#secondaryHangarGrid .hangar-cell input[type="datetime-local"]::-webkit-inner-spin-button,
+#secondaryHangarGrid .hangar-cell input[type="datetime-local"]::-webkit-clear-button {
+	opacity: 0 !important;
+	pointer-events: none !important;
+}
+#hangarGrid .hangar-cell input[type="datetime-local"]:hover::-webkit-inner-spin-button,
+#hangarGrid .hangar-cell input[type="datetime-local"]:hover::-webkit-clear-button,
+#hangarGrid .hangar-cell input[type="datetime-local"]:focus::-webkit-inner-spin-button,
+#hangarGrid .hangar-cell input[type="datetime-local"]:focus::-webkit-clear-button,
+#secondaryHangarGrid .hangar-cell input[type="datetime-local"]:hover::-webkit-inner-spin-button,
+#secondaryHangarGrid .hangar-cell input[type="datetime-local"]:hover::-webkit-clear-button,
+#secondaryHangarGrid .hangar-cell input[type="datetime-local"]:focus::-webkit-inner-spin-button,
+#secondaryHangarGrid .hangar-cell input[type="datetime-local"]:focus::-webkit-clear-button {
+	opacity: 1 !important;
+	pointer-events: auto !important;
 }
 
 /* Keep compact date-time input and its button in a single grid cell using absolute button */

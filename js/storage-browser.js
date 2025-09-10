@@ -739,21 +739,22 @@ class ServerSync {
 				return true;
 			}
 
-			// Fallback: Direkte Anwendung (nur wenn Koordinator nicht verfügbar)
+			// Versuche Legacy-Handler, falle bei Fehlschlag auf direkte Anwendung zurück
 			if (
 				window.hangarData &&
 				typeof window.hangarData.applyLoadedHangarPlan === "function"
 			) {
-				console.log(
-					"🔄 Verwende hangarData.applyLoadedHangarPlan für Server-Daten..."
-				);
-				const result = window.hangarData.applyLoadedHangarPlan(serverData);
-				console.log(
-					"✅ Server-Daten über hangarData angewendet (Fallback), Ergebnis:",
-					result
-				);
-				if (result) { try { this.lastLoadedAt = Date.now(); document.dispatchEvent(new CustomEvent('serverDataLoaded', { detail: { loadedAt: this.lastLoadedAt } })); } catch(e){} }
-				return result;
+				try {
+					console.log("🔄 Versuche hangarData.applyLoadedHangarPlan...");
+					const result = window.hangarData.applyLoadedHangarPlan(serverData);
+					console.log("📄 Ergebnis hangarData.applyLoadedHangarPlan:", result);
+					if (result) {
+						try { this.lastLoadedAt = Date.now(); document.dispatchEvent(new CustomEvent('serverDataLoaded', { detail: { loadedAt: this.lastLoadedAt } })); } catch(e){}
+						return true;
+					}
+				} catch(e) {
+					console.warn("⚠️ applyLoadedHangarPlan fehlgeschlagen, nutze direkte Anwendung", e);
+				}
 			}
 
 			// ERWEITERT: Direkter Fallback für Kachel-Daten

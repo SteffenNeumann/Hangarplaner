@@ -167,6 +167,11 @@ class HangarEventManager {
 	 */
 	async syncFieldToServer(fieldId, value) {
 		try {
+			// Ensure unified sync object and basic diagnostics
+			if (!window.serverSync && window.storageBrowser) { window.serverSync = window.storageBrowser; }
+			const syncObj = window.serverSync || window.storageBrowser || null;
+			const syncUrl = (syncObj && (syncObj.serverSyncUrl || (typeof syncObj.getServerUrl === 'function' && syncObj.getServerUrl()))) || '';
+			console.log('🧩 syncFieldToServer start', { fieldId, hasSyncObj: !!syncObj, syncUrl: !!syncUrl, isMaster: !!window.serverSync?.isMaster, mode: window.sharingManager?.syncMode });
 			// Prüfe ob Server-Sync verfügbar ist (bevorzugt storageBrowser, fallback serverSync)
 			const syncObj = window.storageBrowser || window.serverSync;
 			const syncUrl = (syncObj && (syncObj.serverSyncUrl || (typeof syncObj.getServerUrl === 'function' && syncObj.getServerUrl()))) || '';
@@ -190,7 +195,8 @@ class HangarEventManager {
 
 			// Bevor wir eine eigene POST-Anfrage bauen, bevorzugt über die zentrale ServerSync-Schicht schreiben
 			if (window.serverSync && typeof window.serverSync.syncWithServer === "function") {
-				await window.serverSync.syncWithServer();
+				const ok = await window.serverSync.syncWithServer();
+				console.log('📤 central syncWithServer result:', ok);
 				return;
 			}
 
@@ -264,7 +270,9 @@ class HangarEventManager {
 			} catch(e) { /* noop */ }
 
 			// Server-Request mit allen Daten (Fallback, wenn zentrale Sync-Schicht nicht verfügbar ist)
-			const response = await fetch(window.storageBrowser.serverSyncUrl, {
+			const postUrl = (window.storageBrowser?.serverSyncUrl) || (window.serverSync?.getServerUrl?.()) || '';
+			console.log('📮 fallback POST', { url: postUrl, fieldId });
+			const response = await fetch(postUrl, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -298,7 +306,7 @@ class HangarEventManager {
 			console.warn(`⚠️ Container ${containerId} nicht gefunden`);
 			return [];
 		}
-
+	}
 		const tiles = [];
 		const selectors = [
 			'input[id^="aircraft-"]',

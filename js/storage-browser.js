@@ -511,11 +511,23 @@ class ServerSync {
 						);
 					}
 
-				return data;
-			}
-
-			// Fallback: Sammle Basis-Daten
-			const data = {
+					// Ensure tiles present; if missing/empty, collect from DOM
+					try {
+						const needDom = !data || !Array.isArray(data.primaryTiles) || data.primaryTiles.length === 0;
+						if (needDom) {
+							const dom = this.collectTilesFromDom();
+							data = data || {};
+							data.primaryTiles = dom.primary;
+							if (dom.secondary && dom.secondary.length) data.secondaryTiles = dom.secondary;
+							console.log('🧮 DOM collector → tiles', { primary: dom.primary.length, secondary: dom.secondary.length });
+						}
+					} catch(_e){}
+					
+					return data;
+				}
+				
+				// Fallback: Sammle Basis-Daten
+				const data = {
 				timestamp: new Date().toISOString(),
 				projectName:
 					document.getElementById("projectName")?.value || "Unbenannt",
@@ -544,6 +556,47 @@ class ServerSync {
 		}
 	}
 
+	/**
+	 * Sammle Kachel-Daten direkt aus dem DOM, wenn keine andere Quelle verfügbar ist
+	 */
+	collectTilesFromDom() {
+		const ids = new Set();
+		try {
+			const sel = document.querySelectorAll("[id^='aircraft-'], [id^='position-'], [id^='hangar-position-'], [id^='arrival-time-'], [id^='departure-time-'], [id^='status-'], [id^='tow-status-'], [id^='notes-']");
+			sel.forEach(el => { const m = el.id.match(/-(\d+)$/); if (m) ids.add(parseInt(m[1],10)); });
+		} catch(_e){}
+		const toTile = (id) => {
+			const getVal = (prefix) => { const el = document.getElementById(`${prefix}${id}`); return el ? (el.value || '').trim() : ''; };
+			const aircraftId = getVal('aircraft-');
+			const posInfo = getVal('position-');
+			const posHangar = getVal('hangar-position-');
+			const arrivalTime = getVal('arrival-time-');
+			const departureTime = getVal('departure-time-');
+			const status = getVal('status-') || 'neutral';
+			const towStatus = getVal('tow-status-') || 'neutral';
+			const notes = getVal('notes-');
+			// Only include if there is meaningful content
+			const hasMeaning = !!(aircraftId || posInfo || posHangar || arrivalTime || departureTime || notes || (status && status !== 'neutral') || (towStatus && towStatus !== 'neutral'));
+			if (!hasMeaning) return null;
+			return {
+				tileId: id,
+				aircraftId,
+				position: posInfo,
+				hangarPosition: posHangar,
+				arrivalTime,
+				departureTime,
+				status,
+				towStatus,
+				notes,
+			};
+		};
+		const allIds = Array.from(ids).sort((a,b)=>a-b);
+		const primary = [];
+		const secondary = [];
+		allIds.forEach(id => { const t = toTile(id); if (!t) return; if (id >= 100) secondary.push(t); else primary.push(t); });
+		return { primary, secondary };
+	}
+	
 	/**
 	 * Lädt Daten vom Server
 	 */

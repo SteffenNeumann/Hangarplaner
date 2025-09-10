@@ -1289,19 +1289,29 @@ window.hangarInitQueue = window.hangarInitQueue || [];
 window.hangarInitQueue.push(async function () {
 	console.log("🔄 Server-Sync wird über zentrale Initialisierung gestartet...");
 
-	// PRODUKTIONS-Server-URL für hangarplanner.de
-	const productionServerUrl = "https://hangarplanner.de/sync/data.php";
+// Standard: verwende gleichen Origin-Server wie die App
+	const defaultServerUrl = window.location.origin + "/sync/data.php";
 
-	// Fallback für lokale Entwicklung
-	const localServerUrl = window.location.origin + "/sync/data.php";
-
-	// Prüfe auf Server-Konfiguration oder verwende Produktions-URL
+	// Prüfe auf gespeicherte Server-URL
 	let serverUrl = localStorage.getItem("hangarServerSyncUrl");
 
-	// Wenn keine URL gespeichert ist, verwende Produktions-URL
+	// Migration: korrigiere versehentliche Domain-Mismatches (e.g., hangarplanner.de → hangarplaner.de)
+	try {
+		if (serverUrl) {
+			const savedHost = new URL(serverUrl).hostname;
+			const currentHost = window.location.hostname;
+			if (savedHost && savedHost !== currentHost) {
+				console.warn(`⚠️ Gespeicherte Server-URL Host (${savedHost}) != aktueller Host (${currentHost}) – setze auf gleichen Origin`);
+				serverUrl = defaultServerUrl;
+				localStorage.setItem("hangarServerSyncUrl", serverUrl);
+			}
+		}
+	} catch(_e){}
+
+	// Wenn keine URL gespeichert ist, verwende gleichen Origin
 	if (!serverUrl) {
-		serverUrl = productionServerUrl;
-		console.log("🌐 Verwende Produktions-Server:", productionServerUrl);
+		serverUrl = defaultServerUrl;
+		console.log("🌐 Verwende Standard-Server (gleicher Origin):", serverUrl);
 	} else {
 		console.log("💾 Verwende gespeicherte Server-URL:", serverUrl);
 	}
@@ -1317,30 +1327,12 @@ window.hangarInitQueue.push(async function () {
 setTimeout(async () => {
 	if (!window.serverSync) return;
 
-	const serverUrl =
-		localStorage.getItem("hangarServerSyncUrl") ||
-		"https://hangarplanner.de/sync/data.php";
-	const isServerReachable = await window.serverSync.testServerConnection(
-		serverUrl
-	);
+	const serverUrl = localStorage.getItem("hangarServerSyncUrl") || (window.location.origin + "/sync/data.php");
+	const isServerReachable = await window.serverSync.testServerConnection(serverUrl);
 
 	if (!isServerReachable) {
-		console.warn("⚠️ Server nicht erreichbar, verwende lokale Speicherung");
-
-		// Fallback auf lokalen Server falls Produktions-Server nicht erreichbar
-		if (serverUrl.includes("hangarplanner.de")) {
-			const fallbackUrl = window.location.origin + "/sync/data.php";
-			console.log("🔄 Versuche Fallback auf lokalen Server:", fallbackUrl);
-
-			const isFallbackReachable = await window.serverSync.testServerConnection(
-				fallbackUrl
-			);
-			if (isFallbackReachable) {
-				window.serverSync.initSync(fallbackUrl);
-				localStorage.setItem("hangarServerSyncUrl", fallbackUrl);
-				console.log("✅ Fallback auf lokalen Server erfolgreich");
-			}
-		}
+		console.warn("⚠️ Server nicht erreichbar, bleibe im lokalen Modus");
+		// Optional: hier könnte ein alternativer Host getestet werden, aktuell nicht nötig
 	} else {
 		console.log("✅ Server-Verbindung bestätigt");
 	}

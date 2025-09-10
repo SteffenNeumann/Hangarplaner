@@ -167,12 +167,14 @@ class HangarEventManager {
 	 */
 	async syncFieldToServer(fieldId, value) {
 		try {
-			// Prüfe ob Server-Sync verfügbar ist
-			if (!window.storageBrowser || !window.storageBrowser.serverSyncUrl) {
+			// Prüfe ob Server-Sync verfügbar ist (bevorzugt storageBrowser, fallback serverSync)
+			const syncObj = window.storageBrowser || window.serverSync;
+			const syncUrl = (syncObj && (syncObj.serverSyncUrl || (typeof syncObj.getServerUrl === 'function' && syncObj.getServerUrl()))) || '';
+			if (!syncObj || !syncUrl) {
 				console.info("ℹ️ Server-Sync noch nicht konfiguriert – versuche später zu synchronisieren");
 				// Versuche kurze Zeit später einen vollständigen Sync (falls inzwischen initialisiert)
 				setTimeout(() => {
-					try { window.serverSync?.syncWithServer?.(); } catch (e) {}
+					try { (window.serverSync || window.storageBrowser)?.syncWithServer?.(); } catch (e) {}
 				}, 1200);
 				return;
 			}

@@ -575,6 +575,50 @@ class ServerSync {
 			console.warn("⚠️ Keine Server-Daten zum Anwenden");
 			return false;
 		}
+		// Normalize legacy schemas to { primaryTiles, secondaryTiles } if needed
+		try {
+			if (!serverData.primaryTiles && (Array.isArray(serverData.primary) || Array.isArray(serverData.secondary))) {
+				const mapTile = (row, idx) => ({
+					ileId: parseInt(row?.tileId || row?.id || (idx + 1), 10),
+					aircraftId: row?.aircraftId || row?.aircraft || '',
+					arrivalTime: row?.arrivalTime || row?.arrival || '',
+					departureTime: row?.departureTime || row?.departure || '',
+					position: row?.position || row?.hangarPosition || '',
+					hangarPosition: row?.hangarPosition || '',
+					status: row?.status || 'neutral',
+					towStatus: row?.towStatus || row?.tow || 'neutral',
+					notes: row?.notes || '',
+					updatedAt: row?.updatedAt || undefined,
+					updatedBy: row?.updatedBy || undefined,
+				});
+				serverData = {
+					...serverData,
+					primaryTiles: (serverData.primary || []).map(mapTile),
+					secondaryTiles: (serverData.secondary || []).map(mapTile),
+				};
+				console.log('🔁 Normalized legacy server data → primaryTiles/secondaryTiles');
+			}
+			// Legacy: tilesData (object of cells)
+			if (!serverData.primaryTiles && serverData.tilesData && typeof serverData.tilesData === 'object'){
+				const entries = Object.entries(serverData.tilesData);
+				const toTiles = entries.map(([key, v]) => {
+					const m = String(key).match(/cell_(\d+)/);
+					const id = m ? parseInt(m[1],10) : 0;
+					return {
+						tileId: id,
+						aircraftId: v?.aircraftId || '',
+						arrivalTime: v?.arrivalTime || '',
+						departureTime: v?.departureTime || '',
+						position: v?.position || '',
+						status: v?.status || 'neutral',
+						towStatus: v?.towStatus || 'neutral',
+						notes: v?.notes || '',
+					};
+				}).filter(t => t.tileId > 0);
+				serverData = { ...serverData, primaryTiles: toTiles };
+				console.log('🔁 Normalized tilesData → primaryTiles');
+			}
+		} catch(e) { console.warn('⚠️ Server data normalization failed', e); }
 
 		// Verhindere gleichzeitige Anwendung von Server-Daten
 		if (this.isApplyingServerData) {

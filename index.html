@@ -291,7 +291,7 @@
 						</div>
 					</div>
 					<div class="panel-divider"></div>
-					<button id="manualSyncBtn" class="sidebar-btn sidebar-btn-primary w-full" title="Trigger a one-time sync now">Manual Sync</button>
+					<button id="manualSyncBtn" class="sidebar-btn sidebar-btn-primary w-full" title="Trigger a one-time sync now" onclick="try{ if(window.sharingManager && typeof window.sharingManager.performManualSync==='function'){ window.sharingManager.performManualSync(); } else if (typeof window.syncManual==='function'){ window.syncManual(); } }catch(e){ console.warn(e); }">Manual Sync</button>
 					<div class="text-sm text-center" style="margin-top: 6px; color: #64748b;">Trigger a one-time sync now</div>
 					<div id="syncPollingInfo" class="text-sm text-center" style="margin-top: 4px; color: #94a3b8;">Receiving updates every 10s</div>
 
@@ -2700,17 +2700,17 @@ type="datetime-local"
 				});
 						</script>
 
-						<!-- Ensure Sync Debug URL is shown after init -->
+						<!-- Ensure Sync Debug URL is shown after init & add fallback debug helpers -->
 						<script>
-						window.hangarInitQueue = window.hangarInitQueue || [];
-						window.hangarInitQueue.push(function(){
-							try{
-								var el = document.getElementById('syncDebugUrl');
-								if (el && window.sharingManager && typeof window.sharingManager._getServerUrlSafe==='function'){
-									el.textContent = window.sharingManager._getServerUrlSafe();
-								}
-							}catch(e){}
-						});
+						(function(){
+							function getServerUrl(){ try { return (window.serverSync && typeof window.serverSync.getServerUrl==='function' && window.serverSync.getServerUrl()) || (window.serverSync && window.serverSync.serverSyncUrl) || (window.location.origin + '/sync/data.php'); } catch(e){ return window.location.origin + '/sync/data.php'; } }
+							function log(line){ try { var el = document.getElementById('syncDebugLog'); var ts = new Date().toLocaleTimeString(); if (el){ var msg = '['+ts+'] '+line; el.textContent = (el.textContent ? el.textContent + '\n' : '') + msg; el.scrollTop = el.scrollHeight; } console.log(line); } catch(_e){} }
+							window.syncDebugRead = async function(){ try { var url = getServerUrl(); log('GET '+url); var res = await fetch(url + (url.includes('?') ? '&' : '?') + 'action=load', { headers:{'Accept':'application/json'} }); log('GET status '+res.status); var text = await res.text(); log('Body (first 200): '+ text.slice(0,200)); try { var json = JSON.parse(text); if (window.serverSync && typeof window.serverSync.applyServerData==='function'){ var applied = await window.serverSync.applyServerData(json); log('applyServerData: '+applied); } } catch(_e){} } catch(e){ log('READ error: '+e.message); } };
+							window.syncDebugWrite = async function(){ try { var url = getServerUrl(); var sid = (window.serverSync && typeof window.serverSync.getSessionId==='function') ? window.serverSync.getSessionId() : (localStorage.getItem('serverSync.sessionId') || ''); var dname = (localStorage.getItem('presence.displayName') || '').trim(); var body = { metadata:{ debugPing: new Date().toISOString(), timestamp: Math.round(Date.now()) } }; log('POST '+url); var res = await fetch(url, { method:'POST', headers:{ 'Content-Type':'application/json', 'X-Sync-Role':'master', 'X-Sync-Session': sid, 'X-Display-Name': dname }, body: JSON.stringify(body) }); log('POST status '+res.status); var text = await res.text(); log('Body (first 200): '+ text.slice(0,200)); await window.syncDebugRead(); } catch(e){ log('WRITE error: '+e.message); } };
+							window.syncManual = async function(){ try { var btn = document.getElementById('manualSyncBtn'); if (btn){ btn.disabled = true; btn.textContent = 'Syncing...'; } if (!window.serverSync){ log('ServerSync not available'); return; } var ok=false; try { if (typeof window.serverSync.manualSync==='function'){ ok = await window.serverSync.manualSync(); } else if (typeof window.serverSync.syncWithServer==='function'){ ok = await window.serverSync.syncWithServer(); } } catch(err){ log('manual sync call failed: '+err.message); ok=false; } if (ok){ log('Manual sync OK'); try { await window.syncDebugRead(); } catch(_e){} } else { log('Manual sync failed'); } } finally { if (btn){ btn.disabled=false; btn.textContent='Manual Sync'; } } };
+							window.hangarInitQueue = window.hangarInitQueue || [];
+							window.hangarInitQueue.push(function(){ try{ var el = document.getElementById('syncDebugUrl'); if (el){ el.textContent = getServerUrl(); } }catch(e){} });
+						})();
 						</script>
 
 			<!-- Timetable API Integration - NACH AeroDataBox API laden -->

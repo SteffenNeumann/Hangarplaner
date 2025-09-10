@@ -637,6 +637,19 @@
 			}
 		}
 
+		// Force-refresh header mode label when mode changes
+		function refreshHeaderModeLabel(){
+			try {
+				const el = document.getElementById('sync-mode');
+				if (!el) return;
+				const mode = (window.sharingManager && window.sharingManager.syncMode) || 'standalone';
+				el.classList.remove('master','slave','standalone','write-only');
+				if (mode === 'master') { el.textContent = 'Master'; el.classList.add('master'); }
+				else if (mode === 'sync') { el.textContent = 'Sync Read only'; el.classList.add('slave'); }
+				else { el.textContent = 'Standalone'; el.classList.add('standalone'); }
+			} catch(e){}
+		}
+
 		// Öffne linke Submenüs bei Klick auf Status-Zeilen
 		container.querySelectorAll('.status-row[data-open-submenu]').forEach(row => {
 			row.addEventListener('click', () => {
@@ -709,6 +722,11 @@
 		if (readToggleForLoad) readToggleForLoad.addEventListener('change', updateHeaderLastLoad);
 		if (writeToggleForLoad) writeToggleForLoad.addEventListener('change', updateHeaderLastLoad);
 		setTimeout(updateHeaderLastLoad, 0);
+		// Listen to mode changes and refresh header label
+		document.addEventListener('syncModeChanged', refreshHeaderModeLabel);
+		const modeCtlHeader = document.getElementById('syncModeControl');
+		if (modeCtlHeader) modeCtlHeader.addEventListener('change', () => setTimeout(refreshHeaderModeLabel, 0));
+		setTimeout(refreshHeaderModeLabel, 0);
 
 		// Optional coupling retained (no project label to update); guard for missing elements.
 		let couplingInProgress = false;

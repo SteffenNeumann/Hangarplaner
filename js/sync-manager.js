@@ -71,6 +71,7 @@ class SharingManager {
     console.log(`📤 Write Data Toggle: ${enabled ? "AN" : "AUS"}`);
   }
   handleModeControlChange(mode){ if (!mode) return; this.updateSyncModeByString(mode); }
+  _emitModeChanged(){ try { document.dispatchEvent(new CustomEvent('syncModeChanged', { detail: { mode: this.syncMode } })); } catch(_e){} }
   async updateSyncModeByString(mode){
     try {
       if (mode === 'standalone') { await this.enableStandaloneMode(); }
@@ -80,6 +81,7 @@ class SharingManager {
         await this.loadServerDataImmediately();
       }
       this.saveSharingSettings();
+      this._emitModeChanged();
     } catch(e){ console.error('updateSyncModeByString failed', e); }
   }
   async ensureNoActiveMaster(){
@@ -112,7 +114,7 @@ class SharingManager {
     this._clearFallbackTimers();
     if (window.serverSync){ window.serverSync.isMaster = false; window.serverSync.isSlaveActive = false; }
     this.syncMode = 'standalone'; this.isLiveSyncEnabled = false; this.isMasterMode = false;
-    this.updateAllSyncDisplays('Standalone', false); this.applyReadOnlyUIState(false); this.showNotification('Standalone-Modus aktiviert - Nur lokale Speicherung','info');
+    this.updateAllSyncDisplays('Standalone', false); this.applyReadOnlyUIState(false); this.showNotification('Standalone-Modus aktiviert - Nur lokale Speicherung','info'); this._emitModeChanged();
     console.log('✅ Standalone-Modus aktiviert');
   } catch(e){ console.error('❌ Fehler beim Aktivieren des Standalone-Modus:', e); this.showNotification('Fehler beim Wechsel zu Standalone-Modus','error'); } }
   async enableSyncMode(){ try{
@@ -126,7 +128,7 @@ class SharingManager {
       console.warn('⚠️ startSlaveMode nicht verfügbar – aktiviere Fallback-Polling');
       this._startFallbackReadPolling();
     }
-    this.syncMode = 'sync'; this.isLiveSyncEnabled = true; this.isMasterMode = false; this.updateAllSyncDisplays('Sync', true); this.applyReadOnlyUIState(true); this.showNotification('Sync-Modus aktiviert - Empfange Server-Updates','info'); console.log('✅ Sync-Modus (Slave) aktiviert');
+    this.syncMode = 'sync'; this.isLiveSyncEnabled = true; this.isMasterMode = false; this.updateAllSyncDisplays('Sync', true); this.applyReadOnlyUIState(true); this.showNotification('Sync-Modus aktiviert - Empfange Server-Updates','info'); this._emitModeChanged(); console.log('✅ Sync-Modus (Slave) aktiviert');
   } catch(e){ console.error('❌ Fehler beim Aktivieren des Sync-Modus:', e); this.showNotification('Fehler beim Aktivieren der Synchronisation','error'); await this.enableStandaloneMode(); } }
   async enableMasterMode(){ try{
     console.log('👑 Aktiviere Master-Modus...');
@@ -140,7 +142,7 @@ class SharingManager {
       this._startFallbackWriteTimer();
       this._startFallbackReadPolling();
     }
-    this.syncMode = 'master'; this.isLiveSyncEnabled = true; this.isMasterMode = true; this.updateAllSyncDisplays('Master', true); this.applyReadOnlyUIState(false); this.showNotification('Master-Modus aktiviert - Sende Daten an Server', 'success'); console.log('✅ Master-Modus aktiviert');
+    this.syncMode = 'master'; this.isLiveSyncEnabled = true; this.isMasterMode = true; this.updateAllSyncDisplays('Master', true); this.applyReadOnlyUIState(false); this.showNotification('Master-Modus aktiviert - Sende Daten an Server', 'success'); this._emitModeChanged(); console.log('✅ Master-Modus aktiviert');
   } catch(e){ console.error('❌ Fehler beim Aktivieren des Master-Modus:', e); this.showNotification('Fehler beim Aktivieren des Master-Modus','error'); await this.enableSyncMode(); } }
   async performLiveSync(){ if (!this.isLiveSyncEnabled) return; try { if (window.serverSync && window.serverSync.syncWithServer){ const success = await window.serverSync.syncWithServer(); if (success){ console.log('🔄 Live Sync erfolgreich'); this.updateSyncStatusIndicator('success'); } else { console.warn('⚠️ Live Sync teilweise fehlgeschlagen'); this.updateSyncStatusIndicator('warning'); } } } catch(e){ console.error('❌ Live Sync Fehler:', e); this.updateSyncStatusIndicator('error'); } }
   async performManualSync(){

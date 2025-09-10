@@ -2726,9 +2726,40 @@ window.sharingManager = {
 							initialized: true,
 							serverSyncUrl: (function(){ try { return window.location.origin + '/sync/data.php'; } catch(_e){ return '/sync/data.php'; } })(),
 							updateAllSyncDisplays: function(){ try { const el = document.getElementById('sync-mode'); if (el){ const txt = this.syncMode==='master'?'Master':(this.syncMode==='sync'?'Sync':'Standalone'); el.textContent = txt; el.classList.remove('master','slave','standalone','write-only'); el.classList.add(this.syncMode==='master'?'master':(this.syncMode==='sync'?'slave':'standalone')); } } catch(e){} },
-							enableStandaloneMode: function(){ try{ if (window.serverSync){ window.serverSync.isMaster=false; window.serverSync.isSlaveActive=false; if (typeof window.serverSync.stopPeriodicSync==='function') window.serverSync.stopPeriodicSync(); } this.syncMode='standalone'; this.updateAllSyncDisplays(); } catch(e){ console.warn(e); } },
-							enableSyncMode: function(){ try{ if (window.serverSync){ window.serverSync.isMaster=false; window.serverSync.isSlaveActive=true; if (typeof window.serverSync.startSlaveMode==='function') window.serverSync.startSlaveMode(); } this.syncMode='sync'; this.updateAllSyncDisplays(); } catch(e){ console.warn(e); } },
-							enableMasterMode: function(){ try{ if (window.serverSync){ window.serverSync.isMaster=true; window.serverSync.isSlaveActive=false; if (typeof window.serverSync.startMasterMode==='function') window.serverSync.startMasterMode(); } this.syncMode='master'; this.updateAllSyncDisplays(); } catch(e){ console.warn(e); } },
+							applyReadOnlyUIState: function(isReadOnly){
+								try {
+									const ro = !!isReadOnly;
+									document.body.classList.toggle('read-only', ro);
+									const containers = [ document.getElementById('hangarGrid'), document.getElementById('secondaryHangarGrid') ];
+									containers.forEach((container)=>{
+										if (!container) return;
+										const controls = container.querySelectorAll('input, textarea, select');
+										controls.forEach((el)=>{
+											if (ro){ if (!el.disabled){ el.setAttribute('data-readonly-disabled','true'); el.disabled = true; } }
+											else { if (el.hasAttribute('data-readonly-disabled')){ el.disabled = false; el.removeAttribute('data-readonly-disabled'); } }
+										});
+									});
+									// Simple modal on interaction with disabled controls (rate-limited)
+									const ensureModal = function(){ let overlay = document.getElementById('readOnlyModalOverlay'); if (overlay) return overlay; overlay = document.createElement('div'); overlay.id='readOnlyModalOverlay'; overlay.style.cssText='position:fixed;inset:0;display:none;background:rgba(0,0,0,0.45);z-index:10000;align-items:center;justify-content:center;padding:12px;'; const panel=document.createElement('div'); panel.id='readOnlyModalPanel'; panel.style.cssText='max-width:480px;width:100%;background:#ffffff;color:#1f2937;border-radius:10px;border:1px solid #e5e7eb;box-shadow:0 10px 24px rgba(0,0,0,0.15);padding:16px 18px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;'; panel.innerHTML='<div style="font-weight:700;font-size:14px;margin-bottom:4px;">Read-Only Mode</div><div style="font-size:13px;color:#4b5563;">This client is in Sync (read-only). Changes will not be saved to the server.</div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;"><button id="roModalOk" type="button" style="background:#0ea5e9;color:#fff;border:1px solid #0284c7;border-radius:8px;padding:6px 12px;font-weight:600;">OK</button></div>';
+									overlay.appendChild(panel); document.body.appendChild(overlay);
+									panel.querySelector('#roModalOk').addEventListener('click', ()=>{ overlay.style.display='none'; });
+									overlay.addEventListener('click', (e)=>{ if (e.target===overlay) overlay.style.display='none'; });
+									return overlay; };
+									if (ro && !this._roGuardHandler){
+										this._roModalLast = this._roModalLast || 0;
+										this._roGuardHandler = (ev)=>{
+											try { const tgt = ev.target; if (!tgt) return; const control = tgt.closest('input, textarea, select, button'); if (!control) return; const blocked = control.disabled || control.getAttribute('aria-disabled')==='true'; if (blocked){ ev.preventDefault(); ev.stopPropagation(); const now=Date.now(); if (now-(this._roModalLast||0) > 3000){ this._roModalLast = now; ensureModal().style.display='flex'; } } } catch(_e){}
+										};
+										document.addEventListener('pointerdown', this._roGuardHandler, true);
+									} else if (!ro && this._roGuardHandler){
+										document.removeEventListener('pointerdown', this._roGuardHandler, true);
+										this._roGuardHandler = null;
+									}
+								} catch(e){ console.warn('fallback applyReadOnlyUIState failed', e); }
+							},
+							enableStandaloneMode: function(){ try{ if (window.serverSync){ window.serverSync.isMaster=false; window.serverSync.isSlaveActive=false; if (typeof window.serverSync.stopPeriodicSync==='function') window.serverSync.stopPeriodicSync(); } this.syncMode='standalone'; this.updateAllSyncDisplays(); this.applyReadOnlyUIState(false); } catch(e){ console.warn(e); } },
+							enableSyncMode: function(){ try{ if (window.serverSync){ window.serverSync.isMaster=false; window.serverSync.isSlaveActive=true; if (typeof window.serverSync.startSlaveMode==='function') window.serverSync.startSlaveMode(); } this.syncMode='sync'; this.updateAllSyncDisplays(); this.applyReadOnlyUIState(true); } catch(e){ console.warn(e); } },
+							enableMasterMode: function(){ try{ if (window.serverSync){ window.serverSync.isMaster=true; window.serverSync.isSlaveActive=false; if (typeof window.serverSync.startMasterMode==='function') window.serverSync.startMasterMode(); } this.syncMode='master'; this.updateAllSyncDisplays(); this.applyReadOnlyUIState(false); } catch(e){ console.warn(e); } },
 							handleModeControlChange: function(v){ if (v==='standalone') this.enableStandaloneMode(); else if (v==='sync') this.enableSyncMode(); else if (v==='master') this.enableMasterMode(); },
 							performManualSync: async function(){ try{ if (!window.serverSync) return false; if (typeof window.serverSync.manualSync==='function') return await window.serverSync.manualSync(); if (typeof window.serverSync.syncWithServer==='function') return await window.serverSync.syncWithServer(); return false; } catch(e){ console.warn(e); return false; } }
 						};

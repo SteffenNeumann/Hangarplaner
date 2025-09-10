@@ -71,9 +71,8 @@ body.dark-mode {
 }
 
 /* Textfelder und Infos */
-.dark-mode .info-label,
-.dark-mode .info-value {
-	color: var(--dark-text);
+.dark-mode .info-label {
+	color: var(--text-secondary) !important;
 }
 
 .dark-mode .info-grid {

@@ -498,7 +498,7 @@ select.status-selector {
 .info-label {
 	text-align: right;
 	font-weight: 500;
-	color: #2d3142; /* Angepasst auf die gleiche Farbe wie Aircraft ID */
+	color: #64748b; /* lighter grey to de-emphasize labels */
 	white-space: nowrap;
 	padding-right: 5px;
 	width: fit-content;
@@ -545,6 +545,49 @@ select.status-selector {
 .info-input::placeholder {
 	color: #9ca3af;
 	font-style: italic;
+}
+
+/* Arr/Dep placeholders: hidden by default; show on input hover or focus (light + dark) */
+#hangarGrid .hangar-cell input[id^="arrival-time-"]::placeholder,
+#hangarGrid .hangar-cell input[id^="departure-time-"]::placeholder,
+#secondaryHangarGrid .hangar-cell input[id^="arrival-time-"]::placeholder,
+#secondaryHangarGrid .hangar-cell input[id^="departure-time-"]::placeholder {
+	color: transparent !important;
+	transition: color .15s ease;
+}
+#hangarGrid .hangar-cell input[id^="arrival-time-"]:hover::placeholder,
+#hangarGrid .hangar-cell input[id^="arrival-time-"]:focus::placeholder,
+#hangarGrid .hangar-cell input[id^="departure-time-"]:hover::placeholder,
+#hangarGrid .hangar-cell input[id^="departure-time-"]:focus::placeholder,
+#secondaryHangarGrid .hangar-cell input[id^="arrival-time-"]:hover::placeholder,
+#secondaryHangarGrid .hangar-cell input[id^="arrival-time-"]:focus::placeholder,
+#secondaryHangarGrid .hangar-cell input[id^="departure-time-"]:hover::placeholder,
+#secondaryHangarGrid .hangar-cell input[id^="departure-time-"]:focus::placeholder {
+	color: #9ca3af !important;
+}
+/* Dark mode placeholder color on hover/focus */
+.dark-mode #hangarGrid .hangar-cell input[id^="arrival-time-"]:hover::placeholder,
+.dark-mode #hangarGrid .hangar-cell input[id^="arrival-time-"]:focus::placeholder,
+.dark-mode #hangarGrid .hangar-cell input[id^="departure-time-"]:hover::placeholder,
+.dark-mode #hangarGrid .hangar-cell input[id^="departure-time-"]:focus::placeholder,
+.dark-mode #secondaryHangarGrid .hangar-cell input[id^="arrival-time-"]:hover::placeholder,
+.dark-mode #secondaryHangarGrid .hangar-cell input[id^="arrival-time-"]:focus::placeholder,
+.dark-mode #secondaryHangarGrid .hangar-cell input[id^="departure-time-"]:hover::placeholder,
+.dark-mode #secondaryHangarGrid .hangar-cell input[id^="departure-time-"]:focus::placeholder {
+	color: var(--text-muted) !important;
+}
+
+/* Date/time picker icon visibility: hidden by default; show on input hover/focus */
+#hangarGrid .hangar-cell input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+#secondaryHangarGrid .hangar-cell input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+	opacity: 0 !important;
+	transition: opacity .15s ease;
+}
+#hangarGrid .hangar-cell input[type="datetime-local"]:hover::-webkit-calendar-picker-indicator,
+#hangarGrid .hangar-cell input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator,
+#secondaryHangarGrid .hangar-cell input[type="datetime-local"]:hover::-webkit-calendar-picker-indicator,
+#secondaryHangarGrid .hangar-cell input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
+	opacity: 1 !important;
 }
 
 /* Keep compact date-time input and its button in a single grid cell using absolute button */

@@ -2707,9 +2707,10 @@ type="datetime-local"
 					function installFallbackManager(){
 						if (window.sharingManager) return;
 						console.warn('SharingManager missing; installing minimal fallback');
-						window.sharingManager = {
+window.sharingManager = {
 							syncMode: 'standalone',
 							initialized: true,
+							serverSyncUrl: (function(){ try { return window.location.origin + '/sync/data.php'; } catch(_e){ return '/sync/data.php'; } })(),
 							updateAllSyncDisplays: function(){ try { const el = document.getElementById('sync-mode'); if (el){ const txt = this.syncMode==='master'?'Master':(this.syncMode==='sync'?'Sync':'Standalone'); el.textContent = txt; el.classList.remove('master','slave','standalone','write-only'); el.classList.add(this.syncMode==='master'?'master':(this.syncMode==='sync'?'slave':'standalone')); } } catch(e){} },
 							enableStandaloneMode: function(){ try{ if (window.serverSync){ window.serverSync.isMaster=false; window.serverSync.isSlaveActive=false; if (typeof window.serverSync.stopPeriodicSync==='function') window.serverSync.stopPeriodicSync(); } this.syncMode='standalone'; this.updateAllSyncDisplays(); } catch(e){ console.warn(e); } },
 							enableSyncMode: function(){ try{ if (window.serverSync){ window.serverSync.isMaster=false; window.serverSync.isSlaveActive=true; if (typeof window.serverSync.startSlaveMode==='function') window.serverSync.startSlaveMode(); } this.syncMode='sync'; this.updateAllSyncDisplays(); } catch(e){ console.warn(e); } },

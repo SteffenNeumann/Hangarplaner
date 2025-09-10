@@ -155,7 +155,11 @@ class ServerSync {
 	 * VEREINFACHT: Nur Standard Server-URL ohne Projekt-IDs
 	 */
 	getServerUrl() {
-		return this.serverSyncUrl;
+		try {
+			return this.serverSyncUrl || (window.location.origin + "/sync/data.php");
+		} catch(_e) {
+			return this.serverSyncUrl || "/sync/data.php";
+		}
 	}
 
 	/**

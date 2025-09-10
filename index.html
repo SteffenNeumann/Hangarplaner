@@ -2704,6 +2704,25 @@ type="datetime-local"
 						<script>
 				// Minimal fallback if Sharing Manager script failed to load (ad blocker or network)
 				(function(){
+					function ensureSyncGlobals(){
+						try {
+							// Ensure serverSyncUrl and storageBrowser alias exist
+							if (window.serverSync) {
+								if (!window.serverSync.serverSyncUrl) {
+									window.serverSync.serverSyncUrl = (function(){ try { return window.location.origin + '/sync/data.php'; } catch(_e){ return '/sync/data.php'; } })();
+								}
+								if (!window.storageBrowser) {
+									window.storageBrowser = window.serverSync;
+								}
+							} else if (!window.storageBrowser) {
+								// Install a minimal alias so improved-event-manager can proceed
+								window.storageBrowser = {
+									serverSyncUrl: (function(){ try { return window.location.origin + '/sync/data.php'; } catch(_e){ return '/sync/data.php'; } })(),
+									syncWithServer: ()=> Promise.resolve(false)
+								};
+							}
+						} catch(_e){}
+					}
 					function installFallbackManager(){
 						if (window.sharingManager) return;
 						console.warn('SharingManager missing; installing minimal fallback');
@@ -2722,7 +2741,8 @@ window.sharingManager = {
 						console.log('Minimal Sync Manager fallback installed');
 					}
 					window.hangarInitQueue = window.hangarInitQueue || [];
-					window.hangarInitQueue.push(function(){ setTimeout(installFallbackManager, 400); });
+					window.hangarInitQueue.push(function(){ setTimeout(function(){ ensureSyncGlobals(); installFallbackManager(); }, 400); });
+					try { document.addEventListener('DOMContentLoaded', function(){ ensureSyncGlobals(); }, { once: true }); } catch(_e){}
 				})();
 						</script>
 

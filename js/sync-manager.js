@@ -163,14 +163,14 @@ class SharingManager {
           panel.id = 'readOnlyModalPanel';
           panel.style.cssText = 'max-width:480px;width:100%;background:#ffffff;color:#1f2937;border-radius:10px;border:1px solid #e5e7eb;box-shadow:0 10px 24px rgba(0,0,0,0.15);padding:16px 18px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;';
           panel.innerHTML = `
-            <div style="display:flex;align-items:flex-start;gap:10px;">
+            <div style="display:flex; align-items:flex-start; gap:12px;">
               <div style="flex:1 1 auto;">
-                <div style="font-weight:700;font-size:14px;margin-bottom:4px;">Read-Only Mode</div>
-                <div style="font-size:13px;color:#4b5563;">This client is in Sync (read-only). Changes will not be saved to the server.</div>
+                <div style="font-weight:700; font-size:15px; margin-bottom:6px; letter-spacing:.01em;">Read-Only Mode</div>
+                <div style="font-size:13px; color: var(--text-medium); line-height:1.45;">This client is in Sync (read-only). Changes are disabled and won’t be saved to the server.</div>
               </div>
             </div>
-            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-              <button id="roModalOk" type="button" style="background:#0ea5e9;color:#fff;border:1px solid #0284c7;border-radius:8px;padding:6px 12px;font-weight:600;">OK</button>
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:14px;">
+              <button id="roModalOk" type="button" style="background: var(--menu-accent); color:#fff; border:1px solid var(--menu-accent); border-radius:10px; padding:8px 14px; font-weight:700; letter-spacing:.02em; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">OK</button>
             </div>
           `;
           overlay.appendChild(panel);

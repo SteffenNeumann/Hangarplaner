@@ -166,31 +166,183 @@ else if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception("Keine Schreibberechtigung für die Datei");
         }
         
-        // JSON neu formatieren für bessere Lesbarkeit
-        $formattedJson = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        // UPDATE: Multi-master merge with tile-level patching
+        // 1) Load existing server data (under a file lock)
+        $existing = [];
+        $merged = [];
+        $appliedTiles = 0;
+        $payload = '';
 
-        // Update lock (or acquire if free/expired)
+        // Normalize helpers
+        $normalize_tile = function($tile) {
+            if (!is_array($tile)) $tile = [];
+            $tile['tileId'] = isset($tile['tileId']) ? intval($tile['tileId']) : 0;
+            foreach (['aircraftId','arrivalTime','departureTime','position','hangarPosition','status','towStatus','notes'] as $k) {
+                if (!array_key_exists($k, $tile)) { $tile[$k] = isset($tile[$k]) ? $tile[$k] : ''; }
+            }
+            return $tile;
+        };
+        $tiles_to_map = function($tiles) use ($normalize_tile) {
+            $map = [];
+            if (!is_array($tiles)) return $map;
+            foreach ($tiles as $t) {
+                $t = $normalize_tile($t);
+                $id = intval($t['tileId'] ?? 0);
+                if ($id) $map[$id] = $t;
+            }
+            return $map;
+        };
+        $map_to_sorted_array = function($map) {
+            ksort($map, SORT_NUMERIC);
+            return array_values($map);
+        };
+
+        // Update lock info for diagnostics (non-blocking policy)
         $newLock = [
             'sessionId' => $sessionId,
             'displayName' => $displayName,
             'lastSeen' => $now,
-            'since' => (is_array($lock) && $holder === $sessionId && isset($lock['since'])) ? $lock['since'] : $now,
+            'since' => (is_array($lock) && ($lock['sessionId'] ?? '') === $sessionId && isset($lock['since'])) ? $lock['since'] : $now,
         ];
         @file_put_contents($lockFile, json_encode($newLock, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
         @chmod($lockFile, 0664);
-        
-        // Daten in Datei speichern
-        $result = file_put_contents($dataFile, $formattedJson, LOCK_EX);
-        
-        if ($result === false) {
-            throw new Exception("Fehler beim Schreiben der Datei");
+
+        // Open data file for atomic read-modify-write
+        $fp = @fopen($dataFile, 'c+');
+        if ($fp) {
+            if (@flock($fp, LOCK_EX)) {
+                // Read existing
+                @rewind($fp);
+                $raw = '';
+                while (!feof($fp)) {
+                    $chunk = fread($fp, 8192);
+                    if ($chunk === false) break;
+                    $raw .= $chunk;
+                }
+                $existing = json_decode($raw, true);
+                if (!is_array($existing)) $existing = [];
+
+                // Prepare merged baseline
+                $merged = $existing;
+                if (!isset($merged['primaryTiles']) || !is_array($merged['primaryTiles'])) $merged['primaryTiles'] = [];
+                if (!isset($merged['secondaryTiles']) || !is_array($merged['secondaryTiles'])) $merged['secondaryTiles'] = [];
+                if (!isset($merged['settings']) || !is_array($merged['settings'])) $merged['settings'] = [];
+                if (!isset($merged['metadata']) || !is_array($merged['metadata'])) $merged['metadata'] = [];
+
+                // 2) Merge settings shallow + displayOptions deep
+                if (isset($data['settings']) && is_array($data['settings'])) {
+                    foreach ($data['settings'] as $k => $v) {
+                        if ($k === 'displayOptions' && is_array($v)) {
+                            if (!isset($merged['settings']['displayOptions']) || !is_array($merged['settings']['displayOptions'])) {
+                                $merged['settings']['displayOptions'] = [];
+                            }
+                            foreach ($v as $dk => $dv) { $merged['settings']['displayOptions'][$dk] = $dv; }
+                        } else {
+                            $merged['settings'][$k] = $v;
+                        }
+                    }
+                }
+
+                // 3) Tile-level merge
+                $serverPrimaryMap = $tiles_to_map($merged['primaryTiles']);
+                $serverSecondaryMap = $tiles_to_map($merged['secondaryTiles']);
+                $tileKeys = ['aircraftId','arrivalTime','departureTime','position','hangarPosition','status','towStatus','notes'];
+
+                $apply_tile_if_changed = function(&$map, $ptile) use ($tileKeys, $normalize_tile, &$appliedTiles) {
+                    $ptile = $normalize_tile($ptile);
+                    $id = intval($ptile['tileId'] ?? 0);
+                    if (!$id) return;
+                    $serverTile = isset($map[$id]) ? $map[$id] : [];
+                    $changed = false;
+                    foreach ($tileKeys as $k) {
+                        if (array_key_exists($k, $ptile)) {
+                            $old = $serverTile[$k] ?? null;
+                            $new = $ptile[$k];
+                            if ($old !== $new) { $changed = true; }
+                        }
+                    }
+                    if ($changed) {
+                        $map[$id] = array_merge($serverTile, $ptile);
+                        $map[$id]['tileId'] = $id;
+                        $map[$id]['updatedAt'] = date('c');
+                        $appliedTiles++;
+                    }
+                };
+
+                // If fieldUpdates provided, prefer fine-grained patching
+                if (isset($data['fieldUpdates']) && is_array($data['fieldUpdates'])) {
+                    foreach ($data['fieldUpdates'] as $fid => $val) {
+                        $tid = null; $field = null; $isSecondary = false;
+                        if (preg_match('/^aircraft-(\d+)$/', $fid, $m)) { $tid = intval($m[1]); $field = 'aircraftId'; }
+                        elseif (preg_match('/^arrival-time-(\d+)$/', $fid, $m)) { $tid = intval($m[1]); $field = 'arrivalTime'; }
+                        elseif (preg_match('/^departure-time-(\d+)$/', $fid, $m)) { $tid = intval($m[1]); $field = 'departureTime'; }
+                        elseif (preg_match('/^hangar-position-(\d+)$/', $fid, $m)) { $tid = intval($m[1]); $field = 'hangarPosition'; }
+                        elseif (preg_match('/^position-(\d+)$/', $fid, $m)) { $tid = intval($m[1]); $field = 'position'; }
+                        elseif (preg_match('/^status-(\d+)$/', $fid, $m)) { $tid = intval($m[1]); $field = 'status'; }
+                        elseif (preg_match('/^tow-status-(\d+)$/', $fid, $m)) { $tid = intval($m[1]); $field = 'towStatus'; }
+                        elseif (preg_match('/^notes-(\d+)$/', $fid, $m)) { $tid = intval($m[1]); $field = 'notes'; }
+                        if ($tid !== null && $field) {
+                            $isSecondary = ($tid >= 100);
+                            if ($isSecondary) {
+                                if (!isset($serverSecondaryMap[$tid])) { $serverSecondaryMap[$tid] = ['tileId' => $tid]; }
+                                $old = $serverSecondaryMap[$tid][$field] ?? null;
+                                if ($old !== $val) { $serverSecondaryMap[$tid][$field] = $val; $serverSecondaryMap[$tid]['updatedAt'] = date('c'); $appliedTiles++; }
+                            } else {
+                                if (!isset($serverPrimaryMap[$tid])) { $serverPrimaryMap[$tid] = ['tileId' => $tid]; }
+                                $old = $serverPrimaryMap[$tid][$field] ?? null;
+                                if ($old !== $val) { $serverPrimaryMap[$tid][$field] = $val; $serverPrimaryMap[$tid]['updatedAt'] = date('c'); $appliedTiles++; }
+                            }
+                        }
+                    }
+                } else {
+                    // Otherwise, merge posted tiles by difference
+                    if (isset($data['primaryTiles']) && is_array($data['primaryTiles'])) {
+                        foreach ($data['primaryTiles'] as $pt) { $apply_tile_if_changed($serverPrimaryMap, $pt); }
+                    }
+                    if (isset($data['secondaryTiles']) && is_array($data['secondaryTiles'])) {
+                        foreach ($data['secondaryTiles'] as $pt) { $apply_tile_if_changed($serverSecondaryMap, $pt); }
+                    }
+                }
+
+                // Rebuild arrays
+                $merged['primaryTiles'] = $map_to_sorted_array($serverPrimaryMap);
+                $merged['secondaryTiles'] = $map_to_sorted_array($serverSecondaryMap);
+
+                // 4) Metadata update (server-side)
+                $merged['metadata'] = is_array($merged['metadata']) ? $merged['metadata'] : [];
+                $merged['metadata']['lastModified'] = date('c');
+                $merged['metadata']['timestamp'] = round(microtime(true) * 1000);
+                if ($displayName !== '') $merged['metadata']['lastWriter'] = $displayName;
+                $merged['metadata']['lastWriterSession'] = $sessionId;
+
+                // 5) Write back under the same lock
+                $payload = json_encode($merged, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                if ($payload === false) { throw new Exception('JSON encoding failed'); }
+                @ftruncate($fp, 0);
+                @rewind($fp);
+                $wrote = @fwrite($fp, $payload);
+                @fflush($fp);
+                @flock($fp, LOCK_UN);
+                @fclose($fp);
+                if ($wrote === false) { throw new Exception('Fehler beim Schreiben der Datei'); }
+            } else {
+                @fclose($fp);
+                throw new Exception('Konnte Dateisperre nicht erhalten');
+            }
+        } else {
+            // Fallback: no atomic merge possible, write posted data as-is
+            $payload = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            if ($payload === false) { throw new Exception('JSON encoding failed (fallback)'); }
+            $result = file_put_contents($dataFile, $payload, LOCK_EX);
+            if ($result === false) { throw new Exception('Fehler beim Schreiben der Datei (fallback)'); }
         }
-        
+
         // Erfolgsantwort
         echo json_encode([
             'message' => 'Daten erfolgreich gespeichert',
-            'timestamp' => $data['metadata']['timestamp'],
-            'size' => strlen($formattedJson),
+            'timestamp' => isset($merged['metadata']['timestamp']) ? $merged['metadata']['timestamp'] : ($data['metadata']['timestamp'] ?? round(microtime(true)*1000)),
+            'appliedTiles' => $appliedTiles,
+            'size' => strlen($payload),
             'success' => true
         ]);
         

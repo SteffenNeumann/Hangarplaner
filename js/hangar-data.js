@@ -1633,8 +1633,80 @@ window.generateDefaultProjectName = generateDefaultProjectName;
 		}
 	}
 
-	// expose
+// expose
 	window.createOrUpdateLastUpdateBadge = createOrUpdateLastUpdateBadge;
+
+	// === Subtle Author Pill (dismissible) ===
+	(function(){
+		const STORE_KEY = 'hangar.updateAuthorRead'; // map of "cellId|tsMs" → true
+		function loadRead(){ try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}') || {}; } catch(e){ return {}; } }
+		function saveRead(obj){ try { localStorage.setItem(STORE_KEY, JSON.stringify(obj)); } catch(e){} }
+		function keyOf(cellId, ts){ return `${cellId}|${ts}`; }
+		function hasRead(cellId, ts){ const s = loadRead(); return !!s[keyOf(cellId, ts)]; }
+		function markRead(cellId, ts){ const s = loadRead(); s[keyOf(cellId, ts)] = true; saveRead(s); }
+
+		function createOrUpdateUpdateAuthorPill(cellId, author, timestampMs, options = {}){
+			try {
+				const ts = parseInt(timestampMs, 10);
+				if (!cellId || !ts || !author) return;
+				if (hasRead(cellId, ts)) return; // already acknowledged
+
+				let tile = document.querySelector(`[data-cell-id="${cellId}"]`);
+				if (!tile && cellId >= 1 && cellId <= 100) tile = document.querySelector(`#hangarGrid .hangar-cell:nth-child(${cellId})`);
+				if (!tile && cellId >= 101) tile = document.querySelector(`#secondaryHangarGrid .hangar-cell:nth-child(${cellId-100})`);
+				if (!tile) return;
+
+				// Remove older pill with different ts
+				const existing = tile.querySelector('.update-author-pill');
+				if (existing) existing.remove();
+
+				const pill = document.createElement('div');
+				pill.className = 'update-author-pill';
+				pill.dataset.timestamp = String(ts);
+				pill.dataset.cellId = String(cellId);
+				pill.title = `Updated by ${author} at ${new Date(ts).toLocaleString()}`;
+				pill.textContent = `Updated by ${author}`;
+
+				// Dismiss (mark as read) button
+				const btn = document.createElement('button');
+				btn.type = 'button';
+				btn.className = 'update-author-pill-btn';
+				btn.title = 'Mark as read';
+				btn.textContent = '✓';
+				btn.addEventListener('click', (e) => {
+					e.stopPropagation();
+					markRead(cellId, ts);
+					pill.remove();
+				});
+				pill.appendChild(btn);
+
+				// Place near the last-update-badge inside header
+				const header = tile.querySelector('.card-header');
+				const headerEls = header ? header.querySelector('.header-elements') : null;
+				if (headerEls) {
+					// insert before existing last-update-badge if present, else before right block
+					const lastBadge = headerEls.querySelector('.last-update-badge');
+					if (lastBadge && lastBadge.parentNode) {
+						lastBadge.parentNode.insertBefore(pill, lastBadge);
+					} else {
+						const rightBlock = headerEls.querySelector('.position-container');
+						if (rightBlock) headerEls.insertBefore(pill, rightBlock); else headerEls.appendChild(pill);
+					}
+				} else {
+					tile.appendChild(pill);
+				}
+			} catch(e){ /* ignore */ }
+		}
+
+		window.createOrUpdateUpdateAuthorPill = createOrUpdateUpdateAuthorPill;
+		window.AuthorPills = {
+			markRead,
+			hasRead,
+			remove(cellId){ const host = document.querySelector(`[data-cell-id="${cellId}"]`); if (host){ const el = host.querySelector('.update-author-pill'); if (el) el.remove(); }},
+			clearAll(){ document.querySelectorAll('.update-author-pill').forEach(el => el.remove()); localStorage.removeItem(STORE_KEY); }
+		};
+	})();
+
 	window.LastUpdateBadges = {
 		load: loadStore,
 		save: saveStore,

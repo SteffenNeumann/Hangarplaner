@@ -1406,6 +1406,48 @@ body:not(.dark-mode) .tow-status-selector:not(.tow-initiated):not(.tow-ongoing):
   margin: 0 auto;
 }
 
+/* Subtle author pill for multi-master updates */
+.update-author-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px;
+  border-radius: 9999px;
+  font-size: 10px;
+  line-height: 1;
+  background: #f8fafc; /* slate-50 */
+  color: #475569; /* slate-600 */
+  border: 1px solid #e2e8f0; /* slate-200 */
+  box-shadow: none;
+}
+.update-author-pill-btn {
+  background: transparent;
+  border: 1px solid #94a3b8; /* slate-400 */
+  color: #334155; /* slate-700 */
+  border-radius: 9999px;
+  padding: 0 6px;
+  font-size: 10px;
+  line-height: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+.update-author-pill-btn:hover {
+  background: #e2e8f0; /* slate-200 */
+}
+
+.dark-mode .update-author-pill {
+  background: rgba(148, 163, 184, 0.12); /* slate-400 alpha */
+  color: #cbd5e1; /* slate-300 */
+  border-color: rgba(148,163,184,0.35);
+}
+.dark-mode .update-author-pill-btn {
+  border-color: rgba(148,163,184,0.6);
+  color: #e2e8f0;
+}
+.dark-mode .update-author-pill-btn:hover {
+  background: rgba(148,163,184,0.25);
+}
+
 .dark-mode .tile-delete-btn { color: #6b7280; }
 .dark-mode .tile-delete-btn:hover { color: #f87171; }
 

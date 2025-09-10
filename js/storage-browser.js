@@ -59,42 +59,57 @@ class ServerSync {
 			console.log("📥 Lade einmalige Server-Daten beim Erststart...");
 
 			const serverData = await this.loadFromServer();
-			if (serverData && !serverData.error) {
-				// Prüfe ob gültige Daten vorhanden sind
-				const hasValidData =
-					(serverData.primaryTiles && serverData.primaryTiles.length > 0) ||
-					(serverData.secondaryTiles && serverData.secondaryTiles.length > 0) ||
-					(serverData.settings &&
-						Object.keys(serverData.settings).length > 0) ||
-					(serverData.metadata && serverData.metadata.projectName);
+            if (serverData && !serverData.error) {
+                // Prüfe ob gültige Daten vorhanden sind
+                const hasValidData =
+                    (serverData.primaryTiles && serverData.primaryTiles.length > 0) ||
+                    (serverData.secondaryTiles && serverData.secondaryTiles.length > 0) ||
+                    (serverData.settings && Object.keys(serverData.settings).length > 0) ||
+                    (serverData.metadata && serverData.metadata.projectName);
 
-				if (hasValidData) {
-					await this.applyServerData(serverData);
-					console.log("✅ Erststart Server-Daten erfolgreich geladen");
-
-					if (window.showNotification) {
-						window.showNotification("Server-Daten beim Start geladen", "info");
-					}
-				} else {
-					console.log("📭 Keine gültigen Server-Daten beim Erststart gefunden");
-				}
-			} else {
-				console.log("ℹ️ Keine Server-Daten beim Erststart verfügbar");
-			}
-		} catch (error) {
-			console.error("❌ Fehler beim Laden der Erststart Server-Daten:", error);
-		}
-	}
-
-	/**
-	 * Startet periodische Synchronisation alle 60 Sekunden (optimiert)
-	 */
-	startPeriodicSync() {
-		if (this.serverSyncInterval) {
-			clearInterval(this.serverSyncInterval);
-		}
-
-		this.serverSyncInterval = setInterval(() => {
+                if (hasValidData) {
+                    // Wende Server-Daten an
+                    const applied = await window.serverSync.applyServerData(serverData);
+                    
+                    if (applied) {
+                        console.log("✅ Server-Daten sofort geladen und angewendet");
+                        
+                        // Subtle author pills for tiles updated by server (multi-master)
+                        try {
+                            const allTiles = [];
+                            if (Array.isArray(serverData.primaryTiles)) allTiles.push(...serverData.primaryTiles);
+                            if (Array.isArray(serverData.secondaryTiles)) allTiles.push(...serverData.secondaryTiles);
+                            allTiles.forEach(t => {
+                                const id = parseInt(t?.tileId || 0, 10);
+                                const ts = Date.parse(t?.updatedAt || '') || null;
+                                const author = (t?.updatedBy || serverData?.metadata?.lastWriter || '').trim();
+                                if (id && ts && author && typeof window.createOrUpdateUpdateAuthorPill === 'function') {
+                                    window.createOrUpdateUpdateAuthorPill(id, author, ts, { source: 'server' });
+                                }
+                            });
+                        } catch(_e) {}
+                        
+                        // Benachrichtigung anzeigen falls verfügbar
+                        if (window.showNotification) {
+                            window.showNotification(
+                                `Server-Daten geladen (${this.syncMode} Modus)`,
+                                "success"
+                            );
+                        }
+                        
+                        return true;
+                    } else {
+                        console.warn("⚠️ Server-Daten konnten nicht angewendet werden");
+                        return false;
+                    }
+                } else {
+                    console.log("ℹ️ Keine gültigen Server-Daten gefunden");
+                    return false;
+                }
+            } else {
+                console.log("ℹ️ Keine Server-Daten verfügbar für sofortige Ladung");
+                return false;
+            }
 			// Nur synchronisieren wenn keine andere Sync-Operation läuft UND Daten geändert wurden
 			if (
 				!this.isApplyingServerData &&
@@ -928,13 +943,20 @@ class ServerSync {
 				}
 			}
 
-			// Last-Update Badge aus geladenen Daten wiederherstellen (falls vorhanden)
-			if (tileData.updatedAt && typeof window.createOrUpdateLastUpdateBadge === 'function') {
-				const ts = Date.parse(tileData.updatedAt);
-				if (!isNaN(ts)) {
-					window.createOrUpdateLastUpdateBadge(tileId, 'server', ts, { persist: true });
-				}
-			}
+            // Last-Update Badge aus geladenen Daten wiederherstellen (falls vorhanden)
+            if (tileData.updatedAt && typeof window.createOrUpdateLastUpdateBadge === 'function') {
+                const ts = Date.parse(tileData.updatedAt);
+                if (!isNaN(ts)) {
+                    window.createOrUpdateLastUpdateBadge(tileId, 'server', ts, { persist: true });
+                    // Subtle author pill (multi-master): show "Updated by NAME" until dismissed
+                    try {
+                        const author = (tileData.updatedBy || '').trim();
+                        if (author && typeof window.createOrUpdateUpdateAuthorPill === 'function') {
+                            window.createOrUpdateUpdateAuthorPill(tileId, author, ts, { source: 'server' });
+                        }
+                    } catch(_e) {}
+                }
+            }
 		});
 
 		// NEUE ZUSAMMENFASSUNG

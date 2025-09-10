@@ -370,6 +370,12 @@ class ServerSync {
 		window.isSavingToServer = true;
 
 		try {
+			console.log("📝 syncWithServer(): preparing POST", {
+				isMaster: this.isMaster,
+				serverUrl: this.getServerUrl && this.getServerUrl(),
+				canRead: this.canReadFromServer && this.canReadFromServer(),
+				changesPending: this.hasDataChanged && this.hasDataChanged(),
+			});
 			// Aktuelle Daten sammeln
 			const currentData = this.collectCurrentData();
 
@@ -419,6 +425,7 @@ class ServerSync {
 				} else if (response.status === 423) {
 					let payload = null;
 					try { payload = await response.json(); } catch(_e) {}
+					console.warn("🚫 Master denied by server (423)", payload);
 					console.warn("⛔ Server returned 423 Locked (master lock held)", payload);
 					if (window.showNotification) {
 						const holder = payload?.holder?.displayName ? ` by ${payload.holder.displayName}` : '';
@@ -563,10 +570,12 @@ class ServerSync {
 				const data = await response.json();
 				console.log("✅ Daten vom Server geladen");
 				return data;
-			} else {
-				console.warn("⚠️ Server-Load fehlgeschlagen:", response.status);
-				return null;
-			}
+				} else {
+					let text = '';
+					try { text = await response.text(); } catch(_e){}
+					console.warn("⚠️ Server-Sync fehlgeschlagen:", { status: response.status, body: text.slice(0,200) });
+					return false;
+				}
 		} catch (error) {
 			console.error("❌ Server-Load Fehler:", error);
 			return null;

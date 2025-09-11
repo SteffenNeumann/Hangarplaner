@@ -1786,6 +1786,14 @@ body.dark-mode {
 	appearance: none;
 }
 
+/* Dark mode: keep disabled placeholders dim in Sync-only mode */
+.dark-mode input:disabled::placeholder,
+.dark-mode textarea:disabled::placeholder {
+	color: var(--text-muted) !important;
+	/* WebKit/Blink: ensure placeholder inherits dim color despite -webkit-text-fill-color on disabled */
+	-webkit-text-fill-color: var(--text-muted) !important;
+}
+
 /* Preserve tow chip colors when disabled */
 .dark-mode .tow-status-selector.tow-neutral:disabled {
 	background: var(--bg-secondary) !important;

@@ -1558,6 +1558,12 @@ html:not(.dark-mode) .tow-status-selector:not(.tow-initiated):not(.tow-ongoing):
 	--status-neutral: #a0aec0; /* Neutrales Grau */
 }
 
+/* Planner-only: ensure tile labels (Arr/Dep/Pos/Tow) use secondary grey in dark mode */
+.dark-mode #hangarGrid .info-label,
+.dark-mode #secondaryHangarGrid .info-label {
+	color: var(--text-secondary) !important;
+}
+
 /* Background und Text Colors */
 body.dark-mode {
 	background-color: var(--bg-primary);

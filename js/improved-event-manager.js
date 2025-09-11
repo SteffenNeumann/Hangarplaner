@@ -252,15 +252,10 @@ class HangarEventManager {
 					this._pendingFlushDueAt = 0;
 					await flushFn();
 				} else {
-					// Schedule or reschedule earlier if needed
-					if (!this._pendingFlushTimer){
-						this._pendingFlushDueAt = now + desiredDelay;
-						this._pendingFlushTimer = setTimeout(async () => { await flushFn(); }, desiredDelay);
-					} else if (!this._pendingFlushDueAt || (now + desiredDelay) < this._pendingFlushDueAt) {
-						clearTimeout(this._pendingFlushTimer);
-						this._pendingFlushDueAt = now + desiredDelay;
-						this._pendingFlushTimer = setTimeout(async () => { await flushFn(); }, desiredDelay);
-					}
+					// Trailing debounce: always schedule flush desiredDelay after the most recent update
+					if (this._pendingFlushTimer) { clearTimeout(this._pendingFlushTimer); }
+					this._pendingFlushDueAt = now + desiredDelay;
+					this._pendingFlushTimer = setTimeout(async () => { await flushFn(); }, desiredDelay);
 				}
 			} catch(_e){}
 			// Stop here; legacy immediate single-field path not needed when aggregation is enabled

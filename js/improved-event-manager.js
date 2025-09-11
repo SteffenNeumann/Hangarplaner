@@ -432,6 +432,7 @@ class HangarEventManager {
 		this.setupUnifiedEventHandlers();
 
 		this.initialized = true;
+		try { document.dispatchEvent(new CustomEvent('eventManagerReady')); } catch(_e){}
 	}
 
 	cleanupExistingHandlers() {
@@ -870,7 +871,7 @@ window.hangarInitQueue.push(function () {
 		if (window.hangarEventManager) {
 			window.hangarEventManager.init();
 		}
-	}, 1000);
+	}, 200);
 });
 
 // Für Debugging

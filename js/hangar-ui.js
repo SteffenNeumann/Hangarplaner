@@ -1257,10 +1257,20 @@ const requiredSections = [
 						processedIds.add(element.id);
 					} else {
 						console.warn(
-							"⚠️ Event-Manager nicht verfügbar, verwende Fallback-Handler für:",
+							"⚠️ Event-Manager nicht verfügbar, versuche verzögert zu registrieren:",
 							element.id
 						);
-						// Fallback: Direkte Event-Handler
+						// Try once when Event Manager becomes ready
+						try {
+							document.addEventListener('eventManagerReady', () => {
+								try { if (window.hangarUI && window.hangarUI.setupSecondaryTileEventListeners) window.hangarUI.setupSecondaryTileEventListeners(); } catch(_e){}
+							}, { once: true });
+						} catch(_e){}
+						// Also schedule a short retry
+						setTimeout(() => {
+							try { if (window.hangarUI && window.hangarUI.setupSecondaryTileEventListeners) window.hangarUI.setupSecondaryTileEventListeners(); } catch(_e){}
+						}, 400);
+						// Fallback: Direkte Event-Handler (as last resort)
 						element.addEventListener("input", (event) => {
 							console.log(
 								`📝 Fallback Input: ${event.target.id} = "${event.target.value}"`

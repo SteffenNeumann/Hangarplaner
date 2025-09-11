@@ -239,29 +239,55 @@ class SharingManager {
           if (overlay) return overlay;
           overlay = document.createElement('div');
           overlay.id = 'readOnlyModalOverlay';
-          overlay.style.cssText = 'position:fixed;inset:0;display:none;background:rgba(0,0,0,0.45);z-index:10000;align-items:center;justify-content:center;padding:12px;';
+          overlay.className = 'hp-modal-overlay';
+
           const panel = document.createElement('div');
           panel.id = 'readOnlyModalPanel';
-          panel.style.cssText = 'max-width:480px;width:100%;background:#ffffff;color:#1f2937;border-radius:10px;border:1px solid #e5e7eb;box-shadow:0 10px 24px rgba(0,0,0,0.15);padding:16px 18px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;';
+          panel.className = 'hp-modal';
+          panel.setAttribute('role', 'dialog');
+          panel.setAttribute('aria-modal', 'true');
+          panel.setAttribute('aria-labelledby', 'roModalTitle');
+
           panel.innerHTML = `
-            <div style="display:flex; align-items:flex-start; gap:12px;">
-              <div style="flex:1 1 auto;">
-                <div style="font-weight:700; font-size:15px; margin-bottom:6px; letter-spacing:.01em;">Read-Only Mode</div>
-                <div style="font-size:13px; color: var(--text-medium); line-height:1.45;">This client is in Sync (read-only). Changes are disabled and won’t be saved to the server.</div>
-              </div>
-            </div>
-            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:14px;">
-              <button id="roModalOk" type="button" style="background: var(--menu-accent); color:#fff; border:1px solid var(--menu-accent); border-radius:10px; padding:8px 14px; font-weight:700; letter-spacing:.02em; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">OK</button>
+            <div class="hp-modal-title" id="roModalTitle">Read-only mode is active</div>
+            <div class="hp-modal-body">You're in Sync (read-only). Edits are disabled and won’t be saved to the server.</div>
+            <div class="hp-modal-actions">
+              <button id="roModalSyncSettings" type="button" class="sidebar-btn sidebar-btn-secondary">Open Sync settings</button>
+              <button id="roModalOk" type="button" class="sidebar-btn sidebar-btn-primary">Got it</button>
             </div>
           `;
+
           overlay.appendChild(panel);
           document.body.appendChild(overlay);
-          panel.querySelector('#roModalOk').addEventListener('click', ()=>{ overlay.style.display='none'; });
-          overlay.addEventListener('click', (e)=>{ if (e.target===overlay) overlay.style.display='none'; });
+
+          // Wire actions
+          const okBtn = panel.querySelector('#roModalOk');
+          const openSyncBtn = panel.querySelector('#roModalSyncSettings');
+          const hide = () => { overlay.style.display = 'none'; document.removeEventListener('keydown', escHandler, true); };
+          okBtn.addEventListener('click', hide);
+          openSyncBtn.addEventListener('click', () => {
+            try {
+              const btn = document.querySelector('#leftMenu .menu-item[data-menu=\"sync\"]');
+              if (btn) btn.click();
+            } catch(_e) {}
+            hide();
+          });
+          overlay.addEventListener('click', (e)=>{ if (e.target===overlay) hide(); });
+
+          function escHandler(e){ if (e.key === 'Escape') { hide(); } }
+
+          // Expose a helper to focus the primary button when shown
+          overlay.__focusPrimary = () => { try { okBtn.focus(); } catch(_) {} };
+          overlay.__escHandler = escHandler;
           return overlay;
         };
 
-        const showModal = () => { const ov = ensureModal(); ov.style.display='flex'; };
+        const showModal = () => {
+          const ov = ensureModal();
+          ov.style.display = 'flex';
+          try { document.addEventListener('keydown', ov.__escHandler, true); } catch(_e){}
+          try { if (typeof ov.__focusPrimary === 'function') ov.__focusPrimary(); } catch(_e){}
+        };
 
         if (ro && !this._roGuardHandler) {
           this._roModalLast = this._roModalLast || 0;

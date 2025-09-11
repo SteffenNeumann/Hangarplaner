@@ -151,8 +151,8 @@ class ServerSync {
 						this.syncWithServer();
 					}
 				} catch (_e) {}
-			}, 3000);
-			console.log("⏰ Periodische Server-Sync gestartet (3s Intervall, Change-Detection)");
+			}, 5000);
+			console.log("⏰ Periodische Server-Sync gestartet (5s Intervall, Change-Detection)");
 		} catch (e) {
 			console.warn('startPeriodicSync failed', e);
 		}
@@ -440,6 +440,13 @@ async slaveCheckForUpdates() {
 				canRead: this.canReadFromServer && this.canReadFromServer(),
 				changesPending: this.hasDataChanged && this.hasDataChanged(),
 			});
+			// Pre-flight: if server changed since our last read, pull updates first to avoid overwriting newer data
+			try {
+				const srvTs = await this.getServerTimestamp();
+				if (srvTs > (this.lastServerTimestamp || 0)) {
+					await this.slaveCheckForUpdates();
+				}
+			} catch(_e){}
 			// Aktuelle Daten sammeln
 			const currentData = this.collectCurrentData();
 
@@ -1212,19 +1219,38 @@ async slaveCheckForUpdates() {
 
 			const currentData = this.collectCurrentData();
 
-			// Entferne zeitabhängige Felder für Vergleich
-			const compareData = { ...currentData };
+			// Entferne zeitabhängige Felder und normalisiere Struktur für stabilen Vergleich
+			const compareData = JSON.parse(JSON.stringify(currentData || {}));
 			if (compareData.metadata) {
 				delete compareData.metadata.lastModified;
 				delete compareData.metadata.lastSaved;
+				delete compareData.metadata.lastSync;
+				delete compareData.metadata.timestamp;
+				delete compareData.metadata.lastWriter;
+				delete compareData.metadata.lastWriterSession;
+				delete compareData.metadata.source;
+			}
+			const stableTile = (t) => ({
+				tileId: parseInt(t.tileId || 0, 10) || 0,
+				aircraftId: t.aircraftId || '',
+				arrivalTime: t.arrivalTime || '',
+				departureTime: t.departureTime || '',
+				position: t.position || '',
+				hangarPosition: t.hangarPosition || '',
+				status: t.status || 'neutral',
+				towStatus: t.towStatus || 'neutral',
+				notes: t.notes || '',
+			});
+			if (Array.isArray(compareData.primaryTiles)) {
+				compareData.primaryTiles = compareData.primaryTiles.map(stableTile).sort((a,b)=>a.tileId-b.tileId);
+			}
+			if (Array.isArray(compareData.secondaryTiles)) {
+				compareData.secondaryTiles = compareData.secondaryTiles.map(stableTile).sort((a,b)=>a.tileId-b.tileId);
 			}
 
-			const currentChecksum = this.generateChecksum(
-				JSON.stringify(compareData)
-			);
+			const currentChecksum = this.generateChecksum(JSON.stringify(compareData));
 
 			if (this.lastDataChecksum !== currentChecksum) {
-				// console.log("🔄 Datenänderung erkannt, Sync erforderlich");
 				this.lastDataChecksum = currentChecksum;
 				return true;
 			}
@@ -1571,7 +1597,7 @@ setTimeout(async () => {
 }, 2000);
 
 console.log(
-	"📦 Server-Sync-Modul geladen (Performance-optimiert: Master writes 3s, Master/Sync reads 5s, Change-Detection, initSync mit Erststart-Load)"
+	"📦 Server-Sync-Modul geladen (Performance-optimiert: Master writes 5s, Master/Sync reads 5s, change-detection stabilized, initSync mit Erststart-Load)"
 );
 
 // Kleine Debug-Hilfe: Server-Lock anzeigen

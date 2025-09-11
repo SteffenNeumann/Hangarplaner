@@ -1794,6 +1794,16 @@ body.dark-mode {
 	-webkit-text-fill-color: var(--text-muted) !important;
 }
 
+/* Read-only (Sync) mode: hide placeholders completely in Planner tiles */
+.read-only #hangarGrid .hangar-cell input::placeholder,
+.read-only #hangarGrid .hangar-cell textarea::placeholder,
+.read-only #secondaryHangarGrid .hangar-cell input::placeholder,
+.read-only #secondaryHangarGrid .hangar-cell textarea::placeholder {
+	color: transparent !important;
+	/* WebKit/Blink: ensure placeholder is hidden regardless of input text fill rules */
+	-webkit-text-fill-color: transparent !important;
+}
+
 /* Preserve tow chip colors when disabled */
 .dark-mode .tow-status-selector.tow-neutral:disabled {
 	background: var(--bg-secondary) !important;

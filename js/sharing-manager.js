@@ -195,24 +195,26 @@ class SharingManager {
 	async updateSyncMode(readEnabled, writeEnabled) {
 		console.log(`🔄 Sync-Modus wird geändert: Read=${readEnabled}, Write=${writeEnabled}`);
 
-		// 4 mögliche Kombinationen:
+		// Enforce policy: Write implies Read (no write-only mode)
+		if (writeEnabled && !readEnabled) {
+			console.log('🛡️ Enforcing Read ON when Write is enabled (no write-only mode)');
+			readEnabled = true;
+			try { const readToggle = document.getElementById('readDataToggle'); if (readToggle) readToggle.checked = true; } catch(_e){}
+		}
+
+		// 4 mögliche Kombinationen (after enforcement):
 		if (!readEnabled && !writeEnabled) {
 			// Beide AUS -> Standalone Mode
 			await this.enableStandaloneMode();
 		} else if (readEnabled && !writeEnabled) {
 			// Nur Read -> Sync Mode (Read-Only)
 			await this.enableSyncMode();
-			
-			// HINZUGEFÜGT: Sofortige Server-Datenladung wenn Read aktiviert wird
+			// Sofortige Server-Datenladung wenn Read aktiviert wird
 			await this.loadServerDataImmediately();
-		} else if (!readEnabled && writeEnabled) {
-			// Nur Write -> Master Mode (Write-Only) - ungewöhnlich, aber möglich
-			await this.enableMasterMode();
 		} else {
-			// Beide AN -> Master Mode mit Read-Write
+			// Master Mode (Read-Write)
 			await this.enableMasterMode();
-			
-			// HINZUGEFÜGT: Sofortige Server-Datenladung wenn Read+Write aktiviert wird
+			// Sofortige Server-Datenladung bei Read+Write
 			await this.loadServerDataImmediately();
 		}
 
@@ -341,7 +343,8 @@ class SharingManager {
 			if (window.serverSync) {
 				// Master-Rolle setzen
 				window.serverSync.isMaster = true;
-				window.serverSync.isSlaveActive = false;
+				// Force read active in Master for multi-master convergence
+				window.serverSync.isSlaveActive = true;
 
 				// Starte Master-Sync
 				await window.serverSync.startMasterMode();
@@ -351,7 +354,10 @@ class SharingManager {
 				this.isLiveSyncEnabled = true;
 				this.isMasterMode = true;
 
-// UI aktualisieren
+				// Ensure Read toggle reflects policy (if present)
+				try { const readToggle = document.getElementById('readDataToggle'); if (readToggle) readToggle.checked = true; } catch(_e){}
+
+		// UI aktualisieren
 				this.updateAllSyncDisplays("Master", true);
 				this.applyReadOnlyUIState(false);
 				this.showNotification(
@@ -1297,9 +1303,7 @@ syncModeElement.classList.remove("master", "slave", "standalone");
 				return false;
 			}
 
-			window.isLoadingServerData = true;
-
-			// Lade Server-Daten
+			// Lade Server-Daten (flags are handled internally)
 			const serverData = await window.serverSync.loadFromServer();
 
 			if (serverData && !serverData.error) {
@@ -1342,8 +1346,6 @@ syncModeElement.classList.remove("master", "slave", "standalone");
 		} catch (error) {
 			console.error("❌ Fehler beim sofortigen Laden der Server-Daten:", error);
 			return false;
-		} finally {
-			window.isLoadingServerData = false;
 		}
 	}
 

@@ -98,9 +98,14 @@ class SharingManager {
   handleMasterDeniedByServer(detail){ try { this.showNotification('Master denied by server. Switching to Sync.', 'warning'); this.syncMode = 'sync'; this.setModeControlValue('sync'); this.enableSyncMode(); this.saveSharingSettings(); } catch(e){} }
   async updateSyncMode(readEnabled, writeEnabled){
     console.log(`🔄 Sync-Modus wird geändert: Read=${readEnabled}, Write=${writeEnabled}`);
+    // Enforce: Write implies Read (no write-only mode)
+    if (writeEnabled && !readEnabled) {
+      console.log('🛡️ Enforcing Read ON when Write is enabled (no write-only mode)');
+      readEnabled = true;
+      try { const readToggle = document.getElementById('readDataToggle'); if (readToggle) readToggle.checked = true; } catch(_e){}
+    }
     if (!readEnabled && !writeEnabled) { await this.enableStandaloneMode(); }
     else if (readEnabled && !writeEnabled) { await this.enableSyncMode(); await this.loadServerDataImmediately(); }
-    else if (!readEnabled && writeEnabled) { await this.enableMasterMode(); }
     else { await this.enableMasterMode(); await this.loadServerDataImmediately(); }
     this.saveSharingSettings();
     console.log(`✅ Sync-Modus aktualisiert: Read=${readEnabled}, Write=${writeEnabled}, Mode=${this.syncMode}`);
@@ -134,7 +139,7 @@ class SharingManager {
   async enableMasterMode(){ try{
     console.log('👑 Aktiviere Master-Modus...');
     if (!window.serverSync) throw new Error('ServerSync nicht verfügbar');
-    window.serverSync.isMaster = true; window.serverSync.isSlaveActive = false;
+    window.serverSync.isMaster = true; window.serverSync.isSlaveActive = true; // Force read for multi-master
     if (typeof window.serverSync.startMasterMode === 'function'){
       await window.serverSync.startMasterMode();
     } else {
@@ -143,6 +148,7 @@ class SharingManager {
       this._startFallbackWriteTimer();
       this._startFallbackReadPolling();
     }
+    try { const readToggle = document.getElementById('readDataToggle'); if (readToggle) readToggle.checked = true; } catch(_e){}
     this.syncMode = 'master'; this.isLiveSyncEnabled = true; this.isMasterMode = true; this.updateAllSyncDisplays('Master', true); this.applyReadOnlyUIState(false); this.showNotification('Master-Modus aktiviert - Sende Daten an Server', 'success'); this._emitModeChanged(); console.log('✅ Master-Modus aktiviert');
   } catch(e){ console.error('❌ Fehler beim Aktivieren des Master-Modus:', e); this.showNotification('Fehler beim Aktivieren des Master-Modus','error'); await this.enableSyncMode(); } }
   async performLiveSync(){ if (!this.isLiveSyncEnabled) return; try { if (window.serverSync && window.serverSync.syncWithServer){ const success = await window.serverSync.syncWithServer(); if (success){ console.log('🔄 Live Sync erfolgreich'); this.updateSyncStatusIndicator('success'); } else { console.warn('⚠️ Live Sync teilweise fehlgeschlagen'); this.updateSyncStatusIndicator('warning'); } } } catch(e){ console.error('❌ Live Sync Fehler:', e); this.updateSyncStatusIndicator('error'); } }

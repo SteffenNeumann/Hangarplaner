@@ -216,6 +216,8 @@ class ServerSync {
 	 */
 	canReadFromServer() {
 		try {
+			// In Master mode we always read for multi-master convergence
+			if (this.isMaster === true) return true;
 			// Prefer explicit toggles when present
 			const readToggle = document.getElementById('readDataToggle');
 			if (readToggle) return !!readToggle.checked;
@@ -287,8 +289,8 @@ class ServerSync {
 	 */
 	startMasterMode() {
 		this.isMaster = true;
-		// Respect Read toggle: only receive if reading is enabled
-		this.isSlaveActive = this.canReadFromServer();
+		// In Master we always read for multi-master convergence
+		this.isSlaveActive = true;
 
 		// Stoppe bestehende Intervalle
 		if (this.slaveCheckInterval) {
@@ -300,24 +302,23 @@ class ServerSync {
 		// Starte Master-Synchronisation fürs Senden
 		this.startPeriodicSync(); // Für das Senden von Daten
 
-		// Nur wenn Lesen erlaubt ist, zusätzlich Updates empfangen (längeres Intervall)
-		if (this.isSlaveActive) {
-			this.slaveCheckInterval = setInterval(async () => {
-				await this.slaveCheckForUpdates();
-			}, 30000); // 30 Sekunden für Master-Update-Check
-			console.log("👑 Master-Modus: Empfange zusätzlich Updates (Read ON)");
-		} else {
-			console.log("👑 Master-Modus: Write-only aktiv (Read OFF) – kein Server-Read");
-		}
+		// Zusätzlich Updates empfangen (gleiches Intervall wie Sync-Client)
+		this.slaveCheckInterval = setInterval(async () => {
+			await this.slaveCheckForUpdates();
+		}, 10000); // 10 Sekunden für Master-Update-Check
+		console.log("👑 Master-Modus: Empfange zusätzlich Updates (Read forced ON)");
 
-		// Sofort einen ersten Schreibversuch starten, damit andere Browser zeitnah Daten erhalten
+		// Sofort einen ersten Update-Check und Schreibversuch starten
+		try {
+			this.slaveCheckForUpdates();
+		} catch (_e) {}
 		try {
 			this.syncWithServer();
 		} catch (e) {
 			console.warn("⚠️ Sofortiger Master-Sync fehlgeschlagen:", e?.message || e);
 		}
 
-		console.log("👑 Master-Modus gestartet – Senden aktiv, Empfangen:", this.isSlaveActive ? 'AN' : 'AUS');
+		console.log("👑 Master-Modus gestartet – Senden aktiv, Empfangen: AN");
 	}
 
 	/**
@@ -483,6 +484,12 @@ async slaveCheckForUpdates() {
 					if (window.HangarDataCoordinator) {
 						window.HangarDataCoordinator.apiChangesPendingSync = false;
 					}
+					// Immediate read-back for fast convergence when reading is allowed
+					try {
+						if (this.canReadFromServer && this.canReadFromServer()) {
+							await this.slaveCheckForUpdates();
+						}
+					} catch(_e) {}
 					return true;
 				} else if (response.status === 423) {
 					let payload = null;

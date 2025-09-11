@@ -1148,10 +1148,22 @@ const requiredSections = [
 	/**
 	 * Initialisiert Event-Listener für sekundäre Kacheln - VOLLSTÄNDIG ÜBERARBEITET
 	 */
-	setupSecondaryTileEventListeners: function () {
+setupSecondaryTileEventListeners: function () {
 		const secondaryContainer = document.getElementById("secondaryHangarGrid");
 		if (!secondaryContainer) {
 			console.warn("❌ Sekundärer Container nicht gefunden");
+			return false;
+		}
+
+		// Ensure Event Manager is ready before scanning and wiring handlers
+		if (!window.hangarEventManager || !window.hangarEventManager.safeAddEventListener) {
+			try {
+				console.warn("⚠️ Event-Manager noch nicht bereit – versuche erneut nach Initialisierung (sekundäre Kacheln)");
+				document.addEventListener('eventManagerReady', () => {
+					try { if (window.hangarUI && window.hangarUI.setupSecondaryTileEventListeners) window.hangarUI.setupSecondaryTileEventListeners(); } catch(_e){}
+				}, { once: true });
+				setTimeout(() => { try { if (window.hangarUI && window.hangarUI.setupSecondaryTileEventListeners) window.hangarUI.setupSecondaryTileEventListeners(); } catch(_e){} }, 400);
+			} catch(_e){}
 			return false;
 		}
 

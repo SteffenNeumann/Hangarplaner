@@ -303,10 +303,10 @@ class ServerSync {
 		this.startPeriodicSync(); // Für das Senden von Daten
 
 		// Zusätzlich Updates empfangen (gleiches Intervall wie Sync-Client)
-		this.slaveCheckInterval = setInterval(async () => {
-			await this.slaveCheckForUpdates();
-		}, 10000); // 10 Sekunden für Master-Update-Check
-		console.log("👑 Master-Modus: Empfange zusätzlich Updates (Read forced ON)");
+			this.slaveCheckInterval = setInterval(async () => {
+				await this.slaveCheckForUpdates();
+			}, 5000); // 5 Sekunden für Master-Update-Check
+			console.log("👑 Master-Modus: Empfange zusätzlich Updates (5s, Read forced ON)");
 
 		// Sofort einen ersten Update-Check und Schreibversuch starten
 		try {
@@ -340,10 +340,10 @@ class ServerSync {
 		// Starte Slave-Polling (nur Laden bei Änderungen)
 		this.slaveCheckInterval = setInterval(async () => {
 			await this.slaveCheckForUpdates();
-		}, 10000); // 10 Sekunden Polling-Intervall
+		}, 5000); // 5 Sekunden Polling-Intervall
 
 		console.log(
-			"👤 Slave-Modus gestartet - Polling für Updates alle 15 Sekunden aktiv"
+			"👤 Slave-Modus gestartet - Polling für Updates alle 5 Sekunden aktiv"
 		);
 		// HINWEIS: Initialer Load erfolgt bereits in initSync()
 

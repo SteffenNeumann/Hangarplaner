@@ -265,11 +265,41 @@ class SharingManager {
           const openSyncBtn = panel.querySelector('#roModalSyncSettings');
           const hide = () => { overlay.style.display = 'none'; document.removeEventListener('keydown', escHandler, true); };
           okBtn.addEventListener('click', hide);
-          openSyncBtn.addEventListener('click', () => {
+
+          function openSyncSubmenu(){
             try {
-              const btn = document.querySelector('#leftMenu .menu-item[data-menu=\"sync\"]');
-              if (btn) btn.click();
-            } catch(_e) {}
+              const btn = document.querySelector('#leftMenu .menu-item[data-menu="sync"]');
+              const panel = document.getElementById('submenu-sync');
+              if (btn) {
+                btn.click();
+                // if still hidden after click, enforce fallback show
+                setTimeout(()=>{
+                  try {
+                    const p = document.getElementById('submenu-sync');
+                    if (p && p.classList.contains('hidden')){
+                      p.classList.remove('hidden');
+                      const scrim = document.getElementById('submenu-scrim');
+                      if (scrim) scrim.classList.remove('hidden');
+                      btn.classList.add('active');
+                      btn.setAttribute('aria-expanded','true');
+                    }
+                  } catch(_e){}
+                }, 0);
+                return true;
+              }
+              // direct fallback if button not found
+              if (panel){
+                panel.classList.remove('hidden');
+                const scrim = document.getElementById('submenu-scrim');
+                if (scrim) scrim.classList.remove('hidden');
+                return true;
+              }
+            } catch(_e){}
+            return false;
+          }
+
+          openSyncBtn.addEventListener('click', () => {
+            openSyncSubmenu();
             hide();
           });
           overlay.addEventListener('click', (e)=>{ if (e.target===overlay) hide(); });

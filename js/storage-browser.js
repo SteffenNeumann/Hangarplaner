@@ -27,7 +27,7 @@ class ServerSync {
 
 		// Client-side write fencing to prevent self-echo/oscillation in multi-master
 		this._pendingWrites = {}; // { fieldId: timestampMs }
-		this._writeFenceMs = 1200; // fence TTL window
+		this._writeFenceMs = 3000; // fence TTL window (increased to protect typing)
 
 		// Baseline of last server-applied data to compute precise deltas (fieldUpdates)
 		this._baselinePrimary = {};
@@ -654,10 +654,17 @@ async slaveCheckForUpdates() {
 					if (window.HangarDataCoordinator) {
 						window.HangarDataCoordinator.apiChangesPendingSync = false;
 					}
-					// Immediate read-back for fast convergence when reading is allowed
+					// Read-after-write: delay read-back if user is actively typing to avoid caret jump
 					try {
+						const typingActive = !!(window.hangarEventManager && typeof window.hangarEventManager.isUserTypingRecently === 'function' && window.hangarEventManager.isUserTypingRecently(2000));
 						if (this.canReadFromServer && this.canReadFromServer()) {
-							await this.slaveCheckForUpdates();
+							if (typingActive) {
+								setTimeout(async () => {
+									try { if (this.canReadFromServer && this.canReadFromServer()) { await this.slaveCheckForUpdates(); } } catch(_e){}
+								}, 2000);
+							} else {
+								await this.slaveCheckForUpdates();
+							}
 						}
 					} catch(_e) {}
 					// Update baseline optimistically if we posted deltas and did not read back yet
@@ -756,6 +763,21 @@ async slaveCheckForUpdates() {
 			try {
 				const ts = parseInt(payload?.timestamp || 0, 10);
 				if (ts) this.lastServerTimestamp = Math.max(this.lastServerTimestamp||0, ts);
+			} catch(_e){}
+
+			// Optional immediate read-back to converge, but avoid while typing
+			try {
+				const typingActive = !!(window.hangarEventManager && typeof window.hangarEventManager.isUserTypingRecently === 'function' && window.hangarEventManager.isUserTypingRecently(2000));
+				if (this.canReadFromServer && this.canReadFromServer()) {
+					if (typingActive) {
+						setTimeout(async () => {
+							try { if (this.canReadFromServer && this.canReadFromServer()) { const data = await this.loadFromServer(); if (data && !data.error) await this.applyServerData(data); } } catch(_e){}
+						}, 2000);
+					} else {
+						const data = await this.loadFromServer();
+						if (data && !data.error) await this.applyServerData(data);
+					}
+				}
 			} catch(_e){}
 
 			// Update local baselines optimistically with applied fieldUpdates
@@ -1295,10 +1317,15 @@ async slaveCheckForUpdates() {
 			if (Object.prototype.hasOwnProperty.call(tileData, 'aircraftId')) {
 				const aircraftInput = document.getElementById(`aircraft-${tileId}`);
 				if (aircraftInput) {
+					const newVal = tileData.aircraftId || '';
 					const oldValue = aircraftInput.value;
-					aircraftInput.value = tileData.aircraftId || '';
+					if (document.activeElement === aircraftInput && oldValue === newVal) {
+						// skip to preserve caret when unchanged
+					} else {
+						aircraftInput.value = newVal;
+					}
 					console.log(
-						`✈️ Aircraft ID gesetzt: ${tileId} = ${oldValue} → ${tileData.aircraftId || ''}`
+						`✈️ Aircraft ID gesetzt: ${tileId} = ${oldValue} → ${newVal}`
 					);
 					successfullyApplied++;
 				} else {
@@ -1311,9 +1338,12 @@ async slaveCheckForUpdates() {
 			if (Object.prototype.hasOwnProperty.call(tileData, 'hangarPosition')) {
 				const hangarPosInput = document.getElementById(`hangar-position-${tileId}`);
 				if (hangarPosInput) {
+					const newVal = tileData.hangarPosition || '';
 					const oldValue = hangarPosInput.value;
-					hangarPosInput.value = tileData.hangarPosition || '';
-					console.log(`📍 Hangar Position gesetzt: ${tileId} = ${oldValue} → ${tileData.hangarPosition || ''}`);
+					if (!(document.activeElement === hangarPosInput && oldValue === newVal)) {
+						hangarPosInput.value = newVal;
+					}
+					console.log(`📍 Hangar Position gesetzt: ${tileId} = ${oldValue} → ${newVal}`);
 					successfullyApplied++;
 				} else {
 					console.warn(`❌ Hangar Position Input nicht gefunden: hangar-position-${tileId}`);
@@ -1325,9 +1355,12 @@ async slaveCheckForUpdates() {
 			if (Object.prototype.hasOwnProperty.call(tileData, 'position')) {
 				const posInfoInput = document.getElementById(`position-${tileId}`);
 				if (posInfoInput) {
+					const newVal = tileData.position || '';
 					const oldValue = posInfoInput.value;
-					posInfoInput.value = tileData.position || '';
-					console.log(`📍 Pos (info) gesetzt: ${tileId} = ${oldValue} → ${tileData.position || ''}`);
+					if (!(document.activeElement === posInfoInput && oldValue === newVal)) {
+						posInfoInput.value = newVal;
+					}
+					console.log(`📍 Pos (info) gesetzt: ${tileId} = ${oldValue} → ${newVal}`);
 					successfullyApplied++;
 				} else {
 					console.warn(`❌ Position (info) Input nicht gefunden: position-${tileId}`);
@@ -1339,7 +1372,9 @@ async slaveCheckForUpdates() {
 			if (tileData.notes) {
 				const notesInput = document.getElementById(`notes-${tileId}`);
 				if (notesInput) {
-					notesInput.value = tileData.notes;
+					if (!(document.activeElement === notesInput && notesInput.value === tileData.notes)) {
+						notesInput.value = tileData.notes;
+					}
 					console.log(`📝 Notizen gesetzt: ${tileId} = ${tileData.notes}`);
 				}
 			}

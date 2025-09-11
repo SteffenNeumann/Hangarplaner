@@ -14,7 +14,13 @@ class HangarEventManager {
 		// Field-level write aggregation (batch POST)
 		this._pendingFieldUpdates = {};
 		this._pendingFlushTimer = null;
+		this._pendingFlushDueAt = 0;
 		this._flushInFlight = false;
+
+		// Typing UX controls
+		this.TYPING_DEBOUNCE_MS = 2000; // how long to wait after last keystroke before sending text to server
+		this.BLUR_SAVE_DELAY_MS = 150; // local debounce on blur before sync
+		this._lastTypingAt = 0;
 
 		// Singleton-Pattern
 		if (HangarEventManager.instance) {
@@ -129,8 +135,9 @@ class HangarEventManager {
 	/**
 	 * DEBOUNCED FIELD UPDATES
 	 * Verhindert zu häufige localStorage-Updates
+	 * options: { flushDelayMs?: number, source?: 'input'|'blur'|'change' }
 	 */
-	debouncedFieldUpdate(fieldId, value, delay = 500) {
+	debouncedFieldUpdate(fieldId, value, delay = 500, options = {}) {
 		// Bestehenden Timer löschen
 		if (this.debounceTimers.has(fieldId)) {
 			clearTimeout(this.debounceTimers.get(fieldId));
@@ -138,14 +145,14 @@ class HangarEventManager {
 
 		// Neuen Timer setzen
 		const timer = setTimeout(async () => {
-			await this.updateFieldInStorage(fieldId, value);
+			await this.updateFieldInStorage(fieldId, value, options);
 			this.debounceTimers.delete(fieldId);
 		}, delay);
 
 		this.debounceTimers.set(fieldId, timer);
 	}
 
-	async updateFieldInStorage(fieldId, value) {
+	async updateFieldInStorage(fieldId, value, options = {}) {
 		try {
 			// 1. Lokale Speicherung
 			const existing = (await this.loadFromStorage("hangarPlannerData")) || {};
@@ -159,8 +166,8 @@ class HangarEventManager {
 
 			await this.saveToStorage("hangarPlannerData", existing);
 
-			// 2. DIREKTE Server-Synchronisation
-			await this.syncFieldToServer(fieldId, storeValue);
+			// 2. Server-Synchronisation (Konfigurierbar)
+			await this.syncFieldToServer(fieldId, storeValue, options);
 		} catch (error) {
 			console.error("Fehler beim Speichern von Feld:", fieldId, error);
 		}
@@ -169,7 +176,7 @@ class HangarEventManager {
 	/**
 	 * Direkte Server-Synchronisation für einzelne Felder
 	 */
-	async syncFieldToServer(fieldId, value) {
+	async syncFieldToServer(fieldId, value, options = {}) {
 		try {
 			// Ensure unified sync object
 			if (!window.serverSync && window.storageBrowser) { window.serverSync = window.storageBrowser; }
@@ -196,46 +203,64 @@ class HangarEventManager {
 				// Collect pending updates
 				this._pendingFieldUpdates = this._pendingFieldUpdates || {};
 				this._pendingFieldUpdates[fieldId] = value;
-				// Schedule a flush if not already scheduled
-				if (!this._pendingFlushTimer){
-					this._pendingFlushTimer = setTimeout(async () => {
-						if (this._flushInFlight) { this._pendingFlushTimer = null; return; }
-						this._flushInFlight = true;
-						try {
-							const updates = { ...(this._pendingFieldUpdates||{}) };
-							this._pendingFieldUpdates = {};
-							this._pendingFlushTimer = null;
-							const postUrl = (window.serverSync?.getServerUrl?.()) || (window.storageBrowser?.serverSyncUrl) || '';
-							if (!postUrl){ this._flushInFlight = false; return; }
-							// Build body
-							const lastWriter = (localStorage.getItem('presence.displayName') || '');
-							const body = { metadata: { timestamp: Date.now(), lastWriter }, settings: {}, fieldUpdates: updates };
-							// Post
-							const response = await fetch(postUrl, {
-								method: 'POST',
-								headers: {
-									'Content-Type': 'application/json',
-									'X-Sync-Role': 'master',
-									'X-Sync-Session': (window.serverSync && typeof window.serverSync.getSessionId === 'function') ? window.serverSync.getSessionId() : (localStorage.getItem('serverSync.sessionId') || ''),
-									'X-Display-Name': lastWriter,
-								},
-								body: JSON.stringify(body),
-							});
-							if (response.ok) {
-								// Optional read-back to converge if Read is ON
-								const canRead = !!(window.serverSync && typeof window.serverSync.canReadFromServer === 'function' && window.serverSync.canReadFromServer());
-								if (canRead && typeof window.serverSync.loadFromServer === 'function' && typeof window.serverSync.applyServerData === 'function') {
-									try {
-										const data = await window.serverSync.loadFromServer();
-										if (data && !data.error) await window.serverSync.applyServerData(data);
-									} catch(_e){}
-								}
-							} else {
-								console.warn('⚠️ Aggregated Server-Sync fehlgeschlagen', response.status);
+				// Determine desired flush delay
+				const desiredDelay = (options && typeof options.flushDelayMs === 'number') ? options.flushDelayMs : 450;
+				const now = Date.now();
+				const postUrl = (window.serverSync?.getServerUrl?.()) || (window.storageBrowser?.serverSyncUrl) || '';
+				const lastWriter = (localStorage.getItem('presence.displayName') || '');
+				const flushFn = async () => {
+					if (this._flushInFlight) { this._pendingFlushTimer = null; this._pendingFlushDueAt = 0; return; }
+					this._flushInFlight = true;
+					try {
+						const updates = { ...(this._pendingFieldUpdates||{}) };
+						this._pendingFieldUpdates = {};
+						this._pendingFlushTimer = null;
+						this._pendingFlushDueAt = 0;
+						if (!postUrl){ this._flushInFlight = false; return; }
+						// Build body
+						const body = { metadata: { timestamp: Date.now(), lastWriter }, settings: {}, fieldUpdates: updates };
+						// Post
+						const response = await fetch(postUrl, {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+								'X-Sync-Role': 'master',
+								'X-Sync-Session': (window.serverSync && typeof window.serverSync.getSessionId === 'function') ? window.serverSync.getSessionId() : (localStorage.getItem('serverSync.sessionId') || ''),
+								'X-Display-Name': lastWriter,
+							},
+							body: JSON.stringify(body),
+						});
+						if (response.ok) {
+							// Optional read-back to converge if Read is ON
+							const canRead = !!(window.serverSync && typeof window.serverSync.canReadFromServer === 'function' && window.serverSync.canReadFromServer());
+							if (canRead && typeof window.serverSync.loadFromServer === 'function' && typeof window.serverSync.applyServerData === 'function') {
+								try {
+									const data = await window.serverSync.loadFromServer();
+									if (data && !data.error) await window.serverSync.applyServerData(data);
+								} catch(_e){}
 							}
-						} catch(err){ console.warn('aggregate flush failed', err); }
-						finally { this._flushInFlight = false; }
-					}, 450);
+						} else {
+							console.warn('⚠️ Aggregated Server-Sync fehlgeschlagen', response.status);
+						}
+					} catch(err){ console.warn('aggregate flush failed', err); }
+					finally { this._flushInFlight = false; }
+				};
+
+				// If immediate flush requested (e.g., blur), do it now
+				if (desiredDelay === 0) {
+					if (this._pendingFlushTimer) { clearTimeout(this._pendingFlushTimer); this._pendingFlushTimer = null; }
+					this._pendingFlushDueAt = 0;
+					await flushFn();
+				} else {
+					// Schedule or reschedule earlier if needed
+					if (!this._pendingFlushTimer){
+						this._pendingFlushDueAt = now + desiredDelay;
+						this._pendingFlushTimer = setTimeout(async () => { await flushFn(); }, desiredDelay);
+					} else if (!this._pendingFlushDueAt || (now + desiredDelay) < this._pendingFlushDueAt) {
+						clearTimeout(this._pendingFlushTimer);
+						this._pendingFlushDueAt = now + desiredDelay;
+						this._pendingFlushTimer = setTimeout(async () => { await flushFn(); }, desiredDelay);
+					}
 				}
 			} catch(_e){}
 			// Stop here; legacy immediate single-field path not needed when aggregation is enabled
@@ -592,7 +617,14 @@ class HangarEventManager {
 				if (window.isApplyingServerData) {
 					return;
 				}
-				this.debouncedFieldUpdate(event.target.id, event.target.value);
+				const fid = event.target.id || '';
+				if (this.isFreeTextFieldId(fid)) {
+					this._lastTypingAt = Date.now();
+					// Local save after 500ms, server flush after typing idle window
+					this.debouncedFieldUpdate(fid, event.target.value, 500, { flushDelayMs: this.TYPING_DEBOUNCE_MS, source: 'input' });
+				} else {
+					this.debouncedFieldUpdate(fid, event.target.value);
+				}
 			},
 			`${containerType}_input`
 		);
@@ -643,7 +675,10 @@ class HangarEventManager {
 					if (iso) storeVal = iso; else storeVal = '';
 				}
 
-				this.debouncedFieldUpdate(event.target.id, storeVal, 150);
+				const fid = event.target.id || '';
+				const isFree = this.isFreeTextFieldId(fid);
+				// On blur, flush free-text immediately; others keep normal quick debounce
+				this.debouncedFieldUpdate(fid, storeVal, this.BLUR_SAVE_DELAY_MS, { flushDelayMs: isFree ? 0 : 150, source: 'blur' });
 			},
 			`${containerType}_blur`
 		);
@@ -660,7 +695,9 @@ class HangarEventManager {
 				// KORREKTUR: Aircraft ID Handling entfernt vom change Event
 				// um Doppelaufrufe zu verhindern - wird nur bei blur behandelt
 
-				this.debouncedFieldUpdate(event.target.id, event.target.value, 150);
+				const fid = event.target.id || '';
+				const isFree = this.isFreeTextFieldId(fid);
+				this.debouncedFieldUpdate(fid, event.target.value, 150, { flushDelayMs: isFree ? this.TYPING_DEBOUNCE_MS : 150, source: 'change' });
 			},
 			`${containerType}_change`
 		);
@@ -807,7 +844,13 @@ class HangarEventManager {
 				if (window.isApplyingServerData) {
 					return;
 				}
-				this.debouncedFieldUpdate(event.target.id, event.target.value);
+				const fid = event.target.id || '';
+				if (this.isFreeTextFieldId(fid)) {
+					this._lastTypingAt = Date.now();
+					this.debouncedFieldUpdate(fid, event.target.value, 500, { flushDelayMs: this.TYPING_DEBOUNCE_MS, source: 'input' });
+				} else {
+					this.debouncedFieldUpdate(fid, event.target.value);
+				}
 			},
 			`${handlerPrefix}_input`
 		);
@@ -857,7 +900,9 @@ class HangarEventManager {
 					if (iso) storeVal = iso; else storeVal = '';
 				}
 
-				this.debouncedFieldUpdate(event.target.id, storeVal, 150);
+				const fid = event.target.id || '';
+				const isFree = this.isFreeTextFieldId(fid);
+				this.debouncedFieldUpdate(fid, storeVal, this.BLUR_SAVE_DELAY_MS, { flushDelayMs: isFree ? 0 : 150, source: 'blur' });
 			},
 			`${handlerPrefix}_blur`
 		);
@@ -882,7 +927,9 @@ class HangarEventManager {
 					window.updateStatusLights(cellId);
 				}
 
-				this.debouncedFieldUpdate(event.target.id, event.target.value, 150);
+				const fid = event.target.id || '';
+				const isFree = this.isFreeTextFieldId(fid);
+				this.debouncedFieldUpdate(fid, event.target.value, 150, { flushDelayMs: isFree ? this.TYPING_DEBOUNCE_MS : 150, source: 'change' });
 			},
 			`${handlerPrefix}_change`
 		);
@@ -907,6 +954,23 @@ class HangarEventManager {
 		this.debounceTimers.clear();
 		this.storageQueue.length = 0;
 		this.initialized = false;
+	}
+
+	// Utility: identify free-text fields that should not live-sync per keystroke
+	isFreeTextFieldId(fieldId = '') {
+		try {
+			return (
+				fieldId.startsWith('notes-') ||
+				fieldId.startsWith('aircraft-') ||
+				fieldId.startsWith('position-') ||
+				fieldId.startsWith('hangar-position-')
+			);
+		} catch(_e){ return false; }
+	}
+
+	// Utility: typing recency for read-back gating
+	isUserTypingRecently(windowMs = 2000) {
+		try { return (Date.now() - (this._lastTypingAt || 0)) < windowMs; } catch(_e){ return false; }
 	}
 }
 

@@ -661,7 +661,7 @@
 					try { const raw = localStorage.getItem('hangarSyncSettings'); if (!raw) return null; const s = JSON.parse(raw||'{}'); return typeof s?.syncMode === 'string' ? s.syncMode : null; } catch(_e){ return null; }
 				}
 				let mode = (window.sharingManager && window.sharingManager.syncMode) || getStoredMode() || 'standalone';
-				el.classList.remove('master','slave','standalone','write-only');
+				el.classList.remove('master','slave','standalone');
 				if (mode === 'master') { el.textContent = 'Master'; el.classList.add('master'); }
 				else if (mode === 'sync') { el.textContent = 'Sync Read only'; el.classList.add('slave'); }
 				else { el.textContent = 'Standalone'; el.classList.add('standalone'); }
@@ -2761,7 +2761,7 @@ window.sharingManager = {
 							syncMode: 'master',
 							initialized: true,
 							serverSyncUrl: (function(){ try { return window.location.origin + '/sync/data.php'; } catch(_e){ return '/sync/data.php'; } })(),
-							updateAllSyncDisplays: function(){ try { const el = document.getElementById('sync-mode'); if (el){ const txt = this.syncMode==='master'?'Master':(this.syncMode==='sync'?'Sync':'Standalone'); el.textContent = txt; el.classList.remove('master','slave','standalone','write-only'); el.classList.add(this.syncMode==='master'?'master':(this.syncMode==='sync'?'slave':'standalone')); } } catch(e){} },
+updateAllSyncDisplays: function(){ try { const el = document.getElementById('sync-mode'); if (el){ const txt = this.syncMode==='master'?'Master':(this.syncMode==='sync'?'Sync':'Standalone'); el.textContent = txt; el.classList.remove('master','slave','standalone'); el.classList.add(this.syncMode==='master'?'master':(this.syncMode==='sync'?'slave':'standalone')); } } catch(e){} },
 							applyReadOnlyUIState: function(isReadOnly){
 								try {
 									const ro = !!isReadOnly;
@@ -3560,6 +3560,10 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                   try { return JSON.parse(text); } catch(_) { return null; }
                 } catch(_) { return null; }
               }
+              // Temporary suppression of server entries (UX for Clear)
+              function serverSuppressed(){ try { const t = parseInt(sessionStorage.getItem('changeLog.suppressServerUntil')||'0',10); return Date.now() < t; } catch(_) { return false; } }
+              function suppressServer(ms){ try { sessionStorage.setItem('changeLog.suppressServerUntil', String(Date.now()+ms)); } catch(_){} }
+              function clearServerSuppression(){ try { sessionStorage.removeItem('changeLog.suppressServerUntil'); } catch(_){} }
               function chooseFieldForTile(tile){
                 const id = parseInt(tile?.tileId || 0, 10);
                 let prefix = 'aircraft';
@@ -3597,6 +3601,7 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
               function renderEntries(entryList){
                 const list = document.getElementById('changeLogList');
                 if (!list) return;
+                const suppress = serverSuppressed() && canReadFromServer();
                 const items = (entryList||[]).map((e, idx) => {
                   const when = formatTime(e.ts);
                   const desc = `${e.user} • ${FIELD_LABELS[e.prefix]||e.prefix} @ ${getTileLabel(e.cellId)}`;
@@ -3615,19 +3620,25 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                       </div>
                     </div>`;
                 });
-                list.innerHTML = items.join('');
+                const notice = suppress ? `<div class=\"text-xs\" style=\"margin-bottom:6px; color:#64748b;\">Server updates hidden. <button id=\"changeLogShowServerBtn\" class=\"sidebar-btn sidebar-btn-secondary\" style=\"min-height:22px; font-size:11px; padding:0 8px; margin-left:6px;\">Show</button></div>` : '';
+                list.innerHTML = notice + items.join('');
                 // Wire buttons
                 (entryList||[]).forEach((e, idx) => {
                   const id = `goTo_${idx}_${e.cellId}_${e.prefix}`;
                   const btn = document.getElementById(id);
                   if (btn) btn.addEventListener('click', (ev)=>{ ev.preventDefault(); navigateTo(e.fieldId, e.cellId); });
                 });
+                // Wire show server button if present
+                if (suppress){
+                  const showBtn = document.getElementById('changeLogShowServerBtn');
+                  if (showBtn) showBtn.addEventListener('click', (e)=>{ e.preventDefault(); clearServerSuppression(); setTimeout(()=>{ try { ChangeLog.render(); } catch(_){} }, 0); });
+                }
               }
 
               async function render(){
                 try {
                   const myName = getUserName();
-                  if (canReadFromServer()){
+                  if (canReadFromServer() && !serverSuppressed()){
                     const data = await fetchServerJson();
                     if (data){
                       const serverEntries = buildServerEntries(data, myName);
@@ -3660,7 +3671,7 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                   } catch(_){}
                 },
                 render,
-                clear(){ save([]); render(); },
+                clear(){ try { save([]); if (canReadFromServer()) { suppressServer(5*60*1000); } } finally { render(); } },
               };
 
               function attachListeners(){

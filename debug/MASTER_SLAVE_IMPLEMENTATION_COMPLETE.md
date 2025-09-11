@@ -1,11 +1,11 @@
-# 📋 MASTER-SLAVE SYNCHRONISIERUNG - IMPLEMENTIERUNG ABGESCHLOSSEN
+# 📋 Synchronisationsmodi (Master/Read-only) – Implementierung abgeschlossen
 
 ## 🔧 BUGFIX: INKONSISTENTE STATUS-ANZEIGEN BEHOBEN
 
 ### Problem identifiziert
 
 - **Widget**: Zeigte nur "Master" oder "Standalone" (vereinfacht)
-- **Menü**: Zeigte korrekte "Master", "Slave", "Status" (detailliert)
+- **Menü**: Zeigte korrekte "Master", "Read-only (Sync)", "Status" (detailliert)
 - **Ursache**: Zwei getrennte Update-Funktionen ohne Synchronisation
 
 ### Lösung implementiert
@@ -33,18 +33,18 @@
 
 ### 2. Storage-Browser Erweiterung (js/storage-browser.js)
 
-- **Hinzugefügt**: Master-Slave Eigenschaften (isMaster, isSlaveActive, lastServerTimestamp)
+- **Hinzugefügt**: Sync-Mode Eigenschaften (Master/Read-only) (isMaster, isSlaveActive, lastServerTimestamp)
 - **Implementiert**: `determineMasterSlaveRole()` - automatische Rollenerkennung
 - **Implementiert**: `getServerTimestamp()` - Zeitstempel-Abfrage
 - **Implementiert**: `startMasterMode()` - Master-Funktionalität
-- **Implementiert**: `startSlaveMode()` - Slave-Überwachung
-- **Implementiert**: `slaveCheckForUpdates()` - automatische Updates
+- **Implementiert**: `startSlaveMode()` - Read-only (Sync) Überwachung
+- **Implementiert**: `slaveCheckForUpdates()` - automatische Read-only Updates
 - **Status**: ✅ Syntaxfehler-frei
 
 ### 3. Sharing-Manager Vereinfachung (js/sharing-manager.js)
 
 - **Entfernt**: URL-basierte Sharing-Funktionalität
-- **Ersetzt**: Durch Master-Slave Toggle-System
+- **Ersetzt**: Durch Sync-Mode Toggle-System (Master/Read-only)
 - **Implementiert**: `handleMasterSlaveToggle()` - Modus-Umschaltung
 - **Implementiert**: `enableMasterSlaveSync()` - Sync-Aktivierung
 - **Aktualisiert**: `updateSyncStatusDisplay()` - Status-Anzeige
@@ -52,7 +52,7 @@
 
 ### 4. UI-Anpassungen (index.html)
 
-- **Geändert**: "Data Sharing" → "Master-Slave Sync"
+- **Geändert**: "Data Sharing" → "Synchronisation (Master/Read-only)"
 - **Entfernt**: Share-URL Container und Eingabefelder
 - **Hinzugefügt**: Erklärende Texte für neues System
 - **Vereinfacht**: Interface für Toggle-basierte Bedienung
@@ -78,7 +78,7 @@ testMasterSlaveSync();
 **Test prüft**:
 
 - ServerSync Instanz-Verfügbarkeit
-- Master-Slave Eigenschaften
+- Sync-Mode Eigenschaften (Master/Read-only)
 - SharingManager Integration
 - Backend-Endpoint Funktionalität
 
@@ -91,17 +91,17 @@ testMasterSlaveSync();
 3. Sendet Updates automatisch an Server
 4. Zeigt "Master-Modus aktiv" Status
 
-### Slave-Modus
+### Read-only (Sync) Modus
 
 1. Prüft Server alle 30 Sekunden auf Updates
 2. Lädt automatisch neue Daten herunter
 3. Überschreibt lokale Daten mit Server-Version
-4. Zeigt "Slave-Modus aktiv" Status
+4. Zeigt "Read-only (Sync) aktiv" Status
 
 ### Automatische Rollenerkennung
 
 - **Master**: Erster Client mit lokalen Daten
-- **Slave**: Nachfolgende Clients ohne lokale Daten
+- **Read-only (Sync)**: Nachfolgende Clients ohne lokale Daten
 - **Umschaltung**: Jederzeit über Toggle möglich
 
 ## 📝 REKURSIVE SELBSTKONTROLLE DOKUMENTATION

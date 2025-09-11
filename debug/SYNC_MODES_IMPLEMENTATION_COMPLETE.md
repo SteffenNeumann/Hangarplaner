@@ -11,7 +11,7 @@ Die HangarPlanner Synchronisationsfunktionalität wurde erfolgreich auf ein **3-
 - **Synchronisation**: Keine automatische Synchronisation
 - **Datenfluss**: Server → App (einmalig beim Start)
 
-### 📡 SYNC-MODUS (Slave)
+### 📡 READ-ONLY (SYNC)
 
 - **Verhalten**: Empfängt automatisch Server-Updates (Leserechte)
 - **Anzeige**: Widget zeigt "Sync" (gelb), Menü-Button "📡 Sync"
@@ -39,7 +39,7 @@ Die HangarPlanner Synchronisationsfunktionalität wurde erfolgreich auf ein **3-
 #### Neue Methoden:
 
 - `enableStandaloneMode()`: Aktiviert Standalone-Modus
-- `enableSyncMode()`: Aktiviert Sync-Modus (Slave)
+- `enableSyncMode()`: Aktiviert Read-only (Sync)
 - `enableMasterMode()`: Aktiviert Master-Modus
 - `cycleSyncMode()`: Wechselt zwischen Modi (Standalone → Sync → Master → Standalone)
 
@@ -183,7 +183,7 @@ testModeCycling(); // Test Modus-Wechsel
 ### **Server-Integration**
 
 - ✅ Standalone: Einmalige Datenladung
-- ✅ Sync: Slave-Polling funktioniert
+- ✅ Sync: Read-only polling funktioniert
 - ✅ Master: Bidirektionale Synchronisation
 - ✅ ServerSync Modi-Erkennung
 

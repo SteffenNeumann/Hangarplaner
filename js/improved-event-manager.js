@@ -304,7 +304,6 @@ class HangarEventManager {
 			console.warn(`⚠️ Container ${containerId} nicht gefunden`);
 			return [];
 		}
-	}
 		const tiles = [];
 		const selectors = [
 			'input[id^="aircraft-"]',

@@ -506,7 +506,7 @@
 							<button id="changeLogClearBtn" class="sidebar-btn sidebar-btn-secondary" title="Clear the change log" style="min-height: 28px; font-size: 12px; padding: 0 10px;">Clear</button>
 						</div>
 					</div>
-					<div id="changeLogList" style="max-height: 240px; overflow-y: auto; background: #fff; border: 1px solid #e6e6e6; border-radius: 8px; padding: 8px;">
+					<div id="changeLogList" style="max-height: 240px; overflow-y: auto; background: transparent; border: 1px solid #e6e6e6; border-radius: 8px; padding: 8px;">
 						<!-- Entries rendered here -->
 					</div>
 				</div>
@@ -3535,14 +3535,16 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                 const list = document.getElementById('changeLogList');
                 if (!list) return;
                 const entries = load();
-                const items = entries.slice().reverse().map((e, idx) => {
+                const myName = getUserName();
+                const onlyOthers = entries.filter(e => (e && typeof e.user === 'string') ? (e.user.trim() !== myName) : true);
+                const items = onlyOthers.slice().reverse().map((e, idx) => {
                   const when = formatTime(e.ts);
                   const desc = `${e.user} • ${FIELD_LABELS[e.prefix]||e.prefix} @ ${getTileLabel(e.cellId)}`;
                   const val = (e.value||'').toString();
                   const prettyVal = val.length > 60 ? (val.slice(0,60)+'…') : val;
                   const id = `goTo_${idx}_${e.cellId}_${e.prefix}`;
                   return `
-                    <div class=\"flex items-start justify-between gap-2 py-1 border-b border-gray-200\">
+                    <div class=\"flex items-start justify-between gap-2 py-1 border-b\" style=\"border-color:#e6e6e6;\">
                       <div class=\"text-xs\">
                         <div class=\"font-semibold\" style=\"color:#475569\">${when}</div>
                         <div class=\"\" style=\"color:#64748b\">${desc}</div>
@@ -3555,7 +3557,7 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                 });
                 list.innerHTML = items.join('');
                 // Wire buttons
-                entries.slice().reverse().forEach((e, idx) => {
+                onlyOthers.slice().reverse().forEach((e, idx) => {
                   const id = `goTo_${idx}_${e.cellId}_${e.prefix}`;
                   const btn = document.getElementById(id);
                   if (btn) btn.addEventListener('click', (ev)=>{ ev.preventDefault(); navigateTo(e.fieldId, e.cellId); });

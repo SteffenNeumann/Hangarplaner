@@ -11,6 +11,10 @@ class HangarEventManager {
 		this.storageQueue = []; // Queue für localStorage-Operationen
 		this.isProcessingStorage = false;
 		this.debounceTimers = new Map();
+		// Field-level write aggregation (batch POST)
+		this._pendingFieldUpdates = {};
+		this._pendingFlushTimer = null;
+		this._flushInFlight = false;
 
 		// Singleton-Pattern
 		if (HangarEventManager.instance) {
@@ -184,6 +188,58 @@ class HangarEventManager {
 				console.info("📘 Read-only Modus aktiv – überspringe Server-Write für Feld:", fieldId);
 				return;
 			}
+
+			// ===== Aggregation path: batch multiple field updates into a single POST =====
+			try {
+				// Mark write fence (if supported by serverSync)
+				try { if (window.serverSync && typeof window.serverSync._markPendingWrite === 'function') { window.serverSync._markPendingWrite(fieldId); } } catch(_e){}
+				// Collect pending updates
+				this._pendingFieldUpdates = this._pendingFieldUpdates || {};
+				this._pendingFieldUpdates[fieldId] = value;
+				// Schedule a flush if not already scheduled
+				if (!this._pendingFlushTimer){
+					this._pendingFlushTimer = setTimeout(async () => {
+						if (this._flushInFlight) { this._pendingFlushTimer = null; return; }
+						this._flushInFlight = true;
+						try {
+							const updates = { ...(this._pendingFieldUpdates||{}) };
+							this._pendingFieldUpdates = {};
+							this._pendingFlushTimer = null;
+							const postUrl = (window.serverSync?.getServerUrl?.()) || (window.storageBrowser?.serverSyncUrl) || '';
+							if (!postUrl){ this._flushInFlight = false; return; }
+							// Build body
+							const lastWriter = (localStorage.getItem('presence.displayName') || '');
+							const body = { metadata: { timestamp: Date.now(), lastWriter }, settings: {}, fieldUpdates: updates };
+							// Post
+							const response = await fetch(postUrl, {
+								method: 'POST',
+								headers: {
+									'Content-Type': 'application/json',
+									'X-Sync-Role': 'master',
+									'X-Sync-Session': (window.serverSync && typeof window.serverSync.getSessionId === 'function') ? window.serverSync.getSessionId() : (localStorage.getItem('serverSync.sessionId') || ''),
+									'X-Display-Name': lastWriter,
+								},
+								body: JSON.stringify(body),
+							});
+							if (response.ok) {
+								// Optional read-back to converge if Read is ON
+								const canRead = !!(window.serverSync && typeof window.serverSync.canReadFromServer === 'function' && window.serverSync.canReadFromServer());
+								if (canRead && typeof window.serverSync.loadFromServer === 'function' && typeof window.serverSync.applyServerData === 'function') {
+									try {
+										const data = await window.serverSync.loadFromServer();
+										if (data && !data.error) await window.serverSync.applyServerData(data);
+									} catch(_e){}
+								}
+							} else {
+								console.warn('⚠️ Aggregated Server-Sync fehlgeschlagen', response.status);
+							}
+						} catch(err){ console.warn('aggregate flush failed', err); }
+						finally { this._flushInFlight = false; }
+					}, 450);
+				}
+			} catch(_e){}
+			// Stop here; legacy immediate single-field path not needed when aggregation is enabled
+			return;
 
 			// IMPORTANT: For field-level updates, always send fieldUpdates directly to avoid overwriting unrelated fields in multi-master
 
@@ -587,7 +643,7 @@ class HangarEventManager {
 					if (iso) storeVal = iso; else storeVal = '';
 				}
 
-				this.debouncedFieldUpdate(event.target.id, storeVal, 100);
+				this.debouncedFieldUpdate(event.target.id, storeVal, 150);
 			},
 			`${containerType}_blur`
 		);
@@ -604,7 +660,7 @@ class HangarEventManager {
 				// KORREKTUR: Aircraft ID Handling entfernt vom change Event
 				// um Doppelaufrufe zu verhindern - wird nur bei blur behandelt
 
-				this.debouncedFieldUpdate(event.target.id, event.target.value, 50);
+				this.debouncedFieldUpdate(event.target.id, event.target.value, 150);
 			},
 			`${containerType}_change`
 		);
@@ -801,7 +857,7 @@ class HangarEventManager {
 					if (iso) storeVal = iso; else storeVal = '';
 				}
 
-				this.debouncedFieldUpdate(event.target.id, storeVal, 100);
+				this.debouncedFieldUpdate(event.target.id, storeVal, 150);
 			},
 			`${handlerPrefix}_blur`
 		);
@@ -826,7 +882,7 @@ class HangarEventManager {
 					window.updateStatusLights(cellId);
 				}
 
-				this.debouncedFieldUpdate(event.target.id, event.target.value, 50);
+				this.debouncedFieldUpdate(event.target.id, event.target.value, 150);
 			},
 			`${handlerPrefix}_change`
 		);

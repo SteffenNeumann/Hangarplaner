@@ -25,6 +25,10 @@ class ServerSync {
 		this.lastServerTimestamp = 0;
 		this.sessionId = null; // stable session id cached
 
+		// Client-side write fencing to prevent self-echo/oscillation in multi-master
+		this._pendingWrites = {}; // { fieldId: timestampMs }
+		this._writeFenceMs = 1200; // fence TTL window
+
 		// Baseline of last server-applied data to compute precise deltas (fieldUpdates)
 		this._baselinePrimary = {};
 		this._baselineSecondary = {};
@@ -189,6 +193,50 @@ class ServerSync {
 			try { if (serverData?.metadata?.timestamp) this.lastServerTimestamp = Math.max(this.lastServerTimestamp||0, parseInt(serverData.metadata.timestamp,10)||0); } catch(_e){}
 			console.log('📌 Baseline aktualisiert', { primary: Object.keys(this._baselinePrimary).length, secondary: Object.keys(this._baselineSecondary).length });
 		} catch(e) { console.warn('Baseline update failed', e); }
+	}
+
+	// ===== Write-fence helpers (anti-oscillation) =====
+	_now(){ try { return Date.now(); } catch(_e) { return new Date().getTime(); } }
+	_markPendingWrite(fieldId){ try { if (!fieldId) return; this._pendingWrites[fieldId] = this._now(); } catch(_e){} }
+	_isWriteFenceActive(fieldId){ try { if (!fieldId) return false; const ts = this._pendingWrites[fieldId] || 0; return ts && (this._now() - ts) < this._writeFenceMs; } catch(_e){ return false; } }
+	_hasActiveFences(){ try { const now = this._now(); const win = this._writeFenceMs; return Object.values(this._pendingWrites||{}).some(ts => (now - ts) < win); } catch(_e){ return false; } }
+	_fieldIdFor(tileId, key){
+		try {
+			const id = parseInt(tileId||0,10); if (!id) return null;
+			switch(key){
+				case 'aircraftId': return `aircraft-${id}`;
+				case 'arrivalTime': return `arrival-time-${id}`;
+				case 'departureTime': return `departure-time-${id}`;
+				case 'hangarPosition': return `hangar-position-${id}`;
+				case 'position': return `position-${id}`;
+				case 'status': return `status-${id}`;
+				case 'towStatus': return `tow-status-${id}`;
+				case 'notes': return `notes-${id}`;
+				default: return null;
+			}
+		} catch(_e){ return null; }
+	}
+	_cloneFilteredServerData(serverData){
+		try {
+			const copyTile = (t)=>{
+				const id = parseInt(t?.tileId||0,10);
+				const out = { tileId: id };
+				const keys = ['aircraftId','arrivalTime','departureTime','hangarPosition','position','status','towStatus','notes','updatedAt','updatedBy'];
+				keys.forEach(k=>{
+					if (t.hasOwnProperty(k)){
+						const fid = this._fieldIdFor(id, k);
+						if (!fid || !this._isWriteFenceActive(fid)){
+							out[k] = t[k];
+						}
+					}
+				});
+				return out;
+			};
+			const filtered = { ...serverData };
+			filtered.primaryTiles = Array.isArray(serverData?.primaryTiles) ? serverData.primaryTiles.map(copyTile) : [];
+			filtered.secondaryTiles = Array.isArray(serverData?.secondaryTiles) ? serverData.secondaryTiles.map(copyTile) : [];
+			return filtered;
+		} catch(e){ console.warn('filter server data by fences failed', e); return serverData; }
 	}
 
 	/**
@@ -559,6 +607,7 @@ async slaveCheckForUpdates() {
 			// Delta bevorzugen: Nur geänderte Felder schicken, um Fremdänderungen nicht zu überschreiben
 			let requestBody = null;
 			const delta = this._computeFieldUpdates(currentData);
+			try { if (delta && typeof delta === 'object') { Object.keys(delta).forEach(fid => { try { this._markPendingWrite(fid); } catch(_e){} }); } } catch(_e){}
 			if (delta && Object.keys(delta).length > 0) {
 				requestBody = { metadata: { timestamp: Date.now() }, fieldUpdates: delta, settings: currentData.settings || {} };
 			} else {
@@ -597,6 +646,9 @@ async slaveCheckForUpdates() {
 			cancel && cancel();
 
 				if (response.ok) {
+					// Try to consume JSON and advance our lastServerTimestamp immediately for read-after-write coherency
+					let _resp = null; try { _resp = await response.json(); } catch(_e){}
+					try { const ts = parseInt(_resp?.timestamp || 0, 10); if (ts) { this.lastServerTimestamp = Math.max(this.lastServerTimestamp||0, ts); } } catch(_e){}
 					console.log("✅ Master: Server-Sync erfolgreich");
 					// Reset API-Sync-Bypass-Flag nach erfolgreicher Speicherung
 					if (window.HangarDataCoordinator) {
@@ -862,6 +914,14 @@ async slaveCheckForUpdates() {
 			console.warn("⚠️ Keine Server-Daten zum Anwenden");
 			return false;
 		}
+		// Stale snapshot gating by server timestamp to prevent oscillation
+		try {
+			const incTs = parseInt(serverData?.metadata?.timestamp || 0, 10);
+			if (incTs && (this.lastServerTimestamp || 0) && incTs <= (this.lastServerTimestamp || 0)){
+				console.log('⏭️ Überspringe veralteten Server-Snapshot', { incTs, last: this.lastServerTimestamp });
+				return false;
+			}
+		} catch(_e){}
 		// Normalize legacy schemas to { primaryTiles, secondaryTiles } if needed
 		try {
 			if (!serverData.primaryTiles && (Array.isArray(serverData.primary) || Array.isArray(serverData.secondary))) {
@@ -1017,8 +1077,10 @@ async slaveCheckForUpdates() {
 			}
 
 			// *** PRIORITÄT 2: Kachel-Daten anwenden ***
-			// NEUE LOGIK: Verwende zentralen Datenkoordinator
-			if (window.dataCoordinator) {
+			// NEUE LOGIK: Verwende zentralen Datenkoordinator wenn keine aktiven Write-Fences bestehen,
+			// andernfalls wende nur nicht-gefenzte Felder direkt an, um Oscillation zu vermeiden
+			const hasFences = this._hasActiveFences();
+			if (window.dataCoordinator && !hasFences) {
 				console.log("🔄 Verwende dataCoordinator für Server-Daten...");
 				window.dataCoordinator.loadProject(serverData, "server");
 				console.log("✅ Server-Daten über Datenkoordinator angewendet");
@@ -1047,21 +1109,24 @@ async slaveCheckForUpdates() {
 
 			// ERWEITERT: Direkter Fallback für Kachel-Daten
 			console.log(
-				"⚠️ Keine Standard-Datenhandler verfügbar, verwende direkten Fallback..."
+				hasFences
+					? "⚠️ Aktive Write-Fences erkannt – wende nur nicht-gefenzte Felder direkt an"
+					: "⚠️ Keine Standard-Datenhandler verfügbar, verwende direkten Fallback..."
 			);
 			let applied = false;
+			const dataForApply = hasFences ? this._cloneFilteredServerData(serverData) : serverData;
 
 			// Direkte Anwendung der Kachel-Daten
-			if (serverData.primaryTiles && serverData.primaryTiles.length > 0) {
+			if (dataForApply.primaryTiles && dataForApply.primaryTiles.length > 0) {
 				console.log("🔄 Wende primäre Kachel-Daten direkt an...");
-				const a = this.applyTileData(serverData.primaryTiles, false);
+				const a = this.applyTileData(dataForApply.primaryTiles, false);
 				applied = !!(applied || a);
 				console.log("📊 Primäre Kacheln angewendet:", a);
 			}
 
-			if (serverData.secondaryTiles && serverData.secondaryTiles.length > 0) {
+			if (dataForApply.secondaryTiles && dataForApply.secondaryTiles.length > 0) {
 				console.log("🔄 Wende sekundäre Kachel-Daten direkt an...");
-				const b = this.applyTileData(serverData.secondaryTiles, true);
+				const b = this.applyTileData(dataForApply.secondaryTiles, true);
 				applied = !!(applied || b);
 				console.log("📊 Sekundäre Kacheln angewendet:", b);
 			}

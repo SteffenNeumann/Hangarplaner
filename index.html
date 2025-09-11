@@ -925,6 +925,14 @@
         try {
           const me = presence.sessionId;
           const roleMap = { master: 'Master', sync: 'Sync', standalone: 'Standalone' };
+          const fmtLogin = (secs) => {
+            try {
+              const v = (typeof secs === 'number') ? secs : parseInt(secs, 10);
+              if (!isFinite(v) || v <= 0) return '';
+              const d = new Date(v * 1000);
+              return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            } catch(_) { return ''; }
+          };
           const parts = [];
           const others = (users || []).filter(u => u && u.sessionId !== me);
           others.forEach(u => {
@@ -932,10 +940,17 @@
             const r = (u.role || 'standalone').toLowerCase();
             const label = roleMap[r] || 'Standalone';
             const css = r === 'master' ? 'mode-master' : (r === 'sync' ? 'mode-sync' : 'standalone');
-            if (name.length) parts.push(`<span class=\"sync-mode-badge compact presence-chip ${css}\" title=\"${label}\">${name}</span>`);
+            const loginPart = fmtLogin(u.loginAt);
+            const tooltip = loginPart ? `${label} • Login: ${loginPart}` : `${label}`;
+            if (name.length) parts.push(`<span class=\"sync-mode-badge compact presence-chip ${css}\" title=\"${tooltip}\">${name}</span>`);
           });
           namesEl.innerHTML = parts.join(' ');
-          namesEl.title = others.map(u => `${(u.displayName||'').replace(/[<>]/g, '')} (${roleMap[(u.role||'standalone').toLowerCase()]||'Standalone'})`).join(', ');
+          namesEl.title = others.map(u => {
+            const nm = (u.displayName||'').replace(/[<>]/g, '');
+            const lbl = roleMap[(u.role||'standalone').toLowerCase()]||'Standalone';
+            const lt = fmtLogin(u.loginAt);
+            return lt ? `${nm} (${lbl}) — Login: ${lt}` : `${nm} (${lbl})`;
+          }).join(', ');
         } catch(e){}
       }
 

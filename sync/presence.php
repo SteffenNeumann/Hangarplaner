@@ -171,14 +171,18 @@ if ($method === 'POST') {
                 if (isset($map[$sessionId])) unset($map[$sessionId]);
                 presence_log("$reqId LEAVE sessionId=$sessionId");
             } else {
+                // Preserve first login time (loginAt) across heartbeats; set on first sighting
+                $existing = isset($map[$sessionId]) && is_array($map[$sessionId]) ? $map[$sessionId] : null;
+                $loginAt = isset($existing['loginAt']) ? intval($existing['loginAt']) : $now;
                 $map[$sessionId] = [
                     'sessionId' => $sessionId,
                     'displayName' => $displayName,
                     'role' => $role,
                     'page' => $page,
+                    'loginAt' => $loginAt,
                     'lastSeen' => $now,
                 ];
-                presence_log("$reqId HEARTBEAT sessionId=$sessionId role=$role page=$page");
+                presence_log("$reqId HEARTBEAT sessionId=$sessionId role=$role page=$page loginAt=$loginAt");
             }
         }, $reqId);
 

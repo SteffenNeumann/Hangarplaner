@@ -261,6 +261,16 @@ body.header-loose {
 	text-decoration: underline;
 	text-underline-offset: 2px;
 }
+/* Make Presence widget Users row interactive and consistent */
+#presence-widget .status-row:first-child { cursor: pointer; }
+#presence-widget .status-row:first-child:hover .status-label,
+#presence-widget .status-row:first-child:hover .status-label-value,
+#presence-widget .status-row:first-child:hover #presenceNames {
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+/* Explicit pointer on the chips container */
+#presenceNames { cursor: pointer; }
 /* Gruppe für mehrere Werte rechts (Mode + Update Toggle) */
 #status-widget .status-value-group {
 	display: inline-flex;

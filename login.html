@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hangar Planner - Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <script>
+        // Tailwind configuration
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ["Inter", "ui-sans-serif"] },
+                    colors: {
+                        industrial: {
+                            dark: "#3A4354",
+                            medium: "#5D6B89",
+                            light: "#D1D5DB",
+                            accent: "#FF7043",
+                        },
+                    },
+                },
+            },
+        };
+    </script>
+    <style>
+        /* Custom styles for form elements */
+        .tab-button {
+            transition: all 0.3s ease;
+        }
+        .tab-button.active {
+            color: #FF7043;
+            border-bottom: 2px solid #FF7043;
+        }
+        .form-input {
+            transition: border-color 0.3s ease;
+        }
+        .form-input:focus {
+            border-color: #FF7043;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(255, 112, 67, 0.1);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #FF7043 0%, #FF8A65 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 112, 67, 0.3);
+        }
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+        .error-message {
+            animation: shake 0.5s;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .success-message {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-industrial-dark via-industrial-medium to-industrial-dark min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <!-- Logo/Header -->
+        <div class="bg-gradient-to-r from-industrial-dark to-industrial-medium p-8 text-center">
+            <svg class="w-20 h-20 mx-auto mb-4 text-industrial-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+            </svg>
+            <h1 class="text-3xl font-bold text-white">Hangar Planner</h1>
+            <p class="text-industrial-light mt-2">Aircraft Management System</p>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="flex border-b border-gray-200">
+            <button id="loginTab" class="tab-button flex-1 py-4 px-6 text-center font-medium text-gray-600 active" onclick="switchTab('login')">
+                Login
+            </button>
+            <button id="registerTab" class="tab-button flex-1 py-4 px-6 text-center font-medium text-gray-600" onclick="switchTab('register')">
+                Create Account
+            </button>
+        </div>
+
+        <!-- Message Container -->
+        <div id="messageContainer" class="hidden px-8 pt-4">
+            <div id="messageBox" class="p-4 rounded-lg text-sm font-medium"></div>
+        </div>
+
+        <!-- Login Form -->
+        <div id="loginPanel" class="p-8">
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-medium mb-2" for="loginEmail">
+                        Email Address
+                    </label>
+                    <input 
+                        type="email" 
+                        id="loginEmail" 
+                        required
+                        class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-industrial-accent"
+                        placeholder="your@email.com"
+                    >
+                </div>
+                <div class="mb-6">
+                    <label class="block text-gray-700 font-medium mb-2" for="loginPassword">
+                        Password
+                    </label>
+                    <input 
+                        type="password" 
+                        id="loginPassword" 
+                        required
+                        minlength="8"
+                        class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-industrial-accent"
+                        placeholder="••••••••"
+                    >
+                </div>
+                <button type="submit" class="btn-primary w-full py-3 px-6 text-white font-medium rounded-lg">
+                    Sign In
+                </button>
+            </form>
+        </div>
+
+        <!-- Register Form -->
+        <div id="registerPanel" class="p-8 hidden">
+            <form id="registerForm" onsubmit="handleRegister(event)">
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-medium mb-2" for="registerEmail">
+                        Email Address
+                    </label>
+                    <input 
+                        type="email" 
+                        id="registerEmail" 
+                        required
+                        class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-industrial-accent"
+                        placeholder="your@email.com"
+                    >
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-medium mb-2" for="registerName">
+                        Display Name (Optional)
+                    </label>
+                    <input 
+                        type="text" 
+                        id="registerName"
+                        class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-industrial-accent"
+                        placeholder="John Doe"
+                    >
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-medium mb-2" for="registerPassword">
+                        Password
+                    </label>
+                    <input 
+                        type="password" 
+                        id="registerPassword" 
+                        required
+                        minlength="8"
+                        class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-industrial-accent"
+                        placeholder="••••••••"
+                    >
+                    <p class="text-sm text-gray-500 mt-1">Minimum 8 characters</p>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-gray-700 font-medium mb-2" for="registerConfirm">
+                        Confirm Password
+                    </label>
+                    <input 
+                        type="password" 
+                        id="registerConfirm" 
+                        required
+                        minlength="8"
+                        class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-industrial-accent"
+                        placeholder="••••••••"
+                    >
+                </div>
+                <button type="submit" class="btn-primary w-full py-3 px-6 text-white font-medium rounded-lg">
+                    Create Account
+                </button>
+                <p class="text-sm text-gray-600 mt-4 text-center">
+                    Note: Your account requires admin approval before you can log in.
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching
+        function switchTab(tab) {
+            const loginTab = document.getElementById('loginTab');
+            const registerTab = document.getElementById('registerTab');
+            const loginPanel = document.getElementById('loginPanel');
+            const registerPanel = document.getElementById('registerPanel');
+            
+            if (tab === 'login') {
+                loginTab.classList.add('active');
+                registerTab.classList.remove('active');
+                loginPanel.classList.remove('hidden');
+                registerPanel.classList.add('hidden');
+            } else {
+                registerTab.classList.add('active');
+                loginTab.classList.remove('active');
+                registerPanel.classList.remove('hidden');
+                loginPanel.classList.add('hidden');
+            }
+            hideMessage();
+        }
+
+        // Show message
+        function showMessage(message, type) {
+            const container = document.getElementById('messageContainer');
+            const box = document.getElementById('messageBox');
+            
+            container.classList.remove('hidden');
+            box.textContent = message;
+            box.className = 'p-4 rounded-lg text-sm font-medium ';
+            
+            if (type === 'error') {
+                box.className += 'bg-red-50 text-red-700 border border-red-200 error-message';
+            } else if (type === 'success') {
+                box.className += 'bg-green-50 text-green-700 border border-green-200 success-message';
+            } else {
+                box.className += 'bg-blue-50 text-blue-700 border border-blue-200';
+            }
+        }
+
+        // Hide message
+        function hideMessage() {
+            document.getElementById('messageContainer').classList.add('hidden');
+        }
+
+        // Handle login
+        async function handleLogin(event) {
+            event.preventDefault();
+            hideMessage();
+            
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            try {
+const response = await fetch('sync/auth.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'login',
+                        email: email,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Store display name for presence system
+                    if (data.user && data.user.displayName) {
+                        localStorage.setItem('presence.displayName', data.user.displayName);
+                    } else {
+                        localStorage.setItem('presence.displayName', data.user.email.split('@')[0]);
+                    }
+                    
+                    showMessage('Login successful! Redirecting...', 'success');
+                    setTimeout(() => {
+window.location.href = 'index.html';
+                    }, 1000);
+                } else {
+                    showMessage(data.error || 'Login failed', 'error');
+                }
+            } catch (error) {
+                showMessage('Connection error. Please try again.', 'error');
+                console.error('Login error:', error);
+            }
+        }
+
+        // Handle registration
+        async function handleRegister(event) {
+            event.preventDefault();
+            hideMessage();
+            
+            const email = document.getElementById('registerEmail').value;
+            const displayName = document.getElementById('registerName').value;
+            const password = document.getElementById('registerPassword').value;
+            const confirm = document.getElementById('registerConfirm').value;
+            
+            // Validate passwords match
+            if (password !== confirm) {
+                showMessage('Passwords do not match', 'error');
+                return;
+            }
+            
+            // Validate password length
+            if (password.length < 8) {
+                showMessage('Password must be at least 8 characters', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/sync/auth.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'register',
+                        email: email,
+                        displayName: displayName || email.split('@')[0],
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage('Registration successful! An admin will review your account. You will be able to login once approved.', 'success');
+                    // Clear form
+                    document.getElementById('registerForm').reset();
+                    // Switch to login tab after 3 seconds
+                    setTimeout(() => {
+                        switchTab('login');
+                    }, 3000);
+                } else {
+                    showMessage(data.error || 'Registration failed', 'error');
+                }
+            } catch (error) {
+                showMessage('Connection error. Please try again.', 'error');
+                console.error('Registration error:', error);
+            }
+        }
+
+        // Check if already logged in
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+const response = await fetch('sync/auth.php?action=session');
+                const data = await response.json();
+                
+                if (data.success && data.user) {
+                    // Already logged in, redirect to main app
+                    window.location.href = '/index.html';
+                }
+            } catch (error) {
+                // Not logged in, stay on login page
+            }
+        });
+    </script>
+</body>
+</html>

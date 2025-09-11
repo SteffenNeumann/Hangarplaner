@@ -45,6 +45,11 @@ jspm_packages/
 # dotenv environment variables file
 .env
 
+# Auth configuration and data (do NOT commit)
+sync/config.php
+sync/users.json
+sync/mail_outbox.txt
+
 # IDE files
 .vscode/
 .idea/

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hangar Planner - Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: { colors: { industrial: { dark: "#3A4354", medium: "#5D6B89", light: "#D1D5DB", accent: "#FF7043" } } } } };
+  </script>
+</head>
+<body class="bg-industrial-dark min-h-screen text-white">
+  <div class="max-w-4xl mx-auto p-6">
+    <h1 class="text-3xl font-bold mb-6">Admin Panel</h1>
+
+    <!-- Login panel -->
+    <div id="adminLoginPanel" class="bg-white/10 rounded-xl p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">Admin Login</h2>
+      <div class="grid grid-cols-1 gap-4">
+        <input id="adminSecret" type="password" class="px-4 py-3 rounded-lg bg-white/5 border border-white/20 focus:outline-none focus:ring-2 focus:ring-industrial-accent" placeholder="Enter admin secret" />
+        <button onclick="adminLogin()" class="bg-industrial-accent text-white px-4 py-3 rounded-lg font-medium">Login</button>
+      </div>
+      <p class="text-sm text-industrial-light mt-2">Set your secret in sync/config.php (not committed)</p>
+      <div id="adminLoginMsg" class="mt-3 text-sm"></div>
+    </div>
+
+    <!-- Users panel -->
+    <div id="usersPanel" class="hidden bg-white/10 rounded-xl p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold">Users</h2>
+        <div class="space-x-2">
+          <button onclick="loadUsers()" class="bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg">Refresh</button>
+          <button onclick="adminLogout()" class="bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg">Logout</button>
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead>
+            <tr class="text-left text-industrial-light">
+              <th class="py-2 pr-4">Email</th>
+              <th class="py-2 pr-4">Display Name</th>
+              <th class="py-2 pr-4">Approved</th>
+              <th class="py-2 pr-4">Blocked</th>
+              <th class="py-2 pr-4">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="usersTbody"></tbody>
+        </table>
+      </div>
+      <div id="usersMsg" class="mt-3 text-sm"></div>
+    </div>
+  </div>
+
+  <script>
+    function setMsg(el, msg, ok=true){ el.textContent = msg; el.className = ok ? 'text-green-300' : 'text-red-300'; }
+
+    async function adminLogin(){
+      const secret = document.getElementById('adminSecret').value.trim();
+      const el = document.getElementById('adminLoginMsg');
+      setMsg(el, 'Logging in...', true);
+      try{
+const res = await fetch('auth.php', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'admin_login', secret}) });
+        const data = await res.json();
+        if(data.success){
+          setMsg(el, 'Logged in', true);
+          document.getElementById('adminLoginPanel').classList.add('hidden');
+          document.getElementById('usersPanel').classList.remove('hidden');
+          loadUsers();
+        } else {
+          setMsg(el, data.error||'Login failed', false);
+        }
+      }catch(e){ setMsg(el, 'Network error', false); }
+    }
+
+    async function adminLogout(){
+await fetch('auth.php', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'admin_logout'}) });
+      document.getElementById('usersPanel').classList.add('hidden');
+      document.getElementById('adminLoginPanel').classList.remove('hidden');
+    }
+
+    function renderUsers(users){
+      const tbody = document.getElementById('usersTbody');
+      tbody.innerHTML='';
+      users.forEach(u=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="py-2 pr-4">${u.email}</td>
+          <td class="py-2 pr-4">${u.displayName||''}</td>
+          <td class="py-2 pr-4">${u.approved?'<span class=\'text-green-300\'>Yes</span>':'<span class=\'text-yellow-300\'>No</span>'}</td>
+          <td class="py-2 pr-4">${u.blocked?'<span class=\'text-red-300\'>Yes</span>':'No'}</td>
+          <td class="py-2 pr-4 space-x-2">
+            <button class="bg-white/10 hover:bg-white/20 px-2 py-1 rounded" onclick="blockUser('${u.email}')">Block</button>
+            <button class="bg-white/10 hover:bg-white/20 px-2 py-1 rounded" onclick="unblockUser('${u.email}')">Unblock</button>
+          </td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function loadUsers(){
+      const msg = document.getElementById('usersMsg');
+      setMsg(msg, 'Loading...', true);
+      try{
+const res = await fetch('auth.php?action=admin_list');
+        const data = await res.json();
+        if(data.success){ renderUsers(data.users||[]); setMsg(msg, ''); }
+        else setMsg(msg, data.error||'Failed', false);
+      }catch(e){ setMsg(msg, 'Network error', false); }
+    }
+
+    async function blockUser(email){
+      const msg = document.getElementById('usersMsg');
+      try{
+const res = await fetch('auth.php', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'admin_block', email}) });
+        const data = await res.json();
+        if(data.success){ loadUsers(); }
+        else setMsg(msg, data.error||'Failed to block', false);
+      }catch(e){ setMsg(msg, 'Network error', false); }
+    }
+
+    async function unblockUser(email){
+      const msg = document.getElementById('usersMsg');
+      try{
+const res = await fetch('auth.php', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'admin_unblock', email}) });
+        const data = await res.json();
+        if(data.success){ loadUsers(); }
+        else setMsg(msg, data.error||'Failed to unblock', false);
+      }catch(e){ setMsg(msg, 'Network error', false); }
+    }
+  </script>
+</body>
+</html>
+

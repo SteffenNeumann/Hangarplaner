@@ -1,0 +1,5 @@
+# Deny direct access to JSON and outbox files; allow PHP scripts
+<FilesMatch "^(users\.json|mail_outbox\.txt)$">
+  Require all denied
+</FilesMatch>
+

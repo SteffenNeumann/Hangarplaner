@@ -177,7 +177,24 @@
 			.dark-mode #towing-reminder-widget .status-label-value { color: #cbd5e1; }
 			.dark-mode #towingReminderList { color: #ef4444 !important; }
 		</style>
-	</head>
+<script>
+// Early auth guard: redirect unauthenticated users to /login.html
+(function(){
+  try {
+    var xhr = new XMLHttpRequest();
+xhr.open('GET', 'sync/auth.php?action=session', false); // synchronous, very early
+    xhr.send(null);
+    var ok = false;
+    if (xhr.status === 200) {
+      try { var data = JSON.parse(xhr.responseText||'{}'); ok = !!(data && data.success && data.user); } catch(e){}
+    }
+    if (!ok) {
+window.location.replace('login.html');
+    }
+  } catch(e) { /* ignore; if it fails, page continues */ }
+})();
+</script>
+</head>
 <body class="bg-industrial-dark text-white font-sans edit-mode with-tabs">
 		<div class="flex h-screen">
 			<!-- Neue linke Hauptnavigation -->

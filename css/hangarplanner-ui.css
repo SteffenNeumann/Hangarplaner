@@ -3001,3 +3001,29 @@ body:not(.dark-mode) .tow-status-selector:hover {
 .read-only #secondaryHangarGrid .hangar-cell input[id^="departure-time-"]:focus::placeholder {
 	color: transparent !important;
 }
+/* Dark-mode explicit override (beats .dark-mode .info-input::placeholder) */
+.dark-mode.read-only #hangarGrid .hangar-cell input[id^="arrival-time-"]::placeholder,
+.dark-mode.read-only #hangarGrid .hangar-cell input[id^="departure-time-"]::placeholder,
+.dark-mode.read-only #secondaryHangarGrid .hangar-cell input[id^="arrival-time-"]::placeholder,
+.dark-mode.read-only #secondaryHangarGrid .hangar-cell input[id^="departure-time-"]::placeholder,
+.dark-mode.read-only #hangarGrid .hangar-cell input[id^="arrival-time-"]:hover::placeholder,
+.dark-mode.read-only #hangarGrid .hangar-cell input[id^="departure-time-"]:hover::placeholder,
+.dark-mode.read-only #secondaryHangarGrid .hangar-cell input[id^="arrival-time-"]:hover::placeholder,
+.dark-mode.read-only #secondaryHangarGrid .hangar-cell input[id^="departure-time-"]:hover::placeholder,
+.dark-mode.read-only #hangarGrid .hangar-cell input[id^="arrival-time-"]:focus::placeholder,
+.dark-mode.read-only #hangarGrid .hangar-cell input[id^="departure-time-"]:focus::placeholder,
+.dark-mode.read-only #secondaryHangarGrid .hangar-cell input[id^="arrival-time-"]:focus::placeholder,
+.dark-mode.read-only #secondaryHangarGrid .hangar-cell input[id^="departure-time-"]:focus::placeholder {
+	color: transparent !important;
+}
+/* Vendor-prefixed placeholder selectors to cover WebKit/legacy */
+.read-only #hangarGrid .hangar-cell input[id^="arrival-time-"]::-webkit-input-placeholder,
+.read-only #hangarGrid .hangar-cell input[id^="departure-time-"]::-webkit-input-placeholder,
+.read-only #secondaryHangarGrid .hangar-cell input[id^="arrival-time-"]::-webkit-input-placeholder,
+.read-only #secondaryHangarGrid .hangar-cell input[id^="departure-time-"]::-webkit-input-placeholder,
+.dark-mode.read-only #hangarGrid .hangar-cell input[id^="arrival-time-"]::-webkit-input-placeholder,
+.dark-mode.read-only #hangarGrid .hangar-cell input[id^="departure-time-"]::-webkit-input-placeholder,
+.dark-mode.read-only #secondaryHangarGrid .hangar-cell input[id^="arrival-time-"]::-webkit-input-placeholder,
+.dark-mode.read-only #secondaryHangarGrid .hangar-cell input[id^="departure-time-"]::-webkit-input-placeholder {
+	color: transparent !important;
+}

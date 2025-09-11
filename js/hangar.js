@@ -102,14 +102,9 @@ function initializeApp() {
 			// Überprüfen, ob ein Flugzeug aus der Fleet Database ausgewählt wurde
 			checkForSelectedAircraft();
 
-			// Benachrichtigung anzeigen, wenn alle Module geladen sind
+			// Benachrichtigung anzeigen, wenn alle Module geladen sind (deaktiviert – kein Infofeld gewünscht)
 			if (allModulesLoaded()) {
-				if (window.showNotification) {
-					window.showNotification(
-						"Hangar Planner erfolgreich geladen",
-						"success"
-					);
-				}
+				try { console.log("✅ Hangar Planner geladen"); } catch(_){}
 			}
 
 			// Sicherstellen, dass alle Kacheln den neutralen Status haben

@@ -167,38 +167,25 @@ class HangarEventManager {
 	 */
 	async syncFieldToServer(fieldId, value) {
 		try {
-			// Ensure unified sync object and basic diagnostics
+			// Ensure unified sync object
 			if (!window.serverSync && window.storageBrowser) { window.serverSync = window.storageBrowser; }
-			const syncObj = window.serverSync || window.storageBrowser || null;
-			const syncUrl = (syncObj && (syncObj.serverSyncUrl || (typeof syncObj.getServerUrl === 'function' && syncObj.getServerUrl()))) || '';
+			const syncObj = window.storageBrowser || window.serverSync || null;
+			const syncUrl = (syncObj && (typeof syncObj.getServerUrl === 'function' ? syncObj.getServerUrl() : syncObj.serverSyncUrl)) || '';
 			console.log('🧩 syncFieldToServer start', { fieldId, hasSyncObj: !!syncObj, syncUrl: !!syncUrl, isMaster: !!window.serverSync?.isMaster, mode: window.sharingManager?.syncMode });
-			// Prüfe ob Server-Sync verfügbar ist (bevorzugt storageBrowser, fallback serverSync)
-			const syncObj = window.storageBrowser || window.serverSync;
-			const syncUrl = (syncObj && (syncObj.serverSyncUrl || (typeof syncObj.getServerUrl === 'function' && syncObj.getServerUrl()))) || '';
 			if (!syncObj || !syncUrl) {
 				console.info("ℹ️ Server-Sync noch nicht konfiguriert – versuche später zu synchronisieren");
-				// Versuche kurze Zeit später einen vollständigen Sync (falls inzwischen initialisiert)
-				setTimeout(() => {
-					try { (window.serverSync || window.storageBrowser)?.syncWithServer?.(); } catch (e) {}
-				}, 1200);
+				setTimeout(() => { try { (window.serverSync || window.storageBrowser)?.syncWithServer?.(); } catch (e) {} }, 1200);
 				return;
 			}
 
-			// NEU: Schreibschutz in Read-Only (Sync) Mode erzwingen
-			const isWriteEnabled =
-				(!!window.serverSync && window.serverSync.isMaster === true) ||
-				(!!window.sharingManager && window.sharingManager.isMasterMode === true);
+			// Gate writes to Master only
+			const isWriteEnabled = (!!window.serverSync && window.serverSync.isMaster === true) || (!!window.sharingManager && window.sharingManager.isMasterMode === true);
 			if (!isWriteEnabled) {
 				console.info("📘 Read-only Modus aktiv – überspringe Server-Write für Feld:", fieldId);
-				return; // Keine Server-Schreibvorgänge im Read-Only Modus
-			}
-
-			// Bevor wir eine eigene POST-Anfrage bauen, bevorzugt über die zentrale ServerSync-Schicht schreiben
-			if (window.serverSync && typeof window.serverSync.syncWithServer === "function") {
-				const ok = await window.serverSync.syncWithServer();
-				console.log('📤 central syncWithServer result:', ok);
 				return;
 			}
+
+			// IMPORTANT: For field-level updates, always send fieldUpdates directly to avoid overwriting unrelated fields in multi-master
 
 			// Sammle alle aktuellen Daten für vollständige Server-Synchronisation (Fallback)
 			let allData = null;
@@ -269,9 +256,9 @@ class HangarEventManager {
 				}
 			} catch(e) { /* noop */ }
 
-			// Server-Request mit allen Daten (Fallback, wenn zentrale Sync-Schicht nicht verfügbar ist)
-			const postUrl = (window.storageBrowser?.serverSyncUrl) || (window.serverSync?.getServerUrl?.()) || '';
-			console.log('📮 fallback POST', { url: postUrl, fieldId });
+			// Server-Request with fieldUpdates payload only
+			const postUrl = (window.serverSync?.getServerUrl?.()) || (window.storageBrowser?.serverSyncUrl) || '';
+			console.log('📮 field-update POST', { url: postUrl, fieldId });
 			const response = await fetch(postUrl, {
 				method: "POST",
 				headers: {
@@ -280,11 +267,22 @@ class HangarEventManager {
 					"X-Sync-Session": (window.serverSync && typeof window.serverSync.getSessionId === 'function') ? window.serverSync.getSessionId() : (localStorage.getItem('serverSync.sessionId') || ''),
 					"X-Display-Name": (localStorage.getItem('presence.displayName') || ''),
 				},
-				body: JSON.stringify(allData),
+				body: JSON.stringify({
+					metadata: { timestamp: Date.now(), lastWriter: (localStorage.getItem('presence.displayName') || '') },
+					settings: {},
+					fieldUpdates: { [fieldId]: value }
+				}),
 			});
 
 			if (response.ok) {
-				const result = await response.json();
+				try {
+					// Optional read-back to converge if Read is ON
+					const canRead = !!(window.serverSync && typeof window.serverSync.canReadFromServer === 'function' && window.serverSync.canReadFromServer());
+					if (canRead && typeof window.serverSync.loadFromServer === 'function' && typeof window.serverSync.applyServerData === 'function') {
+						const data = await window.serverSync.loadFromServer();
+						if (data && !data.error) await window.serverSync.applyServerData(data);
+					}
+				} catch(_e){}
 			} else {
 				console.warn(
 					`⚠️ Server-Sync fehlgeschlagen für ${fieldId}:`,

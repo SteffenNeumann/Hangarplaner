@@ -151,8 +151,8 @@ class ServerSync {
 						this.syncWithServer();
 					}
 				} catch (_e) {}
-			}, 120000);
-			console.log("⏰ Periodische Server-Sync gestartet (120s Intervall, Change-Detection)");
+			}, 30000);
+			console.log("⏰ Periodische Server-Sync gestartet (30s Intervall, Change-Detection)");
 		} catch (e) {
 			console.warn('startPeriodicSync failed', e);
 		}
@@ -296,7 +296,7 @@ class ServerSync {
 		// Starte Slave-Polling (nur Laden bei Änderungen)
 		this.slaveCheckInterval = setInterval(async () => {
 			await this.slaveCheckForUpdates();
-		}, 15000); // 15 Sekunden Polling-Intervall
+		}, 10000); // 10 Sekunden Polling-Intervall
 
 		console.log(
 			"👤 Slave-Modus gestartet - Polling für Updates alle 15 Sekunden aktiv"

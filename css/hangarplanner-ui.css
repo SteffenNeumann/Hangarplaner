@@ -1327,7 +1327,7 @@ input:checked + .toggle-slider:before {
 .tow-status-selector option { font-size: 0.9rem; padding: 2px; color: #111827; }
 
 /* Light mode base: left accent border and small radius */
-body:not(.dark-mode) .tow-status-selector {
+html:not(.dark-mode) .tow-status-selector {
 	border-left: 3px solid #cbd5e1 !important; /* base */
 	border-radius: 2px !important;
 	border-color: #e5e7eb !important;
@@ -1335,7 +1335,7 @@ body:not(.dark-mode) .tow-status-selector {
 
 /* Light mode chip colors (match header indicators) */
 /* Light mode: match header Sync mode chip palette */
-body:not(.dark-mode) .tow-status-selector.tow-neutral {
+html:not(.dark-mode) .tow-status-selector.tow-neutral {
 	/* Neutral in light mode should look invisible (no chip) */
 	background: transparent !important;
 	color: #475569 !important; /* keep text legible if any */
@@ -1343,19 +1343,19 @@ body:not(.dark-mode) .tow-status-selector.tow-neutral {
 	border-left: 0 !important;
 	box-shadow: none !important;
 }
-body:not(.dark-mode) .tow-status-selector.tow-initiated {
+html:not(.dark-mode) .tow-status-selector.tow-initiated {
 	background: #fff7ed !important;           /* orange-50 */
 	color: #9a3412 !important;                /* orange-800 */
 	border-color: #fed7aa !important;         /* orange-200 */
 	border-left-color: #f59e0b !important;    /* orange-500 */
 }
-body:not(.dark-mode) .tow-status-selector.tow-ongoing {
+html:not(.dark-mode) .tow-status-selector.tow-ongoing {
 	background: #eff6ff !important;           /* blue-50 */
 	color: #1d4ed8 !important;                /* blue-700 */
 	border-color: #bfdbfe !important;         /* blue-200 */
 	border-left-color: #3b82f6 !important;    /* blue-500 */
 }
-body:not(.dark-mode) .tow-status-selector.tow-on-position {
+html:not(.dark-mode) .tow-status-selector.tow-on-position {
 	background: #ecfdf5 !important;           /* emerald-50 */
 	color: #065f46 !important;                /* emerald-800 */
 	border-color: #a7f3d0 !important;         /* emerald-200 */
@@ -1363,11 +1363,11 @@ body:not(.dark-mode) .tow-status-selector.tow-on-position {
 }
 
 /* Hover/focus cues */
-body:not(.dark-mode) .tow-status-selector:hover { border-color: #cbd5e1 !important; }
-body:not(.dark-mode) .tow-status-selector:focus { outline: none; border-color: #94a3b8 !important; box-shadow: 0 0 0 2px rgba(148,163,184,.25); }
+html:not(.dark-mode) .tow-status-selector:hover { border-color: #cbd5e1 !important; }
+html:not(.dark-mode) .tow-status-selector:focus { outline: none; border-color: #94a3b8 !important; box-shadow: 0 0 0 2px rgba(148,163,184,.25); }
 
 /* Light mode: neutral disabled must remain invisible */
-body:not(.dark-mode) .tow-status-selector.tow-neutral:disabled {
+html:not(.dark-mode) .tow-status-selector.tow-neutral:disabled {
 	background: transparent !important;
 	border-color: transparent !important;
 	border-left: 0 !important;
@@ -1375,7 +1375,7 @@ body:not(.dark-mode) .tow-status-selector.tow-neutral:disabled {
 }
 
 /* Default to neutral if no state class present */
-body:not(.dark-mode) .tow-status-selector:not(.tow-initiated):not(.tow-ongoing):not(.tow-on-position) {
+html:not(.dark-mode) .tow-status-selector:not(.tow-initiated):not(.tow-ongoing):not(.tow-on-position) {
 	/* Fallback neutral: also borderless and transparent */
 	background: transparent !important;
 	color: #475569 !important;
@@ -2972,7 +2972,7 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 .dark-mode #topTabs .tab-btn[aria-selected="true"] { border-bottom-color: var(--menu-accent); color: #ffffff; }
 
 /* Restore light-mode native hover for Tow select (softer, no flash) */
-body:not(.dark-mode) .tow-status-selector:hover {
+html:not(.dark-mode) .tow-status-selector:hover {
 	background-color: transparent !important;
 	border-color: #e5e7eb !important;
 }

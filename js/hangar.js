@@ -1334,8 +1334,11 @@ if (resetScreenBtn) {
 			e.preventDefault();
 			const ok = window.confirm('Reset screen?\n\nThis will:\n• clear all per-tile update timestamps\n• reset all tile inputs (Aircraft, Arr/Dep, Pos/Route, Notes, Tow, Status)\n• keep Hangar Position inputs unchanged');
 			if (!ok) return;
+			const ss = window.serverSync;
 			let resetSucceeded = false;
 			try {
+				// Suspend incoming reads to avoid the next poll re-filling tiles before we POST the cleared state
+				try { if (ss && typeof ss.suspendReads === 'function') ss.suspendReads(); } catch(_e){}
 				// Cancel any pending local rehydrate and suppress near-term runs
 				try {
 					if (window.__localRehydrateTimer) { clearTimeout(window.__localRehydrateTimer); window.__localRehydrateTimer = null; }
@@ -1383,12 +1386,17 @@ if (resetScreenBtn) {
 			} catch (err) {
 				console.warn('Reset screen failed:', err);
 				if (window.showNotification) window.showNotification('Reset failed', 'error');
+			} finally {
+				// Always resume reads afterwards
+				try { if (ss && typeof ss.resumeReads === 'function') ss.resumeReads(false); } catch(_e){}
 			}
 
 			// 5) If write is enabled (Master), persist cleared state to server immediately
 			if (resetSucceeded && window.serverSync?.isMaster) {
 				try {
 					await window.serverSync.syncWithServer();
+					// After a successful write, force an immediate read-back for fast convergence
+					try { if (ss && typeof ss.resumeReads === 'function') ss.resumeReads(true); } catch(_e){}
 				} catch (syncErr) {
 					console.warn('Reset screen sync failed:', syncErr);
 				}

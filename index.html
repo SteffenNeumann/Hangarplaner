@@ -1301,6 +1301,8 @@
       btn.addEventListener('click', async (e)=>{
         e.preventDefault(); e.stopPropagation();
         if (isReadOnlySync()) return; // No action in read-only
+        const ss = window.serverSync;
+        try { if (ss && typeof ss.suspendReads === 'function') ss.suspendReads(); } catch(_e) {}
         const ok = clearSingleTile(cellId);
         try {
           if (ok && window.serverSync?.isMaster) {
@@ -1308,6 +1310,8 @@
           }
         } catch(err) {
           console.warn('Tile clear sync failed:', err);
+        } finally {
+          try { if (ss && typeof ss.resumeReads === 'function') ss.resumeReads(true); } catch(_e) {}
         }
       });
       header.appendChild(btn);

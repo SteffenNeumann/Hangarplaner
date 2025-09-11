@@ -398,10 +398,10 @@ class ServerSync {
 		// Starte Slave-Polling (nur Laden bei Änderungen)
 	this.slaveCheckInterval = setInterval(async () => {
 			await this.slaveCheckForUpdates();
-		}, 15000); // 15 Sekunden Polling-Intervall
+		}, 10000); // 10 Sekunden Polling-Intervall (original)
 
 		console.log(
-			"👤 Slave-Modus gestartet - Polling für Updates alle 15 Sekunden aktiv"
+			"👤 Slave-Modus gestartet - Polling für Updates alle 10 Sekunden aktiv"
 		);
 		// HINWEIS: Initialer Load erfolgt bereits in initSync()
 
@@ -411,6 +411,52 @@ class ServerSync {
 		} catch (e) {
 			console.warn("⚠️ Sofortiger Slave-Update-Check fehlgeschlagen:", e?.message || e);
 		}
+	}
+
+	/**
+	 * Suspend server reads temporarily (pauses slave polling and ignores update checks)
+	 * Use around destructive local operations to avoid re-populating UI from stale server data
+	 */
+	suspendReads() {
+		try {
+			// Remember previous active state so we can restore accurately
+			this._readPausedPrevActive = !!this.isSlaveActive;
+			this.isSlaveActive = false;
+			if (this.slaveCheckInterval) {
+				clearInterval(this.slaveCheckInterval);
+				this.slaveCheckInterval = null;
+			}
+			console.log('⏸️ Server reads suspended');
+		} catch (e) { console.warn('suspendReads failed', e); }
+	}
+
+	/**
+	 * Resume server reads after a suspension. If immediate=true, trigger an on-demand update check
+	 */
+	resumeReads(immediate = false) {
+		try {
+			// Only resume if reads are allowed by current mode/toggles
+			const allow = (typeof this.canReadFromServer === 'function') ? !!this.canReadFromServer() : true;
+			const wantActive = (this._readPausedPrevActive === undefined) ? allow : (this._readPausedPrevActive && allow);
+			delete this._readPausedPrevActive;
+			if (!wantActive) {
+				this.isSlaveActive = false;
+				console.log('▶️ Server reads remain disabled (mode/toggles)');
+				return;
+			}
+			this.isSlaveActive = true;
+			// Recreate polling interval according to current role
+			if (this.slaveCheckInterval) {
+				clearInterval(this.slaveCheckInterval);
+				this.slaveCheckInterval = null;
+			}
+			const intervalMs = this.isMaster ? 30000 : 10000;
+			this.slaveCheckInterval = setInterval(async () => { try { await this.slaveCheckForUpdates(); } catch(_){} }, intervalMs);
+			if (immediate) {
+				try { this.slaveCheckForUpdates(); } catch(_e) {}
+			}
+			console.log('▶️ Server reads resumed', { intervalMs, immediate });
+		} catch (e) { console.warn('resumeReads failed', e); }
 	}
 
 	/**

@@ -414,12 +414,12 @@ class SharingManager {
 			clearInterval(this.shareCheckInterval);
 		}
 
-		// Starte Live Sync Intervall (5 Sekunden)
+		// Starte Live Sync Intervall (30 Sekunden für bessere Responsivität)
 		this.shareCheckInterval = setInterval(async () => {
 			await this.performLiveSync();
-		}, 5000);
+		}, 30000);
 
-		console.log("⏰ Live Sync Intervall gestartet (5s)");
+		console.log("⏰ Live Sync Intervall gestartet (30s)");
 	}
 
 	/**

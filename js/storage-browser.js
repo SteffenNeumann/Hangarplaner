@@ -25,6 +25,10 @@ class ServerSync {
 		this.lastServerTimestamp = 0;
 		this.sessionId = null; // stable session id cached
 
+		// Baseline of last server-applied data to compute precise deltas (fieldUpdates)
+		this._baselinePrimary = {};
+		this._baselineSecondary = {};
+
 		// Global verfügbar machen für Kompatibilität und Race Condition Prevention
 		window.isApplyingServerData = false;
 		window.isLoadingServerData = false;
@@ -170,6 +174,60 @@ class ServerSync {
 	}
 
 	/**
+	 * Build/refresh baseline maps from server data (used for delta posting)
+	 */
+	_updateBaselineFromServerData(serverData) {
+		try {
+			const toMap = (arr)=>{
+				const m = {};
+				(arr||[]).forEach(t=>{ const id = parseInt(t?.tileId||0,10); if (id) m[id] = { ...t, tileId: id }; });
+				return m;
+			};
+			this._baselinePrimary = toMap(serverData?.primaryTiles||[]);
+			this._baselineSecondary = toMap(serverData?.secondaryTiles||[]);
+			// Optionally store timestamp baseline for preflight checks
+			try { if (serverData?.metadata?.timestamp) this.lastServerTimestamp = Math.max(this.lastServerTimestamp||0, parseInt(serverData.metadata.timestamp,10)||0); } catch(_e){}
+			console.log('📌 Baseline aktualisiert', { primary: Object.keys(this._baselinePrimary).length, secondary: Object.keys(this._baselineSecondary).length });
+		} catch(e) { console.warn('Baseline update failed', e); }
+	}
+
+	/**
+	 * Compute fine-grained fieldUpdates vs. current baseline
+	 */
+	_computeFieldUpdates(currentData) {
+		try {
+			const updates = {};
+			const visit = (tiles, isSecondary=false)=>{
+				(tiles||[]).forEach(t=>{
+					const id = parseInt(t?.tileId||0,10); if (!id) return;
+					const base = (isSecondary ? this._baselineSecondary[id] : this._baselinePrimary[id]) || {};
+					const mapField = (key)=>{
+						if (key==='aircraftId') return `aircraft-${id}`;
+						if (key==='arrivalTime') return `arrival-time-${id}`;
+						if (key==='departureTime') return `departure-time-${id}`;
+						if (key==='hangarPosition') return `hangar-position-${id}`;
+						if (key==='position') return `position-${id}`;
+						if (key==='status') return `status-${id}`;
+						if (key==='towStatus') return `tow-status-${id}`;
+						if (key==='notes') return `notes-${id}`;
+						return null;
+					};
+					['aircraftId','arrivalTime','departureTime','hangarPosition','position','status','towStatus','notes'].forEach(k=>{
+						const v = (t?.[k] ?? ''); const b = (base?.[k] ?? '');
+						if (v !== b) {
+							const fid = mapField(k);
+							if (fid) updates[fid] = v;
+						}
+					});
+				});
+			};
+			visit(currentData?.primaryTiles, false);
+			visit(currentData?.secondaryTiles, true);
+			return updates;
+		} catch(e){ console.warn('delta compute failed', e); return {}; }
+	}
+
+	/**
 	 * Internal: build a fetch timeout signal with a safe fallback when AbortSignal.timeout is not available
 	 */
 	_createTimeoutSignal(ms = 10000) {
@@ -302,11 +360,11 @@ class ServerSync {
 		// Starte Master-Synchronisation fürs Senden
 		this.startPeriodicSync(); // Für das Senden von Daten
 
-		// Zusätzlich Updates empfangen (gleiches Intervall wie Sync-Client)
-			this.slaveCheckInterval = setInterval(async () => {
-				await this.slaveCheckForUpdates();
-			}, 5000); // 5 Sekunden für Master-Update-Check
-			console.log("👑 Master-Modus: Empfange zusätzlich Updates (5s, Read forced ON)");
+		// Zusätzlich Updates empfangen (ursprüngliches Intervall)
+		this.slaveCheckInterval = setInterval(async () => {
+			await this.slaveCheckForUpdates();
+		}, 30000); // 30 Sekunden für Master-Update-Check (original)
+		console.log("👑 Master-Modus: Empfange zusätzlich Updates (30s, Read forced ON)");
 
 		// Sofort einen ersten Update-Check und Schreibversuch starten
 		try {
@@ -338,12 +396,12 @@ class ServerSync {
 		}
 
 		// Starte Slave-Polling (nur Laden bei Änderungen)
-		this.slaveCheckInterval = setInterval(async () => {
+	this.slaveCheckInterval = setInterval(async () => {
 			await this.slaveCheckForUpdates();
-		}, 5000); // 5 Sekunden Polling-Intervall
+		}, 10000); // 10 Sekunden Polling-Intervall (original)
 
 		console.log(
-			"👤 Slave-Modus gestartet - Polling für Updates alle 5 Sekunden aktiv"
+			"👤 Slave-Modus gestartet - Polling für Updates alle 10 Sekunden aktiv"
 		);
 		// HINWEIS: Initialer Load erfolgt bereits in initSync()
 
@@ -455,6 +513,16 @@ async slaveCheckForUpdates() {
 				return false;
 			}
 
+			// Delta bevorzugen: Nur geänderte Felder schicken, um Fremdänderungen nicht zu überschreiben
+			let requestBody = null;
+			const delta = this._computeFieldUpdates(currentData);
+			if (delta && Object.keys(delta).length > 0) {
+				requestBody = { metadata: { timestamp: Date.now() }, fieldUpdates: delta, settings: currentData.settings || {} };
+			} else {
+				// Fallback auf vollständige Daten (z.B. erstes Speichern ohne Baseline)
+				requestBody = currentData;
+			}
+
 			// Optimierung: Verwende AbortController für Timeout
 			const { signal, cancel } = this._createTimeoutSignal(10000); // 10s Timeout
 
@@ -479,7 +547,7 @@ async slaveCheckForUpdates() {
 			const response = await fetch(serverUrl, {
 				method: "POST",
 				headers,
-				body: JSON.stringify(currentData),
+				body: JSON.stringify(requestBody),
 				signal,
 			});
 
@@ -497,6 +565,20 @@ async slaveCheckForUpdates() {
 							await this.slaveCheckForUpdates();
 						}
 					} catch(_e) {}
+					// Update baseline optimistically if we posted deltas and did not read back yet
+					try {
+						if (requestBody && requestBody.fieldUpdates && (!this.isSlaveActive)) {
+							// Apply deltas to local baseline so subsequent diffs are correct
+							Object.entries(requestBody.fieldUpdates).forEach(([fid, val])=>{
+								const m = fid.match(/^(aircraft|arrival-time|departure-time|hangar-position|position|status|tow-status|notes)-(\d+)$/);
+								if (!m) return; const field = m[1]; const id = parseInt(m[2],10); const keyMap = { 'aircraft':'aircraftId','arrival-time':'arrivalTime','departure-time':'departureTime','hangar-position':'hangarPosition','position':'position','status':'status','tow-status':'towStatus','notes':'notes' };
+								const key = keyMap[field]; if (!key) return;
+								let tgt = (id>=100 ? this._baselineSecondary : this._baselinePrimary);
+								tgt[id] = tgt[id] || { tileId: id };
+								tgt[id][key] = val;
+							});
+						}
+					} catch(_e){}
 					return true;
 				} else if (response.status === 423) {
 					let payload = null;
@@ -897,6 +979,7 @@ async slaveCheckForUpdates() {
 				console.log("🔄 Verwende dataCoordinator für Server-Daten...");
 				window.dataCoordinator.loadProject(serverData, "server");
 				console.log("✅ Server-Daten über Datenkoordinator angewendet");
+				try { this._updateBaselineFromServerData(serverData); } catch(_e){}
 				try { this.lastLoadedAt = Date.now(); document.dispatchEvent(new CustomEvent('serverDataLoaded', { detail: { loadedAt: this.lastLoadedAt } })); } catch(e){}
 				return true;
 			}
@@ -955,6 +1038,7 @@ async slaveCheckForUpdates() {
 
 			if (applied) {
 				console.log("✅ Server-Daten über direkten Fallback angewendet");
+				try { this._updateBaselineFromServerData(serverData); } catch(_e){}
 				try { this.lastLoadedAt = Date.now(); document.dispatchEvent(new CustomEvent('serverDataLoaded', { detail: { loadedAt: this.lastLoadedAt } })); } catch(e){}
 				return true;
 			} else {
@@ -1597,7 +1681,7 @@ setTimeout(async () => {
 }, 2000);
 
 console.log(
-	"📦 Server-Sync-Modul geladen (Performance-optimiert: Master writes 5s, Master/Sync reads 5s, change-detection stabilized, initSync mit Erststart-Load)"
+	"📦 Server-Sync-Modul geladen (Performance-optimiert: Master 120s, Slave 15s Intervalle, Change-Detection, initSync mit Erststart-Load)"
 );
 
 // Kleine Debug-Hilfe: Server-Lock anzeigen

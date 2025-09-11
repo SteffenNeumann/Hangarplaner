@@ -52,6 +52,7 @@ class SharingManager {
       const testWriteBtn = document.getElementById('syncTestWriteBtn');
       if (testWriteBtn) testWriteBtn.addEventListener('click', () => this.debugTestWrite());
     } catch(_e){}
+  }
 
   _getServerUrlSafe(){ try { return (window.serverSync && typeof window.serverSync.getServerUrl==='function' && window.serverSync.getServerUrl()) || (window.serverSync && window.serverSync.serverSyncUrl) || (window.location.origin + '/sync/data.php'); } catch(e){ return window.location.origin + '/sync/data.php'; } }
   _debugLog(line){ try { const el = document.getElementById('syncDebugLog'); const ts = new Date().toLocaleTimeString(); if (el){ const msg = `[${ts}] ${line}`; el.textContent = (el.textContent ? el.textContent + "\n" : '') + msg; el.scrollTop = el.scrollHeight; } console.log(line); } catch(_e){} }

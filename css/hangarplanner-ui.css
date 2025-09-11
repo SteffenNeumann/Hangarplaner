@@ -2718,6 +2718,12 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 }
 
 
+/* Project Change Log list borders (light/dark) */
+#submenu-project #projectChangeLog #changeLogList { border: 1px solid var(--menu-border); }
+#submenu-project #projectChangeLog #changeLogList .border-b { border-color: var(--menu-border); }
+.dark-mode #submenu-project #projectChangeLog #changeLogList { border-color: var(--border-color); }
+.dark-mode #submenu-project #projectChangeLog #changeLogList .border-b { border-color: var(--border-color); }
+
 /* ==========================================================================
    TOAST NOTIFICATIONS
    ========================================================================== */

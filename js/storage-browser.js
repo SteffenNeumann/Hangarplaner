@@ -151,8 +151,8 @@ class ServerSync {
 						this.syncWithServer();
 					}
 				} catch (_e) {}
-			}, 30000);
-			console.log("⏰ Periodische Server-Sync gestartet (30s Intervall, Change-Detection)");
+			}, 3000);
+			console.log("⏰ Periodische Server-Sync gestartet (3s Intervall, Change-Detection)");
 		} catch (e) {
 			console.warn('startPeriodicSync failed', e);
 		}
@@ -1571,7 +1571,7 @@ setTimeout(async () => {
 }, 2000);
 
 console.log(
-	"📦 Server-Sync-Modul geladen (Performance-optimiert: Master 120s, Slave 15s Intervalle, Change-Detection, initSync mit Erststart-Load)"
+	"📦 Server-Sync-Modul geladen (Performance-optimiert: Master writes 3s, Master/Sync reads 5s, Change-Detection, initSync mit Erststart-Load)"
 );
 
 // Kleine Debug-Hilfe: Server-Lock anzeigen

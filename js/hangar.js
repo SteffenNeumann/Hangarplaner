@@ -1436,15 +1436,21 @@ if (resetScreenBtn) {
 		if (confirmModal && doneModal) {
 			// Use project-styled modal flow
 			e.preventDefault();
-			confirmModal.classList.remove('hidden');
+			// Use hp-modal overlay show/hide to respect dark/light styles
 			const cancelBtn = document.getElementById('resetCancelBtn');
 			const confirmBtn = document.getElementById('resetConfirmBtn');
 			const doneOkBtn = document.getElementById('resetDoneOkBtn');
-			const closeConfirm = ()=>{ try { confirmModal.classList.add('hidden'); } catch(_){} };
-			const openDone = ()=>{ try { doneModal.classList.remove('hidden'); } catch(_){} };
-			const closeDone = ()=>{ try { doneModal.classList.add('hidden'); } catch(_){} };
+			const showEl = (el) => { try { el.style.display = 'flex'; } catch(_){} };
+			const hideEl = (el) => { try { el.style.display = 'none'; } catch(_){} };
+			showEl(confirmModal);
+			const closeConfirm = ()=> hideEl(confirmModal);
+			const openDone = ()=> showEl(doneModal);
+			const closeDone = ()=> hideEl(doneModal);
 
-			if (cancelBtn) cancelBtn.addEventListener('click', closeConfirm, { once: true });
+if (cancelBtn) cancelBtn.addEventListener('click', closeConfirm, { once: true });
+// Also close when clicking outside the modal panel
+try { confirmModal.addEventListener('click', (ev)=>{ if (ev.target === confirmModal) closeConfirm(); }, { once: false }); } catch(_){}
+try { doneModal.addEventListener('click', (ev)=>{ if (ev.target === doneModal) closeDone(); }, { once: false }); } catch(_){}
 			if (confirmBtn) confirmBtn.addEventListener('click', async () => {
 				try { if (confirmBtn) confirmBtn.disabled = true; } catch(_){}
 				let ok = false;

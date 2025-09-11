@@ -2711,29 +2711,26 @@ type="datetime-local"
 				</div>
 
 				<!-- Reset confirmation modal (styled like other modals) -->
-				<div id="resetConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50" role="dialog" aria-modal="true" aria-labelledby="resetConfirmTitle">
-					<div class="bg-industrial-medium rounded-lg p-6 w-96 max-w-full">
-						<h2 id="resetConfirmTitle" class="text-xl font-bold mb-2">Reset Screen</h2>
-						<div class="mb-4 text-sm">
-							This will clear all tile inputs (Aircraft, Arr/Dep, Pos/Route, Notes, Tow, Status).
-							Hangar Position fields will be kept unchanged.
+				<div id="resetConfirmModal" class="hp-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="resetConfirmTitle">
+					<div class="hp-modal" role="document">
+						<h2 id="resetConfirmTitle" class="hp-modal-title">Reset Screen</h2>
+						<div class="hp-modal-body">
+							This will clear all tile inputs (Aircraft, Arr/Dep, Pos/Route, Notes, Tow, Status). Hangar Position fields will be kept unchanged.
 						</div>
-						<div class="flex justify-end space-x-3">
-							<button id="resetCancelBtn" class="px-4 py-2 bg-industrial-light text-industrial-dark rounded">Cancel</button>
-							<button id="resetConfirmBtn" class="px-4 py-2 bg-industrial-accent rounded">Reset</button>
+						<div class="hp-modal-actions">
+							<button id="resetCancelBtn" type="button" class="sidebar-btn sidebar-btn-secondary">Cancel</button>
+							<button id="resetConfirmBtn" type="button" class="sidebar-btn sidebar-btn-primary">Reset</button>
 						</div>
 					</div>
 				</div>
 
 				<!-- Reset finished modal -->
-				<div id="resetDoneModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50" role="dialog" aria-modal="true" aria-labelledby="resetDoneTitle">
-					<div class="bg-industrial-medium rounded-lg p-6 w-96 max-w-full">
-						<h2 id="resetDoneTitle" class="text-xl font-bold mb-2">Reset Completed</h2>
-						<div class="mb-4 text-sm">
-							All tile inputs have been cleared successfully.
-						</div>
-						<div class="flex justify-end">
-							<button id="resetDoneOkBtn" class="px-4 py-2 bg-industrial-accent rounded">OK</button>
+				<div id="resetDoneModal" class="hp-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="resetDoneTitle">
+					<div class="hp-modal" role="document">
+						<h2 id="resetDoneTitle" class="hp-modal-title">Reset Completed</h2>
+						<div class="hp-modal-body">All tile inputs have been cleared successfully.</div>
+						<div class="hp-modal-actions" style="justify-content: flex-end;">
+							<button id="resetDoneOkBtn" type="button" class="sidebar-btn sidebar-btn-primary">OK</button>
 						</div>
 					</div>
 				</div>

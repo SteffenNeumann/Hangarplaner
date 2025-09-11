@@ -495,6 +495,21 @@
 						</div>
 					</div>
 				</div>
+
+				<!-- Change Log section -->
+				<div class="panel-divider"></div>
+				<div class="sync-mode-description">Change Log records user edits to tiles on this device. Entries are saved locally and include time, username, and a quick link to the edited field.</div>
+				<div class="sidebar-form-group" id="projectChangeLog">
+					<div class="sidebar-form-row" style="justify-content: space-between; align-items: center;">
+						<label style="margin: 0;">Change Log</label>
+						<div class="input-container" style="gap: 6px; justify-content: flex-end;">
+							<button id="changeLogClearBtn" class="sidebar-btn sidebar-btn-secondary" title="Clear the change log" style="min-height: 28px; font-size: 12px; padding: 0 10px;">Clear</button>
+						</div>
+					</div>
+					<div id="changeLogList" style="max-height: 240px; overflow-y: auto; background: #fff; border: 1px solid #e6e6e6; border-radius: 8px; padding: 8px;">
+						<!-- Entries rendered here -->
+					</div>
+				</div>
 			</div>
 
 			<!-- Hauptbereich mit Hangar-Kacheln -->
@@ -3437,6 +3452,167 @@ window.sharingManager = {
               }
               window.addEventListener('pageshow', function(){ setTimeout(lateRestore, 300); setTimeout(lateRestore, 1200); });
               document.addEventListener('DOMContentLoaded', function(){ setTimeout(lateRestore, 600); });
+            })();
+            </script>
+
+            <!-- Change Log (Project submenu) -->
+            <script>
+            (function(){
+              const KEY = 'hangar.changeLog.v1';
+              const MAX_ENTRIES = 500;
+              const FIELD_LABELS = {
+                'aircraft': 'Aircraft ID',
+                'arrival-time': 'Arrival',
+                'departure-time': 'Departure',
+                'position': 'Pos',
+                'hangar-position': 'Hangar Position',
+                'status': 'Status',
+                'tow-status': 'Tow',
+                'notes': 'Notes'
+              };
+
+              function parseFieldId(id){
+                if (typeof id !== 'string') return null;
+                const m = id.match(/^(aircraft|arrival-time|departure-time|position|hangar-position|notes|status|tow-status)-(\d+)$/);
+                if (!m) return null;
+                return { prefix: m[1], cellId: parseInt(m[2],10) };
+              }
+
+              function getUserName(){
+                try {
+                  const v = (localStorage.getItem('presence.displayName')||'').trim();
+                  return v || 'Me';
+                } catch(_) { return 'Me'; }
+              }
+
+              function getTileLabel(cellId){
+                try {
+                  const hangar = document.getElementById(`hangar-position-${cellId}`);
+                  const reg = document.getElementById(`aircraft-${cellId}`);
+                  const pos = (hangar && hangar.value || '').trim();
+                  const ac = (reg && reg.value || '').trim();
+                  if (pos && ac) return `${pos} • ${ac}`;
+                  if (pos) return pos;
+                  if (ac) return ac;
+                } catch(_){}
+                return `Tile ${cellId}`;
+              }
+
+              function load(){
+                try { const raw = localStorage.getItem(KEY); return raw ? (JSON.parse(raw)||[]) : []; } catch(_) { return []; }
+              }
+              function save(arr){
+                try { localStorage.setItem(KEY, JSON.stringify(Array.isArray(arr)?arr:[])); } catch(_){}
+              }
+
+              function formatTime(ts){
+                try { return new Date(ts).toLocaleString(); } catch(_) { return String(ts); }
+              }
+
+              function navigateTo(fieldId, cellId){
+                try {
+                  // Ensure Planner tab
+                  const tab = document.getElementById('tab-planner');
+                  if (tab) tab.click();
+                  // Locate tile and field
+                  let tile = null;
+                  if (cellId >= 101) { tile = document.querySelector(`#secondaryHangarGrid .hangar-cell:nth-child(${cellId-100})`); }
+                  else { tile = document.querySelector(`#hangarGrid .hangar-cell:nth-child(${cellId})`); }
+                  if (tile) {
+                    tile.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
+                  const field = document.getElementById(fieldId);
+                  if (field) {
+                    try { field.focus({ preventScroll: true }); } catch(_){}
+                    const old = field.style.outline;
+                    field.style.outline = '2px solid #ff7043';
+                    setTimeout(()=>{ field.style.outline = old || ''; }, 1500);
+                  }
+                } catch(e) {}
+              }
+
+              function render(){
+                const list = document.getElementById('changeLogList');
+                if (!list) return;
+                const entries = load();
+                const items = entries.slice().reverse().map((e, idx) => {
+                  const when = formatTime(e.ts);
+                  const desc = `${e.user} • ${FIELD_LABELS[e.prefix]||e.prefix} @ ${getTileLabel(e.cellId)}`;
+                  const val = (e.value||'').toString();
+                  const prettyVal = val.length > 60 ? (val.slice(0,60)+'…') : val;
+                  const id = `goTo_${idx}_${e.cellId}_${e.prefix}`;
+                  return `
+                    <div class=\"flex items-start justify-between gap-2 py-1 border-b border-gray-200\">
+                      <div class=\"text-xs\">
+                        <div class=\"font-semibold\" style=\"color:#475569\">${when}</div>
+                        <div class=\"\" style=\"color:#64748b\">${desc}</div>
+                        ${prettyVal ? `<div class=\"\" style=\"color:#94a3b8\">→ ${prettyVal}</div>`:''}
+                      </div>
+                      <div>
+                        <button id=\"${id}\" class=\"sidebar-btn sidebar-btn-primary\" style=\"min-height:28px; font-size:12px; padding:0 10px;\" title=\"Go to field\">Go</button>
+                      </div>
+                    </div>`;
+                });
+                list.innerHTML = items.join('');
+                // Wire buttons
+                entries.slice().reverse().forEach((e, idx) => {
+                  const id = `goTo_${idx}_${e.cellId}_${e.prefix}`;
+                  const btn = document.getElementById(id);
+                  if (btn) btn.addEventListener('click', (ev)=>{ ev.preventDefault(); navigateTo(e.fieldId, e.cellId); });
+                });
+              }
+
+              const ChangeLog = {
+                add(fieldId, value){
+                  try {
+                    // Guard: skip if server/applying data
+                    if (window.isApplyingServerData || window.isLoadingServerData) return;
+                    const parsed = parseFieldId(fieldId);
+                    if (!parsed) return;
+                    const user = getUserName();
+                    const entry = { ts: Date.now(), user, fieldId, prefix: parsed.prefix, cellId: parsed.cellId, value };
+                    const arr = load();
+                    arr.push(entry);
+                    if (arr.length > MAX_ENTRIES) arr.splice(0, arr.length-MAX_ENTRIES);
+                    save(arr);
+                    render();
+                  } catch(_){}
+                },
+                render,
+                clear(){ save([]); render(); },
+              };
+
+              function attachListeners(){
+                const root1 = document.getElementById('hangarGrid');
+                const root2 = document.getElementById('secondaryHangarGrid');
+                const handler = (e)=>{
+                  const t = e.target;
+                  if (!t || !t.id) return;
+                  const info = parseFieldId(t.id);
+                  if (!info) return;
+                  // Skip disabled (read-only) interactions
+                  if (document.body.classList.contains('read-only')) return;
+                  // Value source normalization for datetime fields
+                  let v = (t.value || '').toString();
+                  if ((info.prefix === 'arrival-time' || info.prefix === 'departure-time') && t.dataset && t.dataset.iso) {
+                    v = t.dataset.iso;
+                  }
+                  ChangeLog.add(t.id, v);
+                };
+                if (root1 && !root1.__logWired){ root1.addEventListener('change', handler); root1.__logWired = true; }
+                if (root2 && !root2.__logWired){ root2.addEventListener('change', handler); root2.__logWired = true; }
+              }
+
+              function wireClear(){
+                const btn = document.getElementById('changeLogClearBtn');
+                if (btn && !btn.__wired){ btn.addEventListener('click', (e)=>{ e.preventDefault(); ChangeLog.clear(); }); btn.__wired=true; }
+              }
+
+              // Central init
+              window.hangarInitQueue = window.hangarInitQueue || [];
+              window.hangarInitQueue.push(function(){ try { attachListeners(); wireClear(); ChangeLog.render(); } catch(_){} });
+              // Expose for debugging
+              window.ChangeLog = ChangeLog;
             })();
             </script>
 

@@ -1310,14 +1310,62 @@ function setupFlightDataEventHandlers() {
 window.clearSingleTile = window.clearSingleTile || function(cellId){
   try {
     if (!cellId && cellId !== 0) return false;
-    const ac = document.getElementById(`aircraft-${cellId}`); if (ac) ac.value = '';
-    const arr = document.getElementById(`arrival-time-${cellId}`); if (arr) { arr.value=''; try { delete arr.dataset.iso; } catch(e){} }
-    const dep = document.getElementById(`departure-time-${cellId}`); if (dep) { dep.value=''; try { delete dep.dataset.iso; } catch(e){} }
-    const posInfo = document.getElementById(`position-${cellId}`); if (posInfo) posInfo.value='';
-    const notes = document.getElementById(`notes-${cellId}`); if (notes) notes.value='';
-    const tow = document.getElementById(`tow-status-${cellId}`); if (tow) { tow.value='neutral'; if (window.updateTowStatusStyles) window.updateTowStatusStyles(tow); }
-    const status = document.getElementById(`status-${cellId}`); if (status) { status.value='neutral'; if (window.updateStatusLight) window.updateStatusLight(status); }
+
+    const clearedUpdates = {};
+
+    const ac = document.getElementById(`aircraft-${cellId}`);
+    if (ac) { ac.value = ''; clearedUpdates[`aircraft-${cellId}`] = ''; }
+
+    const arr = document.getElementById(`arrival-time-${cellId}`);
+    if (arr) { arr.value=''; try { delete arr.dataset.iso; } catch(e){} clearedUpdates[`arrival-time-${cellId}`] = ''; }
+
+    const dep = document.getElementById(`departure-time-${cellId}`);
+    if (dep) { dep.value=''; try { delete dep.dataset.iso; } catch(e){} clearedUpdates[`departure-time-${cellId}`] = ''; }
+
+    const posInfo = document.getElementById(`position-${cellId}`);
+    if (posInfo) { posInfo.value=''; clearedUpdates[`position-${cellId}`] = ''; }
+
+    const manual = document.getElementById(`manual-input-${cellId}`);
+    if (manual) { manual.value=''; clearedUpdates[`manual-input-${cellId}`] = ''; }
+
+    const notes = document.getElementById(`notes-${cellId}`);
+    if (notes) { notes.value=''; clearedUpdates[`notes-${cellId}`] = ''; }
+
+    const tow = document.getElementById(`tow-status-${cellId}`);
+    if (tow) { tow.value='neutral'; if (window.updateTowStatusStyles) window.updateTowStatusStyles(tow); clearedUpdates[`tow-status-${cellId}`] = 'neutral'; }
+
+    const status = document.getElementById(`status-${cellId}`);
+    if (status) { status.value='neutral'; if (window.updateStatusLight) window.updateStatusLight(status); clearedUpdates[`status-${cellId}`] = 'neutral'; }
+
+    // Remove per-tile update badge/meta
     try { if (window.LastUpdateBadges && typeof window.LastUpdateBadges.remove === 'function') window.LastUpdateBadges.remove(parseInt(cellId,10)); } catch(e){}
+
+    // Persist cleared values locally and trigger unified handlers
+    try {
+      if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage === 'function'){
+        Object.entries(clearedUpdates).forEach(([fid, val]) => {
+          try { window.hangarEventManager.updateFieldInStorage(fid, val, { flushDelayMs: 0, source: 'clear' }); } catch(_){}
+          const el = document.getElementById(fid);
+          if (el){
+            const isSelect = el.tagName === 'SELECT';
+            try { el.dispatchEvent(new Event(isSelect ? 'change' : 'input', { bubbles: true })); } catch(_){}
+            try { el.dispatchEvent(new Event('blur', { bubbles: true })); } catch(_){}
+          }
+        });
+      }
+    } catch(_e){}
+
+    // If master, post a targeted fieldUpdates payload immediately for fast cross-client convergence
+    try {
+      if (window.serverSync && window.serverSync.isMaster && typeof window.serverSync.syncFieldUpdates === 'function'){
+        // Build updates map with field ids -> values
+        const updates = { ...clearedUpdates };
+        // Note: syncFieldUpdates handles headers and read-back; our read-back is already gated when typing
+        window.serverSync.syncFieldUpdates(updates, { })
+          .catch(err => console.warn('clearSingleTile: targeted sync failed', err));
+      }
+    } catch(_e){}
+
     return true;
   } catch(e) { console.warn('clearSingleTile failed:', e); return false; }
 };

@@ -32,9 +32,33 @@ $dataFile = __DIR__ . '/data.json';
 // Neuer Endpoint für Timestamp-basierte Synchronisierung
 if (isset($_GET['action']) && $_GET['action'] === 'timestamp') {
     if (file_exists($dataFile)) {
+        // Prefer high-resolution metadata.timestamp from JSON if available
+        $metaTs = null;
+        $fp = @fopen($dataFile, 'r');
+        if ($fp) {
+            if (@flock($fp, LOCK_SH)) {
+                @rewind($fp);
+                $raw = '';
+                while (!feof($fp)) {
+                    $chunk = fread($fp, 8192);
+                    if ($chunk === false) break;
+                    $raw .= $chunk;
+                }
+                @flock($fp, LOCK_UN);
+                @fclose($fp);
+                $json = json_decode($raw, true);
+                if (is_array($json) && isset($json['metadata']) && isset($json['metadata']['timestamp'])) {
+                    $metaTs = intval($json['metadata']['timestamp']);
+                }
+            } else {
+                @fclose($fp);
+            }
+        }
+        $fallbackTs = @filemtime($dataFile) ? (filemtime($dataFile) * 1000) : 0;
+        $ts = ($metaTs && $metaTs > 0) ? $metaTs : $fallbackTs;
         echo json_encode([
-            'timestamp' => filemtime($dataFile) * 1000, // Milliseconds für JS-Kompatibilität
-            'size' => filesize($dataFile),
+            'timestamp' => $ts,
+            'size' => @filesize($dataFile) ?: 0,
             'success' => true
         ]);
     } else {
@@ -66,18 +90,43 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024;
 // GET-Anfrage: Daten zurückgeben
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if (file_exists($dataFile)) {
-        $fileContent = file_get_contents($dataFile);
-        
-        // Validiere, dass es gültiges JSON ist
-        $data = json_decode($fileContent);
-        if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
-            http_response_code(500);
-            echo json_encode([
-                'error' => 'Gespeicherte Daten sind beschädigt',
-                'success' => false
-            ]);
+        // Read under shared lock to avoid partial reads during concurrent writes
+        $fp = @fopen($dataFile, 'r');
+        if ($fp && @flock($fp, LOCK_SH)) {
+            @rewind($fp);
+            $raw = '';
+            while (!feof($fp)) {
+                $chunk = fread($fp, 8192);
+                if ($chunk === false) break;
+                $raw .= $chunk;
+            }
+            @flock($fp, LOCK_UN);
+            @fclose($fp);
+
+            $data = json_decode($raw);
+            if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
+                http_response_code(500);
+                echo json_encode([
+                    'error' => 'Gespeicherte Daten sind beschädigt',
+                    'success' => false
+                ]);
+            } else {
+                echo $raw;
+            }
         } else {
-            echo $fileContent;
+            // Fallback if lock cannot be obtained
+            if ($fp) { @fclose($fp); }
+            $raw = @file_get_contents($dataFile);
+            $data = json_decode($raw);
+            if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
+                http_response_code(500);
+                echo json_encode([
+                    'error' => 'Gespeicherte Daten sind beschädigt',
+                    'success' => false
+                ]);
+            } else {
+                echo $raw;
+            }
         }
     } else {
         http_response_code(404);

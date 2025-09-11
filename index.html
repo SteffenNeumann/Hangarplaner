@@ -3531,13 +3531,73 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                 } catch(e) {}
               }
 
-              function render(){
+              // New helpers for server-backed rendering (Option A)
+              function canReadFromServer(){
+                try {
+                  if (window.sharingManager && typeof window.sharingManager.syncMode === 'string'){
+                    return window.sharingManager.syncMode === 'sync' || window.sharingManager.syncMode === 'master';
+                  }
+                  const readToggle = document.getElementById('readDataToggle');
+                  return !!(readToggle && readToggle.checked);
+                } catch(_) { return false; }
+              }
+              function getServerUrl(){
+                try {
+                  let url = (window.serverSync && typeof window.serverSync.getServerUrl==='function' && window.serverSync.getServerUrl()) ||
+                            (window.serverSync && window.serverSync.serverSyncUrl) ||
+                            (window.location.origin + '/sync/data.php');
+                  if (typeof url !== 'string' || !url.length) url = window.location.origin + '/sync/data.php';
+                  return url;
+                } catch(_) { return (window.location.origin + '/sync/data.php'); }
+              }
+              async function fetchServerJson(){
+                try {
+                  const url = getServerUrl();
+                  const res = await fetch(url, { method: 'GET', headers: { 'Accept':'application/json' }, signal: AbortSignal.timeout(5000) });
+                  if (!res.ok && res.status !== 404) return null;
+                  if (res.status === 404) return { primaryTiles: [], secondaryTiles: [], metadata: {} };
+                  const text = await res.text();
+                  try { return JSON.parse(text); } catch(_) { return null; }
+                } catch(_) { return null; }
+              }
+              function chooseFieldForTile(tile){
+                const id = parseInt(tile?.tileId || 0, 10);
+                let prefix = 'aircraft';
+                let fieldId = `aircraft-${id}`;
+                let value = (tile?.aircraftId || '').toString();
+                if (!value){
+                  if (tile?.hangarPosition){ prefix='hangar-position'; fieldId=`hangar-position-${id}`; value=tile.hangarPosition; }
+                  else if (tile?.position){ prefix='position'; fieldId=`position-${id}`; value=tile.position; }
+                  else if (tile?.notes){ prefix='notes'; fieldId=`notes-${id}`; value=tile.notes; }
+                  else if (tile?.status){ prefix='status'; fieldId=`status-${id}`; value=tile.status; }
+                  else if (tile?.towStatus){ prefix='tow-status'; fieldId=`tow-status-${id}`; value=tile.towStatus; }
+                }
+                return { prefix, fieldId, value };
+              }
+              function buildServerEntries(data, myName){
+                try {
+                  const tiles = [];
+                  if (Array.isArray(data?.primaryTiles)) tiles.push(...data.primaryTiles);
+                  if (Array.isArray(data?.secondaryTiles)) tiles.push(...data.secondaryTiles);
+                  const entries = [];
+                  tiles.forEach(t => {
+                    const id = parseInt(t?.tileId || 0, 10);
+                    const user = (t?.updatedBy || '').toString().trim();
+                    const ts = Date.parse(t?.updatedAt || '') || 0;
+                    if (!id || !user || !ts) return;
+                    if (myName && user === myName) return; // only other users
+                    const pick = chooseFieldForTile(t);
+                    entries.push({ ts, user, fieldId: pick.fieldId, prefix: pick.prefix, cellId: id, value: pick.value });
+                  });
+                  // Sort newest first, cap length for UI sanity
+                  entries.sort((a,b)=> b.ts - a.ts);
+                  return entries.slice(0, 200);
+                } catch(_) { return []; }
+              }
+              function renderEntries(entryList){
                 const list = document.getElementById('changeLogList');
                 if (!list) return;
-                const entries = load();
-                const myName = getUserName();
-                const onlyOthers = entries.filter(e => (e && typeof e.user === 'string') ? (e.user.trim() !== myName) : true);
-                const items = onlyOthers.slice().reverse().map((e, idx) => {
+                const items = (entryList||[]).map((e, idx) => {
                   const when = formatTime(e.ts);
                   const desc = `${e.user} • ${FIELD_LABELS[e.prefix]||e.prefix} @ ${getTileLabel(e.cellId)}`;
                   const val = (e.value||'').toString();
@@ -3557,11 +3617,30 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                 });
                 list.innerHTML = items.join('');
                 // Wire buttons
-                onlyOthers.slice().reverse().forEach((e, idx) => {
+                (entryList||[]).forEach((e, idx) => {
                   const id = `goTo_${idx}_${e.cellId}_${e.prefix}`;
                   const btn = document.getElementById(id);
                   if (btn) btn.addEventListener('click', (ev)=>{ ev.preventDefault(); navigateTo(e.fieldId, e.cellId); });
                 });
+              }
+
+              async function render(){
+                try {
+                  const myName = getUserName();
+                  if (canReadFromServer()){
+                    const data = await fetchServerJson();
+                    if (data){
+                      const serverEntries = buildServerEntries(data, myName);
+                      if (serverEntries && serverEntries.length){ renderEntries(serverEntries); return; }
+                    }
+                  }
+                  // Fallback: local-only entries from this device (others-only)
+                  const entries = load();
+                  const onlyOthers = entries.filter(e => (e && typeof e.user === 'string') ? (e.user.trim() !== myName) : true);
+                  // keep newest first
+                  onlyOthers.sort((a,b)=> (b.ts||0) - (a.ts||0));
+                  renderEntries(onlyOthers);
+                } catch(_){}
               }
 
               const ChangeLog = {
@@ -3613,6 +3692,9 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
               // Central init
               window.hangarInitQueue = window.hangarInitQueue || [];
               window.hangarInitQueue.push(function(){ try { attachListeners(); wireClear(); ChangeLog.render(); } catch(_){} });
+              // Also refresh when server data loads or mode changes
+              try { document.addEventListener('serverDataLoaded', ()=>{ try { ChangeLog.render(); } catch(_){} }); } catch(_e){}
+              try { document.addEventListener('syncModeChanged', ()=>{ try { ChangeLog.render(); } catch(_){} }); } catch(_e){}
               // Expose for debugging
               window.ChangeLog = ChangeLog;
             })();

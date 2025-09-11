@@ -131,32 +131,30 @@ If issues occur, previous version can be restored by:
 
 ---
 
-## Addendum: Strict Write-only mode (Read OFF)
+## Addendum: Mode policy update (no write-only mode)
 
 ### Summary
-To support a true Write-only configuration (Read OFF, Write ON), the client now strictly gates server reads by the Read Data toggle:
-- Startup initial load is skipped when Read is OFF
-- In Master mode, periodic read-back is disabled when Read is OFF
-- Manual Sync remains available in Write-only and performs POST-only syncs (no GET)
-- Reset screen does not purge localStorage; it clears UI fields (including Arr/Dep dataset.iso) and suppresses local rehydrate for ~10s to avoid immediate repopulation
+The application now supports exactly three sync modes:
+- Standalone: local only; no server reads or writes
+- Read-only (Sync): reads from server; client edits do not write to server
+- Read/Write (Master): writes to server and reads from server; multi-master supported
 
-### Implementation
-- storage-browser.js
-  - Added `canReadFromServer()` to determine if reads are allowed
-  - `initSync()` only loads from server at startup if `canReadFromServer()` is true
-  - `startMasterMode()` enables the periodic read-back loop only when `canReadFromServer()` is true
-- hangar-ui.js
-  - Phase 4 initial load is skipped when Read is OFF
-- hangar.js
-  - Reset screen cancels pending local rehydrate and sets a short suppression window; clears Arr/Dep values and their `dataset.iso` attributes; resets Status/Tow to neutral; keeps Hangar Position
+Write-only (Read OFF, Write ON) is no longer a supported mode. When Write is enabled, Read should also be enabled to ensure proper convergence and visibility of changes across clients.
+
+### Implementation notes
+- Client-side gating remains in place:
+  - `initSync()` only loads from server at startup if reads are allowed
+  - In Master mode, periodic read-back runs only when reads are enabled
+- Server-side write enforcement remains unchanged (`X-Sync-Role: master` and session headers required)
 
 ### Verification
-1) Write-only (Read OFF, Write ON)
-   - Load app: no GET to `sync/data.php`
-   - Use Reset screen: tiles remain cleared after several seconds; no GETs fired
-   - Edit tiles: POSTs with `X-Sync-Role: master` appear; no GETs
-   - Manual Sync: sends POST-only
-2) Regression check
-   - Read-only (Read ON, Write OFF): still polls and loads; no POSTs
-   - Master (Read ON, Write ON): reads+posts as before
-   - Standalone (both OFF): no server traffic
+1) Read-only (Sync)
+   - Enable Read ON, Write OFF
+   - Edit a tile field; expect no POST to `sync/data.php`
+   - UI prevents edits and shows read-only state
+2) Read/Write (Master)
+   - Enable Read ON, Write ON
+   - Edit a tile field; a write occurs via `serverSync.syncWithServer()`
+   - Changes persist and appear on a read-only client
+3) Standalone
+   - Disable both toggles; edits only affect local state; no server traffic

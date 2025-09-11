@@ -314,11 +314,13 @@ class ServerSync {
 	/**
 	 * NEUE METHODE: Slave prüft auf Server-Updates
 	 */
-	async slaveCheckForUpdates() {
-		if (!this.isSlaveActive) return;
+async slaveCheckForUpdates() {
+        if (!this.isSlaveActive) return;
+        if (this._isCheckingUpdates) return;
+        this._isCheckingUpdates = true;
 
-		try {
-			console.log("🔍 Slave: Prüfe auf Server-Updates...");
+        try {
+            console.log("🔍 Slave: Prüfe auf Server-Updates...");
 			const currentServerTimestamp = await this.getServerTimestamp();
 			console.log(
 				`📊 Server-Timestamp: ${currentServerTimestamp}, Letzter: ${this.lastServerTimestamp}`
@@ -345,10 +347,12 @@ class ServerSync {
 			} else {
 				console.log("⏸️ Slave: Keine neuen Änderungen auf Server");
 			}
-		} catch (error) {
-			console.error("❌ Slave: Fehler beim Prüfen auf Updates:", error);
-		}
-	}
+        } catch (error) {
+            console.error("❌ Slave: Fehler beim Prüfen auf Updates:", error);
+        } finally {
+            this._isCheckingUpdates = false;
+        }
+    }
 
 	/**
 	 * Synchronisiert Daten mit dem Server (NUR Master-Modus)
@@ -628,12 +632,13 @@ class ServerSync {
 			const loadUrl =
 				serverUrl + (serverUrl.includes("?") ? "&" : "?") + "action=load";
 
-			const response = await fetch(loadUrl, {
-				method: "GET",
-				headers: {
-					Accept: "application/json",
-				},
-			});
+const response = await fetch(loadUrl, {
+                method: "GET",
+                headers: {
+                    Accept: "application/json",
+                },
+                signal: AbortSignal.timeout(10000),
+            });
 
 			if (response.ok) {
 				const data = await response.json();

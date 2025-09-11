@@ -3027,3 +3027,15 @@ body:not(.dark-mode) .tow-status-selector:hover {
 .dark-mode.read-only #secondaryHangarGrid .hangar-cell input[id^="departure-time-"]::-webkit-input-placeholder {
 	color: transparent !important;
 }
+/* Fallback for engines that ignore ::placeholder on disabled inputs: hide text when placeholder-shown */
+.read-only #hangarGrid .hangar-cell input[id^="arrival-time-"]:placeholder-shown,
+.read-only #hangarGrid .hangar-cell input[id^="departure-time-"]:placeholder-shown,
+.read-only #secondaryHangarGrid .hangar-cell input[id^="arrival-time-"]:placeholder-shown,
+.read-only #secondaryHangarGrid .hangar-cell input[id^="departure-time-"]:placeholder-shown,
+.dark-mode.read-only #hangarGrid .hangar-cell input[id^="arrival-time-"]:placeholder-shown,
+.dark-mode.read-only #hangarGrid .hangar-cell input[id^="departure-time-"]:placeholder-shown,
+.dark-mode.read-only #secondaryHangarGrid .hangar-cell input[id^="arrival-time-"]:placeholder-shown,
+.dark-mode.read-only #secondaryHangarGrid .hangar-cell input[id^="departure-time-"]:placeholder-shown {
+	color: transparent !important;
+	-webkit-text-fill-color: transparent !important; /* Safari */
+}

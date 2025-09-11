@@ -1291,14 +1291,14 @@ async slaveCheckForUpdates() {
 			const tileId = tileData.tileId || (isSecondary ? 101 + index : 1 + index);
 			console.log(`🔄 Verarbeite Kachel ${tileId}:`, tileData);
 
-			// Aircraft ID
-			if (tileData.aircraftId) {
+			// Aircraft ID (apply even when empty string)
+			if (Object.prototype.hasOwnProperty.call(tileData, 'aircraftId')) {
 				const aircraftInput = document.getElementById(`aircraft-${tileId}`);
 				if (aircraftInput) {
 					const oldValue = aircraftInput.value;
-					aircraftInput.value = tileData.aircraftId;
+					aircraftInput.value = tileData.aircraftId || '';
 					console.log(
-						`✈️ Aircraft ID gesetzt: ${tileId} = ${oldValue} → ${tileData.aircraftId}`
+						`✈️ Aircraft ID gesetzt: ${tileId} = ${oldValue} → ${tileData.aircraftId || ''}`
 					);
 					successfullyApplied++;
 				} else {
@@ -1307,22 +1307,30 @@ async slaveCheckForUpdates() {
 				}
 			}
 
-			// Position
-			if (tileData.position) {
-				const positionInput =
-					document.getElementById(`hangar-position-${tileId}`) ||
-					document.getElementById(`position-${tileId}`);
-				if (positionInput) {
-					const oldValue = positionInput.value;
-					positionInput.value = tileData.position;
-					console.log(
-						`📍 Position gesetzt: ${tileId} = ${oldValue} → ${tileData.position}`
-					);
+			// Hangar Position (header) — apply only when server provided hangarPosition key
+			if (Object.prototype.hasOwnProperty.call(tileData, 'hangarPosition')) {
+				const hangarPosInput = document.getElementById(`hangar-position-${tileId}`);
+				if (hangarPosInput) {
+					const oldValue = hangarPosInput.value;
+					hangarPosInput.value = tileData.hangarPosition || '';
+					console.log(`📍 Hangar Position gesetzt: ${tileId} = ${oldValue} → ${tileData.hangarPosition || ''}`);
 					successfullyApplied++;
 				} else {
-					console.warn(
-						`❌ Position Input nicht gefunden: hangar-position-${tileId} oder position-${tileId}`
-					);
+					console.warn(`❌ Hangar Position Input nicht gefunden: hangar-position-${tileId}`);
+					failedToApply++;
+				}
+			}
+
+			// Position in info grid — apply only when server provided position key
+			if (Object.prototype.hasOwnProperty.call(tileData, 'position')) {
+				const posInfoInput = document.getElementById(`position-${tileId}`);
+				if (posInfoInput) {
+					const oldValue = posInfoInput.value;
+					posInfoInput.value = tileData.position || '';
+					console.log(`📍 Pos (info) gesetzt: ${tileId} = ${oldValue} → ${tileData.position || ''}`);
+					successfullyApplied++;
+				} else {
+					console.warn(`❌ Position (info) Input nicht gefunden: position-${tileId}`);
 					failedToApply++;
 				}
 			}
@@ -1336,12 +1344,12 @@ async slaveCheckForUpdates() {
 				}
 			}
 
-			// Arrival Time
-			if (tileData.arrivalTime) {
+			// Arrival Time (apply even when empty string)
+			if (Object.prototype.hasOwnProperty.call(tileData, 'arrivalTime')) {
 				const arrivalInput = document.getElementById(`arrival-time-${tileId}`);
 				if (arrivalInput) {
-					let toSet = tileData.arrivalTime;
-					if (arrivalInput.type === 'datetime-local' && window.helpers) {
+					let toSet = tileData.arrivalTime || '';
+					if (toSet && arrivalInput.type === 'datetime-local' && window.helpers) {
 						const h = window.helpers;
 						if (h.isDateTimeLocal && h.isDateTimeLocal(tileData.arrivalTime)) {
 							toSet = tileData.arrivalTime;
@@ -1351,20 +1359,17 @@ async slaveCheckForUpdates() {
 						}
 					}
 					arrivalInput.value = toSet || '';
-					console.log(
-						`🛬 Ankunftszeit gesetzt: ${tileId} = ${toSet || ''}`
-					);
+					try { if (!toSet && arrivalInput.dataset) delete arrivalInput.dataset.iso; } catch(_e){}
+					console.log(`🛬 Ankunftszeit gesetzt: ${tileId} = ${toSet || ''}`);
 				}
 			}
 
-			// Departure Time
-			if (tileData.departureTime) {
-				const departureInput = document.getElementById(
-					`departure-time-${tileId}`
-				);
+			// Departure Time (apply even when empty string)
+			if (Object.prototype.hasOwnProperty.call(tileData, 'departureTime')) {
+				const departureInput = document.getElementById(`departure-time-${tileId}`);
 				if (departureInput) {
-					let toSet = tileData.departureTime;
-					if (departureInput.type === 'datetime-local' && window.helpers) {
+					let toSet = tileData.departureTime || '';
+					if (toSet && departureInput.type === 'datetime-local' && window.helpers) {
 						const h = window.helpers;
 						if (h.isDateTimeLocal && h.isDateTimeLocal(tileData.departureTime)) {
 							toSet = tileData.departureTime;
@@ -1374,38 +1379,33 @@ async slaveCheckForUpdates() {
 						}
 					}
 					departureInput.value = toSet || '';
-					console.log(
-						`🛫 Abflugzeit gesetzt: ${tileId} = ${toSet || ''}`
-					);
+					try { if (!toSet && departureInput.dataset) delete departureInput.dataset.iso; } catch(_e){}
+					console.log(`🛫 Abflugzeit gesetzt: ${tileId} = ${toSet || ''}`);
 				}
 			}
 
-			// Status
-			if (tileData.status) {
+			// Status (apply on key presence)
+			if (Object.prototype.hasOwnProperty.call(tileData, 'status')) {
 				const statusSelect = document.getElementById(`status-${tileId}`);
 				if (statusSelect) {
-					statusSelect.value = tileData.status;
-					console.log(`🚦 Status gesetzt: ${tileId} = ${tileData.status}`);
+					statusSelect.value = tileData.status || 'neutral';
+					console.log(`🚦 Status gesetzt: ${tileId} = ${tileData.status || 'neutral'}`);
 				}
 			}
 
-			// Tow Status
-			if (tileData.towStatus) {
+			// Tow Status (apply on key presence)
+			if (Object.prototype.hasOwnProperty.call(tileData, 'towStatus')) {
 				const towStatusSelect = document.getElementById(`tow-status-${tileId}`);
 				if (towStatusSelect) {
 					const oldValue = towStatusSelect.value;
-					towStatusSelect.value = tileData.towStatus;
-					console.log(
-						`🚚 Tow Status gesetzt: ${tileId} = ${oldValue} → ${tileData.towStatus}`
-					);
-					// WICHTIG: Styling der Tow-Status-Selects nach programmatischer Änderung aktualisieren
+					towStatusSelect.value = tileData.towStatus || 'neutral';
+					console.log(`🚚 Tow Status gesetzt: ${tileId} = ${oldValue} → ${towStatusSelect.value}`);
 					try {
 						if (typeof window.updateTowStatusStyles === 'function') {
 							window.updateTowStatusStyles(towStatusSelect);
 						} else if (typeof updateTowStatusStyles === 'function') {
 							updateTowStatusStyles(towStatusSelect);
 						} else {
-							// Fallback: Klassen direkt setzen, keine Inline-Farben
 							const v = (towStatusSelect.value || 'neutral').trim();
 							towStatusSelect.classList.remove('tow-neutral','tow-initiated','tow-ongoing','tow-on-position');
 							towStatusSelect.classList.add(`tow-${v}`);
@@ -1419,9 +1419,7 @@ async slaveCheckForUpdates() {
 					}
 					successfullyApplied++;
 				} else {
-					console.warn(
-						`❌ Tow Status Select nicht gefunden: tow-status-${tileId}`
-					);
+					console.warn(`❌ Tow Status Select nicht gefunden: tow-status-${tileId}`);
 					failedToApply++;
 				}
 			}

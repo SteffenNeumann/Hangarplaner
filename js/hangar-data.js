@@ -669,31 +669,35 @@ function applyLoadedTileData(data) {
 					notesTextarea.value = notes || "";
 				}
 
-				// Arrival Time setzen
-				if (arrivalTime && arrivalTime !== "--:--") {
-					const arrivalInput = document.getElementById(`arrival-time-${id}`);
-					if (arrivalInput) {
-						arrivalInput.value = arrivalTime;
-					}
-				}
+		// Arrival Time setzen (auch leeren wenn leerer String geliefert)
+		const arrivalInput = document.getElementById(`arrival-time-${id}`);
+		if (arrivalInput) {
+			if (Object.prototype.hasOwnProperty.call(tile, 'arrivalTime')) {
+				const v = tile.arrivalTime || '';
+				arrivalInput.value = v;
+				try { if (!v && arrivalInput.dataset) delete arrivalInput.dataset.iso; } catch(_e){}
+			}
+		}
 
-				// Departure Time setzen
-				if (departureTime && departureTime !== "--:--") {
-					const departureInput = document.getElementById(
-						`departure-time-${id}`
-					);
-					if (departureInput) {
-						departureInput.value = departureTime;
-					}
-				}
+		// Departure Time setzen (auch leeren wenn leerer String geliefert)
+		const departureInput = document.getElementById(`departure-time-${id}`);
+		if (departureInput) {
+			if (Object.prototype.hasOwnProperty.call(tile, 'departureTime')) {
+				const v = tile.departureTime || '';
+				departureInput.value = v;
+				try { if (!v && departureInput.dataset) delete departureInput.dataset.iso; } catch(_e){}
+			}
+		}
 
-				// Position Info Grid setzen
-				if (positionInfoGrid) {
-					const positionInfoInput = document.getElementById(`position-${id}`);
-					if (positionInfoInput) {
-						positionInfoInput.value = positionInfoGrid;
-					}
-				}
+		// Position Info Grid setzen (legacy key) oder moderne 'position'
+		const positionInfoInput = document.getElementById(`position-${id}`);
+		if (positionInfoInput) {
+			if (Object.prototype.hasOwnProperty.call(tile, 'positionInfoGrid')) {
+				positionInfoInput.value = tile.positionInfoGrid || '';
+			} else if (Object.prototype.hasOwnProperty.call(tile, 'position')) {
+				positionInfoInput.value = tile.position || '';
+			}
+		}
 			});
 
 			console.log("✅ Legacy-Daten erfolgreich angewendet");
@@ -774,18 +778,27 @@ function applySingleTileData(tileData, isSecondary = false) {
 			console.warn(`❌ Aircraft Input für Tile ${tileId} nicht gefunden`);
 		}
 
-		// Position setzen (hangar-position) - mit Container-Validation
-		const positionInput = document.getElementById(`hangar-position-${tileId}`);
-		if (positionInput && containerElement.contains(positionInput)) {
-			positionInput.value = tileData.position || "";
-			console.log(
-				`✅ Position für Tile ${tileId} (${
-					isSecondary ? "sekundär" : "primär"
-				}) gesetzt: ${tileData.position}`
-			);
-		} else {
-			console.warn(
-				`❌ Position Input für Tile ${tileId} nicht gefunden oder in falschem Container`
+		// Hangar Position (header) setzen, wenn vom Server geliefert
+		if (Object.prototype.hasOwnProperty.call(tileData, 'hangarPosition')) {
+			const hangarPositionInput = document.getElementById(`hangar-position-${tileId}`);
+			if (hangarPositionInput && containerElement.contains(hangarPositionInput)) {
+				hangarPositionInput.value = tileData.hangarPosition || "";
+				console.log(`✅ Hangar Position für Tile ${tileId} (${isSecondary ? "sekundär" : "primär"}) gesetzt: ${tileData.hangarPosition || ''}`);
+			} else {
+				console.warn(`❌ Hangar Position Input für Tile ${tileId} nicht gefunden oder in falschem Container`);
+			}
+		}
+
+		// Position im Info-Grid setzen, wenn vom Server geliefert
+		if (Object.prototype.hasOwnProperty.call(tileData, 'position')) {
+			const positionInfoInput = document.getElementById(`position-${tileId}`);
+			if (positionInfoInput && containerElement.contains(positionInfoInput)) {
+				positionInfoInput.value = tileData.position || "";
+				console.log(`✅ Position (Info) für Tile ${tileId} (${isSecondary ? "sekundär" : "primär"}) gesetzt: ${tileData.position || ''}`);
+			} else {
+				console.warn(`❌ Position (Info) Input für Tile ${tileId} nicht gefunden oder in falschem Container`);
+			}
+		}
 			);
 		}
 

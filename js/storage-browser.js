@@ -1368,14 +1368,15 @@ async slaveCheckForUpdates() {
 				}
 			}
 
-			// Notes
-			if (tileData.notes) {
+			// Notes (apply even when empty string if key present)
+			if (Object.prototype.hasOwnProperty.call(tileData, 'notes')) {
 				const notesInput = document.getElementById(`notes-${tileId}`);
 				if (notesInput) {
-					if (!(document.activeElement === notesInput && notesInput.value === tileData.notes)) {
-						notesInput.value = tileData.notes;
+					const newVal = tileData.notes || '';
+					if (!(document.activeElement === notesInput && notesInput.value === newVal)) {
+						notesInput.value = newVal;
 					}
-					console.log(`📝 Notizen gesetzt: ${tileId} = ${tileData.notes}`);
+					console.log(`📝 Notizen gesetzt: ${tileId} = ${newVal}`);
 				}
 			}
 

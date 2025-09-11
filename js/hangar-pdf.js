@@ -333,7 +333,7 @@ function exportToPDF() {
         padding: 20px;
         background-color: white !important;
         color: #111827 !important;
-        font-family: Arial, sans-serif;
+        font-family: "Inter", ui-sans-serif;
         width: 100%;
         margin: 0 auto;
         max-width: ${landscapeMode ? "1100px" : "900px"};

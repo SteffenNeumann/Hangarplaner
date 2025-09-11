@@ -7,6 +7,10 @@
 
 		<!-- Tailwind CSS -->
 		<script src="https://cdn.tailwindcss.com"></script>
+		<!-- Inter font -->
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
 
 		<!-- Early apply saved dark mode to avoid flicker and ensure persistence on subpages -->
 		<script>
@@ -47,6 +51,7 @@
 			tailwind.config = {
 				theme: {
 					extend: {
+						fontFamily: { sans: ["Inter", "ui-sans-serif"] },
 						colors: {
 							"industrial-dark": "#2d3748",
 							"industrial-medium": "#4a5568",

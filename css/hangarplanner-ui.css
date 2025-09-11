@@ -54,6 +54,11 @@ body {
 	color: var(--text-dark);
 }
 
+/* Global Inter font fallback for core elements */
+html, body, button, input, select, textarea {
+	font-family: "Inter", ui-sans-serif;
+}
+
 .form-control:focus {
 	outline: none;
 	box-shadow: 0 0 0 2px rgba(255, 112, 67, 0.4);
@@ -229,21 +234,21 @@ body {
 
 /* Timetable Aircraft ID */
 .timetable-aircraft {
-	font-family: "Courier New", monospace;
+	font-family: "Inter", ui-sans-serif;
 	font-weight: 600;
 	color: #1f2937;
 }
 
 /* Timetable Time */
 .timetable-time {
-	font-family: "Courier New", monospace;
+	font-family: "Inter", ui-sans-serif;
 	color: #4b5563;
 	white-space: nowrap;
 }
 
 /* Timetable Airport Codes */
 .timetable-airport {
-	font-family: "Courier New", monospace;
+	font-family: "Inter", ui-sans-serif;
 	font-weight: 500;
 	color: #1f2937;
 	background-color: #f3f4f6;
@@ -687,7 +692,7 @@ textarea.notes-textarea {
 	width: 100%;
 	color: #1a202c; /* Dunklerer, kontrastreicherer Text */
 	line-height: 1.2; /* Optimierte Zeilenhöhe */
-	font-family: system-ui, -apple-system, sans-serif; /* Klarere Schrift */
+	font-family: "Inter", ui-sans-serif; /* Unified font */
 }
 .aircraft-id::placeholder {
 	color: #9ca3af;
@@ -2216,7 +2221,7 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 }
 
 #shareUrlContainer input#shareUrl {
-	font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+	font-family: "Inter", ui-sans-serif;
 	font-size: 11px !important;
 	background-color: #ffffff;
 	border: 1px solid #e2e8f0;
@@ -2386,7 +2391,7 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   border: 1px solid #e5e7eb; /* gray-200 */
   box-shadow: 0 10px 24px rgba(0,0,0,0.15);
   padding: 16px 18px;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  font-family: "Inter", ui-sans-serif;
 }
 .hp-modal-title {
   font-weight: 700;

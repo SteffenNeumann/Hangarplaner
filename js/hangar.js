@@ -1352,20 +1352,24 @@ if (resetScreenBtn) {
 
 				// 2) Reset inputs for all tiles (primary and secondary), except Hangar Position
 				const tiles = document.querySelectorAll('#hangarGrid .hangar-cell, #secondaryHangarGrid .hangar-cell');
+				const clearedFieldIds = [];
 				tiles.forEach(tile => {
 					// Clear aircraft id
-					tile.querySelectorAll('input[id^="aircraft-"]').forEach(el => { el.value = ''; });
+					tile.querySelectorAll('input[id^="aircraft-"]').forEach(el => { el.value = ''; clearedFieldIds.push(el.id); });
 					// Clear times (also remove any ISO dataset)
-					tile.querySelectorAll('input[id^="arrival-time-"]').forEach(el => { el.value = ''; try { delete el.dataset.iso; } catch(e){} });
-					tile.querySelectorAll('input[id^="departure-time-"]').forEach(el => { el.value = ''; try { delete el.dataset.iso; } catch(e){} });
+					tile.querySelectorAll('input[id^="arrival-time-"]').forEach(el => { el.value = ''; try { delete el.dataset.iso; } catch(e){} clearedFieldIds.push(el.id); });
+					tile.querySelectorAll('input[id^="departure-time-"]').forEach(el => { el.value = ''; try { delete el.dataset.iso; } catch(e){} clearedFieldIds.push(el.id); });
 					// Clear route/position (Pos in info grid)
-					tile.querySelectorAll('input[id^="position-"]').forEach(el => { el.value = ''; });
+					tile.querySelectorAll('input[id^="position-"]').forEach(el => { el.value = ''; clearedFieldIds.push(el.id); });
+					// Optional auxiliary manual input (if exists in some layouts)
+					tile.querySelectorAll('input[id^="manual-input-"]').forEach(el => { el.value = ''; clearedFieldIds.push(el.id); });
 					// Notes
-					tile.querySelectorAll('textarea[id^="notes-"]').forEach(el => { el.value = ''; });
+					tile.querySelectorAll('textarea[id^="notes-"]').forEach(el => { el.value = ''; clearedFieldIds.push(el.id); });
 					// Tow status -> neutral
 					tile.querySelectorAll('select[id^="tow-status-"]').forEach(sel => {
 						sel.value = 'neutral';
 						if (window.updateTowStatusStyles) window.updateTowStatusStyles(sel);
+						clearedFieldIds.push(sel.id);
 					});
 				});
 
@@ -1377,8 +1381,32 @@ if (resetScreenBtn) {
 					document.querySelectorAll('.status-selector').forEach(sel => {
 						sel.value = 'neutral';
 						if (window.updateStatusLight) window.updateStatusLight(sel);
+						clearedFieldIds.push(sel.id);
 					});
 				}
+
+				// 3b) Persist cleared values locally and notify event handlers
+				try {
+					// Clear hangarPlannerData snapshot to prevent local rehydrate from refilling
+					localStorage.setItem('hangarPlannerData', JSON.stringify({}));
+				} catch(_e){}
+				try {
+					if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage === 'function'){
+						clearedFieldIds.forEach(id => {
+							window.hangarEventManager.updateFieldInStorage(id, '');
+							// Dispatch input/change to trigger any other listeners
+							const el = document.getElementById(id);
+							if (el){
+								const isSelect = el.tagName === 'SELECT';
+								el.dispatchEvent(new Event(isSelect ? 'change' : 'input', { bubbles: true }));
+								el.dispatchEvent(new Event('blur', { bubbles: true }));
+							}
+						});
+					}
+				} catch(_e){}
+
+				// 3c) Force refresh of Status lights after resets
+				try { if (typeof window.updateAllStatusLightsForced === 'function') window.updateAllStatusLightsForced(); } catch(_e){}
 
 				// 4) Inform user
 				if (window.showNotification) window.showNotification('Screen reset completed', 'success');

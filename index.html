@@ -293,7 +293,7 @@
 					<div class="panel-divider"></div>
 <button id="manualSyncBtn" class="sidebar-btn sidebar-btn-primary w-full" title="Trigger a one-time sync now">Manual Sync</button>
 					<div class="text-sm text-center" style="margin-top: 6px; color: #64748b;">Trigger a one-time sync now</div>
-<div id="syncPollingInfo" class="text-sm text-center" style="margin-top: 4px; color: #94a3b8;">Receiving updates every 10s</div>
+<div id="syncPollingInfo" class="text-sm text-center" style="margin-top: 4px; color: #94a3b8;">Receiving updates every 3s</div>
 
 				</div>
 
@@ -1304,15 +1304,29 @@
         const ss = window.serverSync;
         try { if (ss && typeof ss.suspendReads === 'function') ss.suspendReads(); } catch(_e) {}
         const ok = clearSingleTile(cellId);
-        try {
-          if (ok && window.serverSync?.isMaster) {
-            await window.serverSync.syncWithServer();
+          try {
+            if (ok && window.serverSync?.isMaster) {
+              const updates = {};
+              try {
+                updates[`aircraft-${cellId}`] = '';
+                updates[`arrival-time-${cellId}`] = '';
+                updates[`departure-time-${cellId}`] = '';
+                updates[`position-${cellId}`] = '';
+                updates[`notes-${cellId}`] = '';
+                updates[`status-${cellId}`] = 'neutral';
+                updates[`tow-status-${cellId}`] = 'neutral';
+              } catch(_e) {}
+              if (typeof window.serverSync.syncFieldUpdates === 'function') {
+                await window.serverSync.syncFieldUpdates(updates);
+              } else {
+                await window.serverSync.syncWithServer();
+              }
+            }
+          } catch(err) {
+            console.warn('Tile clear sync failed:', err);
+          } finally {
+            try { if (ss && typeof ss.resumeReads === 'function') ss.resumeReads(true); } catch(_e) {}
           }
-        } catch(err) {
-          console.warn('Tile clear sync failed:', err);
-        } finally {
-          try { if (ss && typeof ss.resumeReads === 'function') ss.resumeReads(true); } catch(_e) {}
-        }
       });
       header.appendChild(btn);
       tile.__deleteInjected = true;

@@ -444,12 +444,12 @@ class ServerSync {
 		}
 
 		// Starte Slave-Polling (nur Laden bei Änderungen)
-	this.slaveCheckInterval = setInterval(async () => {
+		this.slaveCheckInterval = setInterval(async () => {
 			await this.slaveCheckForUpdates();
-		}, 10000); // 10 Sekunden Polling-Intervall (original)
+		}, 3000); // 3 Sekunden Polling-Intervall
 
 		console.log(
-			"👤 Slave-Modus gestartet - Polling für Updates alle 10 Sekunden aktiv"
+			"👤 Slave-Modus gestartet - Polling für Updates alle 3 Sekunden aktiv"
 		);
 		// HINWEIS: Initialer Load erfolgt bereits in initSync()
 
@@ -498,7 +498,7 @@ class ServerSync {
 				clearInterval(this.slaveCheckInterval);
 				this.slaveCheckInterval = null;
 			}
-			const intervalMs = this.isMaster ? 30000 : 10000;
+			const intervalMs = this.isMaster ? 30000 : 3000;
 			this.slaveCheckInterval = setInterval(async () => { try { await this.slaveCheckForUpdates(); } catch(_){} }, intervalMs);
 			if (immediate) {
 				try { this.slaveCheckForUpdates(); } catch(_e) {}
@@ -701,6 +701,88 @@ async slaveCheckForUpdates() {
 			} else {
 				console.error("❌ Server-Sync Fehler:", error);
 			}
+			return false;
+		} finally {
+			window.isSavingToServer = false;
+		}
+	}
+
+	/**
+	 * Post a targeted set of fieldUpdates immediately (bypasses change-detection), Master-only
+	 * @param {Object} fieldUpdates - map of fieldId -> value (e.g., { 'aircraft-1': '', 'status-1': 'neutral' })
+	 * @param {Object} options - optional flags
+	 * @returns {Promise<boolean>} success
+	 */
+	async syncFieldUpdates(fieldUpdates = {}, options = {}) {
+		try {
+			if (!this.serverSyncUrl) {
+				console.warn("⚠️ Server-URL nicht konfiguriert");
+				if (window.showNotification) window.showNotification("Server-URL nicht konfiguriert – Sync übersprungen", "warning");
+				return false;
+			}
+			if (!this.isMaster) {
+				console.log("⛔ Read-only mode: targeted write skipped (client not master)");
+				if (window.showNotification) window.showNotification("Read-only Modus – Schreiben zum Server deaktiviert", "info");
+				return false;
+			}
+			if (!fieldUpdates || typeof fieldUpdates !== 'object' || Object.keys(fieldUpdates).length === 0) {
+				return true; // nothing to do
+			}
+			if (window.isSavingToServer) {
+				return false;
+			}
+			window.isSavingToServer = true;
+
+			const body = { metadata: { timestamp: Date.now() }, fieldUpdates, settings: {} };
+			const headers = { "Content-Type": "application/json" };
+			if (this.isMaster) headers["X-Sync-Role"] = "master";
+			try {
+				const sid = this.getSessionId(); if (sid) headers["X-Sync-Session"] = sid;
+				const dname = (localStorage.getItem('presence.displayName') || '').trim(); if (dname) headers["X-Display-Name"] = dname;
+			} catch(_e){}
+
+			const { signal, cancel } = this._createTimeoutSignal(10000);
+			const serverUrl = this.getServerUrl();
+			const res = await fetch(serverUrl, { method: 'POST', headers, body: JSON.stringify(body), signal });
+			cancel && cancel();
+			if (!res.ok) {
+				let detail = '';
+				try { detail = await res.text(); } catch(_e){}
+				console.warn("⚠️ Targeted POST failed:", res.status, detail);
+				if (window.showNotification) window.showNotification(`Server-Sync fehlgeschlagen: ${res.status}`, 'error');
+				return false;
+			}
+			let payload = null; try { payload = await res.json(); } catch(_e){}
+			try {
+				const ts = parseInt(payload?.timestamp || 0, 10);
+				if (ts) this.lastServerTimestamp = Math.max(this.lastServerTimestamp||0, ts);
+			} catch(_e){}
+
+			// Update local baselines optimistically with applied fieldUpdates
+			try {
+				Object.entries(fieldUpdates).forEach(([fid, val]) => {
+					const m = fid.match(/^(aircraft|arrival-time|departure-time|hangar-position|position|status|tow-status|notes)-(\d+)$/);
+					if (!m) return;
+					const field = m[1];
+					const id = parseInt(m[2], 10);
+					const keyMap = { 'aircraft':'aircraftId','arrival-time':'arrivalTime','departure-time':'departureTime','hangar-position':'hangarPosition','position':'position','status':'status','tow-status':'towStatus','notes':'notes' };
+					const key = keyMap[field]; if (!key) return;
+					const tgt = (id>=100 ? this._baselineSecondary : this._baselinePrimary);
+					tgt[id] = tgt[id] || { tileId: id };
+					tgt[id][key] = val;
+				});
+			} catch(_e){}
+
+			// Optional immediate read-back to converge
+			try {
+				if (this.canReadFromServer && this.canReadFromServer()) {
+					await this.slaveCheckForUpdates();
+				}
+			} catch(_e){}
+
+			return true;
+		} catch (e) {
+			console.warn('syncFieldUpdates failed', e);
 			return false;
 		} finally {
 			window.isSavingToServer = false;

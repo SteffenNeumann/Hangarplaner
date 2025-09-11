@@ -354,9 +354,14 @@ else if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
 
-                // Rebuild arrays
-                $merged['primaryTiles'] = $map_to_sorted_array($serverPrimaryMap);
-                $merged['secondaryTiles'] = $map_to_sorted_array($serverSecondaryMap);
+                // Rebuild arrays and ensure normalized keys exist for each tile
+                $normalize_array = function($arr) use ($normalize_tile) {
+                    $out = [];
+                    foreach ($arr as $t) { $out[] = $normalize_tile($t); }
+                    return $out;
+                };
+                $merged['primaryTiles'] = $normalize_array($map_to_sorted_array($serverPrimaryMap));
+                $merged['secondaryTiles'] = $normalize_array($map_to_sorted_array($serverSecondaryMap));
 
                 // 4) Metadata update (server-side)
                 $merged['metadata'] = is_array($merged['metadata']) ? $merged['metadata'] : [];

@@ -170,6 +170,48 @@ class ServerSync {
 	}
 
 	/**
+	 * Internal: build a fetch timeout signal with a safe fallback when AbortSignal.timeout is not available
+	 */
+	_createTimeoutSignal(ms = 10000) {
+		try {
+			if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+				return { signal: AbortSignal.timeout(ms), cancel: () => {} };
+			}
+		} catch(_e){}
+		const controller = new AbortController();
+		const id = setTimeout(() => { try { controller.abort(); } catch(_e){} }, ms);
+		return { signal: controller.signal, cancel: () => clearTimeout(id) };
+	}
+
+	/**
+	 * Internal: watchdog to recover from hung loads in case the timeout mechanism is unavailable
+	 */
+	_startLoadWatchdog(ms = 15000) {
+		try {
+			if (this._loadWatchdogId) { clearTimeout(this._loadWatchdogId); }
+			this._loadWatchdogId = setTimeout(() => {
+				try {
+					if (this._isLoading || window.isLoadingServerData) {
+						console.warn(`⏱️ Load watchdog fired after ${ms}ms — resetting flags and aborting pending load`);
+						this._isLoading = false;
+						window.isLoadingServerData = false;
+						// Best-effort UI nudge
+						if (window.showNotification) {
+							window.showNotification('Server read timed out — retrying', 'warning');
+						}
+						// Trigger a single retry if in read-enabled mode
+						try {
+							if (this.canReadFromServer && this.canReadFromServer()) {
+								this.slaveCheckForUpdates && this.slaveCheckForUpdates();
+							}
+						} catch(_e){}
+					}
+				} catch(_e){}
+			}, ms);
+		} catch(_e){}
+	}
+
+	/**
 	 * Prüft, ob Lesen vom Server aktuell erlaubt ist (Read Data Toggle)
 	 */
 	canReadFromServer() {
@@ -222,9 +264,10 @@ class ServerSync {
 	 */
 	async getServerTimestamp() {
 		try {
+			const { signal, cancel } = this._createTimeoutSignal(5000);
 			const response = await fetch(`${this.serverSyncUrl}?action=timestamp`, {
 				method: "GET",
-				signal: AbortSignal.timeout(5000),
+				signal,
 			});
 
 			if (response.ok) {
@@ -405,8 +448,7 @@ async slaveCheckForUpdates() {
 			}
 
 			// Optimierung: Verwende AbortController für Timeout
-			const controller = new AbortController();
-			const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s Timeout
+			const { signal, cancel } = this._createTimeoutSignal(10000); // 10s Timeout
 
 			// Verwende korrekte Server-URL mit Project-ID falls vorhanden
 			const serverUrl = this.getServerUrl();
@@ -430,10 +472,10 @@ async slaveCheckForUpdates() {
 				method: "POST",
 				headers,
 				body: JSON.stringify(currentData),
-				signal: controller.signal,
+				signal,
 			});
 
-			clearTimeout(timeoutId);
+			cancel && cancel();
 
 				if (response.ok) {
 					console.log("✅ Master: Server-Sync erfolgreich");
@@ -626,33 +668,50 @@ async slaveCheckForUpdates() {
 			return null;
 		}
 
+		// Reentrancy guard
+		if (this._isLoading || window.isLoadingServerData) {
+			console.log("⏸️ Load skipped: another server read in progress");
+			return null;
+		}
+
+		this._isLoading = true;
+		window.isLoadingServerData = true;
+		this._startLoadWatchdog(15000);
+
 		try {
 			// Verwende korrekte Server-URL mit Project-ID falls vorhanden
 			const serverUrl = this.getServerUrl();
-			const loadUrl =
-				serverUrl + (serverUrl.includes("?") ? "&" : "?") + "action=load";
+			const loadUrl = serverUrl + (serverUrl.includes("?") ? "&" : "?") + "action=load";
 
-const response = await fetch(loadUrl, {
-                method: "GET",
-                headers: {
-                    Accept: "application/json",
-                },
-                signal: AbortSignal.timeout(10000),
-            });
+			const { signal, cancel } = this._createTimeoutSignal(10000);
+			const response = await fetch(loadUrl, {
+				method: "GET",
+				headers: { Accept: "application/json" },
+				signal,
+			});
+			cancel && cancel();
 
 			if (response.ok) {
 				const data = await response.json();
 				console.log("✅ Daten vom Server geladen");
 				return data;
-				} else {
-					let text = '';
-					try { text = await response.text(); } catch(_e){}
-					console.warn("⚠️ Server-Sync fehlgeschlagen:", { status: response.status, body: text.slice(0,200) });
-					return false;
-				}
+			} else {
+				let text = '';
+				try { text = await response.text(); } catch(_e){}
+				console.warn("⚠️ Server-Sync fehlgeschlagen:", { status: response.status, body: text.slice(0,200) });
+				return false;
+			}
 		} catch (error) {
-			console.error("❌ Server-Load Fehler:", error);
+			if (error && error.name === 'AbortError') {
+				console.warn("⚠️ Server-Load Timeout (10s)");
+			} else {
+				console.error("❌ Server-Load Fehler:", error);
+			}
 			return null;
+		} finally {
+			try { if (this._loadWatchdogId) { clearTimeout(this._loadWatchdogId); this._loadWatchdogId = null; } } catch(_e){}
+			this._isLoading = false;
+			window.isLoadingServerData = false;
 		}
 	}
 
@@ -1258,14 +1317,15 @@ const response = await fetch(loadUrl, {
 		try {
 			console.log("🔍 Teste Server-Verbindung zu:", serverUrl);
 
+			const { signal, cancel } = this._createTimeoutSignal(5000);
 			const response = await fetch(serverUrl, {
 				method: "GET",
 				headers: {
 					Accept: "application/json",
 				},
-				// Timeout nach 5 Sekunden
-				signal: AbortSignal.timeout(5000),
+				signal,
 			});
+			cancel && cancel();
 
 			if (response.ok || response.status === 404) {
 				// 404 ist OK - bedeutet nur, dass noch keine Daten vorhanden sind

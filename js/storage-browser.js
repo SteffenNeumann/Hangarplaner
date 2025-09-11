@@ -1306,16 +1306,31 @@ class ServerSync {
 			console.warn("⚠️ setupSecondaryTileEventListeners nicht verfügbar");
 		}
 
-		// Event-Handler über Event-Manager reaktivieren
-		if (
-			window.hangarEventManager &&
-			window.hangarEventManager.setupUnifiedEventHandlers
-		) {
-			setTimeout(() => {
-				window.hangarEventManager.setupUnifiedEventHandlers();
-				console.log("✅ Unified Event-Handler reaktiviert");
-			}, 200);
-		}
+		// Event-Handler über Event-Manager reaktivieren (robust)
+		setTimeout(() => {
+			try {
+				if (window.hangarEventManager) {
+					if (!window.hangarEventManager.initialized && typeof window.hangarEventManager.init === 'function') {
+						window.hangarEventManager.init();
+						console.log("✅ Event-Manager init during reactivation");
+					} else if (typeof window.hangarEventManager.setupUnifiedEventHandlers === 'function') {
+						window.hangarEventManager.setupUnifiedEventHandlers();
+						console.log("✅ Unified Event-Handler reaktiviert");
+					}
+				} else {
+					// Retry later if manager not yet loaded
+					setTimeout(() => {
+						try {
+							if (window.hangarEventManager) {
+								if (!window.hangarEventManager.initialized && typeof window.hangarEventManager.init === 'function') window.hangarEventManager.init();
+								else if (typeof window.hangarEventManager.setupUnifiedEventHandlers === 'function') window.hangarEventManager.setupUnifiedEventHandlers();
+								console.log("✅ Unified Event-Handler reaktiviert (delayed)");
+							}
+						} catch(_e){}
+					}, 800);
+				}
+			} catch(_e){}
+		}, 200);
 
 			// Status-Indikatoren und UI-Updates
 			setTimeout(() => {

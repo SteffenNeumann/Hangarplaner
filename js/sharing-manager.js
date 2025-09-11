@@ -588,7 +588,7 @@ updateWidgetSyncDisplay(status, isActive) {
 		const syncModeElement = document.getElementById("sync-mode");
 		if (syncModeElement) {
 			// CSS-Klassen zurücksetzen
-			syncModeElement.classList.remove("master", "slave", "standalone", "write-only");
+syncModeElement.classList.remove("master", "slave", "standalone");
 
 			if (isActive) {
 				// Zeige echten Status basierend auf neuen Modi
@@ -598,10 +598,7 @@ updateWidgetSyncDisplay(status, isActive) {
 				} else if (status === "Sync" || status === "Slave") {
 					syncModeElement.textContent = "Sync Read only";
 					syncModeElement.classList.add("slave");
-				} else if (status === "Write-Only") {
-					syncModeElement.textContent = "Write-only";
-					syncModeElement.classList.add("write-only");
-				} else {
+} else {
 					// Fallback für unbekannte aktive Status
 					syncModeElement.textContent = status;
 					syncModeElement.classList.add("master");

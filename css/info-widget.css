@@ -360,7 +360,7 @@ body.header-loose {
 	border-left: 2px solid #94a3b8 !important;
 }
 
-/* Sync mode (Master/Read-only/Write-only/Standalone) */
+/* Sync mode (Master/Read-only/Standalone) */
 #status-widget #sync-mode.master {
 	background: #ecfdf5 !important; /* green */
 	border-color: #a7f3d0 !important;
@@ -372,12 +372,6 @@ body.header-loose {
 	border-color: #bfdbfe !important;
 	color: #1d4ed8 !important;
 	border-left: 2px solid #3b82f6 !important;
-}
-#status-widget #sync-mode.write-only {
-	background: #fff7ed !important; /* orange */
-	border-color: #fed7aa !important;
-	color: #9a3412 !important;
-	border-left: 2px solid #f59e0b !important;
 }
 #status-widget #sync-mode.standalone {
 	background: #f3f4f6 !important; /* gray */
@@ -424,12 +418,6 @@ body.header-loose {
 	color: #93c5fd !important;
 	border-left: 2px solid #3b82f6 !important;
 }
-.dark-mode #status-widget #sync-mode.write-only {
-	background: rgba(245, 158, 11, 0.15) !important;
-	border-color: #b45309 !important;
-	color: #fdba74 !important;
-	border-left: 2px solid #f59e0b !important;
-}
 .dark-mode #status-widget #sync-mode.standalone {
 	background: var(--bg-secondary) !important;
 	border-color: var(--border-color) !important;
@@ -466,7 +454,6 @@ body.header-loose {
 /* Color mapping for those labels based on mode class */
 .currentSyncMode.mode-master, #currentSyncMode.mode-master, #currentSyncModeSidebar.mode-master { color: var(--sync-master-fg, #C2410C); }
 .currentSyncMode.mode-sync, #currentSyncMode.mode-sync, #currentSyncModeSidebar.mode-sync { color: var(--sync-read-fg, #B93815); }
-.currentSyncMode.mode-write, #currentSyncMode.mode-write, #currentSyncModeSidebar.mode-write { color: var(--sync-write-fg, #C2410C); }
 .currentSyncMode.standalone, #currentSyncMode.standalone, #currentSyncModeSidebar.standalone { color: var(--sync-standalone-fg, #344054); }
 
 .dark-mode .currentSyncMode,
@@ -479,9 +466,6 @@ body.header-loose {
 .dark-mode .currentSyncMode.mode-sync,
 .dark-mode #currentSyncMode.mode-sync,
 .dark-mode #currentSyncModeSidebar.mode-sync { color: #fcd34d !important; }
-.dark-mode .currentSyncMode.mode-write,
-.dark-mode #currentSyncMode.mode-write,
-.dark-mode #currentSyncModeSidebar.mode-write { color: #fb923c !important; }
 .dark-mode .currentSyncMode.standalone,
 .dark-mode #currentSyncMode.standalone,
 .dark-mode #currentSyncModeSidebar.standalone { color: #cbd5e1 !important; }

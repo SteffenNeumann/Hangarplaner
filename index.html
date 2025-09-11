@@ -642,7 +642,10 @@
 			try {
 				const el = document.getElementById('sync-mode');
 				if (!el) return;
-				const mode = (window.sharingManager && window.sharingManager.syncMode) || 'standalone';
+				function getStoredMode(){
+					try { const raw = localStorage.getItem('hangarSyncSettings'); if (!raw) return null; const s = JSON.parse(raw||'{}'); return typeof s?.syncMode === 'string' ? s.syncMode : null; } catch(_e){ return null; }
+				}
+				let mode = (window.sharingManager && window.sharingManager.syncMode) || getStoredMode() || 'standalone';
 				el.classList.remove('master','slave','standalone','write-only');
 				if (mode === 'master') { el.textContent = 'Master'; el.classList.add('master'); }
 				else if (mode === 'sync') { el.textContent = 'Sync Read only'; el.classList.add('slave'); }

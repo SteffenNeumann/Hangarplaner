@@ -636,12 +636,21 @@
 				return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 			} catch(e){ return ''; }
 		}
+		function isReadEnabled(){
+			try {
+				if (window.sharingManager && typeof window.sharingManager.syncMode === 'string') {
+					return window.sharingManager.syncMode === 'sync' || window.sharingManager.syncMode === 'master';
+				}
+				const read = !!document.getElementById('readDataToggle')?.checked;
+				return !!read;
+			} catch(e){ return false; }
+		}
 		function updateHeaderLastLoad(){
 			const el = document.getElementById('headerLastLoad');
 			if (!el) return;
 			// Ensure correct class for pill styling
 			el.className = 'header-time-badge';
-			if (!isReadOnlySync()) { el.textContent=''; el.style.display='none'; return; }
+			if (!isReadEnabled()) { el.textContent=''; el.style.display='none'; return; }
 			const loadedAt = (window.serverSync && window.serverSync.lastLoadedAt) ? window.serverSync.lastLoadedAt : null;
 			if (loadedAt) {
 				el.textContent = fmtHHmm(loadedAt);

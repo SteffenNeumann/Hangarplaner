@@ -439,10 +439,7 @@ async slaveCheckForUpdates() {
 						"✅ Slave: Server-Daten erfolgreich geladen und angewendet"
 					);
 
-					// Benachrichtigung für erfolgreiche Updates
-					if (window.showNotification) {
-						window.showNotification("Server-Updates empfangen", "info");
-					}
+					// Update handled by header pill via 'serverDataLoaded' event; suppress toast
 				} else {
 					console.warn("⚠️ Slave: Server-Daten konnten nicht geladen werden");
 				}

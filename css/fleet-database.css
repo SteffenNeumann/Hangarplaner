@@ -98,7 +98,7 @@
 
 /* Registration Code Style */
 .registration-code {
-	font-family: "Monaco", "Menlo", "Consolas", monospace;
+	font-family: "Inter", ui-sans-serif;
 	font-weight: 600;
 	letter-spacing: 0.05em;
 }

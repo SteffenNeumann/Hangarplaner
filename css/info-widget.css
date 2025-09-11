@@ -312,7 +312,7 @@ body.header-loose {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	font-family: monospace;
+	font-family: "Inter", ui-sans-serif;
 	font-size: 11px;
 	line-height: 1;
 	padding: 3px 8px;

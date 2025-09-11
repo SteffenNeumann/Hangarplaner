@@ -1612,7 +1612,7 @@ window.generateDefaultProjectName = generateDefaultProjectName;
 			badge.style.boxShadow = 'none';
 			badge.style.minWidth = '40px';
 			badge.style.textAlign = 'center';
-			badge.style.fontFamily = 'monospace';
+			badge.style.fontFamily = 'Inter, ui-sans-serif';
 			badge.textContent = display;
 
 			// Place badge inline within header (center)

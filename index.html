@@ -1736,7 +1736,16 @@ window.location.replace('login.html');
   function snapshotDomFields(cellId){
     const ids = [`aircraft-${cellId}`, `arrival-time-${cellId}`, `departure-time-${cellId}`, `hangar-position-${cellId}`, `position-${cellId}`, `notes-${cellId}`, `status-${cellId}`, `tow-status-${cellId}`];
     const fields = {};
-    ids.forEach(id=>{ const el = document.getElementById(id); if (el) fields[id] = el.value || ''; });
+    ids.forEach(id=>{
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (id.startsWith('arrival-time-') || id.startsWith('departure-time-')){
+        const raw = (el.dataset && el.dataset.iso) ? el.dataset.iso : (el.value || '');
+        fields[id] = raw || '';
+      } else {
+        fields[id] = el.value || '';
+      }
+    });
     return fields;
   }
   function ensurePlansSeededFromDom(){
@@ -1810,6 +1819,7 @@ window.location.replace('login.html');
   function render(){
     const host = document.getElementById('globalScheduleList'); if (!host) return;
     const data = collectEntries();
+    try { console.debug('Schedule entries:', data); } catch(_e){}
     host.innerHTML = data.map(e=>{
       const time = `${fmtHHmm(e.arrIso)}${e.arrIso?'–':''}${fmtHHmm(e.depIso)}`;
       const meta = `${e.reg || ''}${e.pos? ' • '+e.pos : ''}`;

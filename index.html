@@ -1464,37 +1464,19 @@ window.location.replace('login.html');
       <div class="tile-tabbar" role="tablist" aria-label="Planning tabs">
         <button type="button" class="tab-btn" data-b="0" role="tab" aria-selected="true">Plan 1</button>
         <button type="button" class="tab-btn" data-b="1" role="tab" aria-selected="false">Plan 2</button>
-      </div>
-      <div class="booking-rows">
-        <div class="booking-row" data-b="0">
-          <input type="text" class="booking-reg" placeholder="AC-ID">
-          <input type="datetime-local" class="booking-arr" title="Arr UTC">
-          <input type="datetime-local" class="booking-dep" title="Dep UTC">
-        </div>
-        <div class="booking-row" data-b="1" hidden>
-          <input type="text" class="booking-reg" placeholder="AC-ID">
-          <input type="datetime-local" class="booking-arr" title="Arr UTC">
-          <input type="datetime-local" class="booking-dep" title="Dep UTC">
-        </div>
       </div>`;
-    // input events
-    wrapper.addEventListener('input', (e)=>{
-      const row = e.target.closest('.booking-row'); if (!row) return;
-      const idx = parseInt(row.getAttribute('data-b'),10)||0;
-      const cur = readSchedule(cellId);
-      const reg = row.querySelector('.booking-reg')?.value || '';
-      const arr = row.querySelector('.booking-arr')?.value || '';
-      const dep = row.querySelector('.booking-dep')?.value || '';
-      cur[idx] = { ...(cur[idx]||{}), reg, arr, dep };
-      writeSchedule(cellId, cur);
-      renderScheduleUI(cellId);
-    }, { passive: true });
-    // tab click
+    // tab click -> persist selection and mirror plan into main fields
     wrapper.querySelectorAll('.tile-tabbar .tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const sel = parseInt(btn.getAttribute('data-b'),10)||0;
+        try {
+          if (window.scheduleHelpers){
+            window.scheduleHelpers.setSelectedPlanIndex(cellId, sel);
+            window.scheduleHelpers.applySelectedPlanToTile(cellId);
+          }
+        } catch(_e){}
+        // update aria-selected locally
         wrapper.querySelectorAll('.tile-tabbar .tab-btn').forEach(b=> b.setAttribute('aria-selected', b===btn ? 'true' : 'false'));
-        wrapper.querySelectorAll('.booking-row').forEach(row => { row.hidden = (parseInt(row.getAttribute('data-b'),10)||0) !== sel; });
       });
     });
     return wrapper;
@@ -1508,28 +1490,40 @@ window.location.replace('login.html');
       })();
       if (!host) return;
       const ui = host.querySelector('.tile-schedule-ui');
-      const bookings = readSchedule(cellId);
-      if (ui){
-        const rows = ui.querySelectorAll('.booking-row');
-        rows.forEach((row,i)=>{
-          const d = bookings[i] || { reg:'', arr:'', dep:'' };
-          const reg = row.querySelector('.booking-reg'); if (reg) reg.value = d.reg || '';
-          const arr = row.querySelector('.booking-arr'); if (arr) arr.value = d.arr || '';
-          const dep = row.querySelector('.booking-dep'); if (dep) dep.value = d.dep || '';
-          row.classList.remove('is-active','is-next');
-        });
-        ui.classList.remove('is-conflict');
-        const pick = pickActive(bookings, Date.now());
-        if (pick.index >= 0){ const row = rows[pick.index]; if (row) row.classList.add(pick.type==='active' ? 'is-active' : 'is-next'); }
-        if (hasConflict(bookings[0], bookings[1])) ui.classList.add('is-conflict');
-        // update tab badges
-        const tabs = ui.querySelectorAll('.tile-tabbar .tab-btn');
-        tabs.forEach((btn,i)=>{ btn.classList.remove('time-active','time-next'); });
-        if (pick.index >= 0){
-          const btn = ui.querySelector(`.tile-tabbar .tab-btn[data-b="${pick.index}"]`);
-          if (btn) btn.classList.add(pick.type==='active' ? 'time-active' : 'time-next');
-        }
+      if (!ui) return;
+      // compute active/next from stored plans
+      const plans = readPlans(cellId);
+      const now = Date.now();
+      function planTimes(p){
+        try {
+          const f = (p && p.fields) ? p.fields : {};
+          const a = f[`arrival-time-${cellId}`] || '';
+          const d = f[`departure-time-${cellId}`] || '';
+          const isoA = (window.helpers && typeof window.helpers.canonicalizeDateTimeFieldValue==='function') ? window.helpers.canonicalizeDateTimeFieldValue(`arrival-time-${cellId}`, a) : a;
+          const isoD = (window.helpers && typeof window.helpers.canonicalizeDateTimeFieldValue==='function') ? window.helpers.canonicalizeDateTimeFieldValue(`departure-time-${cellId}`, d) : d;
+          return { a: toMs(isoA||''), d: toMs(isoD||'') };
+        } catch(_e){ return { a: NaN, d: NaN }; }
       }
+      const t0 = planTimes(plans[0]||{});
+      const t1 = planTimes(plans[1]||{});
+      function stateFromTimes(t){ if (!isFinite(t.a) || !isFinite(t.d)) return 'none'; if (t.a <= now && now < t.d) return 'active'; if (t.a > now) return 'next'; return 'none'; }
+      const s0 = stateFromTimes(t0);
+      const s1 = stateFromTimes(t1);
+      // badges
+      const tabs = ui.querySelectorAll('.tile-tabbar .tab-btn');
+      tabs.forEach((btn,i)=>{ btn.classList.remove('time-active','time-next'); });
+      if (s0==='active'){ const b = ui.querySelector('.tile-tabbar .tab-btn[data-b="0"]'); if (b) b.classList.add('time-active'); }
+      else if (s0==='next'){ const b = ui.querySelector('.tile-tabbar .tab-btn[data-b="0"]'); if (b) b.classList.add('time-next'); }
+      if (s1==='active'){ const b = ui.querySelector('.tile-tabbar .tab-btn[data-b="1"]'); if (b) b.classList.add('time-active'); }
+      else if (s1==='next'){ const b = ui.querySelector('.tile-tabbar .tab-btn[data-b="1"]'); if (b) b.classList.add('time-next'); }
+      // conflict marker if both present and overlap
+      const conflict = (isFinite(t0.a)&&isFinite(t0.d)&&isFinite(t1.a)&&isFinite(t1.d) && (t0.a < t1.d) && (t1.a < t0.d));
+      ui.classList.toggle('is-conflict', !!conflict);
+      // reflect persisted selected tab aria-selected
+      try {
+        const sel = getSelectedPlanIndex(cellId);
+        tabs.forEach(btn => { const idx = parseInt(btn.getAttribute('data-b'),10)||0; btn.setAttribute('aria-selected', idx===sel ? 'true' : 'false'); });
+      } catch(_e){}
     } catch(_e){}
   }
   function ensureScheduleForTile(tile){
@@ -1553,6 +1547,13 @@ window.location.replace('login.html');
     } else if (!header.contains(ui)) {
       header.appendChild(ui);
     }
+    // install mirroring of tile fields into selected plan
+    try { installFieldMirroring(tile, cellId); } catch(_e){}
+    // seed plans if needed and apply selected plan
+    try {
+      seedInitialPlansIfEmpty(cellId);
+      applySelectedPlanToTile(cellId);
+    } catch(_e){}
     renderScheduleUI(cellId);
   }
   function initAll(){
@@ -1565,12 +1566,96 @@ window.location.replace('login.html');
   setInterval(tick, 60000);
 
   // expose minimal helpers
-  window.scheduleHelpers = { readSchedule, writeSchedule, renderScheduleUI };
+  // Persistent selected plan index per tile
+  function getSelectedPlanIndex(cellId){
+    try { const raw = localStorage.getItem('tile.plan.selected') || '{}'; const obj = JSON.parse(raw)||{}; const v = obj[String(cellId)]; return (v===0||v===1) ? v : 0; } catch(_e){ return 0; }
+  }
+  function setSelectedPlanIndex(cellId, idx){
+    try { const raw = localStorage.getItem('tile.plan.selected') || '{}'; const obj = JSON.parse(raw)||{}; obj[String(cellId)] = (idx===1?1:0); localStorage.setItem('tile.plan.selected', JSON.stringify(obj)); } catch(_e){}
+  }
+  // Plans store: snapshot actual tile fields for two plans
+  function readPlans(cellId){
+    try { const raw = localStorage.getItem('tile.plans') || '{}'; const obj = JSON.parse(raw)||{}; const v = obj[String(cellId)]; if (!Array.isArray(v)) return [{fields:{}},{fields:{}}]; return [v[0]||{fields:{}}, v[1]||{fields:{}}]; } catch(_e){ return [{fields:{}},{fields:{}}]; }
+  }
+  function writePlans(cellId, plans){
+    try { const raw = localStorage.getItem('tile.plans') || '{}'; const obj = JSON.parse(raw)||{}; obj[String(cellId)] = plans.map(p=>({ fields: p.fields||{} })); localStorage.setItem('tile.plans', JSON.stringify(obj)); } catch(_e){}
+  }
+  function snapshotCurrentTileFields(cellId){
+    const fields = {};
+    const ids = [
+      `aircraft-${cellId}`,
+      `arrival-time-${cellId}`,
+      `departure-time-${cellId}`,
+      `position-${cellId}`,
+      `hangar-position-${cellId}`,
+      `notes-${cellId}`,
+      `status-${cellId}`,
+      `tow-status-${cellId}`,
+    ];
+    ids.forEach(id=>{ const el = document.getElementById(id); if (el) fields[id] = el.value || ''; });
+    return fields;
+  }
+  function applyFieldsToTile(cellId, fields){
+    Object.entries(fields||{}).forEach(([id,val])=>{
+      const el = document.getElementById(id);
+      if (!el) return;
+      const prev = el.value;
+      if (prev === val) return;
+      el.value = val || '';
+      try { el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); } catch(_e){}
+    });
+  }
+  function seedInitialPlansIfEmpty(cellId){
+    const plans = readPlans(cellId);
+    const empty0 = !plans[0] || !plans[0].fields || Object.keys(plans[0].fields).length===0;
+    const empty1 = !plans[1] || !plans[1].fields || Object.keys(plans[1].fields).length===0;
+    if (empty0){ plans[0] = { fields: snapshotCurrentTileFields(cellId) }; }
+    if (empty1){ plans[1] = { fields: snapshotCurrentTileFields(cellId) }; }
+    writePlans(cellId, plans);
+  }
+  function applySelectedPlanToTile(cellId){
+    const sel = getSelectedPlanIndex(cellId);
+    const plans = readPlans(cellId);
+    const fields = (plans[sel] && plans[sel].fields) ? plans[sel].fields : {};
+    applyFieldsToTile(cellId, fields);
+    renderScheduleUI(cellId);
+  }
+  function installFieldMirroring(tile, cellId){
+    const relevant = tile.querySelectorAll(`#aircraft-${cellId}, #arrival-time-${cellId}, #departure-time-${cellId}, #position-${cellId}, #hangar-position-${cellId}, #notes-${cellId}, #status-${cellId}, #tow-status-${cellId}`);
+    relevant.forEach(el => {
+      if (el.__planMirrorInstalled) return;
+      const handler = ()=>{
+        const sel = getSelectedPlanIndex(cellId);
+        const plans = readPlans(cellId);
+        const fields = (plans[sel] && plans[sel].fields) ? plans[sel].fields : {};
+        fields[el.id] = el.value || '';
+        plans[sel] = { fields };
+        writePlans(cellId, plans);
+        // also reflect to schedule JSON for timetable logic (optional, based on Arr/Dep only)
+        try {
+          const reg = (document.getElementById(`aircraft-${cellId}`)?.value||'').trim();
+          const arr = fields[`arrival-time-${cellId}`] || '';
+          const dep = fields[`departure-time-${cellId}`] || '';
+          const current = readSchedule(cellId) || [];
+          current[sel] = { reg, arr, dep };
+          writeSchedule(cellId, current);
+        } catch(_e){}
+        renderScheduleUI(cellId);
+      };
+      el.addEventListener('input', handler);
+      el.addEventListener('change', handler);
+      el.__planMirrorInstalled = true;
+    });
+  }
+
+  window.scheduleHelpers = { readSchedule, writeSchedule, renderScheduleUI, setSelectedPlanIndex, getSelectedPlanIndex, applySelectedPlanToTile };
   window.renderScheduleUI = renderScheduleUI;
 
   window.hangarInitQueue = window.hangarInitQueue || [];
   window.hangarInitQueue.push(initAll);
   document.addEventListener('secondaryTilesCreated', ()=> setTimeout(initAll, 60));
+  // On load, restore selected plan index and apply
+  try { setTimeout(()=>{ try { document.querySelectorAll('[data-cell-id]').forEach(el=>{ const id = parseInt(el.getAttribute('data-cell-id')||'',10); if (isFinite(id)) applySelectedPlanToTile(id); }); } catch(_e){} }, 300); } catch(_e){}
 })();
 </script>
 

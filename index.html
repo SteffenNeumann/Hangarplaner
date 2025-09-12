@@ -1695,22 +1695,72 @@ window.location.replace('login.html');
         tiles.forEach(tile => {
           const cellId = getCellIdFromTile(tile);
           if (!Number.isFinite(cellId)) return;
-          const sel = getSelectedPlanIndex(cellId);
           const plans = readPlans(cellId);
-          const fields = (plans[sel] && plans[sel].fields) ? plans[sel].fields : {};
-          // Read latest values from DOM (post-sync) without dispatching events
+          // Read current DOM values after sync
           const get = (id) => (document.getElementById(id)?.value || '').trim();
-          fields[`aircraft-${cellId}`] = get(`aircraft-${cellId}`);
-          fields[`arrival-time-${cellId}`] = get(`arrival-time-${cellId}`);
-          fields[`departure-time-${cellId}`] = get(`departure-time-${cellId}`);
-          // Store both position variants; UI/logic may consult either
-          fields[`position-${cellId}`] = get(`position-${cellId}`);
-          fields[`hangar-position-${cellId}`] = get(`hangar-position-${cellId}`);
-          fields[`status-${cellId}`] = get(`status-${cellId}`);
-          fields[`tow-status-${cellId}`] = get(`tow-status-${cellId}`);
-          plans[sel] = { fields };
-          writePlans(cellId, plans);
-          // Refresh tab labels and active/next badges for this tile
+          const dom = {
+            aircraft: get(`aircraft-${cellId}`),
+            arrIso: (function(){ try { const raw = get(`arrival-time-${cellId}`); return (window.helpers && typeof window.helpers.canonicalizeDateTimeFieldValue==='function') ? (window.helpers.canonicalizeDateTimeFieldValue(`arrival-time-${cellId}`, raw)||'') : raw; } catch(_e){ return get(`arrival-time-${cellId}`); } })(),
+            depIso: (function(){ try { const raw = get(`departure-time-${cellId}`); return (window.helpers && typeof window.helpers.canonicalizeDateTimeFieldValue==='function') ? (window.helpers.canonicalizeDateTimeFieldValue(`departure-time-${cellId}`, raw)||'') : raw; } catch(_e){ return get(`departure-time-${cellId}`); } })(),
+            pos: get(`position-${cellId}`),
+            hangarPos: get(`hangar-position-${cellId}`),
+            status: get(`status-${cellId}`),
+            tow: get(`tow-status-${cellId}`)
+          };
+
+          // Decide which plan to update by comparing DOM times to stored plans
+          const toMinutes = (iso)=>{ const ms = toMs(iso||''); return isFinite(ms) ? ms/60000 : NaN; };
+          const diff = (a,b)=>{ if (!isFinite(a) || !isFinite(b)) return 1e9; return Math.abs(a-b); };
+          function planTime(pl){
+            const f = (pl && pl.fields) ? pl.fields : {};
+            const a = f[`arrival-time-${cellId}`] || '';
+            const d = f[`departure-time-${cellId}`] || '';
+            // canonicalize in case stored values are compact
+            let aIso=a, dIso=d;
+            try { if (window.helpers && typeof window.helpers.canonicalizeDateTimeFieldValue==='function'){ aIso = a ? (window.helpers.canonicalizeDateTimeFieldValue(`arrival-time-${cellId}`, a)||a) : ''; dIso = d ? (window.helpers.canonicalizeDateTimeFieldValue(`departure-time-${cellId}`, d)||d) : ''; } } catch(_e){}
+            return { aMin: toMinutes(aIso), dMin: toMinutes(dIso), aIso: aIso||'', dIso: dIso||'' };
+          }
+          function isEmptyPlan(pl){
+            try {
+              const f = (pl && pl.fields) ? pl.fields : {};
+              return !Object.keys(f).some(k => (f[k]||'').trim().length);
+            } catch(_e){ return true; }
+          }
+
+          const p0 = planTime(plans[0]);
+          const p1 = planTime(plans[1]);
+          const domA = toMinutes(dom.arrIso), domD = toMinutes(dom.depIso);
+          const score0 = diff(domA, p0.aMin) + diff(domD, p0.dMin);
+          const score1 = diff(domA, p1.aMin) + diff(domD, p1.dMin);
+          const THRESH = 10; // minutes tolerance per field (sum threshold)
+
+          let idxToUpdate = null;
+          if (isFinite(domA) || isFinite(domD)){
+            // Choose the closer plan if within tolerance; otherwise prefer empty plan
+            if (score0 + 1e-6 < score1 && score0 < THRESH*2){ idxToUpdate = 0; }
+            else if (score1 + 1e-6 < score0 && score1 < THRESH*2){ idxToUpdate = 1; }
+            else if (isEmptyPlan(plans[0]) && !isEmptyPlan(plans[1])) { idxToUpdate = 0; }
+            else if (isEmptyPlan(plans[1]) && !isEmptyPlan(plans[0])) { idxToUpdate = 1; }
+          } else {
+            // No times to compare → avoid overwriting; only seed into empty plan if one exists
+            if (isEmptyPlan(plans[0]) && !isEmptyPlan(plans[1])) idxToUpdate = 0;
+            else if (isEmptyPlan(plans[1]) && !isEmptyPlan(plans[0])) idxToUpdate = 1;
+          }
+
+          if (idxToUpdate !== null){
+            const fields = (plans[idxToUpdate] && plans[idxToUpdate].fields) ? plans[idxToUpdate].fields : {};
+            fields[`aircraft-${cellId}`] = dom.aircraft;
+            fields[`arrival-time-${cellId}`] = dom.arrIso || '';
+            fields[`departure-time-${cellId}`] = dom.depIso || '';
+            fields[`position-${cellId}`] = dom.pos;
+            fields[`hangar-position-${cellId}`] = dom.hangarPos;
+            fields[`status-${cellId}`] = dom.status || fields[`status-${cellId}`] || '';
+            fields[`tow-status-${cellId}`] = dom.tow || fields[`tow-status-${cellId}`] || '';
+            plans[idxToUpdate] = { fields };
+            writePlans(cellId, plans);
+          }
+
+          // Always refresh tab labels and active/next badges for this tile
           renderScheduleUI(cellId);
         });
         // Refresh the global schedule panel as well

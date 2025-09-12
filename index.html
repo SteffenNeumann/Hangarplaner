@@ -199,9 +199,9 @@
 		.dark-mode .tile-schedule-ui .booking-row.is-next { background: rgba(59,130,246,0.08); outline-color: rgba(59,130,246,0.45); }
 		.dark-mode .tile-schedule-ui input[type="text"], .dark-mode .tile-schedule-ui input[type="datetime-local"] { background: #0b1220; color: #e5e7eb; border-color: #273449; }
 
-		/* Global vertical schedule panel */
-		.hangar-container { padding-right: 300px; }
-		#globalSchedulePanel { position: fixed; right: 16px; top: 72px; width: 260px; height: calc(100vh - 84px); overflow-y: auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); padding: 10px; }
+		/* Global vertical schedule panel (inside planner grid) */
+		#panel-planner .planner-grid { display: grid; grid-template-columns: minmax(0,1fr) 260px; gap: 12px; align-items: start; }
+		#globalSchedulePanel { position: sticky; top: 8px; width: 100%; max-height: calc(100vh - 120px); overflow-y: auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); padding: 10px; }
 		#globalSchedulePanel .panel-title { font-weight: 700; font-size: 13px; color: #374151; margin-bottom: 6px; }
 		#globalScheduleList { display: flex; flex-direction: column; gap: 6px; }
 		.schedule-item { display: grid; grid-template-columns: 64px 1fr; gap: 8px; align-items: center; padding: 6px 8px; border: 1px solid #e5e7eb; border-radius: 8px; }
@@ -1882,13 +1882,10 @@ window.location.replace('login.html');
 
 					<!-- Panels -->
 					<div id="panel-planner" class="tab-panel" role="tabpanel" aria-labelledby="tab-planner">
-						<!-- Right vertical schedule panel (fixed) -->
-						<aside id="globalSchedulePanel" aria-label="Global schedule">
-							<div class="panel-title">Schedule</div>
-							<div id="globalScheduleList"></div>
-						</aside>
-					<!-- Abschnitt 1 Container -->
-					<div class="section-container">
+						<div class="planner-grid" id="plannerTwoCol">
+							<div id="plannerMainCol">
+								<!-- Abschnitt 1 Container -->
+								<div class="section-container">
 						<div id="hangarGrid" class="grid grid-cols-4 gap-4">
 							<!-- 8 Hangar-Kacheln hier -->
 							<!-- Kachel 1 - NEU GESTALTET -->
@@ -3041,17 +3038,24 @@ type="datetime-local"
 						</div>
 					</div>
 
-					<!-- Horizontale Trennlinie mit gleichmäßigem Abstand -->
-					<div class="section-divider"></div>
+							<!-- Horizontale Trennlinie mit gleichmäßigem Abstand -->
+							<div class="section-divider"></div>
 
-					<!-- Abschnitt 2 Container -->
-					<div class="section-container">
-						<div id="secondaryHangarGrid" class="grid grid-cols-4 gap-4">
-							<!-- Hier werden dynamisch weitere Kacheln eingefügt -->
-						</div>
-					</div>
+							<!-- Abschnitt 2 Container -->
+							<div class="section-container">
+								<div id="secondaryHangarGrid" class="grid grid-cols-4 gap-4">
+									<!-- Hier werden dynamisch weitere Kacheln eingefügt -->
+								</div>
+							</div>
+							</div> <!-- #plannerMainCol -->
+							<!-- Right vertical schedule panel (inside grid) -->
+							<aside id="globalSchedulePanel" aria-label="Global schedule">
+								<div class="panel-title">Schedule</div>
+								<div id="globalScheduleList"></div>
+							</aside>
+						</div> <!-- #plannerTwoCol -->
 
-					</div> <!-- /panel-planner -->
+						</div> <!-- /panel-planner -->
 
 					<!-- Timetable Panel -->
 					<div id="panel-timetable" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-timetable" style="height: calc(100vh - 60px);">

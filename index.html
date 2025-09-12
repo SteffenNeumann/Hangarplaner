@@ -176,6 +176,18 @@
 			.dark-mode #towing-reminder-widget .status-label { color: var(--text-secondary); }
 			.dark-mode #towing-reminder-widget .status-label-value { color: #cbd5e1; }
 			.dark-mode #towingReminderList { color: #ef4444 !important; }
+		/* --- Schedule UI minimal styles --- */
+		.tile-schedule-ui { margin-top: 6px; border: 1px dashed #e5e7eb; border-radius: 6px; padding: 6px; }
+		.tile-schedule-ui .booking-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; align-items: center; margin-bottom: 6px; }
+		.tile-schedule-ui .booking-row:last-child { margin-bottom: 0; }
+		.tile-schedule-ui .booking-row.is-active { background: rgba(34,197,94,0.08); outline: 1px solid rgba(34,197,94,0.35); border-radius: 4px; }
+		.tile-schedule-ui .booking-row.is-next { background: rgba(59,130,246,0.06); outline: 1px dashed rgba(59,130,246,0.35); border-radius: 4px; }
+		.tile-schedule-ui.is-conflict { border-left: 3px solid #ef4444; }
+		.tile-schedule-ui input[type="text"], .tile-schedule-ui input[type="datetime-local"] { font-size: 12px; padding: 4px 6px; border: 1px solid #e5e7eb; border-radius: 4px; }
+		.dark-mode .tile-schedule-ui { border-color: #374151; }
+		.dark-mode .tile-schedule-ui .booking-row.is-active { background: rgba(16,185,129,0.08); outline-color: rgba(16,185,129,0.45); }
+		.dark-mode .tile-schedule-ui .booking-row.is-next { background: rgba(59,130,246,0.08); outline-color: rgba(59,130,246,0.45); }
+		.dark-mode .tile-schedule-ui input[type="text"], .dark-mode .tile-schedule-ui input[type="datetime-local"] { background: #0b1220; color: #e5e7eb; border-color: #273449; }
 		</style>
 <script>
 // Early auth guard: redirect unauthenticated users to /login.html
@@ -1393,6 +1405,145 @@ window.location.replace('login.html');
   window.clearSingleTile = clearSingleTile;
 })();
 </script>
+
+<!-- Schedule (dual booking) injection and runtime logic -->
+<script>
+(function(){
+  function getCellIdFromTile(tile){
+    if (!tile) return null;
+    const sel = tile.querySelector('select[id^="status-"]') || tile.querySelector('select[id^="tow-status-"]');
+    if (sel){ const m = sel.id.match(/-(\d+)$/); if (m) return parseInt(m[1],10); }
+    const pos = tile.querySelector('input[id^="hangar-position-"]') || tile.querySelector('input[id^="position-"]');
+    if (pos){ const m = pos.id.match(/-(\d+)$/); if (m) return parseInt(m[1],10); }
+    const ac = tile.querySelector('input[id^="aircraft-"]');
+    if (ac){ const m = ac.id.match(/-(\d+)$/); if (m) return parseInt(m[1],10); }
+    return null;
+  }
+  function toMs(iso){
+    if (typeof iso !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(iso)) return NaN;
+    const [date,time] = iso.split('T');
+    const [y,m,d] = date.split('-').map(Number);
+    const [hh,mm] = time.split(':').map(Number);
+    return Date.UTC(y,(m||1)-1,d||1,hh||0,mm||0,0,0);
+  }
+  function pickActive(bookings, nowMs){
+    const items = (bookings||[]).map((b,i)=>({i,b,arr:toMs(b.arr),dep:toMs(b.dep)})).filter(x=>isFinite(x.arr)&&isFinite(x.dep));
+    const active = items.find(x=> x.arr <= nowMs && nowMs < x.dep);
+    if (active) return { type:'active', index: active.i };
+    const next = items.filter(x=> x.arr > nowMs).sort((a,b)=> a.arr - b.arr)[0];
+    if (next) return { type:'next', index: next.i };
+    return { type:'none', index:-1 };
+  }
+  function hasConflict(a,b){
+    if (!a || !b) return false; const aA=toMs(a.arr), aD=toMs(a.dep), bA=toMs(b.arr), bD=toMs(b.dep);
+    if (![aA,aD,bA,bD].every(isFinite)) return false; return (aA < bD) && (bA < aD);
+  }
+  function readSchedule(cellId){
+    try { const el = document.getElementById(`schedule-${cellId}`); if (!el) return []; const val = el.value||'[]'; const parsed = JSON.parse(val); return Array.isArray(parsed) ? parsed : []; } catch(_e){ return []; }
+  }
+  function writeSchedule(cellId, bookings){
+    const el = document.getElementById(`schedule-${cellId}`); if (!el) return;
+    const arr = (bookings||[]).slice(0,2).map(x=>({ reg:(x.reg||'').trim(), arr:(x.arr||''), dep:(x.dep||''), pos:(x.pos||'') }));
+    el.value = JSON.stringify(arr);
+    try { if (window.hangarEventManager && typeof window.hangarEventManager.debouncedFieldUpdate==='function'){ window.hangarEventManager.debouncedFieldUpdate(`schedule-${cellId}`, el.value, 150, { flushDelayMs: 150 }); } } catch(_e){}
+  }
+  function buildScheduleUI(cellId){
+    const wrapper = document.createElement('div');
+    wrapper.className = 'tile-schedule-ui';
+    wrapper.innerHTML = `
+      <div class="booking-row" data-b="0">
+        <input type="text" class="booking-reg" placeholder="AC-ID">
+        <input type="datetime-local" class="booking-arr" title="Arr UTC">
+        <input type="datetime-local" class="booking-dep" title="Dep UTC">
+      </div>
+      <div class="booking-row" data-b="1">
+        <input type="text" class="booking-reg" placeholder="AC-ID">
+        <input type="datetime-local" class="booking-arr" title="Arr UTC">
+        <input type="datetime-local" class="booking-dep" title="Dep UTC">
+      </div>`;
+    // input events
+    wrapper.addEventListener('input', (e)=>{
+      const row = e.target.closest('.booking-row'); if (!row) return;
+      const idx = parseInt(row.getAttribute('data-b'),10)||0;
+      const cur = readSchedule(cellId);
+      const reg = row.querySelector('.booking-reg')?.value || '';
+      const arr = row.querySelector('.booking-arr')?.value || '';
+      const dep = row.querySelector('.booking-dep')?.value || '';
+      cur[idx] = { ...(cur[idx]||{}), reg, arr, dep };
+      writeSchedule(cellId, cur);
+      renderScheduleUI(cellId);
+    }, { passive: true });
+    return wrapper;
+  }
+  function renderScheduleUI(cellId){
+    try {
+      const host = (function(){
+        let t = document.querySelector(`[data-cell-id="${cellId}"]`);
+        if (!t) t = document.querySelector(`#hangarGrid .hangar-cell:nth-child(${cellId})`);
+        return t;
+      })();
+      if (!host) return;
+      const ui = host.querySelector('.tile-schedule-ui');
+      const bookings = readSchedule(cellId);
+      if (ui){
+        const rows = ui.querySelectorAll('.booking-row');
+        rows.forEach((row,i)=>{
+          const d = bookings[i] || { reg:'', arr:'', dep:'' };
+          const reg = row.querySelector('.booking-reg'); if (reg) reg.value = d.reg || '';
+          const arr = row.querySelector('.booking-arr'); if (arr) arr.value = d.arr || '';
+          const dep = row.querySelector('.booking-dep'); if (dep) dep.value = d.dep || '';
+          row.classList.remove('is-active','is-next');
+        });
+        ui.classList.remove('is-conflict');
+        const pick = pickActive(bookings, Date.now());
+        if (pick.index >= 0){ const row = rows[pick.index]; if (row) row.classList.add(pick.type==='active' ? 'is-active' : 'is-next'); }
+        if (hasConflict(bookings[0], bookings[1])) ui.classList.add('is-conflict');
+      }
+    } catch(_e){}
+  }
+  function ensureScheduleForTile(tile){
+    const cellId = getCellIdFromTile(tile);
+    if (!cellId && cellId !== 0) return;
+    // hidden input
+    let hidden = tile.querySelector(`#schedule-${cellId}`);
+    if (!hidden){
+      hidden = document.createElement('input');
+      hidden.type = 'hidden';
+      hidden.id = `schedule-${cellId}`;
+      const container = tile.querySelector('.p-3.flex-grow') || tile.querySelector('.p-3');
+      if (container){ container.insertAdjacentElement('afterbegin', hidden); }
+      else { tile.appendChild(hidden); }
+    }
+    // UI
+    if (!tile.querySelector('.tile-schedule-ui')){
+      const ui = buildScheduleUI(cellId);
+      const container = tile.querySelector('.p-3.flex-grow') || tile.querySelector('.p-3');
+      const anchor = tile.querySelector(`#aircraft-${cellId}`) || tile.querySelector('input[id^="aircraft-"]');
+      if (container && anchor){ anchor.insertAdjacentElement('afterend', ui); }
+      else if (container){ container.insertAdjacentElement('afterbegin', ui); }
+      else { tile.appendChild(ui); }
+    }
+    renderScheduleUI(cellId);
+  }
+  function initAll(){
+    try {
+      document.querySelectorAll('#hangarGrid .hangar-cell, #secondaryHangarGrid .hangar-cell').forEach(ensureScheduleForTile);
+    } catch(_e){}
+  }
+  // Re-render highlights periodically
+  function tick(){ try { document.querySelectorAll('#hangarGrid .hangar-cell, #secondaryHangarGrid .hangar-cell').forEach(tile=>{ const id = getCellIdFromTile(tile); if (isFinite(id)) renderScheduleUI(id); }); } catch(_e){} }
+  setInterval(tick, 60000);
+
+  // expose minimal helpers
+  window.scheduleHelpers = { readSchedule, writeSchedule, renderScheduleUI };
+  window.renderScheduleUI = renderScheduleUI;
+
+  window.hangarInitQueue = window.hangarInitQueue || [];
+  window.hangarInitQueue.push(initAll);
+  document.addEventListener('secondaryTilesCreated', ()=> setTimeout(initAll, 60));
+})();
+</script>
+
 
 				<!-- Enhanced submenu behavior for left rail (Step B) -->
 				<script>

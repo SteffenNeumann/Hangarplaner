@@ -527,6 +527,17 @@ function collectContainerTileData(containerSelector) {
 				updatedAt: updatedAtIso,
 			};
 
+			// Optional: Dual-booking schedule stored in hidden input schedule-<tileId>
+			try {
+				const scheduleEl = validateElementInContainer(`schedule-${tileId}`);
+				if (scheduleEl && scheduleEl.value) {
+					const parsed = JSON.parse(scheduleEl.value || '[]');
+					if (Array.isArray(parsed) && parsed.length) {
+						tileDataObject.bookings = parsed.slice(0, 2);
+					}
+				}
+			} catch(_e){}
+
 			console.log(
 				`✅ Gesammelte Daten für Kachel ${tileId} (${
 					isSecondary ? "sekundär" : "primär"
@@ -917,6 +928,23 @@ function applySingleTileData(tileData, isSecondary = false) {
 			) {
 				window.hangarUI.updateTowStatus(tileId);
 			}
+		}
+
+		// Dual-booking schedule (optional)
+		if (Array.isArray(tileData.bookings)) {
+			try {
+				const scheduleInput = document.getElementById(`schedule-${tileId}`);
+				if (scheduleInput && containerElement.contains(scheduleInput)) {
+					scheduleInput.value = JSON.stringify(tileData.bookings || []);
+					try {
+						if (window.scheduleHelpers && typeof window.scheduleHelpers.renderScheduleUI === 'function') {
+							window.scheduleHelpers.renderScheduleUI(tileId);
+						} else if (typeof window.renderScheduleUI === 'function') {
+							window.renderScheduleUI(tileId);
+						}
+					} catch(_e){}
+				}
+			} catch(_e){}
 		}
 
 		// Last-Update Badge aus Server-Daten wiederherstellen (falls vorhanden)

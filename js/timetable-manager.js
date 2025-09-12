@@ -85,6 +85,35 @@ const TimetableManager = (() => {
 				if (cellData) {
 					timetableData.push(cellData);
 				}
+				// Also include schedule bookings (dual bookings) if present
+				try {
+					const schedEl = cell.querySelector(`#schedule-${cellNumber}`);
+					if (schedEl && schedEl.value) {
+						const parsed = JSON.parse(schedEl.value || '[]');
+						if (Array.isArray(parsed)) {
+							parsed.slice(0,2).forEach((b) => {
+								if (!b) return;
+								const arr = (b.arr||'').trim();
+								const dep = (b.dep||'').trim();
+								const entry = {
+									cellNumber,
+									aircraftId: (b.reg||'').trim() || cellData?.aircraftId || '',
+									departureTime: dep || "--:--",
+									arrivalTime: arr || "--:--",
+									fromAirport: "---",
+									toAirport: "---",
+									notes: "",
+									status: "active",
+									airline: "---",
+									isOvernight: false,
+									arrivalTimeSort: convertTimeToMinutes(arr),
+									departureTimeSort: convertTimeToMinutes(dep),
+								};
+								timetableData.push(entry);
+							});
+						}
+					}
+				} catch(_e){}
 			});
 		}
 

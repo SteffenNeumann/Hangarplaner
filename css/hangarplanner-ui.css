@@ -1297,9 +1297,29 @@ input:checked + .toggle-slider:before {
    - Light mode: Neutral state is borderless and transparent (no chip)
    - Dark mode: Chip palette with subtle backgrounds; :disabled keeps dark bg and colors
    - Read-only mode sets :disabled via SharingManager.applyReadOnlyUIState(); these rules
-     explicitly override UA disabled styling to prevent white backgrounds in dark mode
+   - explicitly override UA disabled styling to prevent white backgrounds in dark mode
    - Avoid adding Tow styles in other CSS files; keep adjustments here
 */
+
+/* Global schedule panel minimal styles */
+#globalSchedulePanel { display: flex; flex-direction: column; gap: 6px; padding: 8px; border-left: 1px solid rgba(0,0,0,0.08); }
+#globalSchedulePanel .panel-title { font-weight: 700; font-size: 14px; opacity: 0.9; margin-bottom: 6px; }
+#globalScheduleList { display: flex; flex-direction: column; gap: 4px; }
+#globalScheduleList .schedule-empty { opacity: 0.6; font-size: 12px; padding: 4px 2px; }
+#globalScheduleList .sched-row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 4px; }
+#globalScheduleList .sched-row:hover { background: rgba(0,0,0,0.04); }
+#globalScheduleList .sched-time { font-size: 12px; color: #111827; display: inline-flex; align-items: center; gap: 6px; }
+#globalScheduleList .sched-badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 4px; border-radius: 3px; background: #e5e7eb; color: #374151; }
+#globalScheduleList .sched-reg { font-weight: 600; font-size: 12px; color: #111827; }
+#globalScheduleList .sched-tile { font-size: 12px; color: #6b7280; }
+
+/* Dark mode adjustments */
+html.dark-mode #globalSchedulePanel { border-left-color: rgba(255,255,255,0.08); }
+html.dark-mode #globalScheduleList .sched-row:hover { background: rgba(255,255,255,0.06); }
+html.dark-mode #globalScheduleList .sched-time { color: #e5e7eb; }
+html.dark-mode #globalScheduleList .sched-badge { background: #374151; color: #e5e7eb; }
+html.dark-mode #globalScheduleList .sched-reg { color: #f7fafc; }
+html.dark-mode #globalScheduleList .sched-tile { color: #94a3b8; }
 /* Überarbeitet: pill design, bessere Sichtbarkeit im Light Mode (wie Header Chips) */
 .tow-status-container {
 	width: 100%;

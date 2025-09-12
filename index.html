@@ -1799,15 +1799,15 @@ window.location.replace('login.html');
     return fields;
   }
   function ensurePlansSeededFromDom(){
-    document.querySelectorAll('[data-cell-id]').forEach(el=>{
-      const cellId = parseInt(el.getAttribute('data-cell-id')||'',10); if (!isFinite(cellId)) return;
+    const aircraftInputs = document.querySelectorAll('#hangarGrid .hangar-cell input[id^="aircraft-"], #secondaryHangarGrid .hangar-cell input[id^="aircraft-"]');
+    aircraftInputs.forEach(inp=>{
+      const m = inp.id.match(/aircraft-(\d+)/); if (!m) return; const cellId = parseInt(m[1],10); if (!isFinite(cellId)) return;
       let plans = readPlans(cellId);
       if (!Array.isArray(plans) || plans.length === 0) plans = [{fields:{}},{fields:{}}];
       const empty0 = !plans[0]?.fields || Object.keys(plans[0].fields).length===0;
       const empty1 = !plans[1]?.fields || Object.keys(plans[1].fields).length===0;
       if (empty0 && empty1){
         const snap = snapshotDomFields(cellId);
-        // Only seed if there is meaningful content
         const hasData = Object.keys(snap).some(k=> (snap[k]||'').trim().length);
         if (hasData){ plans[0] = { fields: snap }; writePlans(cellId, plans); }
       }
@@ -1836,8 +1836,9 @@ window.location.replace('login.html');
     } catch(_e){}
     // Fallback: if still empty, read current DOM values to display at least current tiles
     if (!out.length){
-      document.querySelectorAll('[data-cell-id]').forEach(el=>{
-        const cellId = parseInt(el.getAttribute('data-cell-id')||'',10); if (!isFinite(cellId)) return;
+      const aircraftInputs = document.querySelectorAll('#hangarGrid .hangar-cell input[id^="aircraft-"], #secondaryHangarGrid .hangar-cell input[id^="aircraft-"]');
+      aircraftInputs.forEach(inp=>{
+        const m = inp.id.match(/aircraft-(\d+)/); if (!m) return; const cellId = parseInt(m[1],10); if (!isFinite(cellId)) return;
         const f = snapshotDomFields(cellId);
         const reg = (f[`aircraft-${cellId}`]||'').trim();
         const arrIso = canon(`arrival-time-${cellId}`, f[`arrival-time-${cellId}`]||'');

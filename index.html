@@ -176,8 +176,14 @@
 			.dark-mode #towing-reminder-widget .status-label { color: var(--text-secondary); }
 			.dark-mode #towing-reminder-widget .status-label-value { color: #cbd5e1; }
 			.dark-mode #towingReminderList { color: #ef4444 !important; }
-		/* --- Schedule UI minimal styles --- */
+		/* --- Schedule UI minimal styles (header tabs) --- */
 		.tile-schedule-ui { margin-top: 6px; border: 1px dashed #e5e7eb; border-radius: 6px; padding: 6px; }
+		.tile-schedule-ui .tile-tabbar { display: flex; gap: 6px; margin-bottom: 6px; }
+		.tile-schedule-ui .tile-tabbar .tab-btn { font-size: 12px; padding: 2px 8px; line-height: 1.4; border-radius: 6px; border: 1px solid #e5e7eb; color: #374151; background: #fff; }
+		.tile-schedule-ui .tile-tabbar .tab-btn[aria-selected="true"] { background: #e5e7eb; color: #111827; }
+		.tile-schedule-ui .tile-tabbar .tab-btn.time-active::after { content: " · Active"; font-weight: 600; color: #059669; }
+		.tile-schedule-ui .tile-tabbar .tab-btn.time-next::after { content: " · Next"; font-weight: 600; color: #2563eb; }
+		.tile-schedule-ui .booking-rows { }
 		.tile-schedule-ui .booking-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; align-items: center; margin-bottom: 6px; }
 		.tile-schedule-ui .booking-row:last-child { margin-bottom: 0; }
 		.tile-schedule-ui .booking-row.is-active { background: rgba(34,197,94,0.08); outline: 1px solid rgba(34,197,94,0.35); border-radius: 4px; }
@@ -185,6 +191,10 @@
 		.tile-schedule-ui.is-conflict { border-left: 3px solid #ef4444; }
 		.tile-schedule-ui input[type="text"], .tile-schedule-ui input[type="datetime-local"] { font-size: 12px; padding: 4px 6px; border: 1px solid #e5e7eb; border-radius: 4px; }
 		.dark-mode .tile-schedule-ui { border-color: #374151; }
+		.dark-mode .tile-schedule-ui .tile-tabbar .tab-btn { background: #0b1220; color: #e5e7eb; border-color: #273449; }
+		.dark-mode .tile-schedule-ui .tile-tabbar .tab-btn[aria-selected="true"] { background: #111827; color: #e5e7eb; }
+		.dark-mode .tile-schedule-ui .tile-tabbar .tab-btn.time-active::after { color: #34d399; }
+		.dark-mode .tile-schedule-ui .tile-tabbar .tab-btn.time-next::after { color: #60a5fa; }
 		.dark-mode .tile-schedule-ui .booking-row.is-active { background: rgba(16,185,129,0.08); outline-color: rgba(16,185,129,0.45); }
 		.dark-mode .tile-schedule-ui .booking-row.is-next { background: rgba(59,130,246,0.08); outline-color: rgba(59,130,246,0.45); }
 		.dark-mode .tile-schedule-ui input[type="text"], .dark-mode .tile-schedule-ui input[type="datetime-local"] { background: #0b1220; color: #e5e7eb; border-color: #273449; }
@@ -1451,15 +1461,21 @@ window.location.replace('login.html');
     const wrapper = document.createElement('div');
     wrapper.className = 'tile-schedule-ui';
     wrapper.innerHTML = `
-      <div class="booking-row" data-b="0">
-        <input type="text" class="booking-reg" placeholder="AC-ID">
-        <input type="datetime-local" class="booking-arr" title="Arr UTC">
-        <input type="datetime-local" class="booking-dep" title="Dep UTC">
+      <div class="tile-tabbar" role="tablist" aria-label="Planning tabs">
+        <button type="button" class="tab-btn" data-b="0" role="tab" aria-selected="true">Plan 1</button>
+        <button type="button" class="tab-btn" data-b="1" role="tab" aria-selected="false">Plan 2</button>
       </div>
-      <div class="booking-row" data-b="1">
-        <input type="text" class="booking-reg" placeholder="AC-ID">
-        <input type="datetime-local" class="booking-arr" title="Arr UTC">
-        <input type="datetime-local" class="booking-dep" title="Dep UTC">
+      <div class="booking-rows">
+        <div class="booking-row" data-b="0">
+          <input type="text" class="booking-reg" placeholder="AC-ID">
+          <input type="datetime-local" class="booking-arr" title="Arr UTC">
+          <input type="datetime-local" class="booking-dep" title="Dep UTC">
+        </div>
+        <div class="booking-row" data-b="1" hidden>
+          <input type="text" class="booking-reg" placeholder="AC-ID">
+          <input type="datetime-local" class="booking-arr" title="Arr UTC">
+          <input type="datetime-local" class="booking-dep" title="Dep UTC">
+        </div>
       </div>`;
     // input events
     wrapper.addEventListener('input', (e)=>{
@@ -1473,6 +1489,14 @@ window.location.replace('login.html');
       writeSchedule(cellId, cur);
       renderScheduleUI(cellId);
     }, { passive: true });
+    // tab click
+    wrapper.querySelectorAll('.tile-tabbar .tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const sel = parseInt(btn.getAttribute('data-b'),10)||0;
+        wrapper.querySelectorAll('.tile-tabbar .tab-btn').forEach(b=> b.setAttribute('aria-selected', b===btn ? 'true' : 'false'));
+        wrapper.querySelectorAll('.booking-row').forEach(row => { row.hidden = (parseInt(row.getAttribute('data-b'),10)||0) !== sel; });
+      });
+    });
     return wrapper;
   }
   function renderScheduleUI(cellId){
@@ -1498,30 +1522,36 @@ window.location.replace('login.html');
         const pick = pickActive(bookings, Date.now());
         if (pick.index >= 0){ const row = rows[pick.index]; if (row) row.classList.add(pick.type==='active' ? 'is-active' : 'is-next'); }
         if (hasConflict(bookings[0], bookings[1])) ui.classList.add('is-conflict');
+        // update tab badges
+        const tabs = ui.querySelectorAll('.tile-tabbar .tab-btn');
+        tabs.forEach((btn,i)=>{ btn.classList.remove('time-active','time-next'); });
+        if (pick.index >= 0){
+          const btn = ui.querySelector(`.tile-tabbar .tab-btn[data-b="${pick.index}"]`);
+          if (btn) btn.classList.add(pick.type==='active' ? 'time-active' : 'time-next');
+        }
       }
     } catch(_e){}
   }
   function ensureScheduleForTile(tile){
     const cellId = getCellIdFromTile(tile);
     if (!cellId && cellId !== 0) return;
-    // hidden input
+    // hidden input (anywhere in tile)
     let hidden = tile.querySelector(`#schedule-${cellId}`);
     if (!hidden){
       hidden = document.createElement('input');
       hidden.type = 'hidden';
       hidden.id = `schedule-${cellId}`;
-      const container = tile.querySelector('.p-3.flex-grow') || tile.querySelector('.p-3');
-      if (container){ container.insertAdjacentElement('afterbegin', hidden); }
-      else { tile.appendChild(hidden); }
+      tile.appendChild(hidden);
     }
-    // UI
-    if (!tile.querySelector('.tile-schedule-ui')){
-      const ui = buildScheduleUI(cellId);
-      const container = tile.querySelector('.p-3.flex-grow') || tile.querySelector('.p-3');
-      const anchor = tile.querySelector(`#aircraft-${cellId}`) || tile.querySelector('input[id^="aircraft-"]');
-      if (container && anchor){ anchor.insertAdjacentElement('afterend', ui); }
-      else if (container){ container.insertAdjacentElement('afterbegin', ui); }
-      else { tile.appendChild(ui); }
+    // UI in header
+    const header = tile.querySelector('.card-header');
+    if (!header) return;
+    let ui = tile.querySelector('.tile-schedule-ui');
+    if (!ui){
+      ui = buildScheduleUI(cellId);
+      header.appendChild(ui);
+    } else if (!header.contains(ui)) {
+      header.appendChild(ui);
     }
     renderScheduleUI(cellId);
   }

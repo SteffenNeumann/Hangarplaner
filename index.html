@@ -1462,8 +1462,8 @@ window.location.replace('login.html');
     wrapper.className = 'tile-schedule-ui';
     wrapper.innerHTML = `
       <div class="tile-tabbar" role="tablist" aria-label="Planning tabs">
-        <button type="button" class="tab-btn" data-b="0" role="tab" aria-selected="true">Plan 1</button>
-        <button type="button" class="tab-btn" data-b="1" role="tab" aria-selected="false">Plan 2</button>
+        <button type="button" class="tab-btn" data-b="0" role="tab" aria-selected="true" title="Plan 1">+</button>
+        <button type="button" class="tab-btn" data-b="1" role="tab" aria-selected="false" title="Plan 2">+</button>
       </div>`;
     // tab click -> persist selection and mirror plan into main fields
     wrapper.querySelectorAll('.tile-tabbar .tab-btn').forEach(btn => {
@@ -1509,13 +1509,20 @@ window.location.replace('login.html');
       function stateFromTimes(t){ if (!isFinite(t.a) || !isFinite(t.d)) return 'none'; if (t.a <= now && now < t.d) return 'active'; if (t.a > now) return 'next'; return 'none'; }
       const s0 = stateFromTimes(t0);
       const s1 = stateFromTimes(t1);
-      // badges
+      // labels + badges
       const tabs = ui.querySelectorAll('.tile-tabbar .tab-btn');
+      // Set labels from Aircraft ID per plan, fallback to '+'
+      const reg0 = ((plans[0]?.fields?.[`aircraft-${cellId}`]) || '').trim();
+      const reg1 = ((plans[1]?.fields?.[`aircraft-${cellId}`]) || '').trim();
+      const b0 = ui.querySelector('.tile-tabbar .tab-btn[data-b="0"]');
+      const b1 = ui.querySelector('.tile-tabbar .tab-btn[data-b="1"]');
+      if (b0) { b0.textContent = reg0.length ? reg0 : '+'; }
+      if (b1) { b1.textContent = reg1.length ? reg1 : '+'; }
       tabs.forEach((btn,i)=>{ btn.classList.remove('time-active','time-next'); });
-      if (s0==='active'){ const b = ui.querySelector('.tile-tabbar .tab-btn[data-b="0"]'); if (b) b.classList.add('time-active'); }
-      else if (s0==='next'){ const b = ui.querySelector('.tile-tabbar .tab-btn[data-b="0"]'); if (b) b.classList.add('time-next'); }
-      if (s1==='active'){ const b = ui.querySelector('.tile-tabbar .tab-btn[data-b="1"]'); if (b) b.classList.add('time-active'); }
-      else if (s1==='next'){ const b = ui.querySelector('.tile-tabbar .tab-btn[data-b="1"]'); if (b) b.classList.add('time-next'); }
+      if (s0==='active'){ if (b0) b0.classList.add('time-active'); }
+      else if (s0==='next'){ if (b0) b0.classList.add('time-next'); }
+      if (s1==='active'){ if (b1) b1.classList.add('time-active'); }
+      else if (s1==='next'){ if (b1) b1.classList.add('time-next'); }
       // conflict marker if both present and overlap
       const conflict = (isFinite(t0.a)&&isFinite(t0.d)&&isFinite(t1.a)&&isFinite(t1.d) && (t0.a < t1.d) && (t1.a < t0.d));
       ui.classList.toggle('is-conflict', !!conflict);

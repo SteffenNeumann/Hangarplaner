@@ -1696,7 +1696,31 @@ window.location.replace('login.html');
     return Date.UTC(y,(m||1)-1,day||1,hh||0,mm||0,0,0);
   }
   function canon(id, val){ try { return (window.helpers && typeof window.helpers.canonicalizeDateTimeFieldValue==='function') ? (window.helpers.canonicalizeDateTimeFieldValue(id, val)||'') : (val||''); } catch(_e){ return val||''; } }
+  function readPlans(cellId){ try { const raw = localStorage.getItem('tile.plans') || '{}'; const obj = JSON.parse(raw)||{}; const v = obj[String(cellId)]; return Array.isArray(v) ? v : []; } catch(_e){ return []; } }
+  function writePlans(cellId, plans){ try { const raw = localStorage.getItem('tile.plans') || '{}'; const obj = JSON.parse(raw)||{}; obj[String(cellId)] = plans; localStorage.setItem('tile.plans', JSON.stringify(obj)); } catch(_e){} }
+  function snapshotDomFields(cellId){
+    const ids = [`aircraft-${cellId}`, `arrival-time-${cellId}`, `departure-time-${cellId}`, `hangar-position-${cellId}`, `position-${cellId}`, `notes-${cellId}`, `status-${cellId}`, `tow-status-${cellId}`];
+    const fields = {};
+    ids.forEach(id=>{ const el = document.getElementById(id); if (el) fields[id] = el.value || ''; });
+    return fields;
+  }
+  function ensurePlansSeededFromDom(){
+    document.querySelectorAll('[data-cell-id]').forEach(el=>{
+      const cellId = parseInt(el.getAttribute('data-cell-id')||'',10); if (!isFinite(cellId)) return;
+      let plans = readPlans(cellId);
+      if (!Array.isArray(plans) || plans.length === 0) plans = [{fields:{}},{fields:{}}];
+      const empty0 = !plans[0]?.fields || Object.keys(plans[0].fields).length===0;
+      const empty1 = !plans[1]?.fields || Object.keys(plans[1].fields).length===0;
+      if (empty0 && empty1){
+        const snap = snapshotDomFields(cellId);
+        // Only seed if there is meaningful content
+        const hasData = Object.keys(snap).some(k=> (snap[k]||'').trim().length);
+        if (hasData){ plans[0] = { fields: snap }; writePlans(cellId, plans); }
+      }
+    });
+  }
   function collectEntries(){
+    ensurePlansSeededFromDom();
     const out = [];
     try {
       const raw = localStorage.getItem('tile.plans') || '{}';
@@ -1716,6 +1740,20 @@ window.location.replace('login.html');
         });
       });
     } catch(_e){}
+    // Fallback: if still empty, read current DOM values to display at least current tiles
+    if (!out.length){
+      document.querySelectorAll('[data-cell-id]').forEach(el=>{
+        const cellId = parseInt(el.getAttribute('data-cell-id')||'',10); if (!isFinite(cellId)) return;
+        const f = snapshotDomFields(cellId);
+        const reg = (f[`aircraft-${cellId}`]||'').trim();
+        const arrIso = canon(`arrival-time-${cellId}`, f[`arrival-time-${cellId}`]||'');
+        const depIso = canon(`departure-time-${cellId}`, f[`departure-time-${cellId}`]||'');
+        const pos = (f[`hangar-position-${cellId}`]||'').trim();
+        const arrMs = toMs(arrIso), depMs = toMs(depIso);
+        if (!reg && !isFinite(arrMs) && !isFinite(depMs)) return;
+        out.push({ cellId, idx: 0, reg, regShort: shortReg(reg), arrIso, depIso, arrMs, depMs, pos });
+      });
+    }
     // sort by Arr then Dep
     out.sort((a,b)=>{
       const aKey = isFinite(a.arrMs) ? a.arrMs : Number.MAX_SAFE_INTEGER;
@@ -1748,6 +1786,9 @@ window.location.replace('login.html');
     const throttled = (()=>{ let t=null; return ()=>{ clearTimeout(t); t=setTimeout(render, 120); }; })();
     document.addEventListener('input', throttled, { passive:true });
     document.addEventListener('change', throttled, { passive:true });
+    document.addEventListener('dataLoaded', throttled);
+    document.addEventListener('aircraftDataUpdated', throttled);
+    document.addEventListener('serverDataLoaded', throttled);
     setInterval(render, 60000);
   }
   window.refreshGlobalSchedule = render;

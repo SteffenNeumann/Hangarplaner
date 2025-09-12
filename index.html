@@ -1550,6 +1550,22 @@ window.location.replace('login.html');
       } catch(_e){}
     } catch(_e){}
   }
+  function tileHasMeaningfulDom(cellId){
+    const get = (id)=> (document.getElementById(id)?.value || '').trim();
+    try {
+      const aircraft = get(`aircraft-${cellId}`);
+      const arr = get(`arrival-time-${cellId}`);
+      const dep = get(`departure-time-${cellId}`);
+      const pos = get(`position-${cellId}`) || get(`hangar-position-${cellId}`);
+      const notes = get(`notes-${cellId}`);
+      const status = get(`status-${cellId}`);
+      const tow = get(`tow-status-${cellId}`);
+      const hasStatus = !!(status && status !== 'neutral');
+      const hasTow = !!(tow && tow !== 'neutral');
+      return !!(aircraft || arr || dep || pos || notes || hasStatus || hasTow);
+    } catch(_e){ return false; }
+  }
+
   function ensureScheduleForTile(tile){
     const cellId = getCellIdFromTile(tile);
     if (!cellId && cellId !== 0) return;
@@ -1575,10 +1591,12 @@ window.location.replace('login.html');
     }
     // install mirroring of tile fields into selected plan
     try { installFieldMirroring(tile, cellId); } catch(_e){}
-    // seed plans if needed and apply selected plan
+    // seed plans if needed and apply selected plan (only if DOM is effectively empty)
     try {
       seedInitialPlansIfEmpty(cellId);
-      applySelectedPlanToTile(cellId);
+      if (!tileHasMeaningfulDom(cellId)) {
+        applySelectedPlanToTile(cellId);
+      }
     } catch(_e){}
     renderScheduleUI(cellId);
   }
@@ -1681,8 +1699,8 @@ window.location.replace('login.html');
   window.hangarInitQueue = window.hangarInitQueue || [];
   window.hangarInitQueue.push(initAll);
   document.addEventListener('secondaryTilesCreated', ()=> setTimeout(initAll, 60));
-  // On load, restore selected plan index and apply
-  try { setTimeout(()=>{ try { document.querySelectorAll('[data-cell-id]').forEach(el=>{ const id = parseInt(el.getAttribute('data-cell-id')||'',10); if (isFinite(id)) applySelectedPlanToTile(id); }); } catch(_e){} }, 300); } catch(_e){}
+  // On load, restore selected plan index and apply (skip if DOM already has meaningful content)
+  try { setTimeout(()=>{ try { document.querySelectorAll('[data-cell-id]').forEach(el=>{ const id = parseInt(el.getAttribute('data-cell-id')||'',10); if (!isFinite(id)) return; if (!tileHasMeaningfulDom(id)) applySelectedPlanToTile(id); }); } catch(_e){} }, 300); } catch(_e){}
 
   // Sync integration: keep per-tile plans and tab UI in sync after server loads
   // This mirrors the freshly applied DOM values into the currently selected plan
@@ -4609,9 +4627,9 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                         if (!el) return;
                         el.style.display = 'grid';
                         try {
-                            el.style.setProperty('grid-template-columns', `repeat(${layout}, minmax(240px, 1fr))`, 'important');
+                            el.style.setProperty('grid-template-columns', `repeat(${layout}, minmax(345px, 1fr))`, 'important');
                         } catch (e) {
-                            el.style.gridTemplateColumns = `repeat(${layout}, minmax(240px, 1fr))`;
+                            el.style.gridTemplateColumns = `repeat(${layout}, minmax(345px, 1fr))`;
                         }
                         updateClasses(el);
                     };

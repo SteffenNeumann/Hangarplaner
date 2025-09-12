@@ -177,7 +177,7 @@
 			.dark-mode #towing-reminder-widget .status-label-value { color: #cbd5e1; }
 			.dark-mode #towingReminderList { color: #ef4444 !important; }
 		/* --- Schedule UI minimal styles (header tabs) --- */
-		.tile-schedule-ui { margin-top: 6px; border: 1px dashed #e5e7eb; border-radius: 6px; padding: 6px; }
+		.tile-schedule-ui { margin-top: 0; border: none; border-radius: 0; padding: 0; flex: 1 1 auto; }
 		.tile-schedule-ui .tile-tabbar { display: flex; gap: 6px; margin-bottom: 6px; justify-content: center; align-items: center; }
 		.tile-schedule-ui .tile-tabbar .tab-btn { font-size: 12px; padding: 4px 10px; line-height: 1.4; border-radius: 6px; border: none; color: #6b7280; background: transparent; border-bottom: 2px solid transparent; }
 		.tile-schedule-ui .tile-tabbar .tab-btn[aria-selected="true"] { color: #111827; border-bottom-color: var(--menu-accent); }
@@ -1494,6 +1494,7 @@ window.location.replace('login.html');
       // compute active/next from stored plans
       const plans = readPlans(cellId);
       const now = Date.now();
+      function shortReg(s){ try { const t = (s||'').toUpperCase().replace(/[^A-Z0-9]/g,''); return t.length ? t.slice(-3) : '+'; } catch(_e){ return '+'; } }
       function planTimes(p){
         try {
           const f = (p && p.fields) ? p.fields : {};
@@ -1516,8 +1517,8 @@ window.location.replace('login.html');
       const reg1 = ((plans[1]?.fields?.[`aircraft-${cellId}`]) || '').trim();
       const b0 = ui.querySelector('.tile-tabbar .tab-btn[data-b="0"]');
       const b1 = ui.querySelector('.tile-tabbar .tab-btn[data-b="1"]');
-      if (b0) { b0.textContent = reg0.length ? reg0 : '+'; }
-      if (b1) { b1.textContent = reg1.length ? reg1 : '+'; }
+      if (b0) { b0.textContent = reg0.length ? shortReg(reg0) : '+'; }
+      if (b1) { b1.textContent = reg1.length ? shortReg(reg1) : '+'; }
       tabs.forEach((btn,i)=>{ btn.classList.remove('time-active','time-next'); });
       if (s0==='active'){ if (b0) b0.classList.add('time-active'); }
       else if (s0==='next'){ if (b0) b0.classList.add('time-next'); }
@@ -1544,15 +1545,17 @@ window.location.replace('login.html');
       hidden.id = `schedule-${cellId}`;
       tile.appendChild(hidden);
     }
-    // UI in header
+    // UI in header, centered between left and right blocks
     const header = tile.querySelector('.card-header');
     if (!header) return;
+    const headerEls = header.querySelector('.header-elements') || header;
+    const rightBlock = headerEls.querySelector('.position-container');
     let ui = tile.querySelector('.tile-schedule-ui');
     if (!ui){
       ui = buildScheduleUI(cellId);
-      header.appendChild(ui);
-    } else if (!header.contains(ui)) {
-      header.appendChild(ui);
+      if (rightBlock && rightBlock.parentNode === headerEls){ headerEls.insertBefore(ui, rightBlock); } else { headerEls.appendChild(ui); }
+    } else if (!headerEls.contains(ui)) {
+      if (rightBlock && rightBlock.parentNode === headerEls){ headerEls.insertBefore(ui, rightBlock); } else { headerEls.appendChild(ui); }
     }
     // install mirroring of tile fields into selected plan
     try { installFieldMirroring(tile, cellId); } catch(_e){}

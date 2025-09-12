@@ -198,6 +198,22 @@
 		.dark-mode .tile-schedule-ui .booking-row.is-active { background: rgba(16,185,129,0.08); outline-color: rgba(16,185,129,0.45); }
 		.dark-mode .tile-schedule-ui .booking-row.is-next { background: rgba(59,130,246,0.08); outline-color: rgba(59,130,246,0.45); }
 		.dark-mode .tile-schedule-ui input[type="text"], .dark-mode .tile-schedule-ui input[type="datetime-local"] { background: #0b1220; color: #e5e7eb; border-color: #273449; }
+
+		/* Global vertical schedule panel */
+		.hangar-container { padding-right: 300px; }
+		#globalSchedulePanel { position: fixed; right: 16px; top: 72px; width: 260px; height: calc(100vh - 84px); overflow-y: auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); padding: 10px; }
+		#globalSchedulePanel .panel-title { font-weight: 700; font-size: 13px; color: #374151; margin-bottom: 6px; }
+		#globalScheduleList { display: flex; flex-direction: column; gap: 6px; }
+		.schedule-item { display: grid; grid-template-columns: 64px 1fr; gap: 8px; align-items: center; padding: 6px 8px; border: 1px solid #e5e7eb; border-radius: 8px; }
+		.schedule-item .time { font-weight: 700; color: #111827; }
+		.schedule-item .meta { color: #6b7280; font-size: 12px; }
+		.schedule-item.conflict { border-color: #ef4444; background: #fff1f2; }
+		.dark-mode #globalSchedulePanel { background: var(--bg-primary); border-color: var(--border-color); box-shadow: none; }
+		.dark-mode #globalSchedulePanel .panel-title { color: #e5e7eb; }
+		.dark-mode .schedule-item { border-color: var(--border-color); background: var(--bg-secondary); }
+		.dark-mode .schedule-item .time { color: #ffffff; }
+		.dark-mode .schedule-item .meta { color: var(--text-secondary); }
+		.dark-mode .schedule-item.conflict { border-color: #ef4444; background: rgba(239,68,68,0.08); }
 		</style>
 <script>
 // Early auth guard: redirect unauthenticated users to /login.html
@@ -1629,6 +1645,7 @@ window.location.replace('login.html');
     const fields = (plans[sel] && plans[sel].fields) ? plans[sel].fields : {};
     applyFieldsToTile(cellId, fields);
     renderScheduleUI(cellId);
+    try { if (typeof window.refreshGlobalSchedule === 'function') window.refreshGlobalSchedule(); } catch(_e){}
   }
   function installFieldMirroring(tile, cellId){
     const relevant = tile.querySelectorAll(`#aircraft-${cellId}, #arrival-time-${cellId}, #departure-time-${cellId}, #position-${cellId}, #hangar-position-${cellId}, #notes-${cellId}, #status-${cellId}, #tow-status-${cellId}`);
@@ -1666,6 +1683,76 @@ window.location.replace('login.html');
   document.addEventListener('secondaryTilesCreated', ()=> setTimeout(initAll, 60));
   // On load, restore selected plan index and apply
   try { setTimeout(()=>{ try { document.querySelectorAll('[data-cell-id]').forEach(el=>{ const id = parseInt(el.getAttribute('data-cell-id')||'',10); if (isFinite(id)) applySelectedPlanToTile(id); }); } catch(_e){} }, 300); } catch(_e){}
+})();
+</script>
+
+<!-- Global vertical schedule logic -->
+<script>
+(function(){
+  function shortReg(s){ try { const t = (s||'').toUpperCase().replace(/[^A-Z0-9]/g,''); return t.length ? t.slice(-3) : '+'; } catch(_e){ return '+'; } }
+  function toMs(iso){
+    if (typeof iso !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(iso)) return NaN;
+    const [d,t] = iso.split('T'); const [y,m,day]=d.split('-').map(Number); const [hh,mm]=t.split(':').map(Number);
+    return Date.UTC(y,(m||1)-1,day||1,hh||0,mm||0,0,0);
+  }
+  function canon(id, val){ try { return (window.helpers && typeof window.helpers.canonicalizeDateTimeFieldValue==='function') ? (window.helpers.canonicalizeDateTimeFieldValue(id, val)||'') : (val||''); } catch(_e){ return val||''; } }
+  function collectEntries(){
+    const out = [];
+    try {
+      const raw = localStorage.getItem('tile.plans') || '{}';
+      const obj = JSON.parse(raw)||{};
+      Object.keys(obj).forEach(k=>{
+        const cellId = parseInt(k,10); if (!isFinite(cellId)) return;
+        const plans = Array.isArray(obj[k]) ? obj[k] : [];
+        plans.forEach((p,idx)=>{
+          const f = (p && p.fields) ? p.fields : {};
+          const reg = (f[`aircraft-${cellId}`]||'').trim();
+          const arrIso = canon(`arrival-time-${cellId}`, f[`arrival-time-${cellId}`]||'');
+          const depIso = canon(`departure-time-${cellId}`, f[`departure-time-${cellId}`]||'');
+          const pos = (f[`hangar-position-${cellId}`]||'').trim();
+          const arrMs = toMs(arrIso), depMs = toMs(depIso);
+          if (!reg && !isFinite(arrMs) && !isFinite(depMs)) return; // skip empty
+          out.push({ cellId, idx, reg, regShort: shortReg(reg), arrIso, depIso, arrMs, depMs, pos });
+        });
+      });
+    } catch(_e){}
+    // sort by Arr then Dep
+    out.sort((a,b)=>{
+      const aKey = isFinite(a.arrMs) ? a.arrMs : Number.MAX_SAFE_INTEGER;
+      const bKey = isFinite(b.arrMs) ? b.arrMs : Number.MAX_SAFE_INTEGER;
+      if (aKey !== bKey) return aKey - bKey;
+      const aD = isFinite(a.depMs) ? a.depMs : Number.MAX_SAFE_INTEGER;
+      const bD = isFinite(b.depMs) ? b.depMs : Number.MAX_SAFE_INTEGER;
+      return aD - bD;
+    });
+    // mark conflicts: overlapping times for same hangar position (case-insensitive) OR same cellId
+    const groups = new Map();
+    out.forEach(e=>{ const key = (e.pos||'').toUpperCase() || `CELL-${e.cellId}`; if(!groups.has(key)) groups.set(key, []); groups.get(key).push(e); });
+    groups.forEach(list => {
+      list.forEach((a,i)=>{ a.conflict = false; for (let j=0;j<list.length;j++){ if (i===j) continue; const b=list[j]; if (isFinite(a.arrMs)&&isFinite(a.depMs)&&isFinite(b.arrMs)&&isFinite(b.depMs)){ if (a.arrMs < b.depMs && b.arrMs < a.depMs) { a.conflict = true; break; } } }); });
+    });
+    return out;
+  }
+  function fmtHHmm(iso){ try { if (!iso) return ''; const d = new Date(toMs(iso)); if (!isFinite(d)) return ''; return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); } catch(_e){ return ''; } }
+  function render(){
+    const host = document.getElementById('globalScheduleList'); if (!host) return;
+    const data = collectEntries();
+    host.innerHTML = data.map(e=>{
+      const time = `${fmtHHmm(e.arrIso)}${e.arrIso?'–':''}${fmtHHmm(e.depIso)}`;
+      const meta = `${e.reg || ''}${e.pos? ' • '+e.pos : ''}`;
+      const cls = `schedule-item${e.conflict?' conflict':''}`;
+      return `<div class="${cls}" title="Tile ${e.cellId} • Plan ${e.idx+1}"><div class="time">${time}</div><div class="meta">${e.regShort} ${meta ? ('— '+meta) : ''}</div></div>`;
+    }).join('');
+  }
+  function installLive(){
+    const throttled = (()=>{ let t=null; return ()=>{ clearTimeout(t); t=setTimeout(render, 120); }; })();
+    document.addEventListener('input', throttled, { passive:true });
+    document.addEventListener('change', throttled, { passive:true });
+    setInterval(render, 60000);
+  }
+  window.refreshGlobalSchedule = render;
+  window.hangarInitQueue = window.hangarInitQueue || [];
+  window.hangarInitQueue.push(function(){ try { render(); installLive(); } catch(_e){} });
 })();
 </script>
 
@@ -1795,6 +1882,11 @@ window.location.replace('login.html');
 
 					<!-- Panels -->
 					<div id="panel-planner" class="tab-panel" role="tabpanel" aria-labelledby="tab-planner">
+						<!-- Right vertical schedule panel (fixed) -->
+						<aside id="globalSchedulePanel" aria-label="Global schedule">
+							<div class="panel-title">Schedule</div>
+							<div id="globalScheduleList"></div>
+						</aside>
 					<!-- Abschnitt 1 Container -->
 					<div class="section-container">
 						<div id="hangarGrid" class="grid grid-cols-4 gap-4">

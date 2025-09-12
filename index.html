@@ -178,9 +178,9 @@
 			.dark-mode #towingReminderList { color: #ef4444 !important; }
 		/* --- Schedule UI minimal styles (header tabs) --- */
 		.tile-schedule-ui { margin-top: 6px; border: 1px dashed #e5e7eb; border-radius: 6px; padding: 6px; }
-		.tile-schedule-ui .tile-tabbar { display: flex; gap: 6px; margin-bottom: 6px; }
-		.tile-schedule-ui .tile-tabbar .tab-btn { font-size: 12px; padding: 2px 8px; line-height: 1.4; border-radius: 6px; border: 1px solid #e5e7eb; color: #374151; background: #fff; }
-		.tile-schedule-ui .tile-tabbar .tab-btn[aria-selected="true"] { background: #e5e7eb; color: #111827; }
+		.tile-schedule-ui .tile-tabbar { display: flex; gap: 6px; margin-bottom: 6px; justify-content: center; align-items: center; }
+		.tile-schedule-ui .tile-tabbar .tab-btn { font-size: 12px; padding: 4px 10px; line-height: 1.4; border-radius: 6px; border: none; color: #6b7280; background: transparent; border-bottom: 2px solid transparent; }
+		.tile-schedule-ui .tile-tabbar .tab-btn[aria-selected="true"] { color: #111827; border-bottom-color: var(--menu-accent); }
 		.tile-schedule-ui .tile-tabbar .tab-btn.time-active::after { content: " · Active"; font-weight: 600; color: #059669; }
 		.tile-schedule-ui .tile-tabbar .tab-btn.time-next::after { content: " · Next"; font-weight: 600; color: #2563eb; }
 		.tile-schedule-ui .booking-rows { }
@@ -191,8 +191,8 @@
 		.tile-schedule-ui.is-conflict { border-left: 3px solid #ef4444; }
 		.tile-schedule-ui input[type="text"], .tile-schedule-ui input[type="datetime-local"] { font-size: 12px; padding: 4px 6px; border: 1px solid #e5e7eb; border-radius: 4px; }
 		.dark-mode .tile-schedule-ui { border-color: #374151; }
-		.dark-mode .tile-schedule-ui .tile-tabbar .tab-btn { background: #0b1220; color: #e5e7eb; border-color: #273449; }
-		.dark-mode .tile-schedule-ui .tile-tabbar .tab-btn[aria-selected="true"] { background: #111827; color: #e5e7eb; }
+.dark-mode .tile-schedule-ui .tile-tabbar .tab-btn { background: transparent; color: var(--text-secondary); border: none; border-bottom: 2px solid transparent; }
+.dark-mode .tile-schedule-ui .tile-tabbar .tab-btn[aria-selected="true"] { color: #ffffff; border-bottom-color: var(--menu-accent); }
 		.dark-mode .tile-schedule-ui .tile-tabbar .tab-btn.time-active::after { color: #34d399; }
 		.dark-mode .tile-schedule-ui .tile-tabbar .tab-btn.time-next::after { color: #60a5fa; }
 		.dark-mode .tile-schedule-ui .booking-row.is-active { background: rgba(16,185,129,0.08); outline-color: rgba(16,185,129,0.45); }

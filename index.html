@@ -1683,6 +1683,41 @@ window.location.replace('login.html');
   document.addEventListener('secondaryTilesCreated', ()=> setTimeout(initAll, 60));
   // On load, restore selected plan index and apply
   try { setTimeout(()=>{ try { document.querySelectorAll('[data-cell-id]').forEach(el=>{ const id = parseInt(el.getAttribute('data-cell-id')||'',10); if (isFinite(id)) applySelectedPlanToTile(id); }); } catch(_e){} }, 300); } catch(_e){}
+
+  // Sync integration: keep per-tile plans and tab UI in sync after server loads
+  // This mirrors the freshly applied DOM values into the currently selected plan
+  // without emitting input/change events (so it won't write to the server).
+  document.addEventListener('serverDataLoaded', function(){
+    // small delay to allow any trailing DOM updates (lights/styles) to settle
+    setTimeout(function(){
+      try {
+        const tiles = document.querySelectorAll('#hangarGrid .hangar-cell, #secondaryHangarGrid .hangar-cell');
+        tiles.forEach(tile => {
+          const cellId = getCellIdFromTile(tile);
+          if (!Number.isFinite(cellId)) return;
+          const sel = getSelectedPlanIndex(cellId);
+          const plans = readPlans(cellId);
+          const fields = (plans[sel] && plans[sel].fields) ? plans[sel].fields : {};
+          // Read latest values from DOM (post-sync) without dispatching events
+          const get = (id) => (document.getElementById(id)?.value || '').trim();
+          fields[`aircraft-${cellId}`] = get(`aircraft-${cellId}`);
+          fields[`arrival-time-${cellId}`] = get(`arrival-time-${cellId}`);
+          fields[`departure-time-${cellId}`] = get(`departure-time-${cellId}`);
+          // Store both position variants; UI/logic may consult either
+          fields[`position-${cellId}`] = get(`position-${cellId}`);
+          fields[`hangar-position-${cellId}`] = get(`hangar-position-${cellId}`);
+          fields[`status-${cellId}`] = get(`status-${cellId}`);
+          fields[`tow-status-${cellId}`] = get(`tow-status-${cellId}`);
+          plans[sel] = { fields };
+          writePlans(cellId, plans);
+          // Refresh tab labels and active/next badges for this tile
+          renderScheduleUI(cellId);
+        });
+        // Refresh the global schedule panel as well
+        try { if (typeof window.refreshGlobalSchedule === 'function') window.refreshGlobalSchedule(); } catch(_e){}
+      } catch(_e){}
+    }, 50);
+  });
 })();
 </script>
 

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4-Digit Time Format Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            max-width: 600px; 
+            margin: 0 auto;
+        }
+        .test-container {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        input[type="text"] {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+            width: 200px;
+            margin: 5px;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            background: #e8f5e8;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .example {
+            background: #fff3cd;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border: 1px solid #ffeaa7;
+        }
+    </style>
+</head>
+<body>
+    <h1>4-Digit Time Format Test</h1>
+    
+    <div class="example">
+        <strong>How to test:</strong><br>
+        1. Type a 4-digit time like: <code>1230</code><br>
+        2. Click outside the input field (blur event)<br>
+        3. The input should convert to today's date + time: <code>13.01.25,12:30</code>
+    </div>
+
+    <div class="test-container">
+        <h3>Test Input</h3>
+        <label>Enter 4-digit time (e.g., 1230):</label><br>
+        <input type="text" id="test-input" placeholder="1230 or dd.mm.yy,HH:MM">
+        
+        <div id="result" class="result" style="display: none;">
+            Result will appear here after blur...
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h3>Test Examples</h3>
+        <p>Try these values:</p>
+        <ul>
+            <li><code>0830</code> → should become today + 08:30</li>
+            <li><code>1230</code> → should become today + 12:30</li>
+            <li><code>1745</code> → should become today + 17:45</li>
+            <li><code>2300</code> → should become today + 23:00</li>
+        </ul>
+    </div>
+
+    <!-- Include helpers.js -->
+    <script src="js/helpers.js"></script>
+    
+    <script>
+        // Wait for helpers to be loaded
+        setTimeout(() => {
+            const input = document.getElementById('test-input');
+            const result = document.getElementById('result');
+            
+            // Simulate the compact mask attachment
+            if (window.helpers && window.helpers.is4DigitTime && window.helpers.convert4DigitTimeToHHmm) {
+                input.addEventListener('blur', (e) => {
+                    const raw = e.target.value.trim();
+                    let output = 'Input: ' + raw + '\n';
+                    
+                    if (window.helpers.is4DigitTime(raw)) {
+                        const hhmm = window.helpers.convert4DigitTimeToHHmm(raw);
+                        output += 'Converted to HH:mm: ' + hhmm + '\n';
+                        
+                        // Simulate today's date conversion
+                        if (hhmm) {
+                            const now = new Date();
+                            const yy = String(now.getUTCFullYear()).slice(-2);
+                            const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
+                            const dd = String(now.getUTCDate()).padStart(2, '0');
+                            const todayWithTime = `${dd}.${mm}.${yy},${hhmm}`;
+                            output += 'Final result: ' + todayWithTime;
+                            
+                            // Update the input to show the result
+                            e.target.value = todayWithTime;
+                        }
+                    } else {
+                        output += 'Not a 4-digit time format';
+                    }
+                    
+                    result.textContent = output;
+                    result.style.display = 'block';
+                });
+                
+                console.log('✅ 4-digit time functions are available:', {
+                    is4DigitTime: typeof window.helpers.is4DigitTime,
+                    convert4DigitTimeToHHmm: typeof window.helpers.convert4DigitTimeToHHmm
+                });
+            } else {
+                result.textContent = '❌ 4-digit time functions not found in window.helpers';
+                result.style.display = 'block';
+                console.error('4-digit time functions not available');
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

@@ -1140,6 +1140,23 @@ if (window.helpers) {
     return typeof str === 'string' && /^\d{1,2}:\d{2}$/.test(str);
   }
 
+  // Validates 4-digit time format (HHMM)
+  function is4DigitTime(str){
+    return typeof str === 'string' && /^\d{4}$/.test(str);
+  }
+
+  // Converts 4-digit time (1230) to HH:mm format (12:30)
+  function convert4DigitTimeToHHmm(str){
+    if (!is4DigitTime(str)) return '';
+    const hh = str.substring(0, 2);
+    const mm = str.substring(2, 4);
+    const h = parseInt(hh, 10);
+    const m = parseInt(mm, 10);
+    // Validate time ranges
+    if (h < 0 || h > 23 || m < 0 || m > 59) return '';
+    return `${pad2(h)}:${pad2(m)}`;
+  }
+
   // Validates compact format dd.mm.yy,HH:MM (accepts both HH:mm and HH:MM)
   function isCompactDateTime(str){
     return typeof str === 'string' && /^\d{2}\.\d{2}\.\d{2},\d{2}:[\d]{2}$/.test(str);
@@ -1221,6 +1238,15 @@ if (window.helpers) {
       const base = isArrival ? bases.arrivalBase : bases.departureBase;
       return base ? coerceHHmmToDateTimeLocalUtc(v, base) : '';
     }
+    if (is4DigitTime(v)){
+      // Convert 4-digit time (1230) to HH:mm format first
+      const hhmm = convert4DigitTimeToHHmm(v);
+      if (hhmm) {
+        const bases = getBaseDates();
+        const base = isArrival ? bases.arrivalBase : bases.departureBase;
+        return base ? coerceHHmmToDateTimeLocalUtc(hhmm, base) : '';
+      }
+    }
     return '';
   }
 
@@ -1264,7 +1290,7 @@ if (window.helpers) {
   function attachCompactMask(input){
     if (!input || input.__compactMaskAttached) return;
     input.setAttribute('inputmode','numeric');
-    input.setAttribute('placeholder','dd.mm.yy,HH:MM');
+    input.setAttribute('placeholder','1230 or dd.mm.yy,HH:MM');
     input.dataset.dtCompact = 'true';
 
     // Ensure input fills its cell and leave space for absolute calendar button
@@ -1294,6 +1320,11 @@ if (window.helpers) {
     // Allow typing time-only (HH:mm) without masking
     if (isHHmm(raw)) {
       // keep as typed; canonicalization runs on blur
+      return;
+    }
+    // Allow typing 4-digit time (1230) without masking
+    if (is4DigitTime(raw)) {
+      // keep as typed; conversion runs on blur
       return;
     }
     e.target.value = digitsToCompact(raw);
@@ -1336,6 +1367,17 @@ if (window.helpers) {
       const dd = pad2(now.getUTCDate());
       const todayWithTime = `${dd}.${mm}.${yy},${raw}`;
       iso = parseCompactToISOUTC(todayWithTime);
+    } else if (is4DigitTime(raw)) {
+      // 4-digit time input (1230): convert to HH:mm and add today's date
+      const hhmm = convert4DigitTimeToHHmm(raw);
+      if (hhmm) {
+        const now = new Date();
+        const yy = String(now.getUTCFullYear()).slice(-2);
+        const mm = pad2(now.getUTCMonth()+1);
+        const dd = pad2(now.getUTCDate());
+        const todayWithTime = `${dd}.${mm}.${yy},${hhmm}`;
+        iso = parseCompactToISOUTC(todayWithTime);
+      }
     } else {
       iso = canonicalizeDateTimeFieldValue(e.target.id, raw);
     }
@@ -1411,7 +1453,7 @@ if (window.helpers) {
     nodes.forEach(inp => {
       try{ inp.setAttribute('type','text'); } catch(e){}
       inp.classList.add('compact-datetime');
-      inp.setAttribute('placeholder','dd.mm.yy,HH:MM');
+      inp.setAttribute('placeholder','1230 or dd.mm.yy,HH:MM');
       attachCompactMask(inp);
       // If value is ISO from storage, show compact
       const val = (inp.value||'').trim();
@@ -1651,6 +1693,7 @@ if (window.helpers) {
     if (isISODateTimeLocal(raw)) iso = raw;
     else if (isCompactDateTime(raw)) iso = parseCompactToISOUTC(raw);
     else if (isHHmm(raw)) iso = canonicalizeDateTimeFieldValue(input.id, raw);
+    else if (is4DigitTime(raw)) iso = canonicalizeDateTimeFieldValue(input.id, raw);
 
     if (iso){
       const compact = formatISOToCompactUTC(iso);
@@ -1706,6 +1749,8 @@ if (window.helpers) {
   window.helpers.isISODateTimeLocal = isISODateTimeLocal;
   window.helpers.isCompactDateTime = isCompactDateTime;
   window.helpers.isHHmm = isHHmm;
+  window.helpers.is4DigitTime = is4DigitTime;
+  window.helpers.convert4DigitTimeToHHmm = convert4DigitTimeToHHmm;
   window.helpers.getBaseDates = getBaseDates;
   window.helpers.coerceHHmmToDateTimeLocalUtc = coerceHHmmToDateTimeLocalUtc;
   window.helpers.formatDateTimeLocalForPdf = formatDateTimeLocalForPdf;

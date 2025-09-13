@@ -738,6 +738,12 @@ select.status-selector {
 	outline-offset: 2px;
 }
 
+/* Small help icon link next to labels */
+.info-label .help-link { margin-left: 6px; font-size: 11px; color: #64748b; text-decoration: none; border-bottom: 1px dotted #cbd5e1; }
+.info-label .help-link:hover { color: #111827; border-bottom-color: #94a3b8; }
+.dark-mode .info-label .help-link { color: var(--text-tertiary); border-bottom-color: var(--border-color); }
+.dark-mode .info-label .help-link:hover { color: var(--text-secondary); border-bottom-color: var(--text-secondary); }
+
 /* Keep compact date-time input and its button in a single grid cell using absolute button */
 .compact-dt-wrap { position: relative; display: block; width: 100%; min-width: 0; }
 .compact-dt-wrap .compact-dt-btn {

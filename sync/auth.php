@@ -27,6 +27,12 @@ $config = [
 $configPath = $BASE_DIR . '/config.php';
 if (file_exists($configPath)) {
     try { $loaded = include $configPath; if (is_array($loaded)) $config = array_merge($config, $loaded); } catch (Throwable $t) {}
+} else {
+    // Fallback to example config in development if real config is missing
+    $examplePath = $BASE_DIR . '/config.example.php';
+    if (file_exists($examplePath)) {
+        try { $loaded = include $examplePath; if (is_array($loaded)) $config = array_merge($config, $loaded); } catch (Throwable $t) {}
+    }
 }
 
 // Ensure session
@@ -75,15 +81,23 @@ function find_user(&$db, $email) {
     return null;
 }
 
-function send_admin_approval_mail($to, $subject, $body, $outbox) {
-    // Try native mail(); if it fails, append to outbox for manual handling
-    $headers = 'From: no-reply@hangarplanner.local' . "\r\n" . 'Content-Type: text/plain; charset=UTF-8';
-    $ok = @mail($to, $subject, $body, $headers);
+function send_admin_approval_mail($to, $subject, $body, $outbox, $from = 'no-reply@hangarplanner.local') {
+    // Validate recipient and build headers using configured From/Reply-To
+    $fromHdr = filter_var($from, FILTER_VALIDATE_EMAIL) ? $from : 'no-reply@hangarplanner.local';
+    $headers = 'From: ' . $fromHdr . "\r\n" .
+               'Reply-To: ' . $fromHdr . "\r\n" .
+               'Content-Type: text/plain; charset=UTF-8';
+    $ok = false;
+    if (filter_var($to, FILTER_VALIDATE_EMAIL)) {
+        $ok = @mail($to, $subject, $body, $headers);
+    }
     if (!$ok) {
         $ts = date('c');
-        @file_put_contents($outbox, "[$ts]\nTO: $to\nSUBJECT: $subject\n\n$body\n\n---\n", FILE_APPEND);
+        $toLog = filter_var($to, FILTER_VALIDATE_EMAIL) ? $to : 'INVALID_OR_MISSING';
+        @file_put_contents($outbox, "[$ts]\nTO: $toLog\nSUBJECT: $subject\n\n$body\n\n---\n", FILE_APPEND);
         @chmod($outbox, 0664);
     }
+    return $ok;
 }
 
 $method = $_SERVER['REQUEST_METHOD'];
@@ -132,7 +146,7 @@ switch ($action) {
         $approveUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . dirname($_SERVER['REQUEST_URI'] ?? '/sync/auth.php') . '/auth.php?action=approve&token=' . urlencode($token);
         $subject = 'Hangar Planner: Approve new user';
         $bodyMail = "A new user registered:\n\nEmail: $email\nName: $displayName\n\nApprove this user by opening:\n$approveUrl\n\nIf you did not request this, ignore this message.";
-        send_admin_approval_mail($config['adminEmail'], $subject, $bodyMail, $MAIL_OUTBOX);
+        send_admin_approval_mail($config['adminEmail'], $subject, $bodyMail, $MAIL_OUTBOX, $config['mailFrom'] ?? 'no-reply@hangarplanner.local');
 
         respond(['success'=>true, 'message'=>'Registration submitted. Admin approval required.']);
     }

@@ -843,6 +843,7 @@ select.status-selector {
 .markdown-toc { border: 1px solid #e5e7eb; background: #ffffff; border-radius: 6px; padding: 8px 10px; margin-bottom: 12px; }
 .markdown-toc .toc-title { font-weight: 700; color: #0f172a; margin-bottom: 6px; }
 .markdown-toc ul { list-style: none; padding-left: 12px; margin: 0; }
+.markdown-toc ul ul { margin-left: 8px; }
 .markdown-toc li { margin: 2px 0; }
 .markdown-toc a { color: #1f2937; text-decoration: none; }
 .markdown-toc a:hover { text-decoration: underline; }

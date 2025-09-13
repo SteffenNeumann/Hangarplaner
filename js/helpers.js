@@ -1515,11 +1515,16 @@ if (window.helpers) {
 
     rangeCheckbox.addEventListener('change', () => {
       picker._rangeMode = !!rangeCheckbox.checked;
+      // adjust header layout (3 cols) and picker width, and show/hide end time
+      header.classList.toggle('range-mode', picker._rangeMode);
+      timeEnd.style.display = picker._rangeMode ? 'inline-block' : 'none';
+      picker.style.width = picker._rangeMode ? '480px' : '320px';
       // reset selection to current selectedDate
       picker._rangeStart = null; picker._rangeEnd = null;
       if (picker._rangeMode) {
-        // seed start with selected date
         if (picker._selectedDate) picker._rangeStart = new Date(picker._selectedDate);
+        // prefill default end time = start time
+        timeEnd.value = timeStart.value || '00:00';
       }
       if (picker._headerDate) picker._headerDate.textContent = formatLongDateLabel(picker._selectedDate || new Date());
       buildCalendar(picker._viewYear || new Date().getFullYear(), picker._viewMonth || new Date().getMonth(), picker._selectedDate);
@@ -1720,7 +1725,20 @@ if (window.helpers) {
     const headerDate = document.createElement('div');
     headerDate.className = 'dtp-header-date';
     header.appendChild(headerDate);
-    header.appendChild(time);
+    // time start (always visible)
+    const timeStart = time; // keep existing variable as start input
+    header.appendChild(timeStart);
+    // time end (visible only in range mode)
+    const timeEnd = document.createElement('input');
+    timeEnd.type = 'time';
+    timeEnd.step = '60';
+    timeEnd.style.width = '90px';
+    timeEnd.style.height = '28px';
+    timeEnd.style.fontSize = '14px';
+    timeEnd.style.lineHeight = '24px';
+    timeEnd.className = 'dtp-time-input';
+    timeEnd.style.display = 'none';
+    header.appendChild(timeEnd);
 
     function formatLongDateLabel(d){
       if (!(d instanceof Date)) return '';
@@ -1761,11 +1779,16 @@ if (window.helpers) {
         date.style.outline = 'none';
         date.style.colorScheme = 'dark';
 
-        time.style.background = bgPrimary;
-        time.style.color = text;
-        time.style.border = `1px solid ${border}`;
-        time.style.outline = 'none';
-        time.style.colorScheme = 'dark';
+        timeStart.style.background = bgPrimary;
+        timeStart.style.color = text;
+        timeStart.style.border = `1px solid ${border}`;
+        timeStart.style.outline = 'none';
+        timeStart.style.colorScheme = 'dark';
+        timeEnd.style.background = bgPrimary;
+        timeEnd.style.color = text;
+        timeEnd.style.border = `1px solid ${border}`;
+        timeEnd.style.outline = 'none';
+        timeEnd.style.colorScheme = 'dark';
 
         ok.style.background = accent;
         ok.style.border = `1px solid ${accent}`;
@@ -1784,9 +1807,12 @@ if (window.helpers) {
         date.style.color = '#111827';
         date.style.border = '1px solid #cbd5e1';
 
-        time.style.background = '#ffffff';
-        time.style.color = '#111827';
-        time.style.border = '1px solid #cbd5e1';
+        timeStart.style.background = '#ffffff';
+        timeStart.style.color = '#111827';
+        timeStart.style.border = '1px solid #cbd5e1';
+        timeEnd.style.background = '#ffffff';
+        timeEnd.style.color = '#111827';
+        timeEnd.style.border = '1px solid #cbd5e1';
 
         ok.style.background = '#e0f2fe';
         ok.style.border = '1px solid #0ea5e9';
@@ -1832,33 +1858,34 @@ if (window.helpers) {
     }
 
     ok.addEventListener('click', ()=>{
-      const t = (time.value || '').trim() || '00:00';
+      const tStart = (timeStart.value || '').trim() || '00:00';
+      const tEnd = (timeEnd.value || '').trim() || tStart;
       if (typeof picker._onConfirm === 'function'){
         const payload = {};
         if (picker._rangeMode && picker._rangeStart && picker._rangeEnd){
           const f = picker._formatLongDateLabel;
           const s = f(picker._rangeStart), e = f(picker._rangeEnd);
-          payload.mode = 'range'; payload.start = s; payload.end = e;
-          payload.startIso = parseCompactToISOUTC(`${s},${t}`);
-          payload.endIso = parseCompactToISOUTC(`${e},${t}`);
+          payload.mode = 'range'; payload.start = s; payload.end = e; payload.timeStart = tStart; payload.timeEnd = tEnd;
+          payload.startIso = parseCompactToISOUTC(`${s},${tStart}`);
+          payload.endIso = parseCompactToISOUTC(`${e},${tEnd}`);
         } else {
           const d = (date.value || '').trim();
           if (/^\d{2}\.\d{2}\.\d{2}$/.test(d)){
             payload.mode = 'single';
-            payload.value = d; payload.iso = parseCompactToISOUTC(`${d},${t}`);
+            payload.value = d; payload.time = tStart; payload.iso = parseCompactToISOUTC(`${d},${tStart}`);
           }
         }
         try { picker._onConfirm(payload); } catch(_){}
       } else if (pickerTarget) {
         const d = (date.value || '').trim();
-        if (/^\d{2}\.\d{2}\.\d{2}$/.test(d) && /^\d{2}:\d{2}$/.test(t)){
-          const iso = parseCompactToISOUTC(`${d},${t}`);
+        if (/^\d{2}\.\d{2}\.\d{2}$/.test(d) && /^\d{2}:\d{2}$/.test(tStart)){
+          const iso = parseCompactToISOUTC(`${d},${tStart}`);
           if (iso){
             if (picker._rangeMode && picker._rangeStart && picker._rangeEnd){
               const f = picker._formatLongDateLabel; const s=f(picker._rangeStart), e=f(picker._rangeEnd);
               pickerTarget.value = `${s} — ${e}`;
-              pickerTarget.dataset.rangeStartIso = parseCompactToISOUTC(`${s},${t}`);
-              pickerTarget.dataset.rangeEndIso = parseCompactToISOUTC(`${e},${t}`);
+              pickerTarget.dataset.rangeStartIso = parseCompactToISOUTC(`${s},${tStart}`);
+              pickerTarget.dataset.rangeEndIso = parseCompactToISOUTC(`${e},${tEnd}`);
             } else {
               pickerTarget.dataset.iso = iso;
               pickerTarget.value = formatISOToCompactUTC(iso);
@@ -1873,7 +1900,7 @@ if (window.helpers) {
     });
     cancel.addEventListener('click', close);
 
-    picker._date = date; picker._time = time; picker._close = close; picker._applyTheme = applyPickerTheme;
+    picker._date = date; picker._timeStart = timeStart; picker._timeEnd = timeEnd; picker._close = close; picker._applyTheme = applyPickerTheme;
     picker._header = header; picker._headerDate = headerDate;
     return picker;
   }
@@ -1883,6 +1910,9 @@ if (window.helpers) {
     // Re-apply theme in case user toggled dark mode since creation
     if (typeof p._applyTheme === 'function') p._applyTheme();
     pickerTarget = input;
+
+    // Set width based on mode
+    p.style.width = p._rangeMode ? '480px' : '320px';
 
     // Keyboard navigation and close handlers
     function onKey(e){
@@ -1959,7 +1989,7 @@ if (window.helpers) {
 
     // Position near input
     const rect = input.getBoundingClientRect();
-    const assumedWidth = parseInt(p.style.width,10) || 360;
+    const assumedWidth = parseInt(p.style.width,10) || (p._rangeMode ? 480 : 320);
     const assumedHeight = 120;
     p.style.left = `${Math.min(rect.left, window.innerWidth - assumedWidth - 4)}px`;
     p.style.top = `${Math.min(rect.bottom + 4, window.innerHeight - assumedHeight)}px`;
@@ -2019,6 +2049,10 @@ if (window.helpers) {
     p._rangeStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     p._rangeEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate()+3);
     p._selectedDate = new Date(p._rangeStart);
+    if (p._header){ p._header.classList.add('range-mode'); }
+    if (p._timeStart) p._timeStart.value = '09:00';
+    if (p._timeEnd) { p._timeEnd.value = '17:00'; p._timeEnd.style.display='inline-block'; }
+    p.style.width = '480px';
     if (p._headerDate && p._formatLongDateLabel){
       const f=p._formatLongDateLabel; p._headerDate.textContent = `${f(p._rangeStart)} — ${f(p._rangeEnd)}`;
     }

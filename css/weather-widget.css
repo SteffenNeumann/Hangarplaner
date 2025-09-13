@@ -8,7 +8,7 @@
 	padding: 0; /* header grid manages spacing */
 	border-radius: 0;
 	/* removed border and shadow per request */
-	font-family: "Inter", ui-sans-serif;
+	font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 	transition: all 0.3s ease;
 	box-shadow: none;
 	border: none;

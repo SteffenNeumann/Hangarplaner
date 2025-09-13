@@ -333,7 +333,7 @@ function exportToPDF() {
         padding: 20px;
         background-color: white !important;
         color: #111827 !important;
-        font-family: "Inter", ui-sans-serif;
+        font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
         width: 100%;
         margin: 0 auto;
         max-width: ${landscapeMode ? "1100px" : "900px"};

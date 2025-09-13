@@ -169,7 +169,7 @@ switch ($action) {
         if (!write_users_atomic($USERS_FILE, $db)) respond(['success'=>false,'error'=>'Failed to update user'],500);
         // Render a minimal HTML confirmation so admin can click easily from email
         header('Content-Type: text/html; charset=UTF-8');
-        echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>User approved</title></head><body style="font-family: system-ui; padding: 24px;">';
+        echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>User approved</title></head><body style="font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"; padding: 24px;">';
         echo '<h2>✅ User approved</h2><p>The user has been approved. They can now log in.</p></body></html>';
         exit;
     }

@@ -56,7 +56,7 @@ body {
 
 /* Global Inter font fallback for core elements */
 html, body, button, input, select, textarea {
-	font-family: "Inter", ui-sans-serif;
+	font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 }
 
 .form-control:focus {
@@ -234,21 +234,21 @@ html, body, button, input, select, textarea {
 
 /* Timetable Aircraft ID */
 .timetable-aircraft {
-	font-family: "Inter", ui-sans-serif;
+	font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 	font-weight: 600;
 	color: #1f2937;
 }
 
 /* Timetable Time */
 .timetable-time {
-	font-family: "Inter", ui-sans-serif;
+	font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 	color: #4b5563;
 	white-space: nowrap;
 }
 
 /* Timetable Airport Codes */
 .timetable-airport {
-	font-family: "Inter", ui-sans-serif;
+	font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 	font-weight: 500;
 	color: #1f2937;
 	background-color: #f3f4f6;
@@ -898,7 +898,7 @@ textarea.notes-textarea {
 		width: 100%;
 		color: #1a202c; /* Dunklerer, kontrastreicherer Text */
 		line-height: 1.2; /* Optimierte Zeilenhöhe */
-		font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+		font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 	}
 .aircraft-id::placeholder {
 	color: #9ca3af;
@@ -2067,7 +2067,7 @@ body.dark-mode {
 	border: none !important;
 	font-weight: 700;
 	font-size: 1.35rem;
-	font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+	font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 }
 
 .dark-mode .aircraft-id:focus {
@@ -2476,7 +2476,7 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 	font-size: 1.1rem; /* Größer auch in der Tabellenansicht */
 	font-weight: 700; /* Konsistente Gewichtung */
 	height: 32px; /* Etwas höher für die größere Schrift */
-	font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+	font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 }
 
 .table-view .info-grid {
@@ -2570,7 +2570,7 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 }
 
 #shareUrlContainer input#shareUrl {
-	font-family: "Inter", ui-sans-serif;
+	font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 	font-size: 11px !important;
 	background-color: #ffffff;
 	border: 1px solid #e2e8f0;
@@ -2740,7 +2740,7 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   border: 1px solid #e5e7eb; /* gray-200 */
   box-shadow: 0 10px 24px rgba(0,0,0,0.15);
   padding: 16px 18px;
-  font-family: "Inter", ui-sans-serif;
+  font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 }
 .hp-modal-title {
   font-weight: 700;

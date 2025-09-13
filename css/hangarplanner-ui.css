@@ -770,7 +770,7 @@ select.status-selector {
 
 /* Custom date-time picker styles */
 .dtp-header { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; padding: 6px; border: 1px solid #e5e7eb; border-radius: 6px; background: #ffffff; }
-.dtp-header-date { font-weight: 600; color: #111827; font-size: 14px; padding-left: 22px; position: relative; }
+.dtp-header-date { font-weight: 600; color: #111827; font-size: 14px; padding-left: 22px; position: relative; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dtp-header-date::before { content: '\1F4C5'; position: absolute; left: 4px; top: 50%; transform: translateY(-50%); opacity: 0.7; }
 .dtp-time-input { padding-left: 24px !important; background: #ffffff url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%236b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>') no-repeat 6px center; background-size: 16px; }
 

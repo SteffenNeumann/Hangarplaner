@@ -1656,7 +1656,10 @@ if (window.helpers) {
 
     function formatLongDateLabel(d){
       if (!(d instanceof Date)) return '';
-      return d.toLocaleDateString(undefined, { day: '2-digit', month: 'long', year: 'numeric' });
+      const dd = String(d.getDate()).padStart(2,'0');
+      const mm = String(d.getMonth()+1).padStart(2,'0');
+      const yy = String(d.getFullYear()).slice(-2);
+      return `${dd}.${mm}.${yy}`;
     }
     // expose to picker so openCompactDateTimePicker can use it safely
     picker._formatLongDateLabel = formatLongDateLabel;

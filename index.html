@@ -1393,6 +1393,41 @@ window.location.replace('login.html');
   window.clearSingleTile = clearSingleTile;
 })();
 </script>
+<script>
+// Lightweight tab switch to include new FAQ tab without changing existing behavior
+(function(){
+  const tablist = document.getElementById('topTabs'); if(!tablist) return;
+  const panels = {
+    planner: document.getElementById('panel-planner'),
+    timetable: document.getElementById('panel-timetable'),
+    database: document.getElementById('panel-database'),
+    faq: document.getElementById('panel-faq')
+  };
+  function show(tab){
+    Object.keys(panels).forEach(k=>{ if(panels[k]) panels[k].hidden = (k!==tab); });
+    tablist.querySelectorAll('.tab-btn').forEach(btn=>{
+      btn.setAttribute('aria-selected', String(btn.dataset.tab===tab));
+    });
+  }
+  tablist.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.tab-btn'); if(!btn) return;
+    const tab = btn.dataset.tab; if(!tab) return;
+    show(tab);
+  });
+})();
+// FAQ search
+(function(){
+  const q = document.getElementById('faqSearch'); const list = document.getElementById('faqList');
+  if(!q || !list) return;
+  q.addEventListener('input', ()=>{
+    const term = (q.value||'').toLowerCase();
+    list.querySelectorAll('.faq-item').forEach(item=>{
+      const text = item.textContent.toLowerCase();
+      item.style.display = text.includes(term) ? '' : 'none';
+    });
+  });
+})();
+</script>
 
 				<!-- Enhanced submenu behavior for left rail (Step B) -->
 				<script>
@@ -1514,7 +1549,8 @@ window.location.replace('login.html');
 					<div id="topTabs" class="flex gap-2 mb-1" role="tablist" aria-label="Sections" style="position: sticky; top: 0; z-index: 20;">
 						<button id="tab-planner" class="tab-btn" data-tab="planner" role="tab" aria-controls="panel-planner" aria-selected="true" title="Hangar Planner">Planner</button>
 						<button id="tab-timetable" class="tab-btn" data-tab="timetable" role="tab" aria-controls="panel-timetable" aria-selected="false" title="Timetable">Timetable</button>
-						<button id="tab-database" class="tab-btn" data-tab="database" role="tab" aria-controls="panel-database" aria-selected="false" title="Database">Database</button>
+<button id="tab-database" class="tab-btn" data-tab="database" role="tab" aria-controls="panel-database" aria-selected="false" title="Database">Database</button>
+<button id="tab-faq" class="tab-btn" data-tab="faq" role="tab" aria-controls="panel-faq" aria-selected="false" title="FAQ">FAQ</button>
 					</div>
 
 					<!-- Panels -->
@@ -1568,11 +1604,7 @@ window.location.replace('login.html');
 
 									<!-- Einheitliche Ausrichtung für Infos -->
 									<div class="info-grid mb-3">
-										<style>
-											.info-label .help-link { margin-left: 6px; font-size: 11px; color: #64748b; text-decoration: none; border-bottom: 1px dotted #cbd5e1; }
-											.info-label .help-link:hover { color: #111827; border-bottom-color: #94a3b8; }
-										</style>
-<div class="info-label">Arr: <a class="help-link" href="docs/DATE-TIME-PICKER.md" target="_blank" rel="noopener noreferrer" title="Open Date & Time Picker guide">Help</a></div>
+<div class="info-label">Arr:</div>
 										<input
 											type="datetime-local"
 											id="arrival-time-1"
@@ -1580,7 +1612,7 @@ window.location.replace('login.html');
 											title="Date/Time (UTC)"
 											placeholder="dd.mm.yy,HH:mm" />
 
-<div class="info-label">Dep: <a class="help-link" href="docs/DATE-TIME-PICKER.md" target="_blank" rel="noopener noreferrer" title="Open Date & Time Picker guide">Help</a></div>
+<div class="info-label">Dep:</div>
 										<input
 											type="datetime-local"
 											id="departure-time-1"
@@ -1622,7 +1654,31 @@ window.location.replace('login.html');
 											class="notes-textarea"></textarea>
 									</div>
 								</div>
-							</div>
+</div>
+
+<!-- FAQ Panel -->
+<div id="panel-faq" class="tab-panel" role="tabpanel" aria-labelledby="tab-faq" hidden>
+  <div class="section-container" style="padding: 8px 12px;">
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+      <input id="faqSearch" type="search" placeholder="Search FAQ…" aria-label="Search FAQ" style="flex:1; padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px;">
+      <a href="docs/DATE-TIME-PICKER.md" target="_blank" rel="noopener noreferrer" title="Open full FAQ" style="font-size:12px; color:#64748b;">Open docs</a>
+    </div>
+    <div id="faqList" class="faq-list">
+      <details class="faq-item" open>
+        <summary>How do I set a single date and time?</summary>
+        <div>Double-click the Arr or Dep field, pick a day, adjust the time, press OK.</div>
+      </details>
+      <details class="faq-item">
+        <summary>How do I set a date/time range for one aircraft?</summary>
+        <div>Toggle Range, pick start and end days, set Start/End time, press OK. Arr/Dep are filled automatically.</div>
+      </details>
+      <details class="faq-item">
+        <summary>Keyboard shortcuts</summary>
+        <div>Arrows: ±1/±7 days • PageUp/Down: month • Enter: OK • Esc: Close</div>
+      </details>
+    </div>
+  </div>
+</div>
 
 							<!-- Kachel 2 mit neuem Layout -->
 							<div

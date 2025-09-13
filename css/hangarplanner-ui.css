@@ -738,11 +738,6 @@ select.status-selector {
 	outline-offset: 2px;
 }
 
-/* Small help icon link next to labels */
-.info-label .help-link { margin-left: 6px; font-size: 11px; color: #64748b; text-decoration: none; border-bottom: 1px dotted #cbd5e1; }
-.info-label .help-link:hover { color: #111827; border-bottom-color: #94a3b8; }
-.dark-mode .info-label .help-link { color: var(--text-tertiary); border-bottom-color: var(--border-color); }
-.dark-mode .info-label .help-link:hover { color: var(--text-secondary); border-bottom-color: var(--text-secondary); }
 
 /* Keep compact date-time input and its button in a single grid cell using absolute button */
 .compact-dt-wrap { position: relative; display: block; width: 100%; min-width: 0; }
@@ -823,6 +818,16 @@ select.status-selector {
 .dark-mode .dtp-day.range-start, .dark-mode .dtp-day.range-end { background: rgba(59,130,246,0.25); border-color: rgba(59,130,246,0.8); color: var(--text-primary); }
 .dark-mode .dtp-controls { color: var(--text-tertiary); }
 .dark-mode .dtp-range-label { color: var(--text-tertiary); }
+
+/* FAQ minimal styles (adapts to existing look) */
+.faq-list { display: flex; flex-direction: column; gap: 6px; }
+.faq-item { border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px 8px; background: #ffffff; }
+.faq-item > summary { cursor: pointer; list-style: none; font-weight: 600; color: #111827; }
+.faq-item > summary::-webkit-details-marker { display: none; }
+.faq-item[open] { background: #f9fafb; }
+.dark-mode .faq-item { border-color: var(--border-color); background: var(--bg-secondary); }
+.dark-mode .faq-item[open] { background: var(--bg-primary); }
+.dark-mode .faq-item > summary { color: var(--text-secondary); }
 
 .notes-container {
 	display: flex;

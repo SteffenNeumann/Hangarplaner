@@ -1,13 +1,6 @@
 <?php
-// Not committed. Provide admin settings here. Example:
-// return [
-//   'adminEmail' => 'catchmeifyoucan007@duck.com',
-//   'adminSecret' => 'CHANGE_THIS_SECRET',
-//   'mailFrom' => 'no-reply@yourdomain.com'
-// ];
 return [
   'adminEmail' => 'catchmeifyoucan007@duck.com',
-  'adminSecret' => 'CHANGE_THIS_SECRET',
-  'mailFrom' => 'no-reply@hangarplanner.local'
+  'adminSecret' => 'CHANGE_THIS_TO_A_STRONG_SECRET',
+  'mailFrom'    => 'info@hangarplaner.de'
 ];
-

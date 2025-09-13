@@ -1140,9 +1140,9 @@ if (window.helpers) {
     return typeof str === 'string' && /^\d{1,2}:\d{2}$/.test(str);
   }
 
-  // Validates compact format yy.mm.dd,HH:mm
+  // Validates compact format dd.mm.yy,HH:MM (accepts both HH:mm and HH:MM)
   function isCompactDateTime(str){
-    return typeof str === 'string' && /^\d{2}\.\d{2}\.\d{2},\d{2}:\d{2}$/.test(str);
+    return typeof str === 'string' && /^\d{2}\.\d{2}\.\d{2},\d{2}:[\d]{2}$/.test(str);
   }
 
   // Pads to 2-digit
@@ -1179,7 +1179,7 @@ if (window.helpers) {
     return `${baseDateStr}T${pad2(h)}:${pad2(min)}`;
   }
 
-  // Formats ISO local datetime to dd.mm.yy,HH:mm (UTC-based display requested)
+  // Formats ISO local datetime to dd.mm.yy,HH:MM (UTC-based display requested)
   function formatISOToCompactUTC(iso){
     if (!isISODateTimeLocal(iso)) return '';
     const [date, time] = iso.split('T');
@@ -1254,7 +1254,7 @@ if (window.helpers) {
   function attachCompactMask(input){
     if (!input || input.__compactMaskAttached) return;
     input.setAttribute('inputmode','numeric');
-    input.setAttribute('placeholder','dd.mm.yy,HH:mm');
+    input.setAttribute('placeholder','dd.mm.yy,HH:MM');
     input.dataset.dtCompact = 'true';
 
     // Ensure input fills its cell and leave space for absolute calendar button
@@ -1358,7 +1358,7 @@ if (window.helpers) {
     nodes.forEach(inp => {
       try{ inp.setAttribute('type','text'); } catch(e){}
       inp.classList.add('compact-datetime');
-      inp.setAttribute('placeholder','dd.mm.yy,HH:mm');
+      inp.setAttribute('placeholder','dd.mm.yy,HH:MM');
       attachCompactMask(inp);
       // If value is ISO from storage, show compact
       const val = (inp.value||'').trim();

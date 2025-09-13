@@ -1394,39 +1394,18 @@ window.location.replace('login.html');
 })();
 </script>
 <script>
-// Lightweight tab switch to include new FAQ tab without changing existing behavior
-(function(){
-  const tablist = document.getElementById('topTabs'); if(!tablist) return;
-  const panels = {
-    planner: document.getElementById('panel-planner'),
-    timetable: document.getElementById('panel-timetable'),
-    database: document.getElementById('panel-database'),
-    faq: document.getElementById('panel-faq')
-  };
-  function show(tab){
-    Object.keys(panels).forEach(k=>{ if(panels[k]) panels[k].hidden = (k!==tab); });
-    tablist.querySelectorAll('.tab-btn').forEach(btn=>{
-      btn.setAttribute('aria-selected', String(btn.dataset.tab===tab));
-    });
-  }
-  tablist.addEventListener('click', (e)=>{
-    const btn = e.target.closest('.tab-btn'); if(!btn) return;
-    const tab = btn.dataset.tab; if(!tab) return;
-    show(tab);
-  });
-})();
-// FAQ search
-(function(){
+// FAQ search (wired after DOM is ready)
+document.addEventListener('DOMContentLoaded', function(){
   const q = document.getElementById('faqSearch'); const list = document.getElementById('faqList');
   if(!q || !list) return;
-  q.addEventListener('input', ()=>{
+  q.addEventListener('input', function(){
     const term = (q.value||'').toLowerCase();
-    list.querySelectorAll('.faq-item').forEach(item=>{
-      const text = item.textContent.toLowerCase();
+    list.querySelectorAll('.faq-item').forEach(function(item){
+      const text = (item.textContent||'').toLowerCase();
       item.style.display = text.includes(term) ? '' : 'none';
     });
   });
-})();
+});
 </script>
 
 				<!-- Enhanced submenu behavior for left rail (Step B) -->
@@ -1656,29 +1635,6 @@ window.location.replace('login.html');
 								</div>
 </div>
 
-<!-- FAQ Panel -->
-<div id="panel-faq" class="tab-panel" role="tabpanel" aria-labelledby="tab-faq" hidden>
-  <div class="section-container" style="padding: 8px 12px;">
-    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-      <input id="faqSearch" type="search" placeholder="Search FAQ…" aria-label="Search FAQ" style="flex:1; padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px;">
-      <a href="docs/DATE-TIME-PICKER.md" target="_blank" rel="noopener noreferrer" title="Open full FAQ" style="font-size:12px; color:#64748b;">Open docs</a>
-    </div>
-    <div id="faqList" class="faq-list">
-      <details class="faq-item" open>
-        <summary>How do I set a single date and time?</summary>
-        <div>Double-click the Arr or Dep field, pick a day, adjust the time, press OK.</div>
-      </details>
-      <details class="faq-item">
-        <summary>How do I set a date/time range for one aircraft?</summary>
-        <div>Toggle Range, pick start and end days, set Start/End time, press OK. Arr/Dep are filled automatically.</div>
-      </details>
-      <details class="faq-item">
-        <summary>Keyboard shortcuts</summary>
-        <div>Arrows: ±1/±7 days • PageUp/Down: month • Enter: OK • Esc: Close</div>
-      </details>
-    </div>
-  </div>
-</div>
 
 							<!-- Kachel 2 mit neuem Layout -->
 							<div
@@ -2751,11 +2707,35 @@ type="datetime-local"
 							style="width:100%; height:100%; border:0; background: transparent;"></iframe>
 					</div>
 
-					<!-- Database Panel -->
-					<div id="panel-database" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-database" style="height: calc(100vh - 60px);">
-						<iframe id="databaseFrame" src="fleet-database.html" title="Fleet Database"
-							style="width:100%; height:100%; border:0; background: transparent;"></iframe>
-					</div>
+                    <!-- Database Panel -->
+                    <div id="panel-database" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-database" style="height: calc(100vh - 60px);">
+                        <iframe id="databaseFrame" src="fleet-database.html" title="Fleet Database"
+                            style="width:100%; height:100%; border:0; background: transparent;"></iframe>
+                    </div>
+
+                    <!-- FAQ Panel -->
+                    <div id="panel-faq" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-faq">
+                      <div class="section-container" style="padding: 8px 12px;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                          <input id="faqSearch" type="search" placeholder="Search FAQ…" aria-label="Search FAQ" style="flex:1; padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px;">
+                          <a href="docs/DATE-TIME-PICKER.md" target="_blank" rel="noopener noreferrer" title="Open full FAQ" style="font-size:12px; color:#64748b;">Open docs</a>
+                        </div>
+                        <div id="faqList" class="faq-list">
+                          <details class="faq-item" open>
+                            <summary>How do I set a single date and time?</summary>
+                            <div>Double-click the Arr or Dep field, pick a day, adjust the time, press OK.</div>
+                          </details>
+                          <details class="faq-item">
+                            <summary>How do I set a date/time range for one aircraft?</summary>
+                            <div>Toggle Range, pick start and end days, set Start/End time, press OK. Arr/Dep are filled automatically.</div>
+                          </details>
+                          <details class="faq-item">
+                            <summary>Keyboard shortcuts</summary>
+                            <div>Arrows: ±1/±7 days • PageUp/Down: month • Enter: OK • Esc: Close</div>
+                          </details>
+                        </div>
+                      </div>
+                    </div>
 
 				</div>
 			</div>
@@ -4328,13 +4308,14 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
             (function(){
               function saveTab(tab){ try { localStorage.setItem('hangar.activeTab', tab); } catch(e){} }
               function loadTab(){ try { return localStorage.getItem('hangar.activeTab') || 'planner'; } catch(e){ return 'planner'; } }
-              function getOrder(){ return ['planner','timetable','database']; }
+              function getOrder(){ return ['planner','timetable','database','faq']; }
 
               function setActiveTab(tab){
                 var panels = {
                   planner: document.getElementById('panel-planner'),
                   timetable: document.getElementById('panel-timetable'),
-                  database: document.getElementById('panel-database')
+                  database: document.getElementById('panel-database'),
+                  faq: document.getElementById('panel-faq')
                 };
 					var buttons = document.querySelectorAll('#topTabs .tab-btn[role="tab"]');
                 // Toggle buttons (ARIA)
@@ -4417,6 +4398,7 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                   if (e.code === 'Digit1' || e.key === '1'){ e.preventDefault(); setActiveTab('planner'); return; }
                   if (e.code === 'Digit2' || e.key === '2'){ e.preventDefault(); setActiveTab('timetable'); return; }
                   if (e.code === 'Digit3' || e.key === '3'){ e.preventDefault(); setActiveTab('database'); return; }
+                  if (e.code === 'Digit4' || e.key === '4'){ e.preventDefault(); setActiveTab('faq'); return; }
                   if (e.code === 'ArrowRight'){ e.preventDefault(); cycleTab(1, false); return; }
                   if (e.code === 'ArrowLeft'){ e.preventDefault(); cycleTab(-1, false); return; }
                 }

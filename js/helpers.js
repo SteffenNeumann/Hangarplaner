@@ -1498,12 +1498,13 @@ if (window.helpers) {
     date.type = 'text';
     date.placeholder = 'dd.mm.yy or . +1 -1';
     date.inputMode = 'numeric';
-    date.style.flex = '1';
-    date.style.width = '100%';
-    // Compact sizing
-    date.style.height = '24px';
-    date.style.fontSize = '12px';
-    date.style.lineHeight = '20px';
+    // Keep flexible but cap width for tidy layout
+    date.style.flex = '0 0 auto';
+    date.style.width = '130px';
+    // Comfortable sizing
+    date.style.height = '28px';
+    date.style.fontSize = '14px';
+    date.style.lineHeight = '24px';
     
     const nextDayBtn = document.createElement('button');
     nextDayBtn.type = 'button';
@@ -1574,16 +1575,17 @@ if (window.helpers) {
     time.type = 'time';
     time.step = '60';
     time.style.marginBottom = '8px';
-    time.style.width = '100%';
-    // Compact sizing
-    time.style.height = '24px';
-    time.style.fontSize = '12px';
-    time.style.lineHeight = '20px';
+    // Narrower time field
+    time.style.width = '90px';
+    // Comfortable sizing
+    time.style.height = '28px';
+    time.style.fontSize = '14px';
+    time.style.lineHeight = '24px';
 
     const ok = document.createElement('button'); ok.type='button'; ok.textContent='OK';
-    ok.style.marginRight = '6px'; ok.style.padding='4px 8px'; ok.style.height='26px'; ok.style.border='1px solid #0ea5e9'; ok.style.background='#e0f2fe'; ok.style.borderRadius='4px';
+    ok.style.marginRight = '6px'; ok.style.padding='6px 10px'; ok.style.height='30px'; ok.style.border='1px solid #0ea5e9'; ok.style.background='#e0f2fe'; ok.style.borderRadius='4px';
     const cancel = document.createElement('button'); cancel.type='button'; cancel.textContent='Cancel';
-    cancel.style.padding='4px 8px'; cancel.style.height='26px'; cancel.style.border='1px solid #cbd5e1'; cancel.style.background='#f8fafc'; cancel.style.borderRadius='4px';
+    cancel.style.padding='6px 10px'; cancel.style.height='30px'; cancel.style.border='1px solid #cbd5e1'; cancel.style.background='#f8fafc'; cancel.style.borderRadius='4px';
 
     // Apply theme-aware colors (dark/light) using CSS variables if available
     function applyPickerTheme(){

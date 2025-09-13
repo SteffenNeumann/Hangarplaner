@@ -585,22 +585,19 @@ select.status-selector {
 /* Enhanced datetime-local styling with modern design */
 #hangarGrid .hangar-cell input[type="datetime-local"],
 #secondaryHangarGrid .hangar-cell input[type="datetime-local"] {
-	position: relative !important;
-	background: linear-gradient(145deg, #ffffff 0%, #fafafa 100%) !important;
-	border: 1px solid #e2e8f0 !important;
-	border-radius: 6px !important;
-	padding: 4px 6px !important;
-	font-size: 0.75rem !important;
-	color: #2d3748 !important;
-	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06) !important;
-	cursor: pointer !important;
-	height: 24px !important;
-	min-height: 24px !important;
-	max-height: 24px !important;
-	width: 100% !important;
-	box-sizing: border-box !important;
-	line-height: 1.2 !important;
+	position: relative;
+	background: linear-gradient(145deg, #ffffff 0%, #fafafa 100%);
+	border: 1px solid #e2e8f0;
+	border-radius: 6px;
+	padding: 6px 8px; /* back to comfortable size */
+	font-size: 0.8rem;
+	color: #2d3748;
+	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+	cursor: pointer;
+	width: 100%;
+	box-sizing: border-box;
+	line-height: 1.3;
 }
 
 /* Enhanced hover state */
@@ -1716,14 +1713,11 @@ body.dark-mode {
 /* Enhanced dark mode styling for datetime-local inputs */
 .dark-mode #hangarGrid .hangar-cell input[type="datetime-local"],
 .dark-mode #secondaryHangarGrid .hangar-cell input[type="datetime-local"] {
-	color-scheme: dark !important;
-	background: linear-gradient(145deg, var(--input-bg) 0%, #2a2e32 100%) !important;
-	border: 1px solid var(--border-color) !important;
-	color: var(--input-text) !important;
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2) !important;
-	height: 24px !important;
-	min-height: 24px !important;
-	max-height: 24px !important;
+	color-scheme: dark;
+	background: linear-gradient(145deg, var(--input-bg) 0%, #2a2e32 100%);
+	border: 1px solid var(--border-color);
+	color: var(--input-text);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 /* Dark mode hover state */

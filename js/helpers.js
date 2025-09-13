@@ -1516,6 +1516,96 @@ if (window.helpers) {
     dateContainer.appendChild(date);
     dateContainer.appendChild(nextDayBtn);
     
+    // Calendar view (month grid)
+    const cal = document.createElement('div');
+    cal.className = 'dtp-cal';
+
+    const calNav = document.createElement('div');
+    calNav.className = 'dtp-nav';
+
+    const prevMonthBtn = document.createElement('button');
+    prevMonthBtn.type = 'button';
+    prevMonthBtn.className = 'date-nav-btn';
+    prevMonthBtn.textContent = '‹';
+
+    const monthYearLabel = document.createElement('div');
+    monthYearLabel.className = 'dtp-month-label';
+
+    const nextMonthBtn = document.createElement('button');
+    nextMonthBtn.type = 'button';
+    nextMonthBtn.className = 'date-nav-btn';
+    nextMonthBtn.textContent = '›';
+
+    calNav.appendChild(prevMonthBtn);
+    calNav.appendChild(monthYearLabel);
+    calNav.appendChild(nextMonthBtn);
+
+    const dow = document.createElement('div');
+    dow.className = 'dtp-dow-row';
+    const dows = ['Mo','Tu','We','Th','Fr','Sa','Su'];
+    dows.forEach(dn => {
+      const el = document.createElement('div');
+      el.className = 'dtp-dow';
+      el.textContent = dn;
+      dow.appendChild(el);
+    });
+
+    const daysGrid = document.createElement('div');
+    daysGrid.className = 'dtp-grid';
+
+    cal.appendChild(calNav);
+    cal.appendChild(dow);
+    cal.appendChild(daysGrid);
+
+    // Build and update calendar helpers
+    function isSameDay(a,b){ return a && b && a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
+    function toDdMmYy(dt){ const dd = String(dt.getDate()).padStart(2,'0'); const mm = String(dt.getMonth()+1).padStart(2,'0'); const yy = String(dt.getFullYear()).slice(-2); return `${dd}.${mm}.${yy}`; }
+
+    function buildCalendar(year, month, selected){
+      const first = new Date(year, month, 1);
+      // Monday as first day of week
+      const startOffset = (first.getDay() + 6) % 7; // 0..6 (Mon..Sun)
+      const start = new Date(year, month, 1 - startOffset);
+      const monthLabel = first.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+      monthYearLabel.textContent = monthLabel;
+      daysGrid.innerHTML = '';
+      for (let i=0; i<42; i++){
+        const d = new Date(start); d.setDate(start.getDate() + i);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'dtp-day';
+        if (d.getMonth() !== month) btn.classList.add('muted');
+        const today = new Date();
+        if (isSameDay(d, today)) btn.classList.add('today');
+        if (selected && isSameDay(d, selected)) btn.classList.add('selected');
+        btn.textContent = String(d.getDate());
+        btn.addEventListener('click', () => {
+          picker._selectedDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+          date.value = toDdMmYy(picker._selectedDate);
+          buildCalendar(year, month, picker._selectedDate);
+        });
+        daysGrid.appendChild(btn);
+      }
+      picker._viewYear = year; picker._viewMonth = month;
+    }
+
+    prevMonthBtn.addEventListener('click', () => {
+      let y = picker._viewYear || new Date().getFullYear();
+      let m = (picker._viewMonth || 0) - 1; if (m < 0){ m = 11; y--; }
+      buildCalendar(y, m, picker._selectedDate);
+    });
+    nextMonthBtn.addEventListener('click', () => {
+      let y = picker._viewYear || new Date().getFullYear();
+      let m = (picker._viewMonth || 0) + 1; if (m > 11){ m = 0; y++; }
+      buildCalendar(y, m, picker._selectedDate);
+    });
+
+    // Expose for open() to call
+    picker._buildCalendar = buildCalendar;
+    picker._monthYearLabel = monthYearLabel;
+    picker._daysGrid = daysGrid;
+
+    
     // Add input handling for shortcuts
     date.addEventListener('input', (e) => {
       const raw = e.target.value || '';
@@ -1657,7 +1747,10 @@ if (window.helpers) {
     actions.style.justifyContent='flex-end';
     actions.appendChild(ok); actions.appendChild(cancel);
 
-    column.appendChild(dateContainer); column.appendChild(time); column.appendChild(actions);
+    column.appendChild(dateContainer);
+    column.appendChild(cal);
+    column.appendChild(time);
+    column.appendChild(actions);
 
     picker.appendChild(column);
     document.body.appendChild(picker);
@@ -1710,19 +1803,31 @@ if (window.helpers) {
       const parts = compact.split(',');
       p._date.value = parts[0] || '';
       p._time.value = parts[1] || '';
+      // derive selected date from compact (dd.mm.yy)
+      if (parts[0]){
+        const [dd,mm,yy] = parts[0].split('.');
+        const yFull = 2000 + parseInt(yy,10);
+        p._selectedDate = new Date(yFull, parseInt(mm,10)-1, parseInt(dd,10));
+      }
     } else {
-      // default to today UTC + 00:00 in dd.mm.yy
+      // default to today UTC + 00:00
       const now = new Date();
       const yy = String(now.getUTCFullYear()).slice(-2);
       const mm = pad2(now.getUTCMonth()+1);
       const dd = pad2(now.getUTCDate());
       p._date.value = `${dd}.${mm}.${yy}`;
       p._time.value = '00:00';
+      p._selectedDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    }
+
+    // Build calendar for current view around selected date
+    if (typeof p._selectedDate === 'object' && typeof p._buildCalendar === 'function'){
+      p._buildCalendar(p._selectedDate.getFullYear(), p._selectedDate.getMonth(), p._selectedDate);
     }
 
     // Position near input
     const rect = input.getBoundingClientRect();
-    const assumedWidth = parseInt(p.style.width,10) || 260;
+    const assumedWidth = parseInt(p.style.width,10) || 360;
     const assumedHeight = 120;
     p.style.left = `${Math.min(rect.left, window.innerWidth - assumedWidth - 4)}px`;
     p.style.top = `${Math.min(rect.bottom + 4, window.innerHeight - assumedHeight)}px`;

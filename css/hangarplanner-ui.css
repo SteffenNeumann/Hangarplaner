@@ -821,13 +821,27 @@ select.status-selector {
 
 /* FAQ minimal styles (adapts to existing look) */
 .faq-list { display: flex; flex-direction: column; gap: 6px; }
-.faq-item { border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px 8px; background: #ffffff; }
-.faq-item > summary { cursor: pointer; list-style: none; font-weight: 600; color: #111827; }
+.faq-item { border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px 8px; background: #ffffff; color: #111827; }
+.faq-item > summary { cursor: pointer; list-style: none; font-weight: 600; color: #0f172a; }
 .faq-item > summary::-webkit-details-marker { display: none; }
 .faq-item[open] { background: #f9fafb; }
-.dark-mode .faq-item { border-color: var(--border-color); background: var(--bg-secondary); }
+.faq-item > div { color: #111827; }
+.dark-mode .faq-item { border-color: var(--border-color); background: var(--bg-secondary); color: var(--text-primary); }
 .dark-mode .faq-item[open] { background: var(--bg-primary); }
 .dark-mode .faq-item > summary { color: var(--text-secondary); }
+.dark-mode .faq-item > div { color: var(--text-primary); }
+
+/* Minimal Markdown body styles for embedded docs */
+.markdown-body { color: #0f172a; font-size: 14px; line-height: 1.5; }
+.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5, .markdown-body h6 { color: #0f172a; margin: 0.6em 0 0.35em; }
+.markdown-body p { margin: 0.4em 0; }
+.markdown-body ul, .markdown-body ol { padding-left: 1.2em; margin: 0.4em 0; }
+.markdown-body code { background: #f1f5f9; padding: 0 3px; border-radius: 3px; }
+.markdown-body pre.md-code { background: #0b1020; color: #e2e8f0; padding: 8px; border-radius: 6px; overflow: auto; }
+.dark-mode .markdown-body { color: var(--text-primary); }
+.dark-mode .markdown-body h1, .dark-mode .markdown-body h2, .dark-mode .markdown-body h3, .dark-mode .markdown-body h4, .dark-mode .markdown-body h5, .dark-mode .markdown-body h6 { color: var(--text-primary); }
+.dark-mode .markdown-body code { background: rgba(255,255,255,0.08); }
+.dark-mode .markdown-body pre.md-code { background: rgba(0,0,0,0.6); color: var(--text-primary); }
 
 .notes-container {
 	display: flex;

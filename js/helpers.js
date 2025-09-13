@@ -1883,9 +1883,28 @@ if (window.helpers) {
           if (iso){
             if (picker._rangeMode && picker._rangeStart && picker._rangeEnd){
               const f = picker._formatLongDateLabel; const s=f(picker._rangeStart), e=f(picker._rangeEnd);
-              pickerTarget.value = `${s} — ${e}`;
-              pickerTarget.dataset.rangeStartIso = parseCompactToISOUTC(`${s},${tStart}`);
-              pickerTarget.dataset.rangeEndIso = parseCompactToISOUTC(`${e},${tEnd}`);
+              // Fill both tile inputs (arrival/departure)
+              const id = pickerTarget.id || '';
+              const m = id.match(/-(\d+)$/);
+              const idx = m ? m[1] : null;
+              const startCompact = `${s},${tStart}`;
+              const endCompact = `${e},${tEnd}`;
+              const startIso = parseCompactToISOUTC(startCompact);
+              const endIso = parseCompactToISOUTC(endCompact);
+              let applied = false;
+              if (idx){
+                const arrEl = document.getElementById(`arrival-time-${idx}`);
+                const depEl = document.getElementById(`departure-time-${idx}`);
+                if (arrEl){ arrEl.value = startCompact; arrEl.dataset.iso = startIso; arrEl.dispatchEvent(new Event('input',{bubbles:true})); arrEl.dispatchEvent(new Event('change',{bubbles:true})); }
+                if (depEl){ depEl.value = endCompact; depEl.dataset.iso = endIso; depEl.dispatchEvent(new Event('input',{bubbles:true})); depEl.dispatchEvent(new Event('change',{bubbles:true})); }
+                if (arrEl || depEl) applied = true;
+              }
+              if (!applied){
+                // Fallback: write summary into the clicked field and attach datasets
+                pickerTarget.value = `${s} — ${e}`;
+                pickerTarget.dataset.rangeStartIso = startIso;
+                pickerTarget.dataset.rangeEndIso = endIso;
+              }
             } else {
               pickerTarget.dataset.iso = iso;
               pickerTarget.value = formatISOToCompactUTC(iso);

@@ -1322,8 +1322,8 @@ if (window.helpers) {
       // keep as typed; canonicalization runs on blur
       return;
     }
-    // Allow typing 4-digit time (1230) without masking
-    if (is4DigitTime(raw)) {
+    // Allow typing 4-digit time (1230) or partial typing (123, 12, 1) without masking
+    if (is4DigitTime(raw) || /^\d{1,4}$/.test(raw)) {
       // keep as typed; conversion runs on blur
       return;
     }

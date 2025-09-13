@@ -82,11 +82,40 @@
             const input = document.getElementById('test-input');
             const result = document.getElementById('result');
             
-            // Simulate the compact mask attachment
+            // Simulate the compact mask attachment exactly like the real implementation
             if (window.helpers && window.helpers.is4DigitTime && window.helpers.convert4DigitTimeToHHmm) {
-                input.addEventListener('blur', (e) => {
+                
+                // Replicate the actual onInput handler from helpers.js
+                const onInput = (e) => {
+                    const raw = e.target.value || '';
+                    
+                    // Log what's happening during typing
+                    console.log('onInput - raw:', raw, 'is4DigitTime:', window.helpers.is4DigitTime(raw), 'matches1-4digits:', /^\d{1,4}$/.test(raw));
+                    
+                    // Handle special shortcuts first
+                    if (raw === '.') return;
+                    if (/^[+-]\d+$/.test(raw)) return;
+                    
+                    // Allow typing time-only (HH:mm) without masking
+                    if (/^\d{1,2}:\d{2}$/.test(raw)) return;
+                    
+                    // Allow typing 4-digit time (1230) or partial typing (123, 12, 1) without masking
+                    if (window.helpers.is4DigitTime(raw) || /^\d{1,4}$/.test(raw)) {
+                        console.log('Keeping as typed:', raw);
+                        return;
+                    }
+                    
+                    // Otherwise apply masking
+                    console.log('Would apply masking to:', raw);
+                    // For demo, we won't actually apply masking
+                };
+                
+                // Replicate the actual onBlur handler
+                const onBlur = (e) => {
                     const raw = e.target.value.trim();
                     let output = 'Input: ' + raw + '\n';
+                    
+                    console.log('onBlur - raw:', raw, 'is4DigitTime:', window.helpers.is4DigitTime(raw));
                     
                     if (window.helpers.is4DigitTime(raw)) {
                         const hhmm = window.helpers.convert4DigitTimeToHHmm(raw);
@@ -110,7 +139,10 @@
                     
                     result.textContent = output;
                     result.style.display = 'block';
-                });
+                };
+                
+                input.addEventListener('input', onInput);
+                input.addEventListener('blur', onBlur);
                 
                 console.log('✅ 4-digit time functions are available:', {
                     is4DigitTime: typeof window.helpers.is4DigitTime,

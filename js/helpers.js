@@ -1494,6 +1494,40 @@ if (window.helpers) {
     const cal = document.createElement('div');
     cal.className = 'dtp-cal';
 
+    // Controls row (range toggle)
+    const controls = document.createElement('div');
+    controls.className = 'dtp-controls';
+    const rangeLabel = document.createElement('label');
+    rangeLabel.className = 'dtp-range-label';
+    const rangeCheckbox = document.createElement('input');
+    rangeCheckbox.type = 'checkbox';
+    rangeCheckbox.className = 'dtp-range-checkbox';
+    const rangeText = document.createElement('span');
+    rangeText.textContent = 'Range';
+    rangeLabel.appendChild(rangeCheckbox);
+    rangeLabel.appendChild(rangeText);
+    controls.appendChild(rangeLabel);
+
+    // Range state
+    picker._rangeMode = false;
+    picker._rangeStart = null;
+    picker._rangeEnd = null;
+
+    rangeCheckbox.addEventListener('change', () => {
+      picker._rangeMode = !!rangeCheckbox.checked;
+      // reset selection to current selectedDate
+      picker._rangeStart = null; picker._rangeEnd = null;
+      if (picker._rangeMode) {
+        // seed start with selected date
+        if (picker._selectedDate) picker._rangeStart = new Date(picker._selectedDate);
+      }
+      if (picker._headerDate) picker._headerDate.textContent = formatLongDateLabel(picker._selectedDate || new Date());
+      buildCalendar(picker._viewYear || new Date().getFullYear(), picker._viewMonth || new Date().getMonth(), picker._selectedDate);
+    });
+
+    // expose for example/demo
+    picker._rangeCheckbox = rangeCheckbox;
+
     const calNav = document.createElement('div');
     calNav.className = 'dtp-nav';
 
@@ -1552,11 +1586,45 @@ if (window.helpers) {
         const today = new Date();
         if (isSameDay(d, today)) btn.classList.add('today');
         if (selected && isSameDay(d, selected)) btn.classList.add('selected');
+        // Range highlights
+        if (picker._rangeMode) {
+          const rs = picker._rangeStart, re = picker._rangeEnd;
+          if (rs && isSameDay(d, rs)) btn.classList.add('range-start');
+          if (re && isSameDay(d, re)) btn.classList.add('range-end');
+          if (rs && re && d >= rs && d <= re) btn.classList.add('in-range');
+        }
         btn.textContent = String(d.getDate());
         btn.addEventListener('click', () => {
-          picker._selectedDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+          const clicked = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+          if (picker._rangeMode) {
+            if (!picker._rangeStart || (picker._rangeStart && picker._rangeEnd)) {
+              picker._rangeStart = clicked;
+              picker._rangeEnd = null;
+              picker._selectedDate = clicked;
+            } else {
+              // set end
+              if (clicked < picker._rangeStart) {
+                picker._rangeEnd = picker._rangeStart;
+                picker._rangeStart = clicked;
+              } else {
+                picker._rangeEnd = clicked;
+              }
+              picker._selectedDate = clicked;
+            }
+          } else {
+            picker._selectedDate = clicked;
+          }
           date.value = toDdMmYy(picker._selectedDate);
-          if (picker._headerDate) picker._headerDate.textContent = formatLongDateLabel(picker._selectedDate);
+          if (picker._headerDate) {
+            const f = picker._formatLongDateLabel;
+            if (picker._rangeMode && picker._rangeStart && picker._rangeEnd) {
+              picker._headerDate.textContent = `${f(picker._rangeStart)} — ${f(picker._rangeEnd)}`;
+            } else if (picker._rangeMode && picker._rangeStart && !picker._rangeEnd) {
+              picker._headerDate.textContent = f(picker._rangeStart);
+            } else {
+              picker._headerDate.textContent = f(picker._selectedDate);
+            }
+          }
           buildCalendar(year, month, picker._selectedDate);
         });
         daysGrid.appendChild(btn);
@@ -1745,6 +1813,7 @@ if (window.helpers) {
 
     // Header contains long date and time input
     column.appendChild(header);
+    column.appendChild(controls);
     column.appendChild(cal);
     column.appendChild(actions);
 
@@ -1754,21 +1823,50 @@ if (window.helpers) {
     // Initial theme apply and on dark-mode toggles if your app toggles classes
     applyPickerTheme();
 
-    function close(){ picker.style.display='none'; pickerTarget = null; }
+    function close(){
+      picker.style.display='none';
+      // detach listeners
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', onDocDown, true);
+      pickerTarget = null;
+    }
 
     ok.addEventListener('click', ()=>{
-      if (!pickerTarget) { close(); return; }
-      const d = (date.value || '').trim();
-      const t = (time.value || '').trim();
-      if (/^\d{2}\.\d{2}\.\d{2}$/.test(d) && /^\d{2}:\d{2}$/.test(t)){
-        const iso = parseCompactToISOUTC(`${d},${t}`);
-        if (iso){
-          pickerTarget.dataset.iso = iso;
-          pickerTarget.value = formatISOToCompactUTC(iso);
-          // Trigger change/save
-          pickerTarget.dispatchEvent(new Event('input', {bubbles:true}));
-          pickerTarget.dispatchEvent(new Event('change', {bubbles:true}));
-          pickerTarget.dispatchEvent(new Event('blur', {bubbles:true}));
+      const t = (time.value || '').trim() || '00:00';
+      if (typeof picker._onConfirm === 'function'){
+        const payload = {};
+        if (picker._rangeMode && picker._rangeStart && picker._rangeEnd){
+          const f = picker._formatLongDateLabel;
+          const s = f(picker._rangeStart), e = f(picker._rangeEnd);
+          payload.mode = 'range'; payload.start = s; payload.end = e;
+          payload.startIso = parseCompactToISOUTC(`${s},${t}`);
+          payload.endIso = parseCompactToISOUTC(`${e},${t}`);
+        } else {
+          const d = (date.value || '').trim();
+          if (/^\d{2}\.\d{2}\.\d{2}$/.test(d)){
+            payload.mode = 'single';
+            payload.value = d; payload.iso = parseCompactToISOUTC(`${d},${t}`);
+          }
+        }
+        try { picker._onConfirm(payload); } catch(_){}
+      } else if (pickerTarget) {
+        const d = (date.value || '').trim();
+        if (/^\d{2}\.\d{2}\.\d{2}$/.test(d) && /^\d{2}:\d{2}$/.test(t)){
+          const iso = parseCompactToISOUTC(`${d},${t}`);
+          if (iso){
+            if (picker._rangeMode && picker._rangeStart && picker._rangeEnd){
+              const f = picker._formatLongDateLabel; const s=f(picker._rangeStart), e=f(picker._rangeEnd);
+              pickerTarget.value = `${s} — ${e}`;
+              pickerTarget.dataset.rangeStartIso = parseCompactToISOUTC(`${s},${t}`);
+              pickerTarget.dataset.rangeEndIso = parseCompactToISOUTC(`${e},${t}`);
+            } else {
+              pickerTarget.dataset.iso = iso;
+              pickerTarget.value = formatISOToCompactUTC(iso);
+            }
+            pickerTarget.dispatchEvent(new Event('input', {bubbles:true}));
+            pickerTarget.dispatchEvent(new Event('change', {bubbles:true}));
+            pickerTarget.dispatchEvent(new Event('blur', {bubbles:true}));
+          }
         }
       }
       close();
@@ -1785,6 +1883,37 @@ if (window.helpers) {
     // Re-apply theme in case user toggled dark mode since creation
     if (typeof p._applyTheme === 'function') p._applyTheme();
     pickerTarget = input;
+
+    // Keyboard navigation and close handlers
+    function onKey(e){
+      if (!p) return;
+      const delta = (days)=>{
+        const cur = p._selectedDate || new Date();
+        const nd = new Date(cur); nd.setDate(cur.getDate()+days);
+        p._selectedDate = nd;
+        p._date.value = toDdMmYy(nd);
+        if (p._headerDate){
+          const f = p._formatLongDateLabel; p._headerDate.textContent = f(nd);
+        }
+        p._buildCalendar(nd.getFullYear(), nd.getMonth(), nd);
+      };
+      if (e.key === 'ArrowLeft'){ e.preventDefault(); delta(-1); }
+      else if (e.key === 'ArrowRight'){ e.preventDefault(); delta(1); }
+      else if (e.key === 'ArrowUp'){ e.preventDefault(); delta(-7); }
+      else if (e.key === 'ArrowDown'){ e.preventDefault(); delta(7); }
+      else if (e.key === 'Enter'){ e.preventDefault(); ok.click(); }
+      else if (e.key === 'Escape'){ e.preventDefault(); if (typeof p._close === 'function') p._close(); }
+      else if (e.key === 'PageUp'){ e.preventDefault(); p._buildCalendar((p._viewYear||new Date().getFullYear()), (p._viewMonth||0)-1, p._selectedDate); }
+      else if (e.key === 'PageDown'){ e.preventDefault(); p._buildCalendar((p._viewYear||new Date().getFullYear()), (p._viewMonth||0)+1, p._selectedDate); }
+    }
+    function onDocDown(ev){
+      const within = picker && picker.contains(ev.target);
+      const isTarget = input && input.contains && input.contains(ev.target);
+      if (!within && !isTarget){ if (typeof p._close === 'function') p._close(); }
+    }
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onDocDown, true);
+    p._onKey = onKey; p._onDocDown = onDocDown;
 
     // Pre-fill from input
     const raw = (input.value||'').trim();
@@ -1819,7 +1948,8 @@ if (window.helpers) {
     // Update header date label
     if (p._headerDate && p._selectedDate) {
       const f = p._formatLongDateLabel || ((d)=> d ? d.toLocaleDateString() : '');
-      p._headerDate.textContent = f(p._selectedDate);
+      if (p._rangeMode && p._rangeStart && p._rangeEnd) p._headerDate.textContent = `${f(p._rangeStart)} — ${f(p._rangeEnd)}`;
+      else p._headerDate.textContent = f(p._selectedDate);
     }
 
     // Build calendar for current view around selected date
@@ -1878,4 +2008,31 @@ if (window.helpers) {
   window.helpers.attachCompactDateTimeInputs = attachCompactDateTimeInputs;
   window.helpers.transformDateTimeLocalInputsToCompact = transformDateTimeLocalInputsToCompact;
   window.helpers.openCompactDateTimePicker = openCompactDateTimePicker;
+
+  // Example: open picker in range mode (no bound input)
+  window.helpers.openRangePickerExample = function(){
+    const p = ensurePicker();
+    if (typeof p._applyTheme === 'function') p._applyTheme();
+    // turn on range mode
+    p._rangeMode = true; if (p._rangeCheckbox) p._rangeCheckbox.checked = true;
+    const now = new Date();
+    p._rangeStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    p._rangeEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate()+3);
+    p._selectedDate = new Date(p._rangeStart);
+    if (p._headerDate && p._formatLongDateLabel){
+      const f=p._formatLongDateLabel; p._headerDate.textContent = `${f(p._rangeStart)} — ${f(p._rangeEnd)}`;
+    }
+    p._buildCalendar(p._selectedDate.getFullYear(), p._selectedDate.getMonth(), p._selectedDate);
+    p._onConfirm = (payload)=>{
+      console.log('Range picked:', payload);
+      if (typeof p._close === 'function') p._close();
+    };
+    // show at top-left
+    p.style.left = '20px'; p.style.top = '20px'; p.style.display='block';
+    // attach close listeners
+    function onKey(e){ if (e.key==='Escape'){ if (typeof p._close==='function') p._close(); } }
+    function onDocDown(ev){ const within = picker && picker.contains(ev.target); if (!within){ if (typeof p._close==='function') p._close(); } }
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onDocDown, true);
+  };
 })();

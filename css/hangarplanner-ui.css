@@ -585,86 +585,78 @@ select.status-selector {
 /* Enhanced datetime-local styling with modern design */
 #hangarGrid .hangar-cell input[type="datetime-local"],
 #secondaryHangarGrid .hangar-cell input[type="datetime-local"] {
-	position: relative;
-	background: linear-gradient(145deg, #ffffff 0%, #fafafa 100%);
-	border: 1px solid #e2e8f0;
-	border-radius: 6px;
-	padding: 6px 8px;
-	font-size: 0.8rem;
-	color: #2d3748;
-	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
-	cursor: pointer;
+	position: relative !important;
+	background: linear-gradient(145deg, #ffffff 0%, #fafafa 100%) !important;
+	border: 1px solid #e2e8f0 !important;
+	border-radius: 6px !important;
+	padding: 4px 6px !important;
+	font-size: 0.75rem !important;
+	color: #2d3748 !important;
+	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06) !important;
+	cursor: pointer !important;
+	height: 24px !important;
+	min-height: 24px !important;
+	max-height: 24px !important;
+	width: 100% !important;
+	box-sizing: border-box !important;
+	line-height: 1.2 !important;
 }
 
 /* Enhanced hover state */
 #hangarGrid .hangar-cell input[type="datetime-local"]:hover,
 #secondaryHangarGrid .hangar-cell input[type="datetime-local"]:hover {
-	background: linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%);
-	border-color: #cbd5e1;
-	box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-	transform: translateY(-1px);
+	background: linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%) !important;
+	border-color: #cbd5e1 !important;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+	transform: translateY(-1px) !important;
 }
 
 /* Enhanced focus state */
 #hangarGrid .hangar-cell input[type="datetime-local"]:focus,
 #secondaryHangarGrid .hangar-cell input[type="datetime-local"]:focus {
-	outline: none;
-	background: linear-gradient(145deg, #ffffff 0%, #fefefe 100%);
-	border-color: #ff7043;
-	box-shadow: 0 0 0 3px rgba(255, 112, 67, 0.1), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-	transform: translateY(-1px);
+	outline: none !important;
+	background: linear-gradient(145deg, #ffffff 0%, #fefefe 100%) !important;
+	border-color: #ff7043 !important;
+	box-shadow: 0 0 0 2px rgba(255, 112, 67, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+	transform: translateY(-1px) !important;
 }
 
-/* Date/time picker icon styling */
+/* Simplified calendar picker styling */
 #hangarGrid .hangar-cell input[type="datetime-local"]::-webkit-calendar-picker-indicator,
 #secondaryHangarGrid .hangar-cell input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-	opacity: 0.6;
-	width: 16px;
-	height: 16px;
-	background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>') center/contain no-repeat;
-	filter: none;
-	cursor: pointer;
-	transition: all 0.2s ease;
-	margin-left: 4px;
-	pointer-events: auto;
+	width: 14px !important;
+	height: 14px !important;
+	opacity: 0.7 !important;
+	margin-left: 2px !important;
+	cursor: pointer !important;
 }
 
 #hangarGrid .hangar-cell input[type="datetime-local"]:hover::-webkit-calendar-picker-indicator,
 #hangarGrid .hangar-cell input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator,
 #secondaryHangarGrid .hangar-cell input[type="datetime-local"]:hover::-webkit-calendar-picker-indicator,
 #secondaryHangarGrid .hangar-cell input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
-	opacity: 1;
-	background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23ff7043" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>') center/contain no-repeat;
-	transform: scale(1.1);
+	opacity: 1 !important;
 }
 
 /* Enhanced datetime editor styling */
 #hangarGrid .hangar-cell input[type="datetime-local"]::-webkit-datetime-edit,
 #secondaryHangarGrid .hangar-cell input[type="datetime-local"]::-webkit-datetime-edit {
-	color: #2d3748;
-	font-weight: 500;
-	display: flex;
-	align-items: center;
+	color: #2d3748 !important;
+	font-size: 0.75rem !important;
+	line-height: 1.2 !important;
 }
 
 #hangarGrid .hangar-cell input[type="datetime-local"]::-webkit-datetime-edit-fields-wrapper,
 #secondaryHangarGrid .hangar-cell input[type="datetime-local"]::-webkit-datetime-edit-fields-wrapper {
-	background: transparent;
-	border-radius: 4px;
-	padding: 2px 4px;
-	transition: background-color 0.15s ease;
-}
-
-#hangarGrid .hangar-cell input[type="datetime-local"]:hover::-webkit-datetime-edit-fields-wrapper,
-#secondaryHangarGrid .hangar-cell input[type="datetime-local"]:hover::-webkit-datetime-edit-fields-wrapper {
-	background: rgba(255, 112, 67, 0.05);
+	padding: 0 !important;
+	margin: 0 !important;
 }
 
 #hangarGrid .hangar-cell input[type="datetime-local"]::-webkit-datetime-edit-text,
 #secondaryHangarGrid .hangar-cell input[type="datetime-local"]::-webkit-datetime-edit-text {
-	color: #64748b;
-	font-weight: 400;
+	color: #64748b !important;
+	font-size: 0.75rem !important;
 }
 
 /* Hide spin buttons - we'll rely on the calendar picker */
@@ -675,34 +667,10 @@ select.status-selector {
 	display: none;
 }
 
-/* Enhanced interactive states with micro-animations */
+/* Simplified interactive states */
 #hangarGrid .hangar-cell input[type="datetime-local"]:active,
 #secondaryHangarGrid .hangar-cell input[type="datetime-local"]:active {
-	transform: translateY(0);
-	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
-	transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Subtle loading animation when focused */
-#hangarGrid .hangar-cell input[type="datetime-local"]:focus::before,
-#secondaryHangarGrid .hangar-cell input[type="datetime-local"]:focus::before {
-	content: '';
-	position: absolute;
-	top: -2px;
-	left: -2px;
-	right: -2px;
-	bottom: -2px;
-	background: linear-gradient(45deg, transparent, rgba(255, 112, 67, 0.1), transparent);
-	border-radius: 8px;
-	pointer-events: none;
-	animation: shimmer 2s ease-in-out infinite;
-	z-index: -1;
-}
-
-@keyframes shimmer {
-	0% { transform: translateX(-100%); }
-	50% { transform: translateX(100%); }
-	100% { transform: translateX(100%); }
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15) !important;
 }
 
 /* Enhanced accessibility - high contrast support */
@@ -1748,27 +1716,30 @@ body.dark-mode {
 /* Enhanced dark mode styling for datetime-local inputs */
 .dark-mode #hangarGrid .hangar-cell input[type="datetime-local"],
 .dark-mode #secondaryHangarGrid .hangar-cell input[type="datetime-local"] {
-	color-scheme: dark;
-	background: linear-gradient(145deg, var(--input-bg) 0%, #2a2e32 100%);
-	border: 1px solid var(--border-color);
-	color: var(--input-text);
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+	color-scheme: dark !important;
+	background: linear-gradient(145deg, var(--input-bg) 0%, #2a2e32 100%) !important;
+	border: 1px solid var(--border-color) !important;
+	color: var(--input-text) !important;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+	height: 24px !important;
+	min-height: 24px !important;
+	max-height: 24px !important;
 }
 
 /* Dark mode hover state */
 .dark-mode #hangarGrid .hangar-cell input[type="datetime-local"]:hover,
 .dark-mode #secondaryHangarGrid .hangar-cell input[type="datetime-local"]:hover {
-	background: linear-gradient(145deg, #353940 0%, #3a3f45 100%);
-	border-color: rgba(148, 163, 184, 0.6);
-	box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+	background: linear-gradient(145deg, #353940 0%, #3a3f45 100%) !important;
+	border-color: rgba(148, 163, 184, 0.6) !important;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3) !important;
 }
 
 /* Dark mode focus state */
 .dark-mode #hangarGrid .hangar-cell input[type="datetime-local"]:focus,
 .dark-mode #secondaryHangarGrid .hangar-cell input[type="datetime-local"]:focus {
-	background: linear-gradient(145deg, var(--input-bg) 0%, #2d3136 100%);
-	border-color: #ff7043;
-	box-shadow: 0 0 0 3px rgba(255, 112, 67, 0.2), 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+	background: linear-gradient(145deg, var(--input-bg) 0%, #2d3136 100%) !important;
+	border-color: #ff7043 !important;
+	box-shadow: 0 0 0 2px rgba(255, 112, 67, 0.3), 0 2px 4px rgba(0, 0, 0, 0.4) !important;
 }
 
 /* Dark mode datetime editor styling */

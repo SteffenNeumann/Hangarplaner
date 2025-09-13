@@ -227,3 +227,72 @@ Flight number lookups frequently fail due to API limitations and data mapping ch
    - Changes persist and replicate to a read-only client
 3) Standalone
    - Disable both toggles; edits only affect local state; no server traffic
+
+---
+
+## Authentication and Admin Approval (Email-based)
+
+This section documents the lightweight authentication system with admin approval that lives under `sync/`.
+
+### Overview
+- Users self-register via `login.html` (Create Account tab).
+- On registration, the server stores a pending user with an approval token and sends an admin email with an approval link.
+- Admin clicks the approval link to activate the user; then the user can log in.
+- An admin panel exists at `sync/admin.html` for listing and blocking/unblocking users after an admin session login.
+
+### Configuration
+Create `sync/config.php` (gitignored) with your real settings. A committed template exists at `sync/config.example.php`.
+
+Example:
+```php
+<?php
+return [
+  'adminEmail' => 'you@example.com',       // recipient for approval emails
+  'adminSecret' => 'STRONG_ADMIN_SECRET',  // used for admin_login
+  'mailFrom'    => 'info@hangarplaner.de'  // From/Reply-To header for outgoing mail
+];
+```
+Notes:
+- If `sync/config.php` is missing, the server will try to load `sync/config.example.php` as a fallback (useful for dev). Override with a real `config.php` in production.
+- `.gitignore` excludes `sync/config.php`, `sync/users.json`, `sync/mail_outbox.txt`.
+- `.htaccess` in `sync/` blocks direct access to `users.json` and `mail_outbox.txt`. PHP files (like `auth.php`) are executed server-side.
+
+### Running locally
+- Serve the app (choose one):
+  - `php -S localhost:8000` (recommended for PHP endpoints)
+  - `python3 -m http.server 8000` (static only; PHP endpoints require a PHP server)
+  - `npx serve .` (static only; PHP endpoints require a PHP server)
+- Open `login.html` in your browser.
+
+### End-to-end test flow
+1) Registration
+   - In `login.html`, open the Create Account tab and register.
+   - Server writes `sync/users.json` and attempts to send an email to `adminEmail`.
+   - If PHP `mail()` is unavailable or `adminEmail` is invalid, the message is appended to `sync/mail_outbox.txt`.
+2) Approval
+   - Check your mailbox or `sync/mail_outbox.txt` and open the `approve` link.
+   - A confirmation page appears; the user is now approved.
+3) Login
+   - Return to `login.html` and sign in with the approved account.
+4) Admin panel
+   - Visit `sync/admin.html`.
+   - Enter `adminSecret` from `sync/config.php` to log in as admin.
+   - You can list users and block/unblock them.
+
+### API endpoints (sync/auth.php)
+- `POST action=register` — body: `{ email, password, displayName? }`
+- `GET  action=approve&token=<token>` — approve user by token
+- `POST action=login` — body: `{ email, password }`
+- `POST action=logout`
+- `GET  action=session` — returns current user session info
+- Admin session:
+  - `POST action=admin_login` — body: `{ secret }`
+  - `POST action=admin_logout`
+  - `GET  action=admin_list`
+  - `POST action=admin_block` — body: `{ email }`
+  - `POST action=admin_unblock` — body: `{ email }`
+
+### Troubleshooting
+- Emails not arriving: set a valid `mailFrom` and `adminEmail` in `sync/config.php`. On dev hosts without SMTP, check `sync/mail_outbox.txt` for the message content and approval link.
+- Approval link host/URL: generated from the current request (`auth.php`). If behind a proxy, ensure `HTTP_HOST` is set correctly or access the link using the correct public hostname.
+- Cannot log in after approval: verify the user has `approved=true` and not `blocked=true` in `sync/users.json`.

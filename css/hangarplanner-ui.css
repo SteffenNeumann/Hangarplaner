@@ -582,42 +582,195 @@ select.status-selector {
 	color: var(--text-muted) !important;
 }
 
-/* Date/time picker icon visibility: hidden by default; show on input hover/focus */
+/* Enhanced datetime-local styling with modern design */
+#hangarGrid .hangar-cell input[type="datetime-local"],
+#secondaryHangarGrid .hangar-cell input[type="datetime-local"] {
+	position: relative;
+	background: linear-gradient(145deg, #ffffff 0%, #fafafa 100%);
+	border: 1px solid #e2e8f0;
+	border-radius: 6px;
+	padding: 6px 8px;
+	font-size: 0.8rem;
+	color: #2d3748;
+	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+	cursor: pointer;
+}
+
+/* Enhanced hover state */
+#hangarGrid .hangar-cell input[type="datetime-local"]:hover,
+#secondaryHangarGrid .hangar-cell input[type="datetime-local"]:hover {
+	background: linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%);
+	border-color: #cbd5e1;
+	box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+	transform: translateY(-1px);
+}
+
+/* Enhanced focus state */
+#hangarGrid .hangar-cell input[type="datetime-local"]:focus,
+#secondaryHangarGrid .hangar-cell input[type="datetime-local"]:focus {
+	outline: none;
+	background: linear-gradient(145deg, #ffffff 0%, #fefefe 100%);
+	border-color: #ff7043;
+	box-shadow: 0 0 0 3px rgba(255, 112, 67, 0.1), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+	transform: translateY(-1px);
+}
+
+/* Date/time picker icon styling */
 #hangarGrid .hangar-cell input[type="datetime-local"]::-webkit-calendar-picker-indicator,
 #secondaryHangarGrid .hangar-cell input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-	opacity: 0 !important;
-	width: 0 !important;
-	height: 0 !important;
-	pointer-events: none !important;
-	transition: opacity .15s ease, width .15s ease, height .15s ease;
+	opacity: 0.6;
+	width: 16px;
+	height: 16px;
+	background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>') center/contain no-repeat;
+	filter: none;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	margin-left: 4px;
+	pointer-events: auto;
 }
+
 #hangarGrid .hangar-cell input[type="datetime-local"]:hover::-webkit-calendar-picker-indicator,
 #hangarGrid .hangar-cell input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator,
 #secondaryHangarGrid .hangar-cell input[type="datetime-local"]:hover::-webkit-calendar-picker-indicator,
 #secondaryHangarGrid .hangar-cell input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
-	opacity: 1 !important;
-	width: 18px !important;
-	height: 18px !important;
-	pointer-events: auto !important;
+	opacity: 1;
+	background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23ff7043" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>') center/contain no-repeat;
+	transform: scale(1.1);
 }
-/* Also hide other built-in buttons until hover/focus (spin/clear) */
+
+/* Enhanced datetime editor styling */
+#hangarGrid .hangar-cell input[type="datetime-local"]::-webkit-datetime-edit,
+#secondaryHangarGrid .hangar-cell input[type="datetime-local"]::-webkit-datetime-edit {
+	color: #2d3748;
+	font-weight: 500;
+	display: flex;
+	align-items: center;
+}
+
+#hangarGrid .hangar-cell input[type="datetime-local"]::-webkit-datetime-edit-fields-wrapper,
+#secondaryHangarGrid .hangar-cell input[type="datetime-local"]::-webkit-datetime-edit-fields-wrapper {
+	background: transparent;
+	border-radius: 4px;
+	padding: 2px 4px;
+	transition: background-color 0.15s ease;
+}
+
+#hangarGrid .hangar-cell input[type="datetime-local"]:hover::-webkit-datetime-edit-fields-wrapper,
+#secondaryHangarGrid .hangar-cell input[type="datetime-local"]:hover::-webkit-datetime-edit-fields-wrapper {
+	background: rgba(255, 112, 67, 0.05);
+}
+
+#hangarGrid .hangar-cell input[type="datetime-local"]::-webkit-datetime-edit-text,
+#secondaryHangarGrid .hangar-cell input[type="datetime-local"]::-webkit-datetime-edit-text {
+	color: #64748b;
+	font-weight: 400;
+}
+
+/* Hide spin buttons - we'll rely on the calendar picker */
 #hangarGrid .hangar-cell input[type="datetime-local"]::-webkit-inner-spin-button,
 #hangarGrid .hangar-cell input[type="datetime-local"]::-webkit-clear-button,
 #secondaryHangarGrid .hangar-cell input[type="datetime-local"]::-webkit-inner-spin-button,
 #secondaryHangarGrid .hangar-cell input[type="datetime-local"]::-webkit-clear-button {
-	opacity: 0 !important;
-	pointer-events: none !important;
+	display: none;
 }
-#hangarGrid .hangar-cell input[type="datetime-local"]:hover::-webkit-inner-spin-button,
-#hangarGrid .hangar-cell input[type="datetime-local"]:hover::-webkit-clear-button,
-#hangarGrid .hangar-cell input[type="datetime-local"]:focus::-webkit-inner-spin-button,
-#hangarGrid .hangar-cell input[type="datetime-local"]:focus::-webkit-clear-button,
-#secondaryHangarGrid .hangar-cell input[type="datetime-local"]:hover::-webkit-inner-spin-button,
-#secondaryHangarGrid .hangar-cell input[type="datetime-local"]:hover::-webkit-clear-button,
-#secondaryHangarGrid .hangar-cell input[type="datetime-local"]:focus::-webkit-inner-spin-button,
-#secondaryHangarGrid .hangar-cell input[type="datetime-local"]:focus::-webkit-clear-button {
-	opacity: 1 !important;
-	pointer-events: auto !important;
+
+/* Enhanced interactive states with micro-animations */
+#hangarGrid .hangar-cell input[type="datetime-local"]:active,
+#secondaryHangarGrid .hangar-cell input[type="datetime-local"]:active {
+	transform: translateY(0);
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+	transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Subtle loading animation when focused */
+#hangarGrid .hangar-cell input[type="datetime-local"]:focus::before,
+#secondaryHangarGrid .hangar-cell input[type="datetime-local"]:focus::before {
+	content: '';
+	position: absolute;
+	top: -2px;
+	left: -2px;
+	right: -2px;
+	bottom: -2px;
+	background: linear-gradient(45deg, transparent, rgba(255, 112, 67, 0.1), transparent);
+	border-radius: 8px;
+	pointer-events: none;
+	animation: shimmer 2s ease-in-out infinite;
+	z-index: -1;
+}
+
+@keyframes shimmer {
+	0% { transform: translateX(-100%); }
+	50% { transform: translateX(100%); }
+	100% { transform: translateX(100%); }
+}
+
+/* Enhanced accessibility - high contrast support */
+@media (prefers-contrast: high) {
+	#hangarGrid .hangar-cell input[type="datetime-local"],
+	#secondaryHangarGrid .hangar-cell input[type="datetime-local"] {
+		border: 2px solid #000000;
+		background: #ffffff;
+		color: #000000;
+	}
+	
+	#hangarGrid .hangar-cell input[type="datetime-local"]:focus,
+	#secondaryHangarGrid .hangar-cell input[type="datetime-local"]:focus {
+		border-color: #ff0000;
+		box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.3);
+	}
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+	#hangarGrid .hangar-cell input[type="datetime-local"],
+	#secondaryHangarGrid .hangar-cell input[type="datetime-local"],
+	#hangarGrid .hangar-cell input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+	#secondaryHangarGrid .hangar-cell input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+		transition: none;
+		animation: none;
+		transform: none;
+	}
+	
+	#hangarGrid .hangar-cell input[type="datetime-local"]:hover,
+	#secondaryHangarGrid .hangar-cell input[type="datetime-local"]:hover,
+	#hangarGrid .hangar-cell input[type="datetime-local"]:focus,
+	#secondaryHangarGrid .hangar-cell input[type="datetime-local"]:focus {
+		transform: none;
+	}
+}
+
+/* Time picker tooltip enhancement */
+#hangarGrid .hangar-cell input[type="datetime-local"]:hover::after,
+#secondaryHangarGrid .hangar-cell input[type="datetime-local"]:hover::after {
+	content: attr(title);
+	position: absolute;
+	bottom: 100%;
+	left: 50%;
+	transform: translateX(-50%);
+	margin-bottom: 4px;
+	padding: 4px 8px;
+	background: rgba(0, 0, 0, 0.8);
+	color: white;
+	font-size: 11px;
+	border-radius: 4px;
+	white-space: nowrap;
+	pointer-events: none;
+	opacity: 0;
+	animation: fadeInTooltip 0.3s ease-in-out forwards;
+	z-index: 1000;
+}
+
+@keyframes fadeInTooltip {
+	from { opacity: 0; transform: translateX(-50%) translateY(4px); }
+	to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Enhanced keyboard navigation support */
+#hangarGrid .hangar-cell input[type="datetime-local"]:focus-visible,
+#secondaryHangarGrid .hangar-cell input[type="datetime-local"]:focus-visible {
+	outline: 2px solid #ff7043;
+	outline-offset: 2px;
 }
 
 /* Keep compact date-time input and its button in a single grid cell using absolute button */
@@ -1592,48 +1745,145 @@ body.dark-mode {
 	border-color: var(--border-color);
 }
 
-/* Dark mode: native date/time inputs + pickers */
+/* Enhanced dark mode styling for datetime-local inputs */
+.dark-mode #hangarGrid .hangar-cell input[type="datetime-local"],
+.dark-mode #secondaryHangarGrid .hangar-cell input[type="datetime-local"] {
+	color-scheme: dark;
+	background: linear-gradient(145deg, var(--input-bg) 0%, #2a2e32 100%);
+	border: 1px solid var(--border-color);
+	color: var(--input-text);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Dark mode hover state */
+.dark-mode #hangarGrid .hangar-cell input[type="datetime-local"]:hover,
+.dark-mode #secondaryHangarGrid .hangar-cell input[type="datetime-local"]:hover {
+	background: linear-gradient(145deg, #353940 0%, #3a3f45 100%);
+	border-color: rgba(148, 163, 184, 0.6);
+	box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+}
+
+/* Dark mode focus state */
+.dark-mode #hangarGrid .hangar-cell input[type="datetime-local"]:focus,
+.dark-mode #secondaryHangarGrid .hangar-cell input[type="datetime-local"]:focus {
+	background: linear-gradient(145deg, var(--input-bg) 0%, #2d3136 100%);
+	border-color: #ff7043;
+	box-shadow: 0 0 0 3px rgba(255, 112, 67, 0.2), 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+
+/* Dark mode datetime editor styling */
+.dark-mode #hangarGrid .hangar-cell input[type="datetime-local"]::-webkit-datetime-edit,
+.dark-mode #secondaryHangarGrid .hangar-cell input[type="datetime-local"]::-webkit-datetime-edit {
+	color: var(--input-text);
+	font-weight: 500;
+}
+
+.dark-mode #hangarGrid .hangar-cell input[type="datetime-local"]::-webkit-datetime-edit-fields-wrapper,
+.dark-mode #secondaryHangarGrid .hangar-cell input[type="datetime-local"]::-webkit-datetime-edit-fields-wrapper {
+	background: transparent;
+	border-radius: 4px;
+	padding: 2px 4px;
+}
+
+.dark-mode #hangarGrid .hangar-cell input[type="datetime-local"]:hover::-webkit-datetime-edit-fields-wrapper,
+.dark-mode #secondaryHangarGrid .hangar-cell input[type="datetime-local"]:hover::-webkit-datetime-edit-fields-wrapper {
+	background: rgba(255, 112, 67, 0.1);
+}
+
+.dark-mode #hangarGrid .hangar-cell input[type="datetime-local"]::-webkit-datetime-edit-text,
+.dark-mode #secondaryHangarGrid .hangar-cell input[type="datetime-local"]::-webkit-datetime-edit-text {
+	color: var(--text-tertiary);
+	font-weight: 400;
+}
+
+/* Dark mode calendar picker indicator with custom SVG */
+.dark-mode #hangarGrid .hangar-cell input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+.dark-mode #secondaryHangarGrid .hangar-cell input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+	background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23a0aec0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>') center/contain no-repeat;
+	opacity: 0.7;
+	filter: none;
+}
+
+.dark-mode #hangarGrid .hangar-cell input[type="datetime-local"]:hover::-webkit-calendar-picker-indicator,
+.dark-mode #hangarGrid .hangar-cell input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator,
+.dark-mode #secondaryHangarGrid .hangar-cell input[type="datetime-local"]:hover::-webkit-calendar-picker-indicator,
+.dark-mode #secondaryHangarGrid .hangar-cell input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
+	background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23ff7043" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>') center/contain no-repeat;
+	opacity: 1;
+	transform: scale(1.1);
+}
+
+/* Legacy dark mode support for other date/time inputs */
 .dark-mode input[type="date"],
-.dark-mode input[type="time"],
-.dark-mode input[type="datetime-local"] {
-	/* Ensure UA widgets (calendar/time popover) adopt dark UI */
+.dark-mode input[type="time"] {
 	color-scheme: dark;
 	background-color: var(--input-bg);
 	color: var(--input-text);
 	border: 1px solid var(--border-color);
 }
-/* WebKit/Blink datetime editor internals */
+
 .dark-mode input[type="date"]::-webkit-datetime-edit,
-.dark-mode input[type="time"]::-webkit-datetime-edit,
-.dark-mode input[type="datetime-local"]::-webkit-datetime-edit {
+.dark-mode input[type="time"]::-webkit-datetime-edit {
 	color: var(--input-text);
 }
+
 .dark-mode input[type="date"]::-webkit-datetime-edit-fields-wrapper,
-.dark-mode input[type="time"]::-webkit-datetime-edit-fields-wrapper,
-.dark-mode input[type="datetime-local"]::-webkit-datetime-edit-fields-wrapper {
+.dark-mode input[type="time"]::-webkit-datetime-edit-fields-wrapper {
 	background-color: transparent;
 }
+
 .dark-mode input[type="date"]::-webkit-datetime-edit-text,
-.dark-mode input[type="time"]::-webkit-datetime-edit-text,
-.dark-mode input[type="datetime-local"]::-webkit-datetime-edit-text {
+.dark-mode input[type="time"]::-webkit-datetime-edit-text {
 	color: var(--text-secondary);
 }
- .dark-mode input[type="date"]::-webkit-calendar-picker-indicator,
-.dark-mode input[type="time"]::-webkit-calendar-picker-indicator,
-.dark-mode input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-	/* Force dark icon appearance across WebKit/Blink */
+
+.dark-mode input[type="date"]::-webkit-calendar-picker-indicator,
+.dark-mode input[type="time"]::-webkit-calendar-picker-indicator {
 	filter: invert(100%) sepia(2%) saturate(0%) hue-rotate(180deg) brightness(95%) contrast(90%);
 	opacity: 0.95;
 	background: transparent;
 }
-/* Also tint spinner/clear buttons to suit dark */
+
 .dark-mode input[type="date"]::-webkit-inner-spin-button,
 .dark-mode input[type="time"]::-webkit-inner-spin-button,
-.dark-mode input[type="datetime-local"]::-webkit-inner-spin-button,
 .dark-mode input[type="date"]::-webkit-clear-button,
-.dark-mode input[type="time"]::-webkit-clear-button,
-.dark-mode input[type="datetime-local"]::-webkit-clear-button {
+.dark-mode input[type="time"]::-webkit-clear-button {
 	filter: invert(100%);
+}
+
+/* Dark mode interactive enhancements */
+.dark-mode #hangarGrid .hangar-cell input[type="datetime-local"]:active,
+.dark-mode #secondaryHangarGrid .hangar-cell input[type="datetime-local"]:active {
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode #hangarGrid .hangar-cell input[type="datetime-local"]:focus::before,
+.dark-mode #secondaryHangarGrid .hangar-cell input[type="datetime-local"]:focus::before {
+	background: linear-gradient(45deg, transparent, rgba(255, 112, 67, 0.2), transparent);
+}
+
+/* Dark mode tooltip */
+.dark-mode #hangarGrid .hangar-cell input[type="datetime-local"]:hover::after,
+.dark-mode #secondaryHangarGrid .hangar-cell input[type="datetime-local"]:hover::after {
+	background: rgba(20, 20, 25, 0.95);
+	color: var(--text-primary);
+	border: 1px solid var(--border-color);
+}
+
+/* Dark mode high contrast support */
+@media (prefers-contrast: high) {
+	.dark-mode #hangarGrid .hangar-cell input[type="datetime-local"],
+	.dark-mode #secondaryHangarGrid .hangar-cell input[type="datetime-local"] {
+		border: 2px solid #ffffff;
+		background: #000000;
+		color: #ffffff;
+	}
+	
+	.dark-mode #hangarGrid .hangar-cell input[type="datetime-local"]:focus,
+	.dark-mode #secondaryHangarGrid .hangar-cell input[type="datetime-local"]:focus {
+		border-color: #ffff00;
+		box-shadow: 0 0 0 3px rgba(255, 255, 0, 0.5);
+	}
 }
 /* Inline compact date/time button inside inputs */
 .dark-mode .compact-dt-wrap .compact-dt-btn {

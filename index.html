@@ -199,7 +199,8 @@ window.location.replace('login.html');
 // Render docs/DATE-TIME-PICKER.md into the FAQ panel and build a TOC
 (function(){
   function escapeHtml(s){
-    return String(s).replace(/[&<>\"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;','\\'':'&#39;'}[c]); });
+    // Escape only the essentials to avoid breaking JS syntax in this inline script
+    return String(s).replace(/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]); });
   }
   function listify(text, regex, tag){
     const lines = text.split('\n');

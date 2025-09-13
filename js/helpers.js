@@ -1481,40 +1481,14 @@ if (window.helpers) {
     picker.style.display = 'none';
     picker.style.width = '240px'; // compact width to avoid wrapping tile layout
 
-    // Date input with navigation buttons
+    // Header quick-jump controls (± 1 day) removed per request; keep internal date state only
     const dateContainer = document.createElement('div');
-    dateContainer.style.display = 'flex';
-    dateContainer.style.alignItems = 'center';
-    dateContainer.style.marginBottom = '6px';
-    dateContainer.style.gap = '4px';
-    
-    const prevDayBtn = document.createElement('button');
-    prevDayBtn.type = 'button';
-    prevDayBtn.innerHTML = '−';
-    prevDayBtn.className = 'date-nav-btn';
-    prevDayBtn.title = 'Previous day';
-    
+    dateContainer.style.display = 'none';
     const date = document.createElement('input');
     date.type = 'text';
-    date.placeholder = 'dd.mm.yy or . +1 -1';
-    date.inputMode = 'numeric';
-    // Keep flexible but cap width for tidy layout
-    date.style.flex = '0 0 auto';
-    date.style.width = '130px';
-    // Comfortable sizing
-    date.style.height = '28px';
-    date.style.fontSize = '14px';
-    date.style.lineHeight = '24px';
-    
-    const nextDayBtn = document.createElement('button');
-    nextDayBtn.type = 'button';
-    nextDayBtn.innerHTML = '+';
-    nextDayBtn.className = 'date-nav-btn';
-    nextDayBtn.title = 'Next day';
-    
-    dateContainer.appendChild(prevDayBtn);
+    date.style.display = 'none';
+    // keep for internal compact value handling
     dateContainer.appendChild(date);
-    dateContainer.appendChild(nextDayBtn);
     
     // Calendar view (month grid)
     const cal = document.createElement('div');
@@ -1582,6 +1556,7 @@ if (window.helpers) {
         btn.addEventListener('click', () => {
           picker._selectedDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
           date.value = toDdMmYy(picker._selectedDate);
+          if (picker._headerDate) picker._headerDate.textContent = formatLongDateLabel(picker._selectedDate);
           buildCalendar(year, month, picker._selectedDate);
         });
         daysGrid.appendChild(btn);
@@ -1658,19 +1633,31 @@ if (window.helpers) {
       date.value = `${dd}.${mm}.${yy}`;
     };
     
-    prevDayBtn.addEventListener('click', () => adjustDate(-1));
-    nextDayBtn.addEventListener('click', () => adjustDate(1));
+    // prev/next day buttons removed; keep month navigation only
 
     const time = document.createElement('input');
     time.type = 'time';
     time.step = '60';
-    time.style.marginBottom = '8px';
-    // Narrower time field
+    // Narrower time field for header
     time.style.width = '90px';
     // Comfortable sizing
     time.style.height = '28px';
     time.style.fontSize = '14px';
     time.style.lineHeight = '24px';
+    time.className = 'dtp-time-input';
+
+    // Header with long date on left and time on right
+    const header = document.createElement('div');
+    header.className = 'dtp-header';
+    const headerDate = document.createElement('div');
+    headerDate.className = 'dtp-header-date';
+    header.appendChild(headerDate);
+    header.appendChild(time);
+
+    function formatLongDateLabel(d){
+      if (!(d instanceof Date)) return '';
+      return d.toLocaleDateString(undefined, { day: '2-digit', month: 'long', year: 'numeric' });
+    }
 
     const ok = document.createElement('button'); ok.type='button'; ok.textContent='OK';
     ok.style.marginRight = '6px'; ok.style.padding='6px 10px'; ok.style.height='30px'; ok.style.border='1px solid #0ea5e9'; ok.style.background='#e0f2fe'; ok.style.borderRadius='4px';
@@ -1745,11 +1732,15 @@ if (window.helpers) {
     const actions = document.createElement('div');
     actions.style.display='flex';
     actions.style.justifyContent='flex-end';
+    actions.style.gap = '8px';
+    // Improve button alignment
+    ok.style.display='inline-flex'; ok.style.alignItems='center'; ok.style.justifyContent='center'; ok.style.lineHeight='1'; ok.style.minWidth='56px';
+    cancel.style.display='inline-flex'; cancel.style.alignItems='center'; cancel.style.justifyContent='center'; cancel.style.lineHeight='1'; cancel.style.minWidth='72px';
     actions.appendChild(ok); actions.appendChild(cancel);
 
-    column.appendChild(dateContainer);
+    // Header contains long date and time input
+    column.appendChild(header);
     column.appendChild(cal);
-    column.appendChild(time);
     column.appendChild(actions);
 
     picker.appendChild(column);
@@ -1780,7 +1771,7 @@ if (window.helpers) {
     cancel.addEventListener('click', close);
 
     picker._date = date; picker._time = time; picker._close = close; picker._applyTheme = applyPickerTheme;
-    picker._prevDayBtn = prevDayBtn; picker._nextDayBtn = nextDayBtn;
+    picker._header = header; picker._headerDate = headerDate;
     return picker;
   }
 
@@ -1818,6 +1809,11 @@ if (window.helpers) {
       p._date.value = `${dd}.${mm}.${yy}`;
       p._time.value = '00:00';
       p._selectedDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    }
+
+    // Update header date label
+    if (p._headerDate && p._selectedDate) {
+      p._headerDate.textContent = formatLongDateLabel(p._selectedDate);
     }
 
     // Build calendar for current view around selected date

@@ -1250,6 +1250,16 @@ if (window.helpers) {
     return out;
   }
 
+  // Helper: get default time based on field type
+  function getDefaultTimeForField(fieldId) {
+    if (fieldId && fieldId.includes('arrival')) {
+      return '09:00'; // Default arrival time
+    } else if (fieldId && fieldId.includes('departure')) {
+      return '17:00'; // Default departure time  
+    }
+    return '12:00'; // Generic default
+  }
+
   // Attach input mask and interactions to a compact datetime input
   function attachCompactMask(input){
     if (!input || input.__compactMaskAttached) return;
@@ -1264,38 +1274,81 @@ if (window.helpers) {
       input.style.paddingRight = '28px';
     } catch(e){}
 
-    const onInput = (e)=>{
-      const raw = e.target.value || '';
-      // If user types ISO, show compact immediately
-      if (isISODateTimeLocal(raw)){
-        e.target.value = formatISOToCompactUTC(raw);
-        return;
-      }
-      // Allow typing time-only (HH:mm) without masking
-      if (isHHmm(raw)) {
-        // keep as typed; canonicalization runs on blur
-        return;
-      }
-      e.target.value = digitsToCompact(raw);
-    };
+  const onInput = (e)=>{
+    const raw = e.target.value || '';
+    // Handle special shortcuts first
+    if (raw === '.') {
+      // Don't mask the dot, let it be processed on blur
+      return;
+    }
+    // Handle +/- day shortcuts like +1, -2, etc.
+    if (/^[+-]\d+$/.test(raw)) {
+      // Don't mask shortcuts, let them be processed on blur
+      return;
+    }
+    // If user types ISO, show compact immediately
+    if (isISODateTimeLocal(raw)){
+      e.target.value = formatISOToCompactUTC(raw);
+      return;
+    }
+    // Allow typing time-only (HH:mm) without masking
+    if (isHHmm(raw)) {
+      // keep as typed; canonicalization runs on blur
+      return;
+    }
+    e.target.value = digitsToCompact(raw);
+  };
 
-    const onBlur = (e)=>{
-      const raw = (e.target.value||'').trim();
-      let iso = '';
-      if (isISODateTimeLocal(raw)) iso = raw;
-      else if (isCompactDateTime(raw)) iso = parseCompactToISOUTC(raw);
-      else if (isHHmm(raw)) iso = canonicalizeDateTimeFieldValue(e.target.id, raw);
-      else iso = '';
+  const onBlur = (e)=>{
+    const raw = (e.target.value||'').trim();
+    let iso = '';
+    
+    // Handle special shortcuts
+    if (raw === '.') {
+      // Dot means "today" - set to today with default time
+      const now = new Date();
+      const yy = String(now.getUTCFullYear()).slice(-2);
+      const mm = pad2(now.getUTCMonth()+1);
+      const dd = pad2(now.getUTCDate());
+      const timeDefault = getDefaultTimeForField(e.target.id);
+      const todayCompact = `${dd}.${mm}.${yy},${timeDefault}`;
+      iso = parseCompactToISOUTC(todayCompact);
+    } else if (/^[+-]\d+$/.test(raw)) {
+      // Handle +/- day shortcuts like +1, -2, etc.
+      const dayOffset = parseInt(raw, 10);
+      const baseDate = new Date();
+      baseDate.setUTCDate(baseDate.getUTCDate() + dayOffset);
+      const yy = String(baseDate.getUTCFullYear()).slice(-2);
+      const mm = pad2(baseDate.getUTCMonth()+1);
+      const dd = pad2(baseDate.getUTCDate());
+      const timeDefault = getDefaultTimeForField(e.target.id);
+      const offsetCompact = `${dd}.${mm}.${yy},${timeDefault}`;
+      iso = parseCompactToISOUTC(offsetCompact);
+    } else if (isISODateTimeLocal(raw)) {
+      iso = raw;
+    } else if (isCompactDateTime(raw)) {
+      iso = parseCompactToISOUTC(raw);
+    } else if (isHHmm(raw)) {
+      // Time-only input: add today's date automatically
+      const now = new Date();
+      const yy = String(now.getUTCFullYear()).slice(-2);
+      const mm = pad2(now.getUTCMonth()+1);
+      const dd = pad2(now.getUTCDate());
+      const todayWithTime = `${dd}.${mm}.${yy},${raw}`;
+      iso = parseCompactToISOUTC(todayWithTime);
+    } else {
+      iso = canonicalizeDateTimeFieldValue(e.target.id, raw);
+    }
 
-      if (iso){
-        e.target.value = formatISOToCompactUTC(iso); // keep display compact
-        e.target.dataset.iso = iso; // store ISO reference on the element
-      } else {
-        // invalid → clear
-        e.target.value = '';
-        delete e.target.dataset.iso;
-      }
-    };
+    if (iso){
+      e.target.value = formatISOToCompactUTC(iso); // keep display compact
+      e.target.dataset.iso = iso; // store ISO reference on the element
+    } else {
+      // invalid → clear
+      e.target.value = '';
+      delete e.target.dataset.iso;
+    }
+  };
 
     input.addEventListener('input', onInput);
     input.addEventListener('blur', onBlur);
@@ -1386,13 +1439,90 @@ if (window.helpers) {
     picker.style.display = 'none';
     picker.style.width = '240px'; // compact width to avoid wrapping tile layout
 
+    // Date input with navigation buttons
+    const dateContainer = document.createElement('div');
+    dateContainer.style.display = 'flex';
+    dateContainer.style.alignItems = 'center';
+    dateContainer.style.marginBottom = '6px';
+    dateContainer.style.gap = '4px';
+    
+    const prevDayBtn = document.createElement('button');
+    prevDayBtn.type = 'button';
+    prevDayBtn.innerHTML = '−';
+    prevDayBtn.className = 'date-nav-btn';
+    prevDayBtn.title = 'Previous day';
+    
     const date = document.createElement('input');
     date.type = 'text';
-    date.placeholder = 'dd.mm.yy';
+    date.placeholder = 'dd.mm.yy or . +1 -1';
     date.inputMode = 'numeric';
-    date.style.marginBottom = '6px';
+    date.style.flex = '1';
     date.style.width = '100%';
-    date.addEventListener('input', ()=> { date.value = digitsToDdMmYy(date.value); });
+    
+    const nextDayBtn = document.createElement('button');
+    nextDayBtn.type = 'button';
+    nextDayBtn.innerHTML = '+';
+    nextDayBtn.className = 'date-nav-btn';
+    nextDayBtn.title = 'Next day';
+    
+    dateContainer.appendChild(prevDayBtn);
+    dateContainer.appendChild(date);
+    dateContainer.appendChild(nextDayBtn);
+    
+    // Add input handling for shortcuts
+    date.addEventListener('input', (e) => {
+      const raw = e.target.value || '';
+      // Handle special shortcuts
+      if (raw === '.' || /^[+-]\d+$/.test(raw)) {
+        // Don't mask shortcuts, let them be processed
+        return;
+      }
+      e.target.value = digitsToDdMmYy(raw);
+    });
+    
+    // Handle shortcut expansion on blur
+    date.addEventListener('blur', (e) => {
+      const raw = (e.target.value || '').trim();
+      if (raw === '.') {
+        // Set to today
+        const now = new Date();
+        const yy = String(now.getUTCFullYear()).slice(-2);
+        const mm = pad2(now.getUTCMonth()+1);
+        const dd = pad2(now.getUTCDate());
+        e.target.value = `${dd}.${mm}.${yy}`;
+      } else if (/^[+-]\d+$/.test(raw)) {
+        // Handle +/- day shortcuts
+        const dayOffset = parseInt(raw, 10);
+        const baseDate = new Date();
+        baseDate.setUTCDate(baseDate.getUTCDate() + dayOffset);
+        const yy = String(baseDate.getUTCFullYear()).slice(-2);
+        const mm = pad2(baseDate.getUTCMonth()+1);
+        const dd = pad2(baseDate.getUTCDate());
+        e.target.value = `${dd}.${mm}.${yy}`;
+      }
+    });
+    
+    // Navigation button handlers
+    const adjustDate = (offset) => {
+      let currentDate;
+      if (date.value && /^\d{2}\.\d{2}\.\d{2}$/.test(date.value)) {
+        // Parse current date
+        const [dd, mm, yy] = date.value.split('.');
+        currentDate = new Date(2000 + parseInt(yy, 10), parseInt(mm, 10) - 1, parseInt(dd, 10));
+      } else {
+        // Use today if no valid date
+        currentDate = new Date();
+      }
+      
+      currentDate.setDate(currentDate.getDate() + offset);
+      const yy = String(currentDate.getFullYear()).slice(-2);
+      const mm = pad2(currentDate.getMonth() + 1);
+      const dd = pad2(currentDate.getDate());
+      date.value = `${dd}.${mm}.${yy}`;
+    };
+    
+    prevDayBtn.addEventListener('click', () => adjustDate(-1));
+    nextDayBtn.addEventListener('click', () => adjustDate(1));
 
     const time = document.createElement('input');
     time.type = 'time';
@@ -1475,7 +1605,7 @@ if (window.helpers) {
     actions.style.justifyContent='flex-end';
     actions.appendChild(ok); actions.appendChild(cancel);
 
-    column.appendChild(date); column.appendChild(time); column.appendChild(actions);
+    column.appendChild(dateContainer); column.appendChild(time); column.appendChild(actions);
 
     picker.appendChild(column);
     document.body.appendChild(picker);
@@ -1505,6 +1635,7 @@ if (window.helpers) {
     cancel.addEventListener('click', close);
 
     picker._date = date; picker._time = time; picker._close = close; picker._applyTheme = applyPickerTheme;
+    picker._prevDayBtn = prevDayBtn; picker._nextDayBtn = nextDayBtn;
     return picker;
   }
 

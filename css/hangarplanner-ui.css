@@ -1645,6 +1645,50 @@ body.dark-mode {
 .dark-mode .compact-dt-wrap .compact-dt-btn svg { color: var(--text-secondary); }
 .dark-mode .compact-dt-wrap .compact-dt-btn:hover { background: rgba(255,255,255,0.06); }
 
+/* Date picker navigation buttons */
+.date-nav-btn {
+	width: 24px;
+	height: 24px;
+	border: 1px solid #cbd5e1;
+	border-radius: 4px;
+	background: #f8fafc;
+	color: #475569;
+	cursor: pointer;
+	font-size: 14px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.15s ease;
+	user-select: none;
+}
+
+.date-nav-btn:hover {
+	background: #e2e8f0;
+	border-color: #94a3b8;
+	transform: translateY(-1px);
+}
+
+.date-nav-btn:active {
+	background: #cbd5e1;
+	transform: translateY(0);
+}
+
+/* Dark mode for navigation buttons */
+.dark-mode .date-nav-btn {
+	background: var(--bg-secondary);
+	border-color: var(--border-color);
+	color: var(--text-secondary);
+}
+
+.dark-mode .date-nav-btn:hover {
+	background: rgba(255,255,255,0.06);
+	border-color: rgba(148,163,184,0.6);
+}
+
+.dark-mode .date-nav-btn:active {
+	background: rgba(255,255,255,0.12);
+}
+
 .dark-mode .sidebar-form-control,
 .dark-mode .sidebar-form-select {
 	background-color: var(--input-bg);

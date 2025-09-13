@@ -1913,6 +1913,8 @@ if (window.helpers) {
 
     // Set width based on mode
     p.style.width = p._rangeMode ? '480px' : '320px';
+    if (p._header) p._header.classList.toggle('range-mode', p._rangeMode);
+    if (p._timeEnd) p._timeEnd.style.display = p._rangeMode ? 'inline-block' : 'none';
 
     // Keyboard navigation and close handlers
     function onKey(e){
@@ -1957,7 +1959,9 @@ if (window.helpers) {
       const compact = formatISOToCompactUTC(iso);
       const parts = compact.split(',');
       p._date.value = parts[0] || '';
-      p._time.value = parts[1] || '';
+      const tp = parts[1] || '00:00';
+      if (p._timeStart) p._timeStart.value = tp;
+      if (p._rangeMode && p._timeEnd) p._timeEnd.value = tp;
       // derive selected date from compact (dd.mm.yy)
       if (parts[0]){
         const [dd,mm,yy] = parts[0].split('.');
@@ -1971,7 +1975,8 @@ if (window.helpers) {
       const mm = pad2(now.getUTCMonth()+1);
       const dd = pad2(now.getUTCDate());
       p._date.value = `${dd}.${mm}.${yy}`;
-      p._time.value = '00:00';
+      if (p._timeStart) p._timeStart.value = '00:00';
+      if (p._rangeMode && p._timeEnd) p._timeEnd.value = '00:00';
       p._selectedDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     }
 

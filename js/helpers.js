@@ -1658,6 +1658,8 @@ if (window.helpers) {
       if (!(d instanceof Date)) return '';
       return d.toLocaleDateString(undefined, { day: '2-digit', month: 'long', year: 'numeric' });
     }
+    // expose to picker so openCompactDateTimePicker can use it safely
+    picker._formatLongDateLabel = formatLongDateLabel;
 
     const ok = document.createElement('button'); ok.type='button'; ok.textContent='OK';
     ok.style.marginRight = '6px'; ok.style.padding='6px 10px'; ok.style.height='30px'; ok.style.border='1px solid #0ea5e9'; ok.style.background='#e0f2fe'; ok.style.borderRadius='4px';
@@ -1813,7 +1815,8 @@ if (window.helpers) {
 
     // Update header date label
     if (p._headerDate && p._selectedDate) {
-      p._headerDate.textContent = formatLongDateLabel(p._selectedDate);
+      const f = p._formatLongDateLabel || ((d)=> d ? d.toLocaleDateString() : '');
+      p._headerDate.textContent = f(p._selectedDate);
     }
 
     // Build calendar for current view around selected date

@@ -196,10 +196,10 @@ window.location.replace('login.html');
 </script>
 
 <script>
-// Render docs/DATE-TIME-PICKER.md into the FAQ panel without a build step
+// Render docs/DATE-TIME-PICKER.md into the FAQ panel and build a TOC
 (function(){
   function escapeHtml(s){
-    return String(s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]); });
+    return String(s).replace(/[&<>\"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;','\\'':'&#39;'}[c]); });
   }
   function listify(text, regex, tag){
     const lines = text.split('\n');
@@ -221,7 +221,7 @@ window.location.replace('login.html');
     md = md.replace(/\r\n?/g, '\n');
     // Fenced code blocks
     md = md.replace(/```([a-zA-Z0-9]*)[^\n]*\n([\s\S]*?)\n```/g, function(_, lang, code){
-      return `<pre class="md-code"><code class="language-${lang||'text'}">${escapeHtml(code)}</code></pre>`;
+      return `<pre class=\"md-code\"><code class=\"language-${lang||'text'}\">${escapeHtml(code)}</code></pre>`;
     });
     // Headings
     md = md.replace(/^######\s+(.*)$/gm, '<h6>$1<\/h6>')
@@ -234,7 +234,7 @@ window.location.replace('login.html');
     md = md.replace(/\*\*(.+?)\*\*/g, '<strong>$1<\/strong>')
            .replace(/\*(.+?)\*/g, '<em>$1<\/em>')
            .replace(/`([^`]+)`/g, function(__,code){ return `<code>${escapeHtml(code)}<\/code>`; })
-           .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1<\/a>');
+           .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href=\"$2\" target=\"_blank\" rel=\"noopener noreferrer\">$1<\/a>');
     // Lists
     md = listify(md, /^\s*[-*]\s+(.*)$/, 'ul');
     md = listify(md, /^\s*\d+\.\s+(.*)$/, 'ol');
@@ -248,16 +248,43 @@ window.location.replace('login.html');
     });
     return blocks.join('\n');
   }
+  function slugify(text){
+    return String(text).toLowerCase().trim().replace(/[^\w\s-]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-');
+  }
+  function buildTOC(){
+    const tocEl = document.getElementById('faqToc');
+    const container = document.getElementById('faqDocs');
+    if (!tocEl || !container) return;
+    const headings = Array.from(container.querySelectorAll('h1, h2, h3'));
+    if (!headings.length){ tocEl.innerHTML = ''; return; }
+    const used = new Set();
+    function uniq(id){ let out = id, i=2; while(used.has(out)){ out = id+'-'+i++; } used.add(out); return out; }
+    headings.forEach(h => { if(!h.id){ h.id = uniq(slugify(h.textContent||'section')); } });
+    let html = '<div class="toc-title">Contents</div><ul class="toc-root">';
+    let last = 1;
+    headings.forEach(h => {
+      const lvl = parseInt(h.tagName.substring(1), 10);
+      const text = (h.textContent||'').trim();
+      if (lvl > last) { for(let i=0;i<lvl-last;i++) html += '<ul>'; }
+      if (lvl < last) { for(let i=0;i<last-lvl;i++) html += '</ul>'; }
+      html += `<li class="toc-l${lvl}"><a href="#${h.id}">${escapeHtml(text)}</a></li>`;
+      last = lvl;
+    });
+    for(let i=0;i<last-1;i++) html += '</ul>';
+    html += '</ul>';
+    tocEl.innerHTML = html;
+  }
   async function render(){
     const container = document.getElementById('faqDocs');
     if (!container) return;
     try {
       const res = await fetch('docs/DATE-TIME-PICKER.md', { cache: 'no-store' });
-      if (!res.ok) { container.innerHTML = '<p style="color:#b91c1c">Failed to load documentation.<\/p>'; return; }
+      if (!res.ok) { container.innerHTML = '<p style=\"color:#b91c1c\">Failed to load documentation.<\/p>'; return; }
       const md = await res.text();
       container.innerHTML = mdToHtml(md);
+      buildTOC();
     } catch(e){
-      container.innerHTML = '<p style="color:#b91c1c">Failed to load documentation.<\/p>';
+      container.innerHTML = '<p style=\"color:#b91c1c\">Failed to load documentation.<\/p>';
     }
   }
   document.addEventListener('DOMContentLoaded', render);
@@ -2804,6 +2831,7 @@ type="datetime-local"
                           </details>
                         </div>
                         <hr style="margin:12px 0; border:none; border-top:1px solid #e5e7eb;" />
+                        <nav id="faqToc" class="markdown-toc" aria-label="Contents"></nav>
                         <div id="faqDocs" class="markdown-body" aria-label="FAQ Documentation"></div>
                       </div>
                     </div>

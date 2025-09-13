@@ -838,10 +838,22 @@ select.status-selector {
 .markdown-body ul, .markdown-body ol { padding-left: 1.2em; margin: 0.4em 0; }
 .markdown-body code { background: #f1f5f9; padding: 0 3px; border-radius: 3px; }
 .markdown-body pre.md-code { background: #0b1020; color: #e2e8f0; padding: 8px; border-radius: 6px; overflow: auto; }
+
+/* TOC styles */
+.markdown-toc { border: 1px solid #e5e7eb; background: #ffffff; border-radius: 6px; padding: 8px 10px; margin-bottom: 12px; }
+.markdown-toc .toc-title { font-weight: 700; color: #0f172a; margin-bottom: 6px; }
+.markdown-toc ul { list-style: none; padding-left: 12px; margin: 0; }
+.markdown-toc li { margin: 2px 0; }
+.markdown-toc a { color: #1f2937; text-decoration: none; }
+.markdown-toc a:hover { text-decoration: underline; }
+
 .dark-mode .markdown-body { color: var(--text-primary); }
 .dark-mode .markdown-body h1, .dark-mode .markdown-body h2, .dark-mode .markdown-body h3, .dark-mode .markdown-body h4, .dark-mode .markdown-body h5, .dark-mode .markdown-body h6 { color: var(--text-primary); }
 .dark-mode .markdown-body code { background: rgba(255,255,255,0.08); }
 .dark-mode .markdown-body pre.md-code { background: rgba(0,0,0,0.6); color: var(--text-primary); }
+.dark-mode .markdown-toc { border-color: var(--border-color); background: var(--bg-secondary); }
+.dark-mode .markdown-toc .toc-title { color: var(--text-secondary); }
+.dark-mode .markdown-toc a { color: var(--text-primary); }
 
 .notes-container {
 	display: flex;

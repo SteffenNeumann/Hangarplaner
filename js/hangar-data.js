@@ -799,8 +799,6 @@ function applySingleTileData(tileData, isSecondary = false) {
 				console.warn(`❌ Position (Info) Input für Tile ${tileId} nicht gefunden oder in falschem Container`);
 			}
 		}
-			);
-		}
 
 		// Arrival Time setzen (leer bedeutet keine Zeit) - mit Container-Validation
 		if (tileData.arrivalTime) {
@@ -808,16 +806,24 @@ function applySingleTileData(tileData, isSecondary = false) {
 			if (arrivalElement && containerElement.contains(arrivalElement)) {
 				const h = window.helpers || {};
 				let display = '';
-				if (h.isISODateTimeLocal && h.isISODateTimeLocal(tileData.arrivalTime)) {
-					display = h.formatISOToCompactUTC(tileData.arrivalTime);
-				} else if (h.isHHmm && h.isHHmm(tileData.arrivalTime) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
-					const bases = h.getBaseDates();
-					const iso = h.coerceHHmmToDateTimeLocalUtc(tileData.arrivalTime, bases.arrivalBase || '');
-					display = iso ? h.formatISOToCompactUTC(iso) : '';
-				} else if (h.isCompactDateTime && h.isCompactDateTime(tileData.arrivalTime)) {
-					display = tileData.arrivalTime;
+			if (h.isISODateTimeLocal && h.isISODateTimeLocal(tileData.arrivalTime)) {
+				display = h.formatISOToCompactUTC(tileData.arrivalTime);
+				// Store original ISO in dataset for consistency
+				if (arrivalElement.dataset) arrivalElement.dataset.iso = tileData.arrivalTime;
+			} else if (h.isHHmm && h.isHHmm(tileData.arrivalTime) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
+				const bases = h.getBaseDates();
+				const iso = h.coerceHHmmToDateTimeLocalUtc(tileData.arrivalTime, bases.arrivalBase || '');
+				display = iso ? h.formatISOToCompactUTC(iso) : '';
+				if (iso && arrivalElement.dataset) arrivalElement.dataset.iso = iso;
+			} else if (h.isCompactDateTime && h.isCompactDateTime(tileData.arrivalTime)) {
+				display = tileData.arrivalTime;
+				// Store corresponding ISO in dataset
+				if (h.parseCompactToISOUTC && arrivalElement.dataset) {
+					const iso = h.parseCompactToISOUTC(tileData.arrivalTime);
+					if (iso) arrivalElement.dataset.iso = iso;
 				}
-				arrivalElement.value = display || '';
+			}
+			arrivalElement.value = display || '';
 				console.log(
 					`✅ Arrival Time für Tile ${tileData.tileId} (${isSecondary ? "sekundär" : "primär"}) gesetzt: ${display || ''}`
 				);
@@ -836,16 +842,24 @@ function applySingleTileData(tileData, isSecondary = false) {
 			if (departureElement && containerElement.contains(departureElement)) {
 				const h = window.helpers || {};
 				let display = '';
-				if (h.isISODateTimeLocal && h.isISODateTimeLocal(tileData.departureTime)) {
-					display = h.formatISOToCompactUTC(tileData.departureTime);
-				} else if (h.isHHmm && h.isHHmm(tileData.departureTime) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
-					const bases = h.getBaseDates();
-					const iso = h.coerceHHmmToDateTimeLocalUtc(tileData.departureTime, bases.departureBase || '');
-					display = iso ? h.formatISOToCompactUTC(iso) : '';
-				} else if (h.isCompactDateTime && h.isCompactDateTime(tileData.departureTime)) {
-					display = tileData.departureTime;
+			if (h.isISODateTimeLocal && h.isISODateTimeLocal(tileData.departureTime)) {
+				display = h.formatISOToCompactUTC(tileData.departureTime);
+				// Store original ISO in dataset for consistency
+				if (departureElement.dataset) departureElement.dataset.iso = tileData.departureTime;
+			} else if (h.isHHmm && h.isHHmm(tileData.departureTime) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
+				const bases = h.getBaseDates();
+				const iso = h.coerceHHmmToDateTimeLocalUtc(tileData.departureTime, bases.departureBase || '');
+				display = iso ? h.formatISOToCompactUTC(iso) : '';
+				if (iso && departureElement.dataset) departureElement.dataset.iso = iso;
+			} else if (h.isCompactDateTime && h.isCompactDateTime(tileData.departureTime)) {
+				display = tileData.departureTime;
+				// Store corresponding ISO in dataset
+				if (h.parseCompactToISOUTC && departureElement.dataset) {
+					const iso = h.parseCompactToISOUTC(tileData.departureTime);
+					if (iso) departureElement.dataset.iso = iso;
 				}
-				departureElement.value = display || '';
+			}
+			departureElement.value = display || '';
 				console.log(
 					`✅ Departure Time für Tile ${tileData.tileId} (${isSecondary ? "sekundär" : "primär"}) gesetzt: ${display || ''}`
 				);

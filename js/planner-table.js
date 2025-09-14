@@ -107,7 +107,16 @@
       tr.innerHTML = '<td colspan="8" style="text-align: center; padding: 20px; color: #666; font-style: italic;">No aircraft data available. Add aircraft to tiles in the main view.</td>';
       body.appendChild(tr);
     } else {
+      let dividerInserted = false;
       STATE.filtered.forEach(row => {
+        // Insert divider before first secondary (tileId >= 100)
+        if (!dividerInserted && isSecondaryRow(row)){
+          const d = document.createElement('tr');
+          d.className = 'section-divider-row';
+          d.innerHTML = '<td colspan="8">Outer Section</td>';
+          body.appendChild(d);
+          dividerInserted = true;
+        }
         const tr = document.createElement('tr');
         tr.style.borderBottom = '1px solid #e5e7eb';
         tr.innerHTML = [
@@ -156,6 +165,7 @@
       const r = !!p.document.getElementById('readDataToggle')?.checked; const w = !!p.document.getElementById('writeDataToggle')?.checked; return r && !w; } catch(_) { return false; }
   }
   function isMaster(){ try { const p=window.parent; if (!p) return false; if (p.serverSync && p.serverSync.isMaster===true) return true; if (p.sharingManager && p.sharingManager.isMasterMode===true) return true; } catch(_){} return false; }
+  function isSecondaryRow(row){ try { return parseInt(row.tileId,10) >= 100; } catch(_) { return false; } }
 
   function fireParent(selector, type){ try { const p=window.parent; const el=p.document.querySelector(selector); if (el) el.dispatchEvent(new Event(type, { bubbles: true })); } catch(_){} }
   function setParent(selector, value){ try { const p=window.parent; const el=p.document.querySelector(selector); if (el) el.value = value; } catch(_){} }

@@ -3359,6 +3359,10 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 .table-view #panel-planner .section-container {
 	display: none !important;
 }
+/* In table view, show only the iframe inside the planner panel */
+.table-view #panel-planner > *:not(#plannerTableFrame) {
+	display: none !important;
+}
 
 /* ==========================================================================
    SHARING & SYNCHRONIZATION STYLES

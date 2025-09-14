@@ -261,19 +261,35 @@ window.location.replace('login.html');
     const used = new Set();
     function uniq(id){ let out = id, i=2; while(used.has(out)){ out = id+'-'+i++; } used.add(out); return out; }
     headings.forEach(h => { if(!h.id){ h.id = uniq(slugify(h.textContent||'section')); } });
-    let html = '<div class="toc-title">Contents</div><ul class="toc-root">';
-    let last = 1;
-    headings.forEach(h => {
+    
+    // Skip the main title (h1) for TOC, start from h2
+    const tocHeadings = headings.filter(h => h.tagName !== 'H1');
+    if (!tocHeadings.length) { tocEl.innerHTML = ''; return; }
+    
+    let html = '<div class="toc-title">Documentation Sections</div><ul>';
+    let last = 2; // Start from h2
+    tocHeadings.forEach(h => {
       const lvl = parseInt(h.tagName.substring(1), 10);
       const text = (h.textContent||'').trim();
       if (lvl > last) { for(let i=0;i<lvl-last;i++) html += '<ul>'; }
       if (lvl < last) { for(let i=0;i<last-lvl;i++) html += '</ul>'; }
-      html += `<li class="toc-l${lvl}"><a href="#${h.id}">${escapeHtml(text)}</a></li>`;
+      html += `<li><a href="#${h.id}">${escapeHtml(text)}</a></li>`;
       last = lvl;
     });
-    for(let i=0;i<last-1;i++) html += '</ul>';
+    for(let i=0;i<last-2;i++) html += '</ul>';
     html += '</ul>';
     tocEl.innerHTML = html;
+    
+    // Smooth scroll for TOC links
+    tocEl.addEventListener('click', function(e){
+      if (e.target.tagName === 'A' && e.target.hash) {
+        e.preventDefault();
+        const target = document.querySelector(e.target.hash);
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
+    });
   }
   async function render(){
     const container = document.getElementById('faqDocs');
@@ -1497,17 +1513,176 @@ window.location.replace('login.html');
 })();
 </script>
 <script>
-// FAQ search (wired after DOM is ready)
+// Modern FAQ functionality
 document.addEventListener('DOMContentLoaded', function(){
-  const q = document.getElementById('faqSearch'); const list = document.getElementById('faqList');
-  if(!q || !list) return;
-  q.addEventListener('input', function(){
-    const term = (q.value||'').toLowerCase();
-    list.querySelectorAll('.faq-item').forEach(function(item){
-      const text = (item.textContent||'').toLowerCase();
-      item.style.display = text.includes(term) ? '' : 'none';
+  const searchInput = document.getElementById('faqSearch');
+  const quickCards = document.querySelectorAll('.faq-quick-card');
+  const docsContainer = document.getElementById('faqDocs');
+  const tocContainer = document.getElementById('faqToc');
+  
+  // Enhanced search functionality
+  if (searchInput) {
+    searchInput.addEventListener('input', function(){
+      const term = (searchInput.value || '').toLowerCase().trim();
+      
+      // Search and highlight in quick cards
+      quickCards.forEach(function(card){
+        const cardText = (card.textContent || '').toLowerCase();
+        const searchTerms = card.dataset.search || '';
+        const matches = cardText.includes(term) || searchTerms.toLowerCase().includes(term);
+        
+        if (!term || matches) {
+          card.style.display = 'block';
+          highlightText(card, term);
+        } else {
+          card.style.display = 'none';
+        }
+      });
+      
+      // Search in documentation
+      if (docsContainer && term) {
+        highlightInDocs(docsContainer, term);
+      } else if (docsContainer) {
+        clearHighlights(docsContainer);
+      }
+      
+      // Auto-expand first matching card if search term exists
+      if (term) {
+        const firstVisible = document.querySelector('.faq-quick-card[style*="block"], .faq-quick-card:not([style*="none"])');
+        if (firstVisible && !firstVisible.classList.contains('expanded')) {
+          toggleCard(firstVisible);
+        }
+      }
     });
+    
+    // Keyboard shortcuts (Cmd/Ctrl + K)
+    document.addEventListener('keydown', function(e){
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        searchInput.focus();
+      }
+      
+      // Escape to clear search
+      if (e.key === 'Escape' && searchInput === document.activeElement) {
+        searchInput.value = '';
+        searchInput.dispatchEvent(new Event('input'));
+        searchInput.blur();
+      }
+    });
+  }
+  
+  // Quick card interactions
+  quickCards.forEach(function(card){
+    card.addEventListener('click', function(){
+      toggleCard(card);
+    });
+    
+    // Keyboard navigation
+    card.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleCard(card);
+      }
+    });
+    
+    // Make cards focusable
+    card.setAttribute('tabindex', '0');
   });
+  
+  function toggleCard(card) {
+    const wasExpanded = card.classList.contains('expanded');
+    
+    // Collapse all other cards
+    quickCards.forEach(function(otherCard){
+      if (otherCard !== card) {
+        otherCard.classList.remove('expanded');
+      }
+    });
+    
+    // Toggle current card
+    card.classList.toggle('expanded', !wasExpanded);
+  }
+  
+  function highlightText(element, term) {
+    if (!term) return;
+    
+    const walker = document.createTreeWalker(
+      element,
+      NodeFilter.SHOW_TEXT,
+      null,
+      false
+    );
+    
+    const textNodes = [];
+    let node;
+    while (node = walker.nextNode()) {
+      textNodes.push(node);
+    }
+    
+    textNodes.forEach(function(textNode){
+      const text = textNode.textContent;
+      const index = text.toLowerCase().indexOf(term);
+      if (index !== -1) {
+        const beforeText = text.substring(0, index);
+        const matchText = text.substring(index, index + term.length);
+        const afterText = text.substring(index + term.length);
+        
+        const span = document.createElement('span');
+        span.className = 'faq-highlight';
+        span.textContent = matchText;
+        
+        const fragment = document.createDocumentFragment();
+        fragment.appendChild(document.createTextNode(beforeText));
+        fragment.appendChild(span);
+        fragment.appendChild(document.createTextNode(afterText));
+        
+        textNode.parentNode.replaceChild(fragment, textNode);
+      }
+    });
+  }
+  
+  function highlightInDocs(container, term) {
+    clearHighlights(container);
+    if (!term) return;
+    
+    const walker = document.createTreeWalker(
+      container,
+      NodeFilter.SHOW_TEXT,
+      function(node) {
+        return node.parentNode.tagName !== 'SCRIPT' ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      },
+      false
+    );
+    
+    const textNodes = [];
+    let node;
+    while (node = walker.nextNode()) {
+      if (node.textContent.toLowerCase().includes(term)) {
+        textNodes.push(node);
+      }
+    }
+    
+    textNodes.forEach(function(textNode){
+      const text = textNode.textContent;
+      const regex = new RegExp('(' + term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+      const highlightedText = text.replace(regex, '<span class="faq-highlight">$1</span>');
+      
+      if (highlightedText !== text) {
+        const span = document.createElement('span');
+        span.innerHTML = highlightedText;
+        textNode.parentNode.replaceChild(span, textNode);
+      }
+    });
+  }
+  
+  function clearHighlights(container) {
+    const highlights = container.querySelectorAll('.faq-highlight');
+    highlights.forEach(function(highlight){
+      const parent = highlight.parentNode;
+      parent.replaceChild(document.createTextNode(highlight.textContent), highlight);
+      parent.normalize();
+    });
+  }
 });
 </script>
 
@@ -2818,26 +2993,106 @@ type="datetime-local"
 
                     <!-- FAQ Panel -->
                     <div id="panel-faq" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-faq">
-                      <div class="section-container" style="padding: 8px 12px;">
-                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-                          <input id="faqSearch" type="search" placeholder="Search FAQ…" aria-label="Search FAQ" style="flex:1; padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px;">
+                      <div class="faq-container">
+                        <!-- Hero Section -->
+                        <div class="faq-hero">
+                          <div class="faq-hero-content">
+                            <h1 class="faq-hero-title">
+                              <svg class="faq-hero-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                                <path d="M12 17h.01"/>
+                              </svg>
+                              Help & Documentation
+                            </h1>
+                            <p class="faq-hero-subtitle">Everything you need to know about using HangarPlaner's date & time picker</p>
+                          </div>
                         </div>
-                        <div id="faqList" class="faq-list">
-                          <details class="faq-item" open>
-                            <summary>How do I set a single date and time?</summary>
-                            <div>Double-click the Arr or Dep field, pick a day, adjust the time, press OK.</div>
-                          </details>
-                          <details class="faq-item">
-                            <summary>How do I set a date/time range for one aircraft?</summary>
-                            <div>Toggle Range, pick start and end days, set Start/End time, press OK. Arr/Dep are filled automatically.</div>
-                          </details>
-                          <details class="faq-item">
-                            <summary>Keyboard shortcuts</summary>
-                            <div>Arrows: ±1/±7 days • PageUp/Down: month • Enter: OK • Esc: Close</div>
-                          </details>
+
+                        <!-- Search Section -->
+                        <div class="faq-search-section">
+                          <div class="faq-search-container">
+                            <svg class="faq-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                              <circle cx="11" cy="11" r="8"/>
+                              <path d="M21 21l-4.35-4.35"/>
+                            </svg>
+                            <input id="faqSearch" type="search" placeholder="Search documentation and FAQs..." aria-label="Search FAQ" class="faq-search-input">
+                            <div class="faq-search-shortcut">⌘K</div>
+                          </div>
                         </div>
-                        <hr style="margin:12px 0; border:none; border-top:1px solid #e5e7eb;" />
-                        <nav id="faqToc" class="markdown-toc" aria-label="Contents"></nav>
+
+                        <!-- Quick Actions -->
+                        <div class="faq-quick-actions">
+                          <h2 class="faq-section-title">Quick Start</h2>
+                          <div class="faq-cards-grid">
+                            <div class="faq-quick-card" data-search="single date time">
+                              <div class="faq-quick-card-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                  <line x1="16" y1="2" x2="16" y2="6"/>
+                                  <line x1="8" y1="2" x2="8" y2="6"/>
+                                  <line x1="3" y1="10" x2="21" y2="10"/>
+                                </svg>
+                              </div>
+                              <div class="faq-quick-card-content">
+                                <h3>Single Date & Time</h3>
+                                <p>Set arrival or departure for one aircraft</p>
+                                <div class="faq-quick-card-answer">Double-click the Arr or Dep field, pick a day, adjust the time, press OK.</div>
+                              </div>
+                            </div>
+
+                            <div class="faq-quick-card" data-search="range mode multiple">
+                              <div class="faq-quick-card-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                  <path d="M8 2v4"/>
+                                  <path d="M16 2v4"/>
+                                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                  <path d="M3 10h18"/>
+                                  <path d="M8 14h.01"/>
+                                  <path d="M12 14h.01"/>
+                                  <path d="M16 14h.01"/>
+                                  <path d="M8 18h.01"/>
+                                  <path d="M12 18h.01"/>
+                                </svg>
+                              </div>
+                              <div class="faq-quick-card-content">
+                                <h3>Date Range Mode</h3>
+                                <p>Set both arrival and departure dates</p>
+                                <div class="faq-quick-card-answer">Toggle Range, pick start and end days, set Start/End time, press OK. Arr/Dep are filled automatically.</div>
+                              </div>
+                            </div>
+
+                            <div class="faq-quick-card" data-search="keyboard shortcuts">
+                              <div class="faq-quick-card-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                  <rect x="2" y="6" width="20" height="12" rx="2" ry="2"/>
+                                  <path d="M6 10h.01"/>
+                                  <path d="M10 10h.01"/>
+                                  <path d="M14 10h.01"/>
+                                  <path d="M18 10h.01"/>
+                                  <path d="M7 14h10"/>
+                                </svg>
+                              </div>
+                              <div class="faq-quick-card-content">
+                                <h3>Keyboard Shortcuts</h3>
+                                <p>Navigate faster with keyboard commands</p>
+                                <div class="faq-quick-card-answer">Arrows: ±1/±7 days • PageUp/Down: month • Enter: OK • Esc: Close</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Table of Contents -->
+                        <div class="faq-toc-section">
+                          <h2 class="faq-section-title">Documentation</h2>
+                          <nav id="faqToc" class="faq-toc" aria-label="Contents"></nav>
+                        </div>
+
+                        <!-- Full Documentation -->
+                        <div class="faq-docs-section">
+                          <div id="faqDocs" class="faq-docs" aria-label="FAQ Documentation"></div>
+                        </div>
+
                         <!-- Embedded fallback of the Markdown so FAQ also works when opened via file:// -->
                         <script type="text/markdown" id="faqMdEmbedded">
 # Date & Time Picker – FAQ

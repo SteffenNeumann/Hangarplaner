@@ -26,13 +26,25 @@
   function pullFromParent(){
     try {
       const p = window.parent;
-      if (!p || !p.document) return [];
+      if (!p || !p.document) {
+        console.warn('No parent window or document found');
+        return [];
+      }
+      
       // Use parent.collectContainerTileData
-      if (typeof p.collectContainerTileData !== 'function') return [];
+      if (typeof p.collectContainerTileData !== 'function') {
+        console.warn('collectContainerTileData function not found in parent');
+        return [];
+      }
+      
+      console.log('Pulling data from parent window...');
       const prim = p.collectContainerTileData('#hangarGrid') || [];
-      const sec  = p.collectContainerTileData('#secondaryHangarGrid') || [];
+      const sec = p.collectContainerTileData('#secondaryHangarGrid') || [];
       const both = prim.concat(sec);
-      return both.map(row => ({
+      
+      console.log(`Found ${prim.length} primary tiles, ${sec.length} secondary tiles`);
+      
+      const result = both.map(row => ({
         tileId: row.tileId,
         hangarPosition: byParentIdValue(p, `hangar-position-${row.tileId}`),
         aircraftId: row.aircraftId || '',
@@ -43,7 +55,13 @@
         status: row.status || 'neutral',
         notes: byParentIdValue(p, `notes-${row.tileId}`)
       }));
-    } catch(_) { return []; }
+      
+      console.log(`Mapped ${result.length} tile data objects`);
+      return result;
+    } catch(error) { 
+      console.error('Error pulling data from parent:', error);
+      return [];
+    }
   }
   function byParentIdValue(p, id){ const el = p.document.getElementById(id); return el ? (el.value||'') : ''; }
 
@@ -69,28 +87,48 @@
 
   function render(){
     const body = document.getElementById('plannerDbBody');
-    if (!body) return;
-    body.innerHTML='';
+    const table = document.getElementById('plannerDbTable');
+    const loading = document.getElementById('loadingMessage');
+    
+    if (!body) {
+      console.error('plannerDbBody element not found');
+      return;
+    }
+    
+    body.innerHTML = '';
     const ro = isReadOnly();
 
-    STATE.filtered.forEach(row => {
+    // Show table, hide loading message
+    if (table) table.style.display = '';
+    if (loading) loading.style.display = 'none';
+
+    if (STATE.filtered.length === 0) {
       const tr = document.createElement('tr');
-      tr.innerHTML = [
-        tdInput(`pos-${row.tileId}`, row.hangarPosition, ro, 'hangarPosition'),
-        tdInput(`ac-${row.tileId}`, row.aircraftId, ro, 'aircraftId'),
-        tdInput(`arr-${row.tileId}`, row.arrivalTime, ro, 'arrivalTime'),
-        tdInput(`dep-${row.tileId}`, row.departureTime, ro, 'departureTime'),
-        tdInput(`pinfo-${row.tileId}`, row.positionInfo, ro, 'positionInfo'),
-        tdSelect(`tow-${row.tileId}`, row.towStatus, ro, ['neutral','initiated','ongoing','on-position'], 'towStatus'),
-        tdSelect(`stat-${row.tileId}`, row.status, ro, ['neutral','ready','maintenance','aog'], 'status'),
-        tdInput(`notes-${row.tileId}`, row.notes, ro, 'notes')
-      ].join('');
-      wireEditors(tr, row.tileId, ro);
+      tr.innerHTML = '<td colspan="8" style="text-align: center; padding: 20px; color: #666; font-style: italic;">No aircraft data available. Add aircraft to tiles in the main view.</td>';
       body.appendChild(tr);
-    });
+    } else {
+      STATE.filtered.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid #e5e7eb';
+        tr.innerHTML = [
+          tdInput(`pos-${row.tileId}`, row.hangarPosition, ro, 'hangarPosition'),
+          tdInput(`ac-${row.tileId}`, row.aircraftId, ro, 'aircraftId'),
+          tdInput(`arr-${row.tileId}`, row.arrivalTime, ro, 'arrivalTime'),
+          tdInput(`dep-${row.tileId}`, row.departureTime, ro, 'departureTime'),
+          tdInput(`pinfo-${row.tileId}`, row.positionInfo, ro, 'positionInfo'),
+          tdSelect(`tow-${row.tileId}`, row.towStatus, ro, ['neutral','initiated','ongoing','on-position'], 'towStatus'),
+          tdSelect(`stat-${row.tileId}`, row.status, ro, ['neutral','ready','maintenance','aog'], 'status'),
+          tdInput(`notes-${row.tileId}`, row.notes, ro, 'notes')
+        ].join('');
+        wireEditors(tr, row.tileId, ro);
+        body.appendChild(tr);
+      });
+    }
+    
     const st = document.getElementById('plannerDbStatus');
     if (st) st.textContent = `${STATE.filtered.length} of ${STATE.rows.length} tiles shown`;
     updateSortIndicators();
+    console.log(`Table rendered with ${STATE.filtered.length} rows`);
   }
 
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;' }[c])); }
@@ -157,10 +195,50 @@
     // No filter row for now
   }
 
-  function refresh(){ STATE.rows = pullFromParent(); applyFilters(); render(); }
+  function refresh(){ 
+    console.log('Refreshing table data...');
+    STATE.rows = pullFromParent(); 
+    applyFilters(); 
+    render(); 
+  }
 
-  function init(){ restore(); wireSorting(); wireFilters(); refresh(); }
+  function init(){ 
+    console.log('Initializing planner table iframe...');
+    
+    // Check if we're actually in an iframe
+    if (window === window.parent) {
+      console.warn('Table view appears to be loaded directly, not in iframe');
+      const loading = document.getElementById('loadingMessage');
+      if (loading) {
+        loading.textContent = 'This table view should be loaded within the main application.';
+        loading.style.color = '#dc2626';
+      }
+      return;
+    }
+    
+    restore(); 
+    wireSorting(); 
+    wireFilters(); 
+    
+    // Add a small delay to ensure parent is ready
+    setTimeout(refresh, 100);
+  }
 
   window.addEventListener('DOMContentLoaded', init);
-  window.addEventListener('message', function(e){ try { if (e && e.data && e.data.type === 'planner-table-refresh') refresh(); if (e && e.data && e.data.type==='theme') { document.documentElement.classList.toggle('dark-mode', !!e.data.dark); if (document.body) document.body.classList.toggle('dark-mode', !!e.data.dark); } } catch(_){} });
+  window.addEventListener('message', function(e){ 
+    try { 
+      if (e && e.data) {
+        console.log('Received message:', e.data.type);
+        if (e.data.type === 'planner-table-refresh') {
+          refresh();
+        }
+        if (e.data.type === 'theme') {
+          document.documentElement.classList.toggle('dark-mode', !!e.data.dark);
+          if (document.body) document.body.classList.toggle('dark-mode', !!e.data.dark);
+        }
+      }
+    } catch(error) {
+      console.error('Error handling message:', error);
+    }
+  });
 })();

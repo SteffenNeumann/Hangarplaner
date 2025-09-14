@@ -4691,6 +4691,8 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                                 document.body.classList.add('table-view');
                                 document.body.classList.remove('tile-view');
                                 if (iframe) iframe.style.display = '';
+                                // Ensure the table iframe refreshes immediately when switching into table mode
+                                try { if (iframe && iframe.contentWindow) iframe.contentWindow.postMessage({ type: 'planner-table-refresh' }, '*'); } catch(e){}
                             } else {
                                 document.body.classList.add('tile-view');
                                 document.body.classList.remove('table-view');

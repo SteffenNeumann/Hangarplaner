@@ -2,6 +2,13 @@
   // Planner Table View module
   // Renders a table alternative to the tile grids using existing tile data and enforces the same edit/sync rules.
   
+  // DEPRECATED: This module is superseded by the iframe-based table (planner-table.html + js/planner-table.js).
+  // It remains for reference only and is not used by index.html. If accidentally loaded inside the iframe, bail out.
+  if (window !== window.parent) {
+    try { console.warn('planner-table-view.js is deprecated; using iframe-based table instead.'); } catch(_){}
+    return;
+  }
+
   // Local state
   const STATE = {
     rows: [],      // full set (visible tiles only)

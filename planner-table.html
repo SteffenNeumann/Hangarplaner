@@ -30,18 +30,19 @@
   </style>
 </head>
 <body>
-  <div id="tableHost" style="padding:8px;">
-    <table id="plannerDbTable" class="db-table">
+  <div id="tableHost" style="padding:8px; min-height: 400px;">
+    <div id="loadingMessage" style="text-align: center; padding: 20px; color: #666;">Loading hangar data...</div>
+    <table id="plannerDbTable" class="db-table" style="display: none;">
       <thead>
         <tr class="db-thead">
-          <th data-col="hangarPosition" class="sortable">Hangar Pos <span class="sort-indicator">↕</span></th>
-          <th data-col="aircraftId" class="sortable">AC-ID <span class="sort-indicator">↕</span></th>
-          <th data-col="arrivalTime" class="sortable">Arr (UTC) <span class="sort-indicator">↕</span></th>
-          <th data-col="departureTime" class="sortable">Dep (UTC) <span class="sort-indicator">↕</span></th>
-          <th data-col="positionInfo" class="sortable">Position <span class="sort-indicator">↕</span></th>
-          <th data-col="towStatus" class="sortable">Tow Status <span class="sort-indicator">↕</span></th>
-          <th data-col="status" class="sortable">Status <span class="sort-indicator">↕</span></th>
-          <th data-col="notes" class="sortable">Notes <span class="sort-indicator">↕</span></th>
+          <th data-col="hangarPosition" class="sortable" style="cursor: pointer;">Hangar Pos <span class="sort-indicator">↕</span></th>
+          <th data-col="aircraftId" class="sortable" style="cursor: pointer;">AC-ID <span class="sort-indicator">↕</span></th>
+          <th data-col="arrivalTime" class="sortable" style="cursor: pointer;">Arr (UTC) <span class="sort-indicator">↕</span></th>
+          <th data-col="departureTime" class="sortable" style="cursor: pointer;">Dep (UTC) <span class="sort-indicator">↕</span></th>
+          <th data-col="positionInfo" class="sortable" style="cursor: pointer;">Position <span class="sort-indicator">↕</span></th>
+          <th data-col="towStatus" class="sortable" style="cursor: pointer;">Tow Status <span class="sort-indicator">↕</span></th>
+          <th data-col="status" class="sortable" style="cursor: pointer;">Status <span class="sort-indicator">↕</span></th>
+          <th data-col="notes" class="sortable" style="cursor: pointer;">Notes <span class="sort-indicator">↕</span></th>
         </tr>
       </thead>
       <tbody id="plannerDbBody"></tbody>

@@ -35,18 +35,19 @@ Die Sender-Logs zeigten, dass die Datensammlung perfekt funktionierte, aber die 
 
 ## Technical Details
 
-### Server-Side Support
+## Server-Side Support (aktuell)
 
-Der Server (`sync/data.php`) unterstützte bereits Project-IDs:
+Der Server (`sync/data.php`) verwendet eine vereinfachte, projektlose Dateiablage (`sync/data.json`) und bietet Change-Detection via `?action=timestamp`. Schreiben erfordert Header:
+- X-Sync-Role: master
+- X-Sync-Session: <session>
+- optional X-Display-Name: <name>
 
-```php
-$projectId = isset($_GET['project']) ? $_GET['project'] : null;
-if ($projectId && preg_match('/^[a-zA-Z0-9_]+$/', $projectId)) {
-    $dataFile = __DIR__ . '/shared_' . $projectId . '.json';
-} else {
-    $dataFile = __DIR__ . '/data.json';
-}
+Beispiel für Timestamp (curl):
+```bash
+curl "http://localhost:8000/sync/data.php?action=timestamp"
 ```
+
+Hinweis (Legacy): Eine ältere Variante mit Project-ID-Parametern wurde entfernt. Für aktuelle Builds ist eine einzelne Daten-Datei vorgesehen.
 
 ### Client-Side Integration
 

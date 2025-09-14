@@ -4,25 +4,25 @@
 
 Die HangarPlanner Synchronisationsfunktionalität wurde erfolgreich auf ein **3-Modi-System** umgestellt:
 
-### 🏠 STANDALONE-MODUS
+### 🏠 OFFLINE/Standalone-MODUS
 
-- **Verhalten**: Nur localStorage, einmalige Server-Datenladung beim Start
-- **Anzeige**: Widget zeigt "Standalone" (grau), Menü-Button "📊 Status"
+- **Verhalten**: Nur localStorage, optional einmalige Server-Datenladung beim Start
+- **Anzeige**: Widget zeigt "Offline/Standalone" (grau), Menü-Button "📊 Status"
 - **Synchronisation**: Keine automatische Synchronisation
-- **Datenfluss**: Server → App (einmalig beim Start)
+- **Datenfluss**: Server → App (einmalig, wenn verfügbar)
 
 ### 📡 READ-ONLY (SYNC)
 
 - **Verhalten**: Empfängt automatisch Server-Updates (Leserechte)
 - **Anzeige**: Widget zeigt "Sync" (gelb), Menü-Button "📡 Sync"
-- **Synchronisation**: Polling alle 30 Sekunden für Server-Updates
+- **Synchronisation**: Polling alle ~3 Sekunden für Server-Updates
 - **Datenfluss**: Server → App (automatisch bei Änderungen)
 
 ### 👑 MASTER-MODUS
 
 - **Verhalten**: Sendet Daten an Server und empfängt Updates (Schreibrechte)
 - **Anzeige**: Widget zeigt "Master" (grün), Menü-Button "👑 Master"
-- **Synchronisation**: Bidirektional - sendet und empfängt Daten
+- **Synchronisation**: Bidirektional - sendet (Change-Detection ~5s) und empfängt Daten (Read-back ~15s + on-demand)
 - **Datenfluss**: App ↔ Server (automatisch bei lokalen Änderungen)
 
 ---

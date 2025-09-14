@@ -55,15 +55,22 @@ Die Sharing/Synchronisation-Funktionalität wurde erfolgreich wiederhergestellt 
 
 ## 🔧 Technische Details
 
-### **Neue Dateien:**
+### Aktualisierung (Architektur heute)
 
-- `js/sharing-manager.js` - Hauptlogik für Sharing-Features
+- Project-ID/Share-URL Pfad ist legacy und wird nicht mehr benötigt.
+- Aktueller Sync basiert auf 3 Modi (Offline/Sync/Master) und einem zentralen Endpunkt `sync/data.php` (+ `sync/presence.php`).
+- Schreiben erfordert `X-Sync-Role: master` und `X-Sync-Session`.
+- Live Sync verwendet ServerSync (periodische Writes/Reads) und Read-only Polling.
+
+### **Neue Dateien (historisch):**
+
+- `js/sharing-manager.js` - Logik für Sharing/Sync-UI (weiterhin aktiv, aber ohne Project-ID-Routing)
 - CSS-Erweiterungen in `hangarplanner-ui.css`
 
 ### **Erweiterte Dateien:**
 
-- `sync/data.php` - Unterstützt jetzt Project-IDs für isolierte Projekte
-- `index.html` - Sharing-Manager eingebunden
+- `sync/data.php` - Timestamp-Endpoint, Multi-Master Merges, Header-Checks
+- `index.html` - Sync-UI und FAQ Panel
 
 ### **Integration:**
 

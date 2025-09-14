@@ -196,11 +196,11 @@ window.location.replace('login.html');
 </script>
 
 <script>
-// Render docs/DATE-TIME-PICKER.md into the FAQ panel and build a TOC
+// Render docs/SYNC-MODE-FAQ.md + docs/DATE-TIME-PICKER.md into the FAQ panel and build a TOC
 (function(){
   function escapeHtml(s){
     // Escape only the essentials to avoid breaking JS syntax in this inline script
-    return String(s).replace(/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]); });
+    return String(s).replace(/[&<>\"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]); });
   }
   function listify(text, regex, tag){
     const lines = text.split('\n');
@@ -298,14 +298,23 @@ window.location.replace('login.html');
     if (!container) return;
     let md = '';
     try {
-      const res = await fetch('docs/DATE-TIME-PICKER.md', { cache: 'no-store' });
-      if (res.ok) {
-        md = await res.text();
-      }
+      // Fetch both guides and concatenate
+      const [syncRes, dtpRes] = await Promise.all([
+        fetch('docs/SYNC-MODE-FAQ.md', { cache: 'no-store' }),
+        fetch('docs/DATE-TIME-PICKER.md', { cache: 'no-store' }),
+      ]);
+      let syncText = '', dtpText = '';
+      if (syncRes && syncRes.ok) syncText = await syncRes.text();
+      if (dtpRes && dtpRes.ok) dtpText = await dtpRes.text();
+      md = [syncText, dtpText].filter(Boolean).join('\n\n---\n\n');
     } catch(e){ /* ignore fetch errors, will use fallback */ }
     if (!md) {
-      const embedded = document.getElementById('faqMdEmbedded');
-      if (embedded) { md = embedded.textContent || embedded.innerText || ''; }
+      // Fallback to embedded markdowns if fetch failed (file:// or offline)
+      const syncEmbedded = document.getElementById('faqMdSyncEmbedded');
+      const dtpEmbedded = document.getElementById('faqMdEmbedded');
+      const syncText = syncEmbedded ? (syncEmbedded.textContent || syncEmbedded.innerText || '') : '';
+      const dtpText = dtpEmbedded ? (dtpEmbedded.textContent || dtpEmbedded.innerText || '') : '';
+      md = [syncText, dtpText].filter(Boolean).join('\n\n---\n\n');
     }
     if (!md) { container.innerHTML = '<p style="color:#b91c1c">Failed to load documentation.</p>'; return; }
     container.innerHTML = mdToHtml(md);
@@ -314,15 +323,6 @@ window.location.replace('login.html');
   document.addEventListener('DOMContentLoaded', render);
   window.addEventListener('pageshow', render);
 })();
-</script>
-</head>
-<body class="bg-industrial-dark text-white font-sans edit-mode with-tabs">
-		<div class="flex h-screen">
-			<!-- Neue linke Hauptnavigation -->
-			<nav id="leftMenu" class="left-menu">
-				<button class="menu-item" data-menu="project" title="Project">
-					<svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M3 6h14" />
 						<path stroke-linecap="round" stroke-linejoin="round" d="M17 4v4" />
 						<path stroke-linecap="round" stroke-linejoin="round" d="M3 12h18" />
 						<path stroke-linecap="round" stroke-linejoin="round" d="M13 10v4" />
@@ -3017,7 +3017,7 @@ type="datetime-local"
                               </svg>
                               Help & Documentation
                             </h1>
-                            <p class="faq-hero-subtitle">Everything you need to know about using HangarPlaner's date & time picker</p>
+<p class="faq-hero-subtitle">Documentation for Sync Mode and the Date & Time Picker</p>
                           </div>
                         </div>
 
@@ -3106,6 +3106,64 @@ type="datetime-local"
                         </div>
 
                         <!-- Embedded fallback of the Markdown so FAQ also works when opened via file:// -->
+                        <script type="text/markdown" id="faqMdSyncEmbedded">
+# Sync Mode – Full FAQ and Guide
+
+This guide covers how Sync works in HangarPlaner: the three modes, headers and endpoints, conflict handling, presence, manual sync, and troubleshooting.
+
+---
+
+## Overview
+
+HangarPlaner supports three synchronization modes:
+- Standalone (Offline): local only; no server reads or writes after an initial best-effort load.
+- Read-only (Sync): reads from server; local edits do not write to server.
+- Read/Write (Master): writes to server and reads from server; multi-master supported.
+
+Key properties:
+- Multi-master: multiple Masters can write concurrently; last-write-wins per field with conflict prompts on the client.
+- Client-side gating: write attempts are blocked client-side unless in Master.
+- Server-enforced header: writes require the X-Sync-Role: master header and a session header.
+
+---
+
+## Quick Start
+
+- Enable Sync (read-only): Read Data ON, Write Data OFF.
+- Become Master: toggle Write Data ON (Read stays ON). Writes include required headers.
+- Go Offline: turn both Read and Write OFF (Standalone). No server traffic; all changes remain local.
+- Manual Sync: available in Master; triggers a write plus optional read-back.
+
+---
+
+## Behavior by Mode
+
+### Standalone (Offline)
+- One-time best-effort server load at startup, then local only.
+- No periodic reads or writes.
+
+### Read-only (Sync)
+- Periodically fetches server updates.
+- Local editing of aircraft tiles is disabled; display-only options save locally and show “Saved locally (read-only mode)”.
+- Poll interval (default): ~3 seconds.
+
+### Read/Write (Master)
+- Periodic write checks and targeted writes on edits.
+- Read-back is enabled for multi-master convergence.
+
+---
+
+## Server Contract
+
+Required headers for writes:
+- X-Sync-Role: master
+- X-Sync-Session: stable client session id
+
+Endpoints:
+- sync/data.php (GET load/timestamp, POST write)
+- sync/presence.php (GET list, POST heartbeat/leave)
+
+</script>
                         <script type="text/markdown" id="faqMdEmbedded">
 # Date & Time Picker – FAQ
 

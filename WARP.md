@@ -193,6 +193,8 @@ Flight number lookups frequently fail due to API limitations and data mapping ch
 
 ### Sync policy and read-only enforcement
 
+See also the user-facing guide: docs/SYNC-MODE-FAQ.md
+
 - Multi-master behavior
   - Multiple clients may be write-enabled at the same time
   - Server does not enforce an exclusive master lock; writes require X-Sync-Role: master

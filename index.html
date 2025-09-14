@@ -3395,7 +3395,7 @@ You’ll see the result in the browser console.
 						if (window.sharingManager) return;
 						console.warn('SharingManager missing; installing minimal fallback');
 window.sharingManager = {
-							syncMode: 'master',
+							syncMode: 'standalone',
 							initialized: true,
 							serverSyncUrl: (function(){ try { return window.location.origin + '/sync/data.php'; } catch(_e){ return '/sync/data.php'; } })(),
 updateAllSyncDisplays: function(){ try { const el = document.getElementById('sync-mode'); if (el){ const txt = this.syncMode==='master'?'Master':(this.syncMode==='sync'?'Sync':'Standalone'); el.textContent = txt; el.classList.remove('master','slave','standalone'); el.classList.add(this.syncMode==='master'?'master':(this.syncMode==='sync'?'slave':'standalone')); } } catch(e){} },
@@ -3486,7 +3486,7 @@ updateAllSyncDisplays: function(){ try { const el = document.getElementById('syn
 							handleModeControlChange: function(v){ if (v==='standalone') this.enableStandaloneMode(); else if (v==='sync') this.enableSyncMode(); else if (v==='master') this.enableMasterMode(); },
 							performManualSync: async function(){ try{ if (!window.serverSync) return false; if (typeof window.serverSync.manualSync==='function') return await window.serverSync.manualSync(); if (typeof window.serverSync.syncWithServer==='function') return await window.serverSync.syncWithServer(); return false; } catch(e){ console.warn(e); return false; } }
 						};
-try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ modeCtl.value = 'master'; window.sharingManager.enableMasterMode(); modeCtl.addEventListener('change', (e)=>window.sharingManager.handleModeControlChange(e.target.value)); } } catch(_e){}
+try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ modeCtl.value = 'standalone'; window.sharingManager.enableStandaloneMode(); modeCtl.addEventListener('change', (e)=>window.sharingManager.handleModeControlChange(e.target.value)); } } catch(_e){}
 						console.log('Minimal Sync Manager fallback installed');
 					}
 					window.hangarInitQueue = window.hangarInitQueue || [];

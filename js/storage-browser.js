@@ -371,6 +371,8 @@ class ServerSync {
 	 * NEUE METHODE: Holt Server-Timestamp für Change-Detection
 	 */
 	async getServerTimestamp() {
+		// Respect mode: avoid reads when not allowed
+		try { if (typeof this.canReadFromServer === 'function' && !this.canReadFromServer()) { return 0; } } catch(_e){}
 		try {
 			const { signal, cancel } = this._createTimeoutSignal(5000);
 			const response = await fetch(`${this.serverSyncUrl}?action=timestamp`, {
@@ -958,6 +960,8 @@ async slaveCheckForUpdates() {
 	 * Lädt Daten vom Server
 	 */
 	async loadFromServer() {
+		// Respect mode: skip reads if not allowed
+		try { if (typeof this.canReadFromServer === 'function' && !this.canReadFromServer()) { return null; } } catch(_e){}
 		if (!this.serverSyncUrl) {
 			console.warn("⚠️ Server-URL nicht konfiguriert");
 			return null;
@@ -1920,6 +1924,12 @@ try {
 // SERVER-VERBINDUNGSTEST (verzögert)
 setTimeout(async () => {
 	if (!window.serverSync) return;
+	try {
+		if (typeof window.serverSync.canReadFromServer === 'function' && !window.serverSync.canReadFromServer()) {
+			console.log("🔌 Skipping server reachability test (Standalone mode)");
+			return;
+		}
+	} catch(_e){}
 
 	const serverUrl = localStorage.getItem("hangarServerSyncUrl") || (window.location.origin + "/sync/data.php");
 	const isServerReachable = await window.serverSync.testServerConnection(serverUrl);

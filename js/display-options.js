@@ -188,10 +188,19 @@ async init() {
 			// Priorität 1: Server (nur wenn kein Server-Sync aktiv)
 			let loaded = false;
 
-			if (!window.isApplyingServerData && !window.isLoadingServerData) {
+			const canRead = (window.serverSync && typeof window.serverSync.canReadFromServer === 'function')
+				? window.serverSync.canReadFromServer()
+				: (window.sharingManager && typeof window.sharingManager.syncMode === 'string'
+					? (window.sharingManager.syncMode === 'sync' || window.sharingManager.syncMode === 'master')
+					: false);
+			if (canRead && !window.isApplyingServerData && !window.isLoadingServerData) {
 				loaded = await this.loadFromServer();
 			} else {
-				console.log("⏸️ Server-Sync aktiv, überspringe Server-Load");
+				if (!canRead) {
+					console.log("🏠 Standalone mode: skipping server load");
+				} else {
+					console.log("⏸️ Server-Sync aktiv, überspringe Server-Load");
+				}
 			}
 
 			if (!loaded) {
@@ -215,6 +224,16 @@ async init() {
 	 * Lädt Display Options vom Server
 	 */
 	async loadFromServer() {
+		// Respect Standalone (no server reads)
+		const canRead = (window.serverSync && typeof window.serverSync.canReadFromServer === 'function')
+			? window.serverSync.canReadFromServer()
+			: (window.sharingManager && typeof window.sharingManager.syncMode === 'string'
+				? (window.sharingManager.syncMode === 'sync' || window.sharingManager.syncMode === 'master')
+				: false);
+		if (!canRead) {
+			console.log("🏠 Standalone mode: display options server load skipped");
+			return false;
+		}
 		try {
 			// Verwende den zentralen Server-Sync
 			if (window.serverSync && window.serverSync.loadFromServer) {

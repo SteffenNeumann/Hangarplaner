@@ -3339,7 +3339,81 @@ You’ll see the result in the browser console.
 							<button id="resetDoneOkBtn" type="button" class="sidebar-btn sidebar-btn-primary">OK</button>
 						</div>
 					</div>
+</div>
+
+			<!-- Conflict Resolution Modal -->
+			<div id="conflictModalOverlay" class="hp-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="conflictModalTitle" style="display:none;">
+				<div class="hp-modal" role="document">
+					<h2 id="conflictModalTitle" class="hp-modal-title">Conflict detected</h2>
+					<div class="hp-modal-body">
+						<div id="conflictModalMessage">Another user updated this field.</div>
+						<div class="mt-3">
+							<div><strong>Field:</strong> <span id="conflictField"></span></div>
+							<div><strong>Updated by:</strong> <span id="conflictUpdatedBy"></span></div>
+							<div style="margin-top:8px;"><strong>Server value:</strong>
+								<div><input id="conflictServerValue" class="form-control" readonly /></div>
+							</div>
+							<div style="margin-top:8px;"><strong>Your value:</strong>
+								<div><input id="conflictLocalValue" class="form-control" readonly /></div>
+							</div>
+						</div>
+					</div>
+					<div class="hp-modal-actions">
+						<button id="conflictAcceptBtn" type="button" class="sidebar-btn sidebar-btn-secondary">Accept server</button>
+						<button id="conflictKeepBtn" type="button" class="sidebar-btn sidebar-btn-primary">Keep mine</button>
+					</div>
 				</div>
+			</div>
+
+			<script>
+			(function(){
+				// Minimal conflict queue driver leveraging hp-modal styling
+				window.__conflictQueue = window.__conflictQueue || [];
+				let showing = false;
+				let current = null;
+				function el(id){ return document.getElementById(id); }
+				async function applyServerValue(item){
+					try {
+						const fid = item.fieldId;
+						const input = document.getElementById(fid);
+						if (input){ input.value = item.serverValue ?? ''; }
+						// Optionally update ISO dataset for date/time fields
+						try { if ((/^arrival-time-|^departure-time-/).test(fid) && input && input.dataset){ input.dataset.iso = item.serverValue || ''; } } catch(_e){}
+						// Update baseline by forcing a small targeted read back (if reads are allowed)
+						if (window.serverSync && typeof window.serverSync.canReadFromServer==='function' && window.serverSync.canReadFromServer()){
+							try { const data = await window.serverSync.loadFromServer(); if (data && !data.error) await window.serverSync.applyServerData(data); } catch(_e){}
+						}
+					} catch(_e){}
+				}
+				async function keepMineAndPost(item){
+					try {
+						if (!window.serverSync || typeof window.serverSync.syncFieldUpdates !== 'function') return;
+						const updates = {}; updates[item.fieldId] = item.localValue ?? '';
+						// Extend local write fence to avoid immediate echo overwrite
+						try { if (typeof window.serverSync._markPendingWrite==='function') window.serverSync._markPendingWrite(item.fieldId); } catch(_e){}
+						await window.serverSync.syncFieldUpdates(updates, {});
+					} catch(_e){}
+				}
+				function hide(){ const ov = el('conflictModalOverlay'); if (!ov) return; ov.style.display='none'; showing=false; current=null; }
+				window.__showNextConflict = function(){
+					if (showing) return; if (!window.__conflictQueue || window.__conflictQueue.length===0) return;
+					current = window.__conflictQueue.shift();
+					const ov = el('conflictModalOverlay'); if (!ov) return;
+					el('conflictField').textContent = `${current.field||''} (Tile ${current.tileId||''})`;
+					el('conflictUpdatedBy').textContent = (current.updatedBy||'unknown');
+					el('conflictServerValue').value = current.serverValue ?? '';
+					el('conflictLocalValue').value = current.localValue ?? '';
+					ov.style.display='flex'; showing = true;
+				};
+				function wire(){
+					const acc = el('conflictAcceptBtn'); const keep = el('conflictKeepBtn'); const ov = el('conflictModalOverlay');
+					if (acc && !acc.__wired){ acc.__wired=true; acc.addEventListener('click', async ()=>{ const item=current; hide(); if (item) await applyServerValue(item); window.__showNextConflict(); }); }
+					if (keep && !keep.__wired){ keep.__wired=true; keep.addEventListener('click', async ()=>{ const item=current; hide(); if (item) await keepMineAndPost(item); window.__showNextConflict(); }); }
+					if (ov && !ov.__wired){ ov.__wired=true; ov.addEventListener('click', (e)=>{ if (e.target===ov){ hide(); window.__showNextConflict(); } }); }
+				}
+				if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', wire, { once: true }); else wire();
+			})();
+			</script>
 
 			<!-- JavaScript-Dateien -->
 			<script src="js/helpers.js"></script>

@@ -3,9 +3,12 @@
  * Reduzierte Version - nur Server-Sync ohne Event-Handler
  * Optimiert von 2085 → ~400 Zeilen
  */
-
 class ServerSync {
+
 	constructor() {
+		// Feature flags (configurable)
+		this.requireOtherMastersForRead = true; // Gate read-backs in Master to when other Masters exist
+		this.conflictPromptWindowMs = 10000;    // Consider local edits "fresh" for conflict prompts within this window
 		// Set a safe default so sync is configured even if initSync is delayed
 		try {
 			this.serverSyncUrl = window.location.origin + "/sync/data.php";
@@ -517,6 +520,18 @@ async slaveCheckForUpdates() {
         if (this._isCheckingUpdates) return;
         this._isCheckingUpdates = true;
 
+        // Presence-aware gating for Master mode: only update view when other masters exist
+        try {
+            if (this.isMaster && this.requireOtherMastersForRead) {
+                const others = await this._getOtherActiveMasters();
+                if (!others || others.length === 0) {
+                    console.log("⏭️ Master read gated: no other masters online");
+                    this._isCheckingUpdates = false;
+                    return;
+                }
+            }
+        } catch(_e){}
+
         try {
             console.log("🔍 Slave: Prüfe auf Server-Updates...");
 			const currentServerTimestamp = await this.getServerTimestamp();
@@ -529,6 +544,19 @@ async slaveCheckForUpdates() {
 
 				const serverData = await this.loadFromServer();
 				if (serverData && !serverData.error) {
+					// In Master mode, avoid applying our own write immediately if gating is enabled
+					try {
+						if (this.isMaster && this.requireOtherMastersForRead) {
+							const mySid = this.getSessionId();
+							const lastWriter = String(serverData?.metadata?.lastWriterSession || '').trim();
+							if (lastWriter && mySid && lastWriter === mySid) {
+								console.log('⏭️ Skip apply: last write is our own session (master gating)');
+								this.lastServerTimestamp = currentServerTimestamp; // still advance to avoid re-reading the same snapshot
+								this._isCheckingUpdates = false;
+								return;
+							}
+						}
+					} catch(_e){}
 					await this.applyServerData(serverData);
 					this.lastServerTimestamp = currentServerTimestamp;
 					console.log(
@@ -656,10 +684,15 @@ async slaveCheckForUpdates() {
 					if (window.HangarDataCoordinator) {
 						window.HangarDataCoordinator.apiChangesPendingSync = false;
 					}
-					// Read-after-write: delay read-back if user is actively typing to avoid caret jump
+			// Read-after-write: delay read-back if user is actively typing to avoid caret jump
 					try {
+						// If presence-gating is enabled in Master, avoid immediate read-back unless others are present
+						let allowReadBack = true;
+						if (this.isMaster && this.requireOtherMastersForRead) {
+							try { const others = await this._getOtherActiveMasters(); allowReadBack = (others && others.length > 0); } catch(_e){ allowReadBack = false; }
+						}
 						const typingActive = !!(window.hangarEventManager && typeof window.hangarEventManager.isUserTypingRecently === 'function' && window.hangarEventManager.isUserTypingRecently(2000));
-						if (this.canReadFromServer && this.canReadFromServer()) {
+						if (allowReadBack && this.canReadFromServer && this.canReadFromServer()) {
 							if (typingActive) {
 								setTimeout(async () => {
 									try { if (this.canReadFromServer && this.canReadFromServer()) { await this.slaveCheckForUpdates(); } } catch(_e){}
@@ -1018,6 +1051,17 @@ async slaveCheckForUpdates() {
 	 * Wendet Server-Daten auf die Anwendung an - KOORDINIERT
 	 */
 	async applyServerData(serverData) {
+		// In Master with presence-gating, do an extra check here too
+		try {
+			if (this.isMaster && this.requireOtherMastersForRead) {
+				const mySid = this.getSessionId();
+				const lastWriter = String(serverData?.metadata?.lastWriterSession || '').trim();
+				if (lastWriter && mySid && lastWriter === mySid) {
+					console.log('⏭️ Skip applyServerData: last write is our own session (master gating)');
+					return false;
+				}
+			}
+		} catch(_e){}
 		if (!serverData) {
 			console.warn("⚠️ Keine Server-Daten zum Anwenden");
 			return false;
@@ -1304,6 +1348,14 @@ async slaveCheckForUpdates() {
 	 * NEUE HILFSFUNKTION: Wendet Kachel-Daten auf die UI an
 	 */
 	applyTileData(tiles, isSecondary = false) {
+		// Helper: conflict prompt enqueuer
+		const enqueueConflict = (fieldId, info) => {
+			try {
+				window.__conflictQueue = window.__conflictQueue || [];
+				window.__conflictQueue.push({ fieldId, ...info });
+				if (typeof window.__showNextConflict === 'function') window.__showNextConflict();
+			} catch(_e){}
+		};
 		console.log(
 			`🏗️ Wende ${isSecondary ? "sekundäre" : "primäre"} Kachel-Daten an:`,
 			tiles.length,
@@ -1323,7 +1375,12 @@ async slaveCheckForUpdates() {
 				if (aircraftInput) {
 					const newVal = tileData.aircraftId || '';
 					const oldValue = aircraftInput.value;
-					if (document.activeElement === aircraftInput && oldValue === newVal) {
+					const fid = `aircraft-${tileId}`;
+					const recent = (typeof window.getLastLocalEdit === 'function') ? window.getLastLocalEdit(fid) : null;
+					const fresh = recent && (Date.now() - (recent.editedAt||0) < (this.conflictPromptWindowMs||10000));
+					if ((document.activeElement === aircraftInput || fresh) && oldValue !== newVal) {
+						enqueueConflict(fid, { tileId, field: 'aircraftId', localValue: oldValue, serverValue: newVal, updatedBy: (tileData.updatedBy||'') });
+					} else if (document.activeElement === aircraftInput && oldValue === newVal) {
 						// skip to preserve caret when unchanged
 					} else {
 						aircraftInput.value = newVal;
@@ -1344,7 +1401,12 @@ async slaveCheckForUpdates() {
 				if (hangarPosInput) {
 					const newVal = tileData.hangarPosition || '';
 					const oldValue = hangarPosInput.value;
-					if (!(document.activeElement === hangarPosInput && oldValue === newVal)) {
+					const fid = `hangar-position-${tileId}`;
+					const recent = (typeof window.getLastLocalEdit === 'function') ? window.getLastLocalEdit(fid) : null;
+					const fresh = recent && (Date.now() - (recent.editedAt||0) < (this.conflictPromptWindowMs||10000));
+					if ((document.activeElement === hangarPosInput || fresh) && oldValue !== newVal) {
+						enqueueConflict(fid, { tileId, field: 'hangarPosition', localValue: oldValue, serverValue: newVal, updatedBy: (tileData.updatedBy||'') });
+					} else if (!(document.activeElement === hangarPosInput && oldValue === newVal)) {
 						hangarPosInput.value = newVal;
 					}
 					console.log(`📍 Hangar Position gesetzt: ${tileId} = ${oldValue} → ${newVal}`);
@@ -1361,7 +1423,12 @@ async slaveCheckForUpdates() {
 				if (posInfoInput) {
 					const newVal = tileData.position || '';
 					const oldValue = posInfoInput.value;
-					if (!(document.activeElement === posInfoInput && oldValue === newVal)) {
+					const fid = `position-${tileId}`;
+					const recent = (typeof window.getLastLocalEdit === 'function') ? window.getLastLocalEdit(fid) : null;
+					const fresh = recent && (Date.now() - (recent.editedAt||0) < (this.conflictPromptWindowMs||10000));
+					if ((document.activeElement === posInfoInput || fresh) && oldValue !== newVal) {
+						enqueueConflict(fid, { tileId, field: 'position', localValue: oldValue, serverValue: newVal, updatedBy: (tileData.updatedBy||'') });
+					} else if (!(document.activeElement === posInfoInput && oldValue === newVal)) {
 						posInfoInput.value = newVal;
 					}
 					console.log(`📍 Pos (info) gesetzt: ${tileId} = ${oldValue} → ${newVal}`);
@@ -1377,7 +1444,12 @@ async slaveCheckForUpdates() {
 				const notesInput = document.getElementById(`notes-${tileId}`);
 				if (notesInput) {
 					const newVal = tileData.notes || '';
-					if (!(document.activeElement === notesInput && notesInput.value === newVal)) {
+					const fid = `notes-${tileId}`;
+					const recent = (typeof window.getLastLocalEdit === 'function') ? window.getLastLocalEdit(fid) : null;
+					const fresh = recent && (Date.now() - (recent.editedAt||0) < (this.conflictPromptWindowMs||10000));
+					if ((document.activeElement === notesInput || fresh) && notesInput.value !== newVal) {
+						enqueueConflict(fid, { tileId, field: 'notes', localValue: notesInput.value, serverValue: newVal, updatedBy: (tileData.updatedBy||'') });
+					} else if (!(document.activeElement === notesInput && notesInput.value === newVal)) {
 						notesInput.value = newVal;
 					}
 					console.log(`📝 Notizen gesetzt: ${tileId} = ${newVal}`);
@@ -1388,6 +1460,9 @@ async slaveCheckForUpdates() {
 			if (Object.prototype.hasOwnProperty.call(tileData, 'arrivalTime')) {
 				const arrivalInput = document.getElementById(`arrival-time-${tileId}`);
 				if (arrivalInput) {
+					const fid = `arrival-time-${tileId}`;
+					const recent = (typeof window.getLastLocalEdit === 'function') ? window.getLastLocalEdit(fid) : null;
+					const fresh = recent && (Date.now() - (recent.editedAt||0) < (this.conflictPromptWindowMs||10000));
 					let toSet = tileData.arrivalTime || '';
 					// Convert ISO format to compact display format for all input types
 					if (toSet && window.helpers) {
@@ -1412,9 +1487,20 @@ async slaveCheckForUpdates() {
 							}
 						}
 					}
-					arrivalInput.value = toSet || '';
-					try { if (!toSet && arrivalInput.dataset) delete arrivalInput.dataset.iso; } catch(_e){}
-					console.log(`🛬 Ankunftszeit gesetzt: ${tileId} = ${toSet || ''}`);
+					if ((document.activeElement === arrivalInput || fresh)) {
+						const oldDisplay = arrivalInput.value;
+						// If incoming differs in canonical ISO form, trigger conflict prompt
+						let differs = true;
+						try {
+							const oldIso = arrivalInput.dataset?.iso || '';
+							differs = (oldIso !== (tileData.arrivalTime || ''));
+						} catch(_e){}
+						if (differs) enqueueConflict(fid, { tileId, field: 'arrivalTime', localValue: oldDisplay, serverValue: toSet, updatedBy: (tileData.updatedBy||'') });
+					} else {
+						arrivalInput.value = toSet || '';
+						try { if (!toSet && arrivalInput.dataset) delete arrivalInput.dataset.iso; } catch(_e){}
+						console.log(`🛬 Ankunftszeit gesetzt: ${tileId} = ${toSet || ''}`);
+					}
 				}
 			}
 
@@ -1422,6 +1508,9 @@ async slaveCheckForUpdates() {
 			if (Object.prototype.hasOwnProperty.call(tileData, 'departureTime')) {
 				const departureInput = document.getElementById(`departure-time-${tileId}`);
 				if (departureInput) {
+					const fid = `departure-time-${tileId}`;
+					const recent = (typeof window.getLastLocalEdit === 'function') ? window.getLastLocalEdit(fid) : null;
+					const fresh = recent && (Date.now() - (recent.editedAt||0) < (this.conflictPromptWindowMs||10000));
 					let toSet = tileData.departureTime || '';
 					// Convert ISO format to compact display format for all input types
 					if (toSet && window.helpers) {
@@ -1446,9 +1535,19 @@ async slaveCheckForUpdates() {
 							}
 						}
 					}
-					departureInput.value = toSet || '';
-					try { if (!toSet && departureInput.dataset) delete departureInput.dataset.iso; } catch(_e){}
-					console.log(`🛫 Abflugzeit gesetzt: ${tileId} = ${toSet || ''}`);
+					if ((document.activeElement === departureInput || fresh)) {
+						const oldDisplay = departureInput.value;
+						let differs = true;
+						try {
+							const oldIso = departureInput.dataset?.iso || '';
+							differs = (oldIso !== (tileData.departureTime || ''));
+						} catch(_e){}
+						if (differs) enqueueConflict(fid, { tileId, field: 'departureTime', localValue: oldDisplay, serverValue: toSet, updatedBy: (tileData.updatedBy||'') });
+					} else {
+						departureInput.value = toSet || '';
+						try { if (!toSet && departureInput.dataset) delete departureInput.dataset.iso; } catch(_e){}
+						console.log(`🛫 Abflugzeit gesetzt: ${tileId} = ${toSet || ''}`);
+					}
 				}
 			}
 
@@ -1456,8 +1555,15 @@ async slaveCheckForUpdates() {
 			if (Object.prototype.hasOwnProperty.call(tileData, 'status')) {
 				const statusSelect = document.getElementById(`status-${tileId}`);
 				if (statusSelect) {
-					statusSelect.value = tileData.status || 'neutral';
-					console.log(`🚦 Status gesetzt: ${tileId} = ${tileData.status || 'neutral'}`);
+					const fid = `status-${tileId}`;
+					const recent = (typeof window.getLastLocalEdit === 'function') ? window.getLastLocalEdit(fid) : null;
+					const fresh = recent && (Date.now() - (recent.editedAt||0) < (this.conflictPromptWindowMs||10000));
+					if ((document.activeElement === statusSelect || fresh) && statusSelect.value !== (tileData.status || 'neutral')) {
+						enqueueConflict(fid, { tileId, field: 'status', localValue: statusSelect.value, serverValue: (tileData.status||'neutral'), updatedBy: (tileData.updatedBy||'') });
+					} else {
+						statusSelect.value = tileData.status || 'neutral';
+						console.log(`🚦 Status gesetzt: ${tileId} = ${tileData.status || 'neutral'}`);
+					}
 				}
 			}
 
@@ -1466,8 +1572,14 @@ async slaveCheckForUpdates() {
 				const towStatusSelect = document.getElementById(`tow-status-${tileId}`);
 				if (towStatusSelect) {
 					const oldValue = towStatusSelect.value;
-					towStatusSelect.value = tileData.towStatus || 'neutral';
-					console.log(`🚚 Tow Status gesetzt: ${tileId} = ${oldValue} → ${towStatusSelect.value}`);
+					const fid = `tow-status-${tileId}`;
+					const recent = (typeof window.getLastLocalEdit === 'function') ? window.getLastLocalEdit(fid) : null;
+					const fresh = recent && (Date.now() - (recent.editedAt||0) < (this.conflictPromptWindowMs||10000));
+					if ((document.activeElement === towStatusSelect || fresh) && oldValue !== (tileData.towStatus || 'neutral')) {
+						enqueueConflict(fid, { tileId, field: 'towStatus', localValue: oldValue, serverValue: (tileData.towStatus||'neutral'), updatedBy: (tileData.updatedBy||'') });
+					} else {
+						towStatusSelect.value = tileData.towStatus || 'neutral';
+						console.log(`🚚 Tow Status gesetzt: ${tileId} = ${oldValue} → ${towStatusSelect.value}`);
 					try {
 						if (typeof window.updateTowStatusStyles === 'function') {
 							window.updateTowStatusStyles(towStatusSelect);
@@ -1520,6 +1632,24 @@ async slaveCheckForUpdates() {
 		});
 
 		return successfullyApplied > 0;
+	}
+
+	/**
+	 * Presence helper: list other active masters (excludes self)
+	 */
+	async _getOtherActiveMasters() {
+		try {
+			let base = this.getServerUrl ? this.getServerUrl() : (this.serverSyncUrl || '');
+			if (!base || typeof base !== 'string') return [];
+			const url = base.replace(/data\.php(?:\?.*)?$/i, 'presence.php');
+			const presenceUrl = /presence\.php/i.test(url) ? url : (window.location.origin + '/sync/presence.php');
+			const res = await fetch(presenceUrl + '?action=list', { headers: { 'Accept': 'application/json' } });
+			if (!res.ok) return [];
+			const data = await res.json();
+			const me = this.getSessionId && this.getSessionId();
+			const users = Array.isArray(data?.users) ? data.users : [];
+			return users.filter(u => u && u.sessionId && u.sessionId !== me && String(u.role||'').toLowerCase() === 'master');
+		} catch(_e) { return []; }
 	}
 
 	/**

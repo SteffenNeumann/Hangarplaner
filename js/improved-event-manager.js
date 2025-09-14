@@ -22,6 +22,9 @@ class HangarEventManager {
 		this.BLUR_SAVE_DELAY_MS = 150; // local debounce on blur before sync
 		this._lastTypingAt = 0;
 
+		// Local edit tracking for conflict prompts (per-field)
+		this.lastLocalEdit = {}; // { fieldId: { value, editedAt } }
+
 		// Singleton-Pattern
 		if (HangarEventManager.instance) {
 			return HangarEventManager.instance;
@@ -138,6 +141,10 @@ class HangarEventManager {
 	 * options: { flushDelayMs?: number, source?: 'input'|'blur'|'change' }
 	 */
 	debouncedFieldUpdate(fieldId, value, delay = 500, options = {}) {
+		try {
+			// Record local edit immediately for conflict detection
+			this.recordLocalEdit(fieldId, value);
+		} catch(_e){}
 		// Bestehenden Timer löschen
 		if (this.debounceTimers.has(fieldId)) {
 			clearTimeout(this.debounceTimers.get(fieldId));
@@ -940,6 +947,7 @@ class HangarEventManager {
 			storageQueueLength: this.storageQueue.length,
 			activeDebounceTimers: this.debounceTimers.size,
 			isProcessingStorage: this.isProcessingStorage,
+			localEditsTracked: (this.lastLocalEdit && typeof this.lastLocalEdit === 'object') ? Object.keys(this.lastLocalEdit).length : 0,
 		};
 	}
 
@@ -949,6 +957,14 @@ class HangarEventManager {
 		this.debounceTimers.clear();
 		this.storageQueue.length = 0;
 		this.initialized = false;
+	}
+
+	// Track a field's last local edit for conflict prompts
+	recordLocalEdit(fieldId = '', value) {
+		try {
+			if (!fieldId) return;
+			this.lastLocalEdit[fieldId] = { value, editedAt: Date.now() };
+		} catch(_e){}
 	}
 
 	// Utility: identify free-text fields that should not live-sync per keystroke
@@ -990,5 +1006,10 @@ window.hangarInitQueue.push(function () {
 
 // Für Debugging
 window.getEventManagerStatus = () => window.hangarEventManager.getStatus();
+
+// Expose helper for conflict detection lookups
+window.getLastLocalEdit = function(fieldId){
+	try { return (window.hangarEventManager && window.hangarEventManager.lastLocalEdit) ? (window.hangarEventManager.lastLocalEdit[fieldId] || null) : null; } catch(_e){ return null; }
+};
 
 console.log("📦 Improved Event Manager geladen und global verfügbar");

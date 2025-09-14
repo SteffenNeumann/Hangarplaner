@@ -188,7 +188,7 @@ class SharingManager {
       console.log('🔄 Starte Slave-Polling für Read-Modus...'); await window.serverSync.startSlaveMode();
       if (!window.serverSync.slaveCheckInterval){ setTimeout(async()=>{ try { await window.serverSync.startSlaveMode(); console.log('🔄 Slave-Polling Retry ausgeführt'); } catch(_e){} }, 2000); }
     } else {
-      console.warn('⚠️ startSlaveMode nicht verfügbar – aktiviere Fallback-Polling');
+      console.log('ℹ️ startSlaveMode nicht verfügbar – aktiviere Fallback-Polling');
       this._startFallbackReadPolling();
     }
     this.syncMode = 'sync'; this.isLiveSyncEnabled = true; this.isMasterMode = false; this.updateAllSyncDisplays('Sync', true); this.applyReadOnlyUIState(true); this.showNotification('Sync-Modus aktiviert - Empfange Server-Updates','info'); this._emitModeChanged(); console.log('✅ Sync-Modus (Slave) aktiviert');
@@ -200,7 +200,7 @@ class SharingManager {
     if (await this._waitForServerSyncMethod('startMasterMode', 3000)){
       await window.serverSync.startMasterMode();
     } else {
-      console.warn('⚠️ startMasterMode nicht verfügbar – aktiviere Fallback Write/Read');
+      console.log('ℹ️ startMasterMode nicht verfügbar – aktiviere Fallback Write/Read');
       // Always enable fallback write and read-back in Master for convergence
       this._startFallbackWriteTimer();
       this._startFallbackReadPolling();

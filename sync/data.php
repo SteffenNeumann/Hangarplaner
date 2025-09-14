@@ -319,6 +319,55 @@ else if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 };
 
+                // If field preconditions provided, check for conflicts before applying any updates
+                $pre = isset($data['preconditions']) && is_array($data['preconditions']) ? $data['preconditions'] : [];
+                $conflicts = [];
+                if (isset($data['fieldUpdates']) && is_array($data['fieldUpdates'])) {
+                    foreach ($data['fieldUpdates'] as $fid => $val) {
+                        // Parse field id
+                        $tid = null; $field = null; $isSecondary = false;
+                        if (preg_match('/^aircraft-(\d+)$/', $fid, $m)) { $tid = intval($m[1]); $field = 'aircraftId'; }
+                        elseif (preg_match('/^arrival-time-(\d+)$/', $fid, $m)) { $tid = intval($m[1]); $field = 'arrivalTime'; }
+                        elseif (preg_match('/^departure-time-(\d+)$/', $fid, $m)) { $tid = intval($m[1]); $field = 'departureTime'; }
+                        elseif (preg_match('/^hangar-position-(\d+)$/', $fid, $m)) { $tid = intval($m[1]); $field = 'hangarPosition'; }
+                        elseif (preg_match('/^position-(\d+)$/', $fid, $m)) { $tid = intval($m[1]); $field = 'position'; }
+                        elseif (preg_match('/^status-(\d+)$/', $fid, $m)) { $tid = intval($m[1]); $field = 'status'; }
+                        elseif (preg_match('/^tow-status-(\d+)$/', $fid, $m)) { $tid = intval($m[1]); $field = 'towStatus'; }
+                        elseif (preg_match('/^notes-(\d+)$/', $fid, $m)) { $tid = intval($m[1]); $field = 'notes'; }
+                        if ($tid !== null && $field) {
+                            $isSecondary = ($tid >= 100);
+                            // Obtain current server value
+                            $cur = null; $curBy = '';
+                            if ($isSecondary) {
+                                if (isset($serverSecondaryMap[$tid])) { $cur = $serverSecondaryMap[$tid][$field] ?? null; $curBy = $serverSecondaryMap[$tid]['updatedBy'] ?? ''; }
+                            } else {
+                                if (isset($serverPrimaryMap[$tid])) { $cur = $serverPrimaryMap[$tid][$field] ?? null; $curBy = $serverPrimaryMap[$tid]['updatedBy'] ?? ''; }
+                            }
+                            // Compare with posted precondition
+                            if (array_key_exists($fid, $pre)) {
+                                $expected = $pre[$fid];
+                                if (($expected ?? '') !== ($cur ?? '')) {
+                                    $conflicts[] = [
+                                        'tileId' => $tid,
+                                        'field' => $field,
+                                        'fieldId' => $fid,
+                                        'serverValue' => $cur,
+                                        'localValue' => $val,
+                                        'updatedBy' => $curBy,
+                                    ];
+                                }
+                            }
+                        }
+                    }
+                }
+                if (!empty($conflicts)) {
+                    http_response_code(409);
+                    echo json_encode([ 'success' => false, 'conflicts' => $conflicts ]);
+                    @flock($fp, LOCK_UN);
+                    @fclose($fp);
+                    return;
+                }
+
                 // If fieldUpdates provided, prefer fine-grained patching
                 if (isset($data['fieldUpdates']) && is_array($data['fieldUpdates'])) {
                     foreach ($data['fieldUpdates'] as $fid => $val) {

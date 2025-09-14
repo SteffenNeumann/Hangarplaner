@@ -667,7 +667,19 @@ async slaveCheckForUpdates() {
 			const delta = this._computeFieldUpdates(currentData);
 			try { if (delta && typeof delta === 'object') { Object.keys(delta).forEach(fid => { try { this._markPendingWrite(fid); } catch(_e){} }); } } catch(_e){}
 			if (delta && Object.keys(delta).length > 0) {
-				requestBody = { metadata: { timestamp: Date.now() }, fieldUpdates: delta, settings: currentData.settings || {} };
+				// Include baseline preconditions for optimistic concurrency
+				const pre = {};
+				try {
+					Object.keys(delta).forEach(fid => {
+						const m = fid.match(/^(aircraft|arrival-time|departure-time|hangar-position|position|status|tow-status|notes)-(\d+)$/);
+						if (!m) return; const field = m[1]; const id = parseInt(m[2],10);
+						const keyMap = { 'aircraft':'aircraftId','arrival-time':'arrivalTime','departure-time':'departureTime','hangar-position':'hangarPosition','position':'position','status':'status','tow-status':'towStatus','notes':'notes' };
+						const key = keyMap[field]; if (!key) return;
+						const base = (id>=100 ? this._baselineSecondary[id] : this._baselinePrimary[id]) || {};
+						pre[fid] = (base[key] ?? '');
+					});
+				} catch(_e){}
+				requestBody = { metadata: { timestamp: Date.now() }, fieldUpdates: delta, preconditions: pre, settings: currentData.settings || {} };
 			} else {
 				// Fallback auf vollständige Daten (z.B. erstes Speichern ohne Baseline)
 				requestBody = currentData;
@@ -740,6 +752,16 @@ async slaveCheckForUpdates() {
 						}
 					} catch(_e){}
 					return true;
+				} else if (response.status === 409) {
+					let payload = null; try { payload = await response.json(); } catch(_e){}
+					console.warn('⚠️ Conflict detected on write', payload);
+					try {
+						const items = (payload && payload.conflicts) || [];
+						window.__conflictQueue = window.__conflictQueue || [];
+						items.forEach(item => window.__conflictQueue.push(item));
+						if (typeof window.__showNextConflict === 'function') setTimeout(()=>window.__showNextConflict(), 0);
+					} catch(_e){}
+					return false;
 				} else if (response.status === 423) {
 					let payload = null;
 					try { payload = await response.json(); } catch(_e) {}
@@ -798,7 +820,18 @@ async slaveCheckForUpdates() {
 			}
 			window.isSavingToServer = true;
 
-			const body = { metadata: { timestamp: Date.now() }, fieldUpdates, settings: {} };
+			const pre = {};
+			try {
+				Object.keys(fieldUpdates).forEach(fid => {
+					const m = fid.match(/^(aircraft|arrival-time|departure-time|hangar-position|position|status|tow-status|notes)-(\d+)$/);
+					if (!m) return; const field = m[1]; const id = parseInt(m[2],10);
+					const keyMap = { 'aircraft':'aircraftId','arrival-time':'arrivalTime','departure-time':'departureTime','hangar-position':'hangarPosition','position':'position','status':'status','tow-status':'towStatus','notes':'notes' };
+					const key = keyMap[field]; if (!key) return;
+					const base = (id>=100 ? this._baselineSecondary[id] : this._baselinePrimary[id]) || {};
+					pre[fid] = (base[key] ?? '');
+				});
+			} catch(_e){}
+			const body = { metadata: { timestamp: Date.now() }, fieldUpdates, preconditions: pre, settings: {} };
 			const headers = { "Content-Type": "application/json" };
 			if (this.isMaster) headers["X-Sync-Role"] = "master";
 			try {
@@ -810,6 +843,17 @@ async slaveCheckForUpdates() {
 			const serverUrl = this.getServerUrl();
 			const res = await fetch(serverUrl, { method: 'POST', headers, body: JSON.stringify(body), signal });
 			cancel && cancel();
+			if (res.status === 409) {
+				let payload = null; try { payload = await res.json(); } catch(_e){}
+				console.warn('⚠️ Conflict detected on targeted write', payload);
+				try {
+					const items = (payload && payload.conflicts) || [];
+					window.__conflictQueue = window.__conflictQueue || [];
+					items.forEach(item => window.__conflictQueue.push(item));
+					if (typeof window.__showNextConflict === 'function') setTimeout(()=>window.__showNextConflict(), 0);
+				} catch(_e){}
+				return false;
+			}
 			if (!res.ok) {
 				let detail = '';
 				try { detail = await res.text(); } catch(_e){}

@@ -154,8 +154,7 @@
   }
 
   function wireFilters(){
-    const map = [['flt_hangarPosition','hangarPosition'],['flt_aircraftId','aircraftId'],['flt_arrivalTime','arrivalTime'],['flt_departureTime','departureTime'],['flt_positionInfo','positionInfo'],['flt_towStatus','towStatus'],['flt_status','status'],['flt_notes','notes']];
-    map.forEach(([id,key])=>{ const el=document.getElementById(id); if(!el) return; if(STATE.filters[key]) el.value = STATE.filters[key]; const h = deb(()=>{ STATE.filters[key] = el.value||''; persist(); applyFilters(); render(); }, 200); el.addEventListener('input', h); el.addEventListener('change', h); });
+    // No filter row for now
   }
 
   function refresh(){ STATE.rows = pullFromParent(); applyFilters(); render(); }

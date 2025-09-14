@@ -3352,7 +3352,11 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 .table-view #plannerTableFrame {
 	display: block !important;
 }
-.tile-view #plannerTableFrame {
+ .tile-view #plannerTableFrame {
+	display: none !important;
+}
+/* Hide planner tile sections entirely in table mode */
+.table-view #panel-planner .section-container {
 	display: none !important;
 }
 

@@ -182,7 +182,8 @@
       status: v => { setParent(`#status-${tileId}`, v); fireParent(`#status-${tileId}`, 'change'); },
       notes: v => { setParent(`#notes-${tileId}`, v); fireParent(`#notes-${tileId}`, 'input'); }
     };
-    tr.querySelectorAll('input.db-input, select.db-select').forEach(el => {
+    // FIX: wire to the classes actually used in the DOM we render (planner-input/planner-select)
+    tr.querySelectorAll('input.planner-input, select.planner-select').forEach(el => {
       el.addEventListener('change', async function(){ await applyChange(this, handlers); });
       el.addEventListener('blur', async function(){ await applyChange(this, handlers); });
       if (el.tagName==='INPUT') el.addEventListener('input', deb(function(){ applyChange(el, handlers); }, 350));
@@ -239,6 +240,9 @@
     
     // Add a small delay to ensure parent is ready
     setTimeout(refresh, 100);
+    // Extra retries to avoid the "broken until hover" symptom
+    setTimeout(refresh, 400);
+    setTimeout(refresh, 1000);
   }
 
   window.addEventListener('DOMContentLoaded', init);

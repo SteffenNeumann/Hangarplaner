@@ -227,12 +227,26 @@ class HangarEventManager {
 						// Build body
 						const body = { metadata: { timestamp: Date.now(), lastWriter }, settings: {}, fieldUpdates: updates };
 						// Post
-						const response = await fetch(postUrl, {
+// Ensure we always have a session id, even if serverSync.getSessionId is unavailable
+let sidHeader = '';
+try {
+  if (window.serverSync && typeof window.serverSync.getSessionId === 'function') {
+    sidHeader = window.serverSync.getSessionId();
+  } else {
+    sidHeader = localStorage.getItem('serverSync.sessionId') || '';
+    if (!sidHeader) {
+      sidHeader = Math.random().toString(36).slice(2) + Date.now().toString(36);
+      try { localStorage.setItem('serverSync.sessionId', sidHeader); } catch(_e){}
+    }
+  }
+} catch(_e){}
+
+const response = await fetch(postUrl, {
 							method: 'POST',
 							headers: {
 								'Content-Type': 'application/json',
 								'X-Sync-Role': 'master',
-								'X-Sync-Session': (window.serverSync && typeof window.serverSync.getSessionId === 'function') ? window.serverSync.getSessionId() : (localStorage.getItem('serverSync.sessionId') || ''),
+								'X-Sync-Session': sidHeader,
 								'X-Display-Name': lastWriter,
 							},
 							body: JSON.stringify(body),

@@ -825,7 +825,6 @@ if (this.isMaster && this.requireOtherMastersForRead) {
                     }
                 }
             } catch(_e){}
-			} catch(_e){}
 
 			// Update local baselines optimistically with applied fieldUpdates
 			try {

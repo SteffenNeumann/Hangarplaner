@@ -1818,53 +1818,8 @@ document.addEventListener('DOMContentLoaded', function(){
 
 					<!-- Panels -->
 					<div id="panel-planner" class="tab-panel" role="tabpanel" aria-labelledby="tab-planner">
-					<!-- Planner Table View (hidden by default; shown when Board/Table toggle is ON) -->
-					<div id="plannerTableView" class="hidden">
-						<div class="planner-table-wrapper">
-							<table id="plannerTable" class="planner-table" aria-label="Planner Table View">
-								<thead>
-									<tr class="planner-table-header">
-										<th data-col="hangarPosition" class="sortable">Hangar Pos <span class="sort-indicator">↕</span></th>
-										<th data-col="aircraftId" class="sortable">AC-ID <span class="sort-indicator">↕</span></th>
-										<th data-col="arrivalTime" class="sortable">Arr (UTC) <span class="sort-indicator">↕</span></th>
-										<th data-col="departureTime" class="sortable">Dep (UTC) <span class="sort-indicator">↕</span></th>
-										<th data-col="positionInfo" class="sortable">Position <span class="sort-indicator">↕</span></th>
-										<th data-col="towStatus" class="sortable">Tow Status <span class="sort-indicator">↕</span></th>
-										<th data-col="status" class="sortable">Status <span class="sort-indicator">↕</span></th>
-										<th data-col="notes" class="sortable">Notes <span class="sort-indicator">↕</span></th>
-									</tr>
-									<tr class="planner-filter-row">
-										<th><input id="flt_hangarPosition" class="planner-filter-input" type="text" placeholder="Filter" /></th>
-										<th><input id="flt_aircraftId" class="planner-filter-input" type="text" placeholder="Filter" /></th>
-										<th><input id="flt_arrivalTime" class="planner-filter-input" type="text" placeholder="Filter" title="e.g. 12:30 or 2025-09-14" /></th>
-										<th><input id="flt_departureTime" class="planner-filter-input" type="text" placeholder="Filter" title="e.g. 13:10 or 2025-09-14" /></th>
-										<th><input id="flt_positionInfo" class="planner-filter-input" type="text" placeholder="Filter" /></th>
-										<th>
-											<select id="flt_towStatus" class="planner-filter-select">
-												<option value="">All</option>
-												<option value="neutral">neutral</option>
-												<option value="initiated">initiated</option>
-												<option value="ongoing">ongoing</option>
-												<option value="on-position">on-position</option>
-											</select>
-										</th>
-										<th>
-											<select id="flt_status" class="planner-filter-select">
-												<option value="">All</option>
-												<option value="neutral">neutral</option>
-												<option value="ready">ready</option>
-												<option value="maintenance">maintenance</option>
-												<option value="aog">aog</option>
-											</select>
-										</th>
-										<th><input id="flt_notes" class="planner-filter-input" type="text" placeholder="Filter" /></th>
-									</tr>
-								</thead>
-								<tbody id="plannerTableBody"></tbody>
-							</table>
-							<div id="plannerTableStatus" class="planner-table-status"></div>
-						</div>
-					</div>
+					<!-- Planner Table subpage in iframe (hidden by default; shown when Board/Table is ON) -->
+					<iframe id="plannerTableFrame" src="planner-table.html" title="Planner Table" style="width:100%; height: calc(100vh - 220px); border: none; display: none; background: transparent;"></iframe>
 
 					<!-- Abschnitt 1 Container -->
 					<div class="section-container">
@@ -3406,7 +3361,6 @@ You’ll see the result in the browser console.
 			<script src="js/storage-browser.js"></script>
 			<script src="js/sync-manager.js"></script>
 			<script src="js/fleet-database.js"></script>
-			<script src="js/planner-table-view.js"></script>
 						<script>
 				// Ensure Sharing Manager initializes (binds sync toggles and manual sync button)
 				window.hangarInitQueue = window.hangarInitQueue || [];
@@ -4992,6 +4946,7 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                 var msg = { type: 'theme', dark: !!computeDark() };
                 try { var f = document.getElementById('timetableFrame'); if (f && f.contentWindow) f.contentWindow.postMessage(msg, '*'); } catch(e){}
                 try { var g = document.getElementById('databaseFrame'); if (g && g.contentWindow) g.contentWindow.postMessage(msg, '*'); } catch(e){}
+                try { var p = document.getElementById('plannerTableFrame'); if (p && p.contentWindow) p.contentWindow.postMessage(msg, '*'); } catch(e){}
               }
               document.addEventListener('DOMContentLoaded', function(){
                 try { var t = document.getElementById('darkModeToggle'); if (t) t.addEventListener('change', send); } catch(e){}
@@ -4999,6 +4954,24 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
               });
               window.addEventListener('pageshow', function(){ setTimeout(send, 0); });
               window.addEventListener('load', function(){ setTimeout(send, 0); });
+            })();
+            </script>
+
+            <!-- Broadcast planner table refresh to iframe on relevant events -->
+            <script>
+            (function(){
+              function sendRefresh(){
+                try {
+                  var p = document.getElementById('plannerTableFrame');
+                  if (p && p.contentWindow) p.contentWindow.postMessage({ type: 'planner-table-refresh' }, '*');
+                } catch(e){}
+              }
+              document.addEventListener('primaryTilesUpdated', sendRefresh);
+              document.addEventListener('secondaryTilesCreated', sendRefresh);
+              document.addEventListener('dataLoaded', sendRefresh);
+              document.addEventListener('serverDataLoaded', sendRefresh);
+              document.addEventListener('syncModeChanged', sendRefresh);
+              window.addEventListener('pageshow', sendRefresh);
             })();
             </script>
 	</body>

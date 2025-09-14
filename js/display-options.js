@@ -573,15 +573,15 @@ applyDarkMode(enabled) {
 		}
 		// Also toggle planner table container visibility immediately if present
 		try {
-			const tbl = document.getElementById('plannerTableView');
+			const iframe = document.getElementById('plannerTableFrame');
 			const grid = document.getElementById('hangarGrid');
 			const sec = document.getElementById('secondaryHangarGrid');
-			if (tbl) tbl.classList.toggle('hidden', !tableView);
+			if (iframe) iframe.style.display = tableView ? '' : 'none';
 			if (grid) grid.style.display = tableView ? 'none' : '';
 			if (sec) sec.style.display = tableView ? 'none' : '';
-			// If switching into table mode, trigger a refresh of the table if its script is loaded
+			// If switching into table mode, ask iframe to refresh
 			if (tableView) {
-				try { document.dispatchEvent(new Event('primaryTilesUpdated')); } catch(_e){}
+				try { if (iframe && iframe.contentWindow) iframe.contentWindow.postMessage({ type: 'planner-table-refresh' }, '*'); } catch(_e){}
 			}
 		} catch(_e){}
 	},

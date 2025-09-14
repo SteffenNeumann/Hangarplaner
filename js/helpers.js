@@ -1481,6 +1481,7 @@ if (window.helpers) {
     picker.style.display = 'none';
     picker.style.width = '320px'; // default width for single mode
     picker.style.minHeight = '300px'; // ensure minimum height
+    picker.style.overflow = 'hidden'; // prevent any hidden calendars from bleeding out
 
     // Header quick-jump controls (± 1 day) removed per request; keep internal date state only
     const dateContainer = document.createElement('div');
@@ -1539,19 +1540,32 @@ if (window.helpers) {
       
       // Switch between single and dual calendar rendering with proper cleanup
       if (picker._rangeMode) {
+        // Ensure dual calendar is attached just before actions
+        if (picker._dualDetached && picker._column) {
+          try { picker._column.insertBefore(dualCalContainer, picker._actions || null); } catch(_){}
+          picker._dualDetached = false;
+        }
         // Show dual calendar, hide single calendar
         cal.style.display = 'none';
+        dualCalContainer.removeAttribute('hidden');
         dualCalContainer.style.display = 'flex';
         dualCalContainer.style.flexDirection = 'row';
         dualCalContainer.style.flexWrap = 'nowrap';
         buildDualCalendar(picker._leftYear, picker._leftMonth, picker._rightYear, picker._rightMonth, picker._selectedDate);
       } else {
-        // Show single calendar, hide and clear dual calendar
+        // Show single calendar, hide and clear dual calendar completely
         cal.style.display = 'block';
         dualCalContainer.style.display = 'none';
-        // Clear dual calendar content to prevent remnants
+        dualCalContainer.setAttribute('hidden','hidden');
         leftGrid.innerHTML = '';
         rightGrid.innerHTML = '';
+        // Detach from DOM to avoid any rendering glitches
+        try {
+          if (dualCalContainer.parentElement) {
+            dualCalContainer.parentElement.removeChild(dualCalContainer);
+            picker._dualDetached = true;
+          }
+        } catch(_){}
         buildCalendar(picker._viewYear || new Date().getFullYear(), picker._viewMonth || new Date().getMonth(), picker._selectedDate);
       }
     });
@@ -2096,6 +2110,10 @@ if (window.helpers) {
     picker.appendChild(column);
     document.body.appendChild(picker);
 
+    // Store references for later re-attach/detach of dual calendar
+    picker._column = column;
+    picker._actions = actions;
+
     // Initial theme apply and on dark-mode toggles if your app toggles classes
     applyPickerTheme();
 
@@ -2190,18 +2208,30 @@ if (window.helpers) {
     if (p._rangeMode) {
       // Range mode: show dual calendar, hide single calendar
       if (p._dualCalContainer) {
+        // Re-attach if previously detached
+        if (p._dualDetached && p._column) {
+          try { p._column.insertBefore(p._dualCalContainer, p._actions || null); } catch(_){}
+          p._dualDetached = false;
+        }
+        p._dualCalContainer.removeAttribute('hidden');
         p._dualCalContainer.style.display = 'flex';
         p._dualCalContainer.style.flexDirection = 'row';
         p._dualCalContainer.style.flexWrap = 'nowrap';
       }
       if (singleCal) singleCal.style.display = 'none';
     } else {
-      // Single mode: show single calendar, hide and clear dual calendar  
+      // Single mode: show single calendar, hide and clear dual calendar
       if (p._dualCalContainer) {
         p._dualCalContainer.style.display = 'none';
-        // Clear dual calendar grids to prevent remnants
+        p._dualCalContainer.setAttribute('hidden','hidden');
         if (p._leftGrid) p._leftGrid.innerHTML = '';
         if (p._rightGrid) p._rightGrid.innerHTML = '';
+        try {
+          if (p._dualCalContainer.parentElement) {
+            p._dualCalContainer.parentElement.removeChild(p._dualCalContainer);
+            p._dualDetached = true;
+          }
+        } catch(_){}
       }
       if (singleCal) singleCal.style.display = 'block';
     }

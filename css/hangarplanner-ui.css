@@ -887,12 +887,12 @@ select.status-selector {
 	background-size: 16px;
 }
 
-/* Dual-month range mode layout - Force horizontal alignment */
+/* Dual-month range mode layout - hidden by default; JS toggles to flex in range mode */
 .dtp-dual-months {
-	display: flex !important;
-	flex-direction: row !important;
-	flex-wrap: nowrap !important;
-	align-items: flex-start !important;
+	display: none; /* default hidden to avoid bleed in single mode */
+	flex-direction: row;
+	flex-wrap: nowrap;
+	align-items: flex-start;
 	gap: 16px;
 	margin: 8px 0;
 	width: 100%;

@@ -1527,7 +1527,7 @@ if (window.helpers) {
       if (picker._rangeMode) {
         if (picker._selectedDate) picker._rangeStart = new Date(picker._selectedDate);
         // prefill default end time = start time
-        timeEnd.value = timeStart.value || '00:00';
+        timeEnd.value = (picker._normalizeTime24 ? picker._normalizeTime24(timeStart.value) : (timeStart.value||'')) || '00:00';
         // Set dual month state for consecutive months
         const currentDate = picker._selectedDate || new Date();
         picker._leftMonth = currentDate.getMonth();
@@ -1971,9 +1971,13 @@ if (window.helpers) {
     
     // prev/next day buttons removed; keep month navigation only
 
+    // 24h time input (text-based to avoid OS 12/24h locale switching)
     const time = document.createElement('input');
-    time.type = 'time';
-    time.step = '60';
+    time.type = 'text';
+    time.setAttribute('inputmode','numeric');
+    time.setAttribute('placeholder','HH:MM');
+    time.setAttribute('aria-label','Time (24h)');
+    time.pattern = '^([01]?\\d|2[0-3]):[0-5]\\d$';
     // Narrower time field for header
     time.style.width = '90px';
     // Comfortable sizing
@@ -1993,8 +1997,11 @@ if (window.helpers) {
     header.appendChild(timeStart);
     // time end (visible only in range mode)
     const timeEnd = document.createElement('input');
-    timeEnd.type = 'time';
-    timeEnd.step = '60';
+    timeEnd.type = 'text';
+    timeEnd.setAttribute('inputmode','numeric');
+    timeEnd.setAttribute('placeholder','HH:MM');
+    timeEnd.setAttribute('aria-label','End time (24h)');
+    timeEnd.pattern = '^([01]?\\d|2[0-3]):[0-5]\\d$';
     timeEnd.style.width = '90px';
     timeEnd.style.height = '28px';
     timeEnd.style.fontSize = '14px';
@@ -2010,8 +2017,51 @@ if (window.helpers) {
       const yy = String(d.getFullYear()).slice(-2);
       return `${dd}.${mm}.${yy}`;
     }
+    // helper: normalize arbitrary input to HH:MM (24h) or ''
+    function normalizeTime24(raw){
+      const s = String(raw||'').trim().toLowerCase();
+      if (!s) return '';
+      // 0930 / 930 -> 09:30
+      if (/^\d{3,4}$/.test(s)){
+        const h = s.length===3 ? s.slice(0,1) : s.slice(0,2);
+        const m = s.slice(-2);
+        let hh = parseInt(h,10), mm = parseInt(m,10);
+        if (isNaN(hh) || isNaN(mm) || hh>23 || mm>59) return '';
+        return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+      }
+      const m = s.match(/^(\d{1,2})(?::?(\d{2}))?\s*([ap]m)?$/i);
+      if (m){
+        let hh = parseInt(m[1],10);
+        let mm = typeof m[2]!== 'undefined' ? parseInt(m[2],10) : 0;
+        const ap = m[3] ? m[3].toLowerCase() : '';
+        if (ap){
+          if (ap.startsWith('p') && hh < 12) hh += 12;
+          if (ap.startsWith('a') && hh === 12) hh = 0;
+        }
+        if (hh>=0 && hh<=23 && mm>=0 && mm<=59){
+          return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+        }
+      }
+      // Already HH:MM? return sanitized
+      const mmatch = s.match(/^(\d{2}):(\d{2})$/);
+      if (mmatch){
+        let hh = parseInt(mmatch[1],10), mm = parseInt(mmatch[2],10);
+        if (hh>=0 && hh<=23 && mm>=0 && mm<=59){
+          return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+        }
+      }
+      return '';
+    }
+
+    // sanitize on blur; allow digits and ':' while typing
+    time.addEventListener('input', ()=>{ time.value = time.value.replace(/[^0-9:]/g,''); });
+    time.addEventListener('blur', ()=>{ const v = normalizeTime24(time.value); if (v) time.value = v; });
+    timeEnd.addEventListener('input', ()=>{ timeEnd.value = timeEnd.value.replace(/[^0-9:]/g,''); });
+    timeEnd.addEventListener('blur', ()=>{ const v = normalizeTime24(timeEnd.value); if (v) timeEnd.value = v; });
+
     // expose to picker so openCompactDateTimePicker can use it safely
     picker._formatLongDateLabel = formatLongDateLabel;
+    picker._normalizeTime24 = normalizeTime24;
 
     const ok = document.createElement('button'); ok.type='button'; ok.textContent='OK';
     ok.style.marginRight = '6px'; ok.style.padding='6px 10px'; ok.style.height='30px'; ok.style.border='1px solid #0ea5e9'; ok.style.background='#e0f2fe'; ok.style.borderRadius='4px';
@@ -2127,8 +2177,8 @@ if (window.helpers) {
     }
 
     ok.addEventListener('click', ()=>{
-      const tStart = (timeStart.value || '').trim() || '00:00';
-      const tEnd = (timeEnd.value || '').trim() || tStart;
+      const tStart = (picker._normalizeTime24 ? picker._normalizeTime24(timeStart.value) : (timeStart.value||'').trim()) || '00:00';
+      const tEnd = (picker._normalizeTime24 ? picker._normalizeTime24(timeEnd.value) : (timeEnd.value||'').trim()) || tStart;
       if (typeof picker._onConfirm === 'function'){
         const payload = {};
         if (picker._rangeMode && picker._rangeStart && picker._rangeEnd){

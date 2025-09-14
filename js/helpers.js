@@ -1518,16 +1518,30 @@ if (window.helpers) {
       // adjust header layout (3 cols) and picker width, and show/hide end time
       header.classList.toggle('range-mode', picker._rangeMode);
       timeEnd.style.display = picker._rangeMode ? 'inline-block' : 'none';
-      picker.style.width = picker._rangeMode ? '480px' : '320px';
+      picker.style.width = picker._rangeMode ? '640px' : '320px';
+      
       // reset selection to current selectedDate
       picker._rangeStart = null; picker._rangeEnd = null;
       if (picker._rangeMode) {
         if (picker._selectedDate) picker._rangeStart = new Date(picker._selectedDate);
         // prefill default end time = start time
         timeEnd.value = timeStart.value || '00:00';
+        // Set dual month state for consecutive months
+        const currentDate = picker._selectedDate || new Date();
+        picker._leftMonth = currentDate.getMonth();
+        picker._leftYear = currentDate.getFullYear();
+        picker._rightMonth = (currentDate.getMonth() + 1) % 12;
+        picker._rightYear = currentDate.getFullYear() + (currentDate.getMonth() === 11 ? 1 : 0);
       }
+      
       if (picker._headerDate) picker._headerDate.textContent = formatLongDateLabel(picker._selectedDate || new Date());
-      buildCalendar(picker._viewYear || new Date().getFullYear(), picker._viewMonth || new Date().getMonth(), picker._selectedDate);
+      
+      // Switch between single and dual calendar rendering
+      if (picker._rangeMode) {
+        buildDualCalendar(picker._leftYear, picker._leftMonth, picker._rightYear, picker._rightMonth, picker._selectedDate);
+      } else {
+        buildCalendar(picker._viewYear || new Date().getFullYear(), picker._viewMonth || new Date().getMonth(), picker._selectedDate);
+      }
     });
 
     // expose for example/demo
@@ -1569,6 +1583,86 @@ if (window.helpers) {
     cal.appendChild(calNav);
     cal.appendChild(dow);
     cal.appendChild(daysGrid);
+
+    // Dual calendar container (for range mode)
+    const dualCalContainer = document.createElement('div');
+    dualCalContainer.className = 'dtp-dual-months';
+    dualCalContainer.style.display = 'none';
+
+    // Left month
+    const leftMonth = document.createElement('div');
+    leftMonth.className = 'dtp-month';
+    
+    const leftNav = document.createElement('div');
+    leftNav.className = 'dtp-nav';
+    const leftPrev = document.createElement('button');
+    leftPrev.type = 'button';
+    leftPrev.className = 'date-nav-btn';
+    leftPrev.textContent = '‹';
+    const leftLabel = document.createElement('div');
+    leftLabel.className = 'dtp-month-label';
+    const leftNext = document.createElement('button');
+    leftNext.type = 'button';
+    leftNext.className = 'date-nav-btn';
+    leftNext.textContent = '›';
+    leftNav.appendChild(leftPrev);
+    leftNav.appendChild(leftLabel);
+    leftNav.appendChild(leftNext);
+
+    const leftDow = document.createElement('div');
+    leftDow.className = 'dtp-dow-row';
+    dows.forEach(dn => {
+      const el = document.createElement('div');
+      el.className = 'dtp-dow';
+      el.textContent = dn;
+      leftDow.appendChild(el);
+    });
+
+    const leftGrid = document.createElement('div');
+    leftGrid.className = 'dtp-grid';
+
+    leftMonth.appendChild(leftNav);
+    leftMonth.appendChild(leftDow);
+    leftMonth.appendChild(leftGrid);
+
+    // Right month
+    const rightMonth = document.createElement('div');
+    rightMonth.className = 'dtp-month';
+    
+    const rightNav = document.createElement('div');
+    rightNav.className = 'dtp-nav';
+    const rightPrev = document.createElement('button');
+    rightPrev.type = 'button';
+    rightPrev.className = 'date-nav-btn';
+    rightPrev.textContent = '‹';
+    const rightLabel = document.createElement('div');
+    rightLabel.className = 'dtp-month-label';
+    const rightNext = document.createElement('button');
+    rightNext.type = 'button';
+    rightNext.className = 'date-nav-btn';
+    rightNext.textContent = '›';
+    rightNav.appendChild(rightPrev);
+    rightNav.appendChild(rightLabel);
+    rightNav.appendChild(rightNext);
+
+    const rightDow = document.createElement('div');
+    rightDow.className = 'dtp-dow-row';
+    dows.forEach(dn => {
+      const el = document.createElement('div');
+      el.className = 'dtp-dow';
+      el.textContent = dn;
+      rightDow.appendChild(el);
+    });
+
+    const rightGrid = document.createElement('div');
+    rightGrid.className = 'dtp-grid';
+
+    rightMonth.appendChild(rightNav);
+    rightMonth.appendChild(rightDow);
+    rightMonth.appendChild(rightGrid);
+
+    dualCalContainer.appendChild(leftMonth);
+    dualCalContainer.appendChild(rightMonth);
 
     // Build and update calendar helpers
     function isSameDay(a,b){ return a && b && a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
@@ -1637,6 +1731,95 @@ if (window.helpers) {
       picker._viewYear = year; picker._viewMonth = month;
     }
 
+    function buildDualCalendar(leftYear, leftMonth, rightYear, rightMonth, selected) {
+      // Build left month
+      buildMonthGrid(leftYear, leftMonth, leftGrid, leftLabel, selected);
+      // Build right month  
+      buildMonthGrid(rightYear, rightMonth, rightGrid, rightLabel, selected);
+      
+      // Update picker state
+      picker._leftYear = leftYear;
+      picker._leftMonth = leftMonth;
+      picker._rightYear = rightYear;
+      picker._rightMonth = rightMonth;
+    }
+
+    function buildMonthGrid(year, month, grid, label, selected) {
+      const first = new Date(year, month, 1);
+      // Monday as first day of week
+      const startOffset = (first.getDay() + 6) % 7; // 0..6 (Mon..Sun)
+      const start = new Date(year, month, 1 - startOffset);
+      const monthLabel = first.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+      label.textContent = monthLabel;
+      grid.innerHTML = '';
+      
+      for (let i = 0; i < 42; i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'dtp-day';
+        
+        if (d.getMonth() !== month) btn.classList.add('muted');
+        
+        const today = new Date();
+        if (isSameDay(d, today)) btn.classList.add('today');
+        if (selected && isSameDay(d, selected)) btn.classList.add('selected');
+        
+        // Range highlights
+        if (picker._rangeMode) {
+          const rs = picker._rangeStart, re = picker._rangeEnd;
+          if (rs && isSameDay(d, rs)) btn.classList.add('range-start');
+          if (re && isSameDay(d, re)) btn.classList.add('range-end');
+          if (rs && re && d >= rs && d <= re) btn.classList.add('in-range');
+        }
+        
+        btn.textContent = String(d.getDate());
+        btn.addEventListener('click', () => {
+          const clicked = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+          if (picker._rangeMode) {
+            if (!picker._rangeStart || (picker._rangeStart && picker._rangeEnd)) {
+              picker._rangeStart = clicked;
+              picker._rangeEnd = null;
+              picker._selectedDate = clicked;
+            } else {
+              // set end
+              if (clicked < picker._rangeStart) {
+                picker._rangeEnd = picker._rangeStart;
+                picker._rangeStart = clicked;
+              } else {
+                picker._rangeEnd = clicked;
+              }
+              picker._selectedDate = clicked;
+            }
+          } else {
+            picker._selectedDate = clicked;
+          }
+          
+          date.value = toDdMmYy(picker._selectedDate);
+          if (picker._headerDate) {
+            const f = picker._formatLongDateLabel;
+            if (picker._rangeMode && picker._rangeStart && picker._rangeEnd) {
+              picker._headerDate.textContent = `${f(picker._rangeStart)} — ${f(picker._rangeEnd)}`;
+            } else if (picker._rangeMode && picker._rangeStart && !picker._rangeEnd) {
+              picker._headerDate.textContent = f(picker._rangeStart);
+            } else {
+              picker._headerDate.textContent = f(picker._selectedDate);
+            }
+          }
+          
+          // Refresh both calendars in dual mode
+          if (picker._rangeMode) {
+            buildDualCalendar(picker._leftYear, picker._leftMonth, picker._rightYear, picker._rightMonth, picker._selectedDate);
+          } else {
+            buildCalendar(year, month, picker._selectedDate);
+          }
+        });
+        
+        grid.appendChild(btn);
+      }
+    }
+
     prevMonthBtn.addEventListener('click', () => {
       let y = picker._viewYear || new Date().getFullYear();
       let m = (picker._viewMonth || 0) - 1; if (m < 0){ m = 11; y--; }
@@ -1648,10 +1831,69 @@ if (window.helpers) {
       buildCalendar(y, m, picker._selectedDate);
     });
 
+    // Dual month navigation handlers
+    leftPrev.addEventListener('click', () => {
+      let y = picker._leftYear;
+      let m = picker._leftMonth - 1;
+      if (m < 0) { m = 11; y--; }
+      
+      // Update right month to be consecutive
+      let rightY = y;
+      let rightM = m + 1;
+      if (rightM > 11) { rightM = 0; rightY++; }
+      
+      buildDualCalendar(y, m, rightY, rightM, picker._selectedDate);
+    });
+    
+    leftNext.addEventListener('click', () => {
+      let y = picker._leftYear;
+      let m = picker._leftMonth + 1;
+      if (m > 11) { m = 0; y++; }
+      
+      // Update right month to be consecutive
+      let rightY = y;
+      let rightM = m + 1;
+      if (rightM > 11) { rightM = 0; rightY++; }
+      
+      buildDualCalendar(y, m, rightY, rightM, picker._selectedDate);
+    });
+    
+    rightPrev.addEventListener('click', () => {
+      let y = picker._rightYear;
+      let m = picker._rightMonth - 1;
+      if (m < 0) { m = 11; y--; }
+      
+      // Update left month to be consecutive
+      let leftY = y;
+      let leftM = m - 1;
+      if (leftM < 0) { leftM = 11; leftY--; }
+      
+      buildDualCalendar(leftY, leftM, y, m, picker._selectedDate);
+    });
+    
+    rightNext.addEventListener('click', () => {
+      let y = picker._rightYear;
+      let m = picker._rightMonth + 1;
+      if (m > 11) { m = 0; y++; }
+      
+      // Update left month to be consecutive
+      let leftY = y;
+      let leftM = m - 1;
+      if (leftM < 0) { leftM = 11; leftY--; }
+      
+      buildDualCalendar(leftY, leftM, y, m, picker._selectedDate);
+    });
+
     // Expose for open() to call
     picker._buildCalendar = buildCalendar;
+    picker._buildDualCalendar = buildDualCalendar;
     picker._monthYearLabel = monthYearLabel;
     picker._daysGrid = daysGrid;
+    picker._dualCalContainer = dualCalContainer;
+    picker._leftGrid = leftGrid;
+    picker._rightGrid = rightGrid;
+    picker._leftLabel = leftLabel;
+    picker._rightLabel = rightLabel;
 
     
     // Add input handling for shortcuts
@@ -1841,6 +2083,7 @@ if (window.helpers) {
     column.appendChild(header);
     column.appendChild(controls);
     column.appendChild(cal);
+    column.appendChild(dualCalContainer);
     column.appendChild(actions);
 
     picker.appendChild(column);
@@ -1930,10 +2173,18 @@ if (window.helpers) {
     if (typeof p._applyTheme === 'function') p._applyTheme();
     pickerTarget = input;
 
-    // Set width based on mode
-    p.style.width = p._rangeMode ? '480px' : '320px';
+    // Set width based on mode and toggle calendar display
+    p.style.width = p._rangeMode ? '640px' : '320px';
     if (p._header) p._header.classList.toggle('range-mode', p._rangeMode);
     if (p._timeEnd) p._timeEnd.style.display = p._rangeMode ? 'inline-block' : 'none';
+    
+    // Toggle between single and dual calendar
+    if (p._dualCalContainer) {
+      p._dualCalContainer.style.display = p._rangeMode ? 'block' : 'none';
+    }
+    if (p._daysGrid && p._daysGrid.parentElement) {
+      p._daysGrid.parentElement.style.display = p._rangeMode ? 'none' : 'block';
+    }
 
     // Keyboard navigation and close handlers
     function onKey(e){
@@ -1946,7 +2197,16 @@ if (window.helpers) {
         if (p._headerDate){
           const f = p._formatLongDateLabel; p._headerDate.textContent = f(nd);
         }
-        p._buildCalendar(nd.getFullYear(), nd.getMonth(), nd);
+        if (p._rangeMode) {
+          const currentDate = nd;
+          const leftYear = currentDate.getFullYear();
+          const leftMonth = currentDate.getMonth();
+          const rightMonth = (leftMonth + 1) % 12;
+          const rightYear = leftYear + (leftMonth === 11 ? 1 : 0);
+          p._buildDualCalendar(leftYear, leftMonth, rightYear, rightMonth, nd);
+        } else {
+          p._buildCalendar(nd.getFullYear(), nd.getMonth(), nd);
+        }
       };
       if (e.key === 'ArrowLeft'){ e.preventDefault(); delta(-1); }
       else if (e.key === 'ArrowRight'){ e.preventDefault(); delta(1); }
@@ -1954,8 +2214,34 @@ if (window.helpers) {
       else if (e.key === 'ArrowDown'){ e.preventDefault(); delta(7); }
       else if (e.key === 'Enter'){ e.preventDefault(); ok.click(); }
       else if (e.key === 'Escape'){ e.preventDefault(); if (typeof p._close === 'function') p._close(); }
-      else if (e.key === 'PageUp'){ e.preventDefault(); p._buildCalendar((p._viewYear||new Date().getFullYear()), (p._viewMonth||0)-1, p._selectedDate); }
-      else if (e.key === 'PageDown'){ e.preventDefault(); p._buildCalendar((p._viewYear||new Date().getFullYear()), (p._viewMonth||0)+1, p._selectedDate); }
+      else if (e.key === 'PageUp'){ 
+        e.preventDefault(); 
+        if (p._rangeMode) {
+          let leftY = p._leftYear || new Date().getFullYear();
+          let leftM = (p._leftMonth || 0) - 1;
+          if (leftM < 0) { leftM = 11; leftY--; }
+          const rightY = leftY;
+          const rightM = (leftM + 1) % 12 === 0 && leftM === 11 ? 0 : (leftM + 1) % 12;
+          const actualRightY = leftY + (leftM === 11 ? 1 : 0);
+          p._buildDualCalendar(leftY, leftM, actualRightY, rightM, p._selectedDate);
+        } else {
+          p._buildCalendar((p._viewYear||new Date().getFullYear()), (p._viewMonth||0)-1, p._selectedDate);
+        }
+      }
+      else if (e.key === 'PageDown'){ 
+        e.preventDefault(); 
+        if (p._rangeMode) {
+          let leftY = p._leftYear || new Date().getFullYear();
+          let leftM = (p._leftMonth || 0) + 1;
+          if (leftM > 11) { leftM = 0; leftY++; }
+          const rightY = leftY;
+          const rightM = (leftM + 1) % 12;
+          const actualRightY = leftY + (leftM === 11 ? 1 : 0);
+          p._buildDualCalendar(leftY, leftM, actualRightY, rightM, p._selectedDate);
+        } else {
+          p._buildCalendar((p._viewYear||new Date().getFullYear()), (p._viewMonth||0)+1, p._selectedDate);
+        }
+      }
     }
     function onDocDown(ev){
       const within = picker && picker.contains(ev.target);
@@ -2007,13 +2293,25 @@ if (window.helpers) {
     }
 
     // Build calendar for current view around selected date
-    if (typeof p._selectedDate === 'object' && typeof p._buildCalendar === 'function'){
-      p._buildCalendar(p._selectedDate.getFullYear(), p._selectedDate.getMonth(), p._selectedDate);
+    if (typeof p._selectedDate === 'object') {
+      if (p._rangeMode && typeof p._buildDualCalendar === 'function') {
+        // Initialize dual month state if not set
+        if (typeof p._leftMonth === 'undefined') {
+          const currentDate = p._selectedDate;
+          p._leftMonth = currentDate.getMonth();
+          p._leftYear = currentDate.getFullYear();
+          p._rightMonth = (currentDate.getMonth() + 1) % 12;
+          p._rightYear = currentDate.getFullYear() + (currentDate.getMonth() === 11 ? 1 : 0);
+        }
+        p._buildDualCalendar(p._leftYear, p._leftMonth, p._rightYear, p._rightMonth, p._selectedDate);
+      } else if (typeof p._buildCalendar === 'function') {
+        p._buildCalendar(p._selectedDate.getFullYear(), p._selectedDate.getMonth(), p._selectedDate);
+      }
     }
 
     // Position near input
     const rect = input.getBoundingClientRect();
-    const assumedWidth = parseInt(p.style.width,10) || (p._rangeMode ? 480 : 320);
+    const assumedWidth = parseInt(p.style.width,10) || (p._rangeMode ? 640 : 320);
     const assumedHeight = 120;
     p.style.left = `${Math.min(rect.left, window.innerWidth - assumedWidth - 4)}px`;
     p.style.top = `${Math.min(rect.bottom + 4, window.innerHeight - assumedHeight)}px`;
@@ -2076,11 +2374,21 @@ if (window.helpers) {
     if (p._header){ p._header.classList.add('range-mode'); }
     if (p._timeStart) p._timeStart.value = '09:00';
     if (p._timeEnd) { p._timeEnd.value = '17:00'; p._timeEnd.style.display='inline-block'; }
-    p.style.width = '480px';
+    p.style.width = '640px';
+    // Set dual month state
+    p._leftMonth = p._selectedDate.getMonth();
+    p._leftYear = p._selectedDate.getFullYear();
+    p._rightMonth = (p._selectedDate.getMonth() + 1) % 12;
+    p._rightYear = p._selectedDate.getFullYear() + (p._selectedDate.getMonth() === 11 ? 1 : 0);
+    
+    // Toggle calendar display
+    if (p._dualCalContainer) p._dualCalContainer.style.display = 'block';
+    if (p._daysGrid && p._daysGrid.parentElement) p._daysGrid.parentElement.style.display = 'none';
+    
     if (p._headerDate && p._formatLongDateLabel){
       const f=p._formatLongDateLabel; p._headerDate.textContent = `${f(p._rangeStart)} — ${f(p._rangeEnd)}`;
     }
-    p._buildCalendar(p._selectedDate.getFullYear(), p._selectedDate.getMonth(), p._selectedDate);
+    p._buildDualCalendar(p._leftYear, p._leftMonth, p._rightYear, p._rightMonth, p._selectedDate);
     p._onConfirm = (payload)=>{
       console.log('Range picked:', payload);
       if (typeof p._close === 'function') p._close();

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dual-Month Date Picker Test</title>
+    <link rel="stylesheet" href="css/hangarplanner-ui.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            background: #f8fafc;
+        }
+        
+        .demo-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .demo-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #111827;
+            margin-bottom: 10px;
+        }
+        
+        .demo-subtitle {
+            color: #6b7280;
+            margin-bottom: 30px;
+        }
+        
+        .test-input {
+            width: 200px;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+        
+        .test-button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px;
+            font-size: 14px;
+        }
+        
+        .test-button:hover {
+            background: #2563eb;
+        }
+        
+        .demo-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+        }
+        
+        .section-title {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 15px;
+        }
+        
+        .dark-mode-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #374151;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        
+        .dark-mode {
+            background: #1f2937;
+        }
+        
+        .dark-mode body {
+            background: #1f2937;
+            color: #f9fafb;
+        }
+        
+        .dark-mode .demo-container {
+            background: #374151;
+            color: #f9fafb;
+        }
+        
+        .dark-mode .demo-title {
+            color: #f9fafb;
+        }
+        
+        .dark-mode .demo-section {
+            border-color: #4b5563;
+            background: #4b5563;
+        }
+        
+        .dark-mode .section-title {
+            color: #e5e7eb;
+        }
+        
+        .dark-mode .test-input {
+            background: #4b5563;
+            border-color: #6b7280;
+            color: #f9fafb;
+        }
+    </style>
+</head>
+<body>
+    <button class="dark-mode-toggle" onclick="toggleDarkMode()">Toggle Dark Mode</button>
+    
+    <div class="demo-container">
+        <h1 class="demo-title">🗓️ Dual-Month Date Picker</h1>
+        <p class="demo-subtitle">Enhanced range picker with two independent months side by side</p>
+        
+        <div class="demo-section">
+            <h3 class="section-title">1. Single Date Mode Test</h3>
+            <p>Double-click the input below to open the single-month date picker:</p>
+            <input type="text" class="test-input" placeholder="dd.mm.yy,HH:mm" id="single-date-input">
+        </div>
+        
+        <div class="demo-section">
+            <h3 class="section-title">2. Range Mode Test</h3>
+            <p>Double-click the input below, then toggle "Range" to see the dual-month layout:</p>
+            <input type="text" class="test-input" placeholder="dd.mm.yy,HH:mm" id="range-test-input">
+        </div>
+        
+        <div class="demo-section">
+            <h3 class="section-title">3. Programmatic Range Picker Demo</h3>
+            <p>Click the button below to open a standalone dual-month range picker:</p>
+            <button class="test-button" onclick="openRangeDemo()">Open Range Picker Demo</button>
+        </div>
+        
+        <div class="demo-section">
+            <h3 class="section-title">4. Flight Simulation</h3>
+            <p>Simulated flight arrival/departure inputs (like in the actual hangar application):</p>
+            <label>Arrival: <input type="text" class="test-input" placeholder="1230 or dd.mm.yy,HH:MM" id="arrival-time-1"></label><br>
+            <label>Departure: <input type="text" class="test-input" placeholder="1230 or dd.mm.yy,HH:MM" id="departure-time-1"></label>
+        </div>
+        
+        <div class="demo-section">
+            <h3 class="section-title">5. Features Overview</h3>
+            <ul>
+                <li><strong>Dual-Month Layout:</strong> In range mode, see two consecutive months side by side</li>
+                <li><strong>Independent Navigation:</strong> Each month has its own navigation controls</li>
+                <li><strong>Enhanced Range Toggle:</strong> Improved styling with icons and hover effects</li>
+                <li><strong>Keyboard Navigation:</strong> Arrow keys, PageUp/PageDown work across both calendars</li>
+                <li><strong>Dark Mode Support:</strong> Full theme compliance with dark/light modes</li>
+                <li><strong>Responsive Width:</strong> Picker expands to 640px in range mode</li>
+                <li><strong>Preserved Functionality:</strong> All existing shortcuts and features remain</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="js/helpers.js"></script>
+    <script>
+        // Initialize dark mode state
+        let darkModeEnabled = false;
+        
+        function toggleDarkMode() {
+            darkModeEnabled = !darkModeEnabled;
+            document.documentElement.classList.toggle('dark-mode', darkModeEnabled);
+            document.body.classList.toggle('dark-mode', darkModeEnabled);
+        }
+        
+        function openRangeDemo() {
+            if (window.helpers && window.helpers.openRangePickerExample) {
+                window.helpers.openRangePickerExample();
+            } else {
+                alert('Range picker example function not available. Make sure helpers.js is loaded.');
+            }
+        }
+        
+        // Wait for helpers to load, then initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Simulate the initialization that normally happens in the main app
+            setTimeout(() => {
+                if (window.helpers && window.helpers.attachCompactDateTimeInputs) {
+                    window.helpers.attachCompactDateTimeInputs();
+                    console.log('✅ Dual-month date picker initialized successfully!');
+                    console.log('📝 Try double-clicking the inputs above to test the picker');
+                    console.log('🔄 Toggle Range mode to see the dual-month layout');
+                } else {
+                    console.error('❌ Date picker initialization failed - helpers not loaded');
+                }
+            }, 100);
+        });
+    </script>
+</body>
+</html>

@@ -132,15 +132,22 @@
   }
 
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;' }[c])); }
-  function tdInput(id, val, ro, col){ return `<td class="db-td"><input id="${esc(id)}" data-col="${col}" class="db-input" ${ro?'disabled':''} value="${esc(val)}"></td>`; }
-  function tdSelect(id, val, ro, opts, col){ const o = opts.map(v=>`<option value="${esc(v)}" ${String(val)===v?'selected':''}>${esc(v)}</option>`).join(''); return `<td class="db-td"><select id="${esc(id)}" data-col="${col}" class="db-select" ${ro?'disabled':''}>${o}</select></td>`; }
+  function tdInput(id, val, ro, col){ return `<td><input id="${esc(id)}" data-col="${col}" class="planner-input" ${ro?'disabled':''} value="${esc(val)}"></td>`; }
+  function tdSelect(id, val, ro, opts, col){ const o = opts.map(v=>`<option value="${esc(v)}" ${String(val)===v?'selected':''}>${esc(v)}</option>`).join(''); return `<td><select id="${esc(id)}" data-col="${col}" class="planner-select" ${ro?'disabled':''}>${o}</select></td>`; }
 
   function updateSortIndicators(){
     $all('thead .sortable').forEach(th => {
       const col = th.getAttribute('data-col');
       const ind = th.querySelector('.sort-indicator'); if (!ind) return;
-      if (col === STATE.sort.col){ ind.textContent = STATE.sort.dir==='asc'?'↑':'↓'; th.classList.add('sorted'); }
-      else { ind.textContent = '↕'; th.classList.remove('sorted'); }
+      // reset
+      th.classList.remove('sorted','sorted-asc','sorted-desc');
+      if (col === STATE.sort.col){
+        ind.textContent = STATE.sort.dir==='asc'?'↑':'↓';
+        th.classList.add('sorted');
+        th.classList.add(STATE.sort.dir==='asc' ? 'sorted-asc' : 'sorted-desc');
+      } else {
+        ind.textContent = '↕';
+      }
     });
   }
 

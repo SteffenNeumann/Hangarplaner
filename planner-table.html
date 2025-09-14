@@ -10,43 +10,54 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/hangarplanner-ui.css" />
   <link rel="stylesheet" href="css/dark-mode-zoom.css" />
+  <link rel="stylesheet" href="css/fleet-database.css" />
   <style>
     body { font-family: Inter, ui-sans-serif, system-ui, -apple-system; }
-    .db-table { width: 100%; border-collapse: separate; border-spacing: 0; background: #fff; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
-    .db-thead th { position: sticky; top: 0; background: #f8fafc; font-size: 11px; text-transform: uppercase; color: #64748b; padding: 10px 12px; border-bottom: 1px solid #e2e8f0; z-index: 1; }
-    .db-filter th { display:none; } /* filter row removed */
-    .db-td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; }
-    .db-input, .db-select { width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 8px; font-size: 12px; background: #fff; color: #0f172a; }
+    #tableHost { padding: 8px; min-height: 400px; width: 100%; max-width: 1400px; margin: 0 auto; }
+
+    /* Match Fleet Database table visuals */
+    .fleet-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+    .fleet-table thead th { position: sticky; top: 0; background: #f8fafc; font-size: 11px; text-transform: uppercase; color: #64748b; padding: 10px 12px; border-bottom: 2px solid #e2e8f0; z-index: 1; letter-spacing: 0.05em; }
+    .fleet-table th.sortable { cursor: pointer; }
+    .fleet-table tbody td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; }
+
+    /* Inputs to resemble database controls */
+    .planner-input, .planner-select { width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 8px; font-size: 12px; background: #fff; color: #0f172a; }
+    .planner-input:focus, .planner-select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+
     .sort-indicator { margin-left: 6px; color: #94a3b8; }
     .sorted .sort-indicator { color: #334155; }
-    .dark-mode body { background: transparent; }
-    .dark-mode .db-table { background: var(--card-bg); box-shadow: none; }
-    .dark-mode .db-thead th { background: var(--card-header-bg); color: var(--text-secondary); border-bottom-color: rgba(255,255,255,0.12); }
-    .dark-mode .db-filter th { background: var(--card-bg); border-bottom-color: rgba(255,255,255,0.12); }
-    .dark-mode .db-td { border-bottom-color: rgba(255,255,255,0.08); }
-    .dark-mode .db-input, .dark-mode .db-select { background: var(--input-bg); color: var(--text-primary); border: 1px solid rgba(255,255,255,0.08); }
     .legend { font-size: 12px; color: #64748b; margin: 8px 2px; }
+
+    /* Dark Mode support */
+    .dark-mode body { background: transparent; }
+    .dark-mode .fleet-table { background: var(--card-bg); box-shadow: none; }
+    .dark-mode .fleet-table thead th { background: var(--card-header-bg); color: var(--text-secondary); border-bottom-color: rgba(255,255,255,0.12); }
+    .dark-mode .fleet-table tbody td { border-bottom-color: rgba(255,255,255,0.08); }
+    .dark-mode .planner-input, .dark-mode .planner-select { background: var(--input-bg); color: var(--text-primary); border: 1px solid rgba(255,255,255,0.08); }
     .dark-mode .legend { color: var(--text-secondary); }
   </style>
 </head>
 <body>
-  <div id="tableHost" style="padding:8px; min-height: 400px;">
-    <div id="loadingMessage" style="text-align: center; padding: 20px; color: #666;">Loading hangar data...</div>
-    <table id="plannerDbTable" class="db-table" style="display: none;">
-      <thead>
-        <tr class="db-thead">
-          <th data-col="hangarPosition" class="sortable" style="cursor: pointer;">Hangar Pos <span class="sort-indicator">↕</span></th>
-          <th data-col="aircraftId" class="sortable" style="cursor: pointer;">AC-ID <span class="sort-indicator">↕</span></th>
-          <th data-col="arrivalTime" class="sortable" style="cursor: pointer;">Arr (UTC) <span class="sort-indicator">↕</span></th>
-          <th data-col="departureTime" class="sortable" style="cursor: pointer;">Dep (UTC) <span class="sort-indicator">↕</span></th>
-          <th data-col="positionInfo" class="sortable" style="cursor: pointer;">Position <span class="sort-indicator">↕</span></th>
-          <th data-col="towStatus" class="sortable" style="cursor: pointer;">Tow Status <span class="sort-indicator">↕</span></th>
-          <th data-col="status" class="sortable" style="cursor: pointer;">Status <span class="sort-indicator">↕</span></th>
-          <th data-col="notes" class="sortable" style="cursor: pointer;">Notes <span class="sort-indicator">↕</span></th>
-        </tr>
-      </thead>
-      <tbody id="plannerDbBody"></tbody>
-    </table>
+  <div id="tableHost">
+    <div class="fleet-table-container">
+      <div id="loadingMessage" class="fleet-loading" style="text-align: center; padding: 20px; color: #666;">Loading hangar data...</div>
+      <table id="plannerDbTable" class="fleet-table" style="display: none;">
+        <thead>
+          <tr>
+            <th data-col="hangarPosition" class="sortable">Hangar Pos <span class="sort-indicator">↕</span></th>
+            <th data-col="aircraftId" class="sortable">AC-ID <span class="sort-indicator">↕</span></th>
+            <th data-col="arrivalTime" class="sortable">Arr (UTC) <span class="sort-indicator">↕</span></th>
+            <th data-col="departureTime" class="sortable">Dep (UTC) <span class="sort-indicator">↕</span></th>
+            <th data-col="positionInfo" class="sortable">Position <span class="sort-indicator">↕</span></th>
+            <th data-col="towStatus" class="sortable">Tow Status <span class="sort-indicator">↕</span></th>
+            <th data-col="status" class="sortable">Status <span class="sort-indicator">↕</span></th>
+            <th data-col="notes" class="sortable">Notes <span class="sort-indicator">↕</span></th>
+          </tr>
+        </thead>
+        <tbody id="plannerDbBody"></tbody>
+      </table>
+    </div>
     <div id="plannerDbStatus" class="legend"></div>
   </div>
 

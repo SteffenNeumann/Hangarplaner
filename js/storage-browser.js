@@ -292,6 +292,14 @@ class ServerSync {
 			} catch(e){ return { primary:{}, secondary:{} }; }
 		}
 
+		_isMasterMode(){
+			try {
+				if (this.isMaster) return true;
+				if (window.sharingManager && window.sharingManager.syncMode === 'master') return true;
+			} catch(_e){}
+			return false;
+		}
+
 		/**
 		 * Detect conflicts and filter server data so we only apply other users' changes
 		 * A conflict is when the same field diverged from the baseline both locally and on the server.
@@ -305,6 +313,15 @@ class ServerSync {
 				const basePrimary = this._baselinePrimary || {};
 				const baseSecondary = this._baselineSecondary || {};
 				const keys = ['aircraftId','arrivalTime','departureTime','position','hangarPosition','status','towStatus','notes'];
+				const norm = (field, val) => {
+					if (val === null || val === undefined) return '';
+					let s = (typeof val === 'string') ? val.trim() : ('' + val);
+					if (field === 'status' || field === 'towStatus') {
+						const l = s.toLowerCase();
+						return (l === '' || l === 'neutral') ? 'neutral' : l;
+					}
+					return s;
+				};
 				function cloneTiles(arr){ return (arr||[]).map(t=>({ ...t })); }
 				const filtered = { ...serverData, primaryTiles: cloneTiles(serverData?.primaryTiles||[]), secondaryTiles: cloneTiles(serverData?.secondaryTiles||[]) };
 				const checkList = [ { arr: filtered.primaryTiles, base: basePrimary, loc: local.primary, isSecondary:false }, { arr: filtered.secondaryTiles, base: baseSecondary, loc: local.secondary, isSecondary:true } ];
@@ -318,9 +335,12 @@ class ServerSync {
 							const srv = t[k];
 							const old = (b?.[k] ?? '');
 							const locVal = (l?.[k] ?? '');
-							if (srv === old) return; // server did not change this field relative to baseline
-							if (locVal === old) return; // only server changed -> safe to apply
-							if (locVal === srv) { return; } // both already equal -> no conflict
+							const srvN = norm(k, srv);
+							const oldN = norm(k, old);
+							const locN = norm(k, locVal);
+							if (srvN === oldN) return; // server did not change this field relative to baseline
+							if (locN === oldN) return; // only server changed -> safe to apply
+							if (locN === srvN) { return; } // both already equal -> no conflict
 							// Conflict detected — remove server value from filtered copy and queue it
 							try { delete arr[i][k]; } catch(_e){}
 							const fieldId = this._fieldIdFor && this._fieldIdFor(id, k);
@@ -1285,9 +1305,21 @@ async slaveCheckForUpdates() {
 			}
 
 			// *** PRIORITÄT 2: Kachel-Daten anwenden ***
-			// Detect conflicts and strip fields that collide with local edits; queue conflicts for user choice
+			// Detect conflicts only in Master mode; in read-only we always apply server changes
 			let toApply = serverData;
-			try { const filt = this._filterConflicts(serverData); toApply = filt.data || serverData; if (Array.isArray(filt.conflicts) && filt.conflicts.length) { try { window.__conflictQueue = window.__conflictQueue || []; filt.conflicts.forEach(c=>window.__conflictQueue.push(c)); if (typeof window.__showNextConflict==='function') setTimeout(()=>window.__showNextConflict(), 0); } catch(_e){} } } catch(_e){}
+			if (this._isMasterMode()) {
+				try {
+					const filt = this._filterConflicts(serverData);
+					toApply = filt.data || serverData;
+					if (Array.isArray(filt.conflicts) && filt.conflicts.length) {
+						try {
+							window.__conflictQueue = window.__conflictQueue || [];
+							filt.conflicts.forEach(c=>window.__conflictQueue.push(c));
+							if (typeof window.__showNextConflict==='function') setTimeout(()=>window.__showNextConflict(), 0);
+						} catch(_e){}
+					}
+				} catch(_e){}
+			}
 			// NEUE LOGIK: Verwende zentralen Datenkoordinator wenn keine aktiven Write-Fences bestehen,
 			// andernfalls wende nur nicht-gefenzte Felder direkt an, um Oscillation zu vermeiden
 			const hasFences = this._hasActiveFences();

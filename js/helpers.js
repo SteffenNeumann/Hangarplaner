@@ -1479,7 +1479,8 @@ if (window.helpers) {
     picker.style.boxShadow = '0 10px 20px rgba(0,0,0,0.15)';
     picker.style.padding = '8px';
     picker.style.display = 'none';
-    picker.style.width = '240px'; // compact width to avoid wrapping tile layout
+    picker.style.width = '320px'; // default width for single mode
+    picker.style.minHeight = '300px'; // ensure minimum height
 
     // Header quick-jump controls (± 1 day) removed per request; keep internal date state only
     const dateContainer = document.createElement('div');
@@ -1536,16 +1537,21 @@ if (window.helpers) {
       
       if (picker._headerDate) picker._headerDate.textContent = formatLongDateLabel(picker._selectedDate || new Date());
       
-      // Switch between single and dual calendar rendering
+      // Switch between single and dual calendar rendering with proper cleanup
       if (picker._rangeMode) {
         // Show dual calendar, hide single calendar
         cal.style.display = 'none';
         dualCalContainer.style.display = 'flex';
+        dualCalContainer.style.flexDirection = 'row';
+        dualCalContainer.style.flexWrap = 'nowrap';
         buildDualCalendar(picker._leftYear, picker._leftMonth, picker._rightYear, picker._rightMonth, picker._selectedDate);
       } else {
-        // Show single calendar, hide dual calendar
+        // Show single calendar, hide and clear dual calendar
         cal.style.display = 'block';
         dualCalContainer.style.display = 'none';
+        // Clear dual calendar content to prevent remnants
+        leftGrid.innerHTML = '';
+        rightGrid.innerHTML = '';
         buildCalendar(picker._viewYear || new Date().getFullYear(), picker._viewMonth || new Date().getMonth(), picker._selectedDate);
       }
     });
@@ -2179,7 +2185,7 @@ if (window.helpers) {
     if (p._header) p._header.classList.toggle('range-mode', p._rangeMode);
     if (p._timeEnd) p._timeEnd.style.display = p._rangeMode ? 'inline-block' : 'none';
     
-    // Toggle between single and dual calendar
+    // Toggle between single and dual calendar with proper cleanup
     const singleCal = p._daysGrid && p._daysGrid.parentElement && p._daysGrid.parentElement.parentElement;
     if (p._rangeMode) {
       // Range mode: show dual calendar, hide single calendar
@@ -2190,8 +2196,13 @@ if (window.helpers) {
       }
       if (singleCal) singleCal.style.display = 'none';
     } else {
-      // Single mode: show single calendar, hide dual calendar  
-      if (p._dualCalContainer) p._dualCalContainer.style.display = 'none';
+      // Single mode: show single calendar, hide and clear dual calendar  
+      if (p._dualCalContainer) {
+        p._dualCalContainer.style.display = 'none';
+        // Clear dual calendar grids to prevent remnants
+        if (p._leftGrid) p._leftGrid.innerHTML = '';
+        if (p._rightGrid) p._rightGrid.innerHTML = '';
+      }
       if (singleCal) singleCal.style.display = 'block';
     }
 
@@ -2318,12 +2329,15 @@ if (window.helpers) {
       }
     }
 
-    // Position near input
+    // Position near input with proper height calculation
     const rect = input.getBoundingClientRect();
     const assumedWidth = parseInt(p.style.width,10) || (p._rangeMode ? 640 : 320);
-    const assumedHeight = 120;
+    const assumedHeight = p._rangeMode ? 400 : 350; // More height for dual calendar
     p.style.left = `${Math.min(rect.left, window.innerWidth - assumedWidth - 4)}px`;
     p.style.top = `${Math.min(rect.bottom + 4, window.innerHeight - assumedHeight)}px`;
+    // Ensure minimum dimensions before showing
+    p.style.minWidth = p._rangeMode ? '640px' : '320px';
+    p.style.minHeight = p._rangeMode ? '400px' : '350px';
     p.style.display = 'block';
   }
 

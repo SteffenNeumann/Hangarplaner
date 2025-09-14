@@ -272,8 +272,66 @@ class ServerSync {
 			visit(currentData?.primaryTiles, false);
 			visit(currentData?.secondaryTiles, true);
 			return updates;
-		} catch(e){ console.warn('delta compute failed', e); return {}; }
-	}
+			} catch(e){ console.warn('delta compute failed', e); return {}; }
+		}
+
+		/**
+		 * Build a map id->tile for quick lookup
+		 */
+		_buildTileMap(data){
+			try {
+				const toMap = (arr)=>{
+					const m = {};
+					(arr||[]).forEach(t=>{ const id = parseInt(t?.tileId||0,10); if (id) m[id] = { ...t, tileId:id }; });
+					return m;
+				};
+				return {
+					primary: toMap(data?.primaryTiles||[]),
+					secondary: toMap(data?.secondaryTiles||[]),
+				};
+			} catch(e){ return { primary:{}, secondary:{} }; }
+		}
+
+		/**
+		 * Detect conflicts and filter server data so we only apply other users' changes
+		 * A conflict is when the same field diverged from the baseline both locally and on the server.
+		 */
+		_filterConflicts(serverData){
+			const result = { data: serverData, conflicts: [] };
+			try {
+				// Build current local map and use existing baseline
+				const localData = this.collectCurrentData && this.collectCurrentData();
+				const local = this._buildTileMap(localData||{});
+				const basePrimary = this._baselinePrimary || {};
+				const baseSecondary = this._baselineSecondary || {};
+				const keys = ['aircraftId','arrivalTime','departureTime','position','hangarPosition','status','towStatus','notes'];
+				function cloneTiles(arr){ return (arr||[]).map(t=>({ ...t })); }
+				const filtered = { ...serverData, primaryTiles: cloneTiles(serverData?.primaryTiles||[]), secondaryTiles: cloneTiles(serverData?.secondaryTiles||[]) };
+				const checkList = [ { arr: filtered.primaryTiles, base: basePrimary, loc: local.primary, isSecondary:false }, { arr: filtered.secondaryTiles, base: baseSecondary, loc: local.secondary, isSecondary:true } ];
+				checkList.forEach(({arr, base, loc, isSecondary})=>{
+					for (let i=0;i<arr.length;i++){
+						const t = arr[i]; const id = parseInt(t?.tileId||0,10); if (!id) continue;
+						const b = base[id] || {};
+						const l = loc[id] || {};
+						keys.forEach(k=>{
+							if (!Object.prototype.hasOwnProperty.call(t,k)) return; // server didn't provide this key
+							const srv = t[k];
+							const old = (b?.[k] ?? '');
+							const locVal = (l?.[k] ?? '');
+							if (srv === old) return; // server did not change this field relative to baseline
+							if (locVal === old) return; // only server changed -> safe to apply
+							if (locVal === srv) { return; } // both already equal -> no conflict
+							// Conflict detected — remove server value from filtered copy and queue it
+							try { delete arr[i][k]; } catch(_e){}
+							const fieldId = this._fieldIdFor && this._fieldIdFor(id, k);
+							result.conflicts.push({ tileId:id, field:k, fieldId, serverValue:srv, localValue:locVal, updatedBy: (t?.updatedBy||serverData?.metadata?.lastWriter||'') });
+						});
+					}
+				});
+				result.data = filtered;
+			} catch(e){ console.warn('conflict filter failed', e); }
+			return result;
+		}
 
 	/**
 	 * Internal: build a fetch timeout signal with a safe fallback when AbortSignal.timeout is not available
@@ -1018,6 +1076,8 @@ async slaveCheckForUpdates() {
 			console.warn("⚠️ Keine Server-Daten zum Anwenden");
 			return false;
 		}
+		// Skip echo of our own write in multi-master scenario
+		try { const sid = (typeof this.getSessionId==='function') ? this.getSessionId() : (this.sessionId || ''); const lastWriter = (serverData?.metadata?.lastWriterSession || '').trim(); if (sid && lastWriter && lastWriter === sid) { return false; } } catch(_e){}
 		// Stale snapshot gating by server timestamp to prevent oscillation
 		try {
 			const incTs = parseInt(serverData?.metadata?.timestamp || 0, 10);
@@ -1181,14 +1241,17 @@ async slaveCheckForUpdates() {
 			}
 
 			// *** PRIORITÄT 2: Kachel-Daten anwenden ***
+			// Detect conflicts and strip fields that collide with local edits; queue conflicts for user choice
+			let toApply = serverData;
+			try { const filt = this._filterConflicts(serverData); toApply = filt.data || serverData; if (Array.isArray(filt.conflicts) && filt.conflicts.length) { try { window.__conflictQueue = window.__conflictQueue || []; filt.conflicts.forEach(c=>window.__conflictQueue.push(c)); if (typeof window.__showNextConflict==='function') setTimeout(()=>window.__showNextConflict(), 0); } catch(_e){} } } catch(_e){}
 			// NEUE LOGIK: Verwende zentralen Datenkoordinator wenn keine aktiven Write-Fences bestehen,
 			// andernfalls wende nur nicht-gefenzte Felder direkt an, um Oscillation zu vermeiden
 			const hasFences = this._hasActiveFences();
 			if (window.dataCoordinator && !hasFences) {
 				console.log("🔄 Verwende dataCoordinator für Server-Daten...");
-				window.dataCoordinator.loadProject(serverData, "server");
+				window.dataCoordinator.loadProject(toApply, "server");
 				console.log("✅ Server-Daten über Datenkoordinator angewendet");
-				try { this._updateBaselineFromServerData(serverData); } catch(_e){}
+				try { this._updateBaselineFromServerData(toApply); } catch(_e){}
 				try { this.lastLoadedAt = Date.now(); document.dispatchEvent(new CustomEvent('serverDataLoaded', { detail: { loadedAt: this.lastLoadedAt } })); } catch(e){}
 				return true;
 			}
@@ -1221,6 +1284,8 @@ async slaveCheckForUpdates() {
 			const dataForApply = hasFences ? this._cloneFilteredServerData(serverData) : serverData;
 
 			// Direkte Anwendung der Kachel-Daten
+			// Recompute conflict stripping for fallback path as well
+			let dataForApply = hasFences ? this._cloneFilteredServerData(serverData) : toApply;
 			if (dataForApply.primaryTiles && dataForApply.primaryTiles.length > 0) {
 				console.log("🔄 Wende primäre Kachel-Daten direkt an...");
 				const a = this.applyTileData(dataForApply.primaryTiles, false);

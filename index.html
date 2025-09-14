@@ -4924,6 +4924,21 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                         togglePlannerPanelForTable(isTable);
                     } catch(_e){}
                 });
+                // Re-assert visibility after BFCache/restore and after deferred settings init
+                window.addEventListener('pageshow', function(){
+                    try {
+                        var isTable = document.body.classList.contains('table-view');
+                        togglePlannerPanelForTable(isTable);
+                        var iframe = document.getElementById('plannerTableFrame');
+                        if (isTable && iframe && iframe.contentWindow) {
+                            iframe.contentWindow.postMessage({ type: 'planner-table-refresh' }, '*');
+                        }
+                    } catch(_e){}
+                    // Apply again shortly after, to win races with late init
+                    setTimeout(function(){
+                        try { togglePlannerPanelForTable(document.body.classList.contains('table-view')); } catch(_e){}
+                    }, 200);
+                });
             })();
             </script>
 

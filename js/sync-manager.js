@@ -115,12 +115,30 @@ class SharingManager {
   _startFallbackWriteTimer(){ try { if (!window.serverSync) return; const writer = async()=>{ try { if (typeof window.serverSync.manualSync === 'function'){ await window.serverSync.manualSync(); } else if (typeof window.serverSync.syncWithServer === 'function'){ await window.serverSync.syncWithServer(); } } catch(_e){} }; this._fallbackWriteInterval = setInterval(writer, 120000); setTimeout(writer, 0); console.log('📝 Fallback Write-Timer aktiviert (120s)'); } catch(_e){} }
   async enableStandaloneMode(){ try{
     console.log("🏠 Aktiviere Standalone-Modus...");
+    // Stop all periodic sync activity and ensure no background reads/writes
     try { if (window.serverSync && typeof window.serverSync.stopPeriodicSync === 'function'){ window.serverSync.stopPeriodicSync(); } } catch(_e){}
     try { if (window.serverSync && window.serverSync.slaveCheckInterval){ clearInterval(window.serverSync.slaveCheckInterval); window.serverSync.slaveCheckInterval = null; } } catch(_e){}
     this._clearFallbackTimers();
     if (window.serverSync){ window.serverSync.isMaster = false; window.serverSync.isSlaveActive = false; }
+
+    // Enter Standalone mode
     this.syncMode = 'standalone'; this.isLiveSyncEnabled = false; this.isMasterMode = false;
-    this.updateAllSyncDisplays('Standalone', false); this.applyReadOnlyUIState(false); this.showNotification('Standalone-Modus aktiviert - Nur lokale Speicherung','info'); this._emitModeChanged();
+    this.updateAllSyncDisplays('Standalone', false);
+    // Standalone is not read-only; local edits remain possible, but no server writes/reads happen after the initial fetch
+    this.applyReadOnlyUIState(false);
+    this.showNotification('Standalone-Modus aktiviert - Nur lokale Speicherung','info');
+    this._emitModeChanged();
+
+    // Perform a single best-effort initial load from server, then stay offline
+    try {
+      const loaded = await this.loadServerDataImmediately();
+      if (loaded) {
+        console.log('📥 Standalone: Einmalige Server-Datenladung abgeschlossen');
+      } else {
+        console.log('ℹ️ Standalone: Keine Server-Daten für Initial-Ladung verfügbar');
+      }
+    } catch(_e){ console.warn('⚠️ Standalone: Initial-Ladung fehlgeschlagen', _e); }
+
     console.log('✅ Standalone-Modus aktiviert');
   } catch(e){ console.error('❌ Fehler beim Aktivieren des Standalone-Modus:', e); this.showNotification('Fehler beim Wechsel zu Standalone-Modus','error'); } }
   async enableSyncMode(){ try{

@@ -149,13 +149,28 @@ class SharingManager {
     } catch(_e){}
     return false;
   }
-  async enableStandaloneMode(){ try{
+async enableStandaloneMode(){ try{
     console.log("🏠 Aktiviere Standalone-Modus...");
     try { if (window.serverSync && typeof window.serverSync.stopPeriodicSync === 'function'){ window.serverSync.stopPeriodicSync(); } } catch(_e){}
     try { if (window.serverSync && window.serverSync.slaveCheckInterval){ clearInterval(window.serverSync.slaveCheckInterval); window.serverSync.slaveCheckInterval = null; } } catch(_e){}
     this._clearFallbackTimers();
     if (window.serverSync){ window.serverSync.isMaster = false; window.serverSync.isSlaveActive = false; }
     this.syncMode = 'standalone'; this.isLiveSyncEnabled = false; this.isMasterMode = false;
+
+    // One-time initial server load (if not yet done) respecting your requirement
+    try {
+      const doneKey = 'standalone.firstLoadDone';
+      const already = localStorage.getItem(doneKey) === '1';
+      if (!already && window.serverSync && typeof window.serverSync.loadFromServer === 'function' && typeof window.serverSync.applyServerData === 'function'){
+        console.log('📥 Standalone: performing one-time initial server load...');
+        const data = await window.serverSync.loadFromServer({ force: true });
+        if (data && !data.error){
+          try { await window.serverSync.applyServerData(data); } catch(_e){}
+        }
+        try { localStorage.setItem(doneKey, '1'); } catch(_e){}
+      }
+    } catch(e){ console.warn('Standalone first-load skipped or failed', e); }
+
     this.updateAllSyncDisplays('Standalone', false); this.applyReadOnlyUIState(false); this.showNotification('Standalone-Modus aktiviert - Nur lokale Speicherung','info'); this._emitModeChanged();
     console.log('✅ Standalone-Modus aktiviert');
   } catch(e){ console.error('❌ Fehler beim Aktivieren des Standalone-Modus:', e); this.showNotification('Fehler beim Wechsel zu Standalone-Modus','error'); } }

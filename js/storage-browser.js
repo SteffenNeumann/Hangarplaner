@@ -521,10 +521,11 @@ async slaveCheckForUpdates() {
         this._isCheckingUpdates = true;
 
         // Presence-aware gating for Master mode: only update view when other masters exist
+        // Fallback policy: if presence fails to respond, DO NOT gate reads
         try {
             if (this.isMaster && this.requireOtherMastersForRead) {
                 const others = await this._getOtherActiveMasters();
-                if (!others || others.length === 0) {
+                if (Array.isArray(others) && others.length === 0) {
                     console.log("⏭️ Master read gated: no other masters online");
                     this._isCheckingUpdates = false;
                     return;
@@ -688,9 +689,20 @@ async slaveCheckForUpdates() {
 					try {
 						// If presence-gating is enabled in Master, avoid immediate read-back unless others are present
 						let allowReadBack = true;
-						if (this.isMaster && this.requireOtherMastersForRead) {
-							try { const others = await this._getOtherActiveMasters(); allowReadBack = (others && others.length > 0); } catch(_e){ allowReadBack = false; }
-						}
+if (this.isMaster && this.requireOtherMastersForRead) {
+                            try {
+                                const others = await this._getOtherActiveMasters();
+                                if (Array.isArray(others)) {
+                                    allowReadBack = (others.length > 0);
+                                } else {
+                                    // Presence unavailable → do not gate read-back
+                                    allowReadBack = true;
+                                }
+                            } catch(_e){
+                                // Presence failed → do not gate read-back
+                                allowReadBack = true;
+                            }
+                        }
 						const typingActive = !!(window.hangarEventManager && typeof window.hangarEventManager.isUserTypingRecently === 'function' && window.hangarEventManager.isUserTypingRecently(2000));
 						if (allowReadBack && this.canReadFromServer && this.canReadFromServer()) {
 							if (typingActive) {
@@ -800,19 +812,19 @@ async slaveCheckForUpdates() {
 				if (ts) this.lastServerTimestamp = Math.max(this.lastServerTimestamp||0, ts);
 			} catch(_e){}
 
-			// Optional immediate read-back to converge, but avoid while typing
-			try {
-				const typingActive = !!(window.hangarEventManager && typeof window.hangarEventManager.isUserTypingRecently === 'function' && window.hangarEventManager.isUserTypingRecently(2000));
-				if (this.canReadFromServer && this.canReadFromServer()) {
-					if (typingActive) {
-						setTimeout(async () => {
-							try { if (this.canReadFromServer && this.canReadFromServer()) { const data = await this.loadFromServer(); if (data && !data.error) await this.applyServerData(data); } } catch(_e){}
-						}, 2000);
-					} else {
-						const data = await this.loadFromServer();
-						if (data && !data.error) await this.applyServerData(data);
-					}
-				}
+// Optional immediate read-back to converge, but avoid while typing
+            try {
+                const typingActive = !!(window.hangarEventManager && typeof window.hangarEventManager.isUserTypingRecently === 'function' && window.hangarEventManager.isUserTypingRecently(2000));
+                if (this.canReadFromServer && this.canReadFromServer()) {
+                    if (typingActive) {
+                        setTimeout(async () => {
+                            try { if (this.canReadFromServer && this.canReadFromServer()) { await this.slaveCheckForUpdates(); } } catch(_e){}
+                        }, 2000);
+                    } else {
+                        await this.slaveCheckForUpdates();
+                    }
+                }
+            } catch(_e){}
 			} catch(_e){}
 
 			// Update local baselines optimistically with applied fieldUpdates
@@ -992,19 +1004,20 @@ async slaveCheckForUpdates() {
 	/**
 	 * Lädt Daten vom Server
 	 */
-	async loadFromServer() {
-		// Respect mode: skip reads if not allowed
-		try { if (typeof this.canReadFromServer === 'function' && !this.canReadFromServer()) { return null; } } catch(_e){}
-		if (!this.serverSyncUrl) {
-			console.warn("⚠️ Server-URL nicht konfiguriert");
-			return null;
-		}
+async loadFromServer(options = {}) {
+        const force = !!(options && options.force === true);
+        // Respect mode: skip reads if not allowed (unless forced)
+        try { if (!force && typeof this.canReadFromServer === 'function' && !this.canReadFromServer()) { return null; } } catch(_e){}
+        if (!this.serverSyncUrl) {
+            console.warn("⚠️ Server-URL nicht konfiguriert");
+            return null;
+        }
 
-		// Reentrancy guard
-		if (this._isLoading || window.isLoadingServerData) {
-			console.log("⏸️ Load skipped: another server read in progress");
-			return null;
-		}
+        // Reentrancy guard
+        if (this._isLoading || window.isLoadingServerData) {
+            console.log("⏸️ Load skipped: another server read in progress");
+            return null;
+        }
 
 		this._isLoading = true;
 		window.isLoadingServerData = true;

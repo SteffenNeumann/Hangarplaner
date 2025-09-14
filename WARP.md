@@ -203,7 +203,7 @@ Flight number lookups frequently fail due to API limitations and data mapping ch
   - Read-only (Sync): reads from server; client edits do not write to server
   - Read/Write (Master): writes to server and reads from server; multiple users can be write-enabled in parallel (multi-master)
 - Client-side gating
-  - Writes: All server writes are centralized through `window.serverSync.syncWithServer()`; header `X-Sync-Role: master` is sent only in Read/Write (Master) mode
+  - Writes: All server writes are centralized through `window.serverSync.syncWithServer()`; header `X-Sync-Role: master` is sent only when in Master mode
   - Reads: All server reads are gated by the Read Data toggle. When Read is OFF, the app skips initial server load at startup and disables periodic read-back. Write-only mode is no longer supported.
   - Display options in read-only mode save locally only and show “Saved locally (read-only mode)”
 - UI behavior in Read-only (Sync)
@@ -212,9 +212,18 @@ Flight number lookups frequently fail due to API limitations and data mapping ch
   - A subtle status indicator remains (e.g., mode label and last-load time pill in header)
   - Mode toggles and navigation remain usable
 - Read/Write (Master) specifics
-  - Manual Sync: POSTs changes and then immediately reads from the server to refresh local state (if Read is ON)
+  - Presence-aware reads: by default the Master client only applies server updates when at least one other Master is online and the last server writer is a different session (configurable via `serverSync.requireOtherMastersForRead`)
+  - Manual Sync: POSTs changes and may read back to refresh local state; read-back is skipped when gating rules disallow it
 - Server endpoint
   - `sync/data.php` accepts GET/POST; client-side gating prevents writes in read-only
+
+#### Conflict Resolution (per-field, multi-master)
+- When two Masters edit the same field close in time, the client shows a modal:
+  - "User {displayName} updated {field} (Tile N). Accept server or Keep mine?"
+- Accept server: apply the server value locally and update baselines
+- Keep mine: keep the local value and immediately POST a targeted `fieldUpdates` write for that field; a short write-fence prevents immediate echo overwrite
+- Fresh-edit window defaults to 10s (`serverSync.conflictPromptWindowMs`) and covers active inputs and recently edited fields
+- Visual aids: subtle author pill and last-update badge remain for awareness
 
 ### Manual test checklist (Sync system)
 1) Read-only (Sync)

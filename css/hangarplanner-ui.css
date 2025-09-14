@@ -836,56 +836,44 @@ select.status-selector {
   background: var(--bg-primary);
 }
 
-/* Hero Section */
+/* Hero Section - Slim and Clean */
 .faq-hero {
   background: linear-gradient(135deg, #f49e0c 0%, #e88c00 100%);
-  padding: 48px 24px;
+  padding: 24px 24px 28px;
   text-align: center;
-  position: relative;
-  overflow: hidden;
-}
-
-.faq-hero::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="%23ffffff" stroke-width="0.5" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
-  opacity: 0.3;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
 .faq-hero-content {
-  position: relative;
-  z-index: 1;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
 .faq-hero-title {
-  font-size: 2.5rem;
-  font-weight: 700;
+  font-size: 1.75rem;
+  font-weight: 600;
   color: #ffffff;
-  margin: 0 0 16px;
+  margin: 0 0 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  line-height: 1.1;
+  gap: 12px;
+  line-height: 1.2;
 }
 
 .faq-hero-icon {
-  width: 48px;
-  height: 48px;
+  width: 28px;
+  height: 28px;
   color: #ffffff;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+  opacity: 0.95;
 }
 
 .faq-hero-subtitle {
-  font-size: 1.125rem;
-  color: rgba(255,255,255,0.9);
+  font-size: 0.95rem;
+  color: rgba(255,255,255,0.85);
   margin: 0;
   font-weight: 400;
-  max-width: 600px;
+  max-width: 500px;
   margin: 0 auto;
 }
 
@@ -1353,18 +1341,22 @@ select.status-selector {
 /* Responsive Design */
 @media (max-width: 768px) {
   .faq-hero {
-    padding: 32px 16px;
+    padding: 20px 16px 24px;
   }
   
   .faq-hero-title {
-    font-size: 2rem;
+    font-size: 1.5rem;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
   }
   
   .faq-hero-icon {
-    width: 40px;
-    height: 40px;
+    width: 24px;
+    height: 24px;
+  }
+  
+  .faq-hero-subtitle {
+    font-size: 0.875rem;
   }
   
   .faq-search-section,

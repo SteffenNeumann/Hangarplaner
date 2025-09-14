@@ -224,6 +224,8 @@ window.location.replace('login.html');
     md = md.replace(/```([a-zA-Z0-9]*)[^\n]*\n([\s\S]*?)\n```/g, function(_, lang, code){
       return `<pre class=\"md-code\"><code class=\"language-${lang||'text'}\">${escapeHtml(code)}</code></pre>`;
     });
+    // Horizontal rules (must come before headings)
+    md = md.replace(/^\s*---+\s*$/gm, '<hr>');
     // Headings
     md = md.replace(/^######\s+(.*)$/gm, '<h6>$1<\/h6>')
            .replace(/^#####\s+(.*)$/gm, '<h5>$1<\/h5>')
@@ -243,7 +245,7 @@ window.location.replace('login.html');
     const blocks = md.split(/\n{2,}/).map(function(block){
       const t = block.trim();
       if (!t) return '';
-      if (/^<h[1-6]|^<ul>|^<ol>|^<pre|^<table|^<blockquote/.test(t)) return block;
+      if (/^<h[1-6]|^<ul>|^<ol>|^<pre|^<table|^<blockquote|^<hr>/.test(t)) return block;
       const lines = t.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
       return `<p>${lines.join(' ')}<\/p>`;
     });

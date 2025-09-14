@@ -2119,9 +2119,10 @@ if (window.helpers) {
 
     function close(){
       picker.style.display='none';
-      // detach listeners
-      document.removeEventListener('keydown', onKey);
-      document.removeEventListener('mousedown', onDocDown, true);
+      // detach listeners safely using stored refs
+      try { if (picker._onKey) document.removeEventListener('keydown', picker._onKey); } catch(_){}
+      try { if (picker._onDocDown) document.removeEventListener('mousedown', picker._onDocDown, true); } catch(_){}
+      picker._onKey = null; picker._onDocDown = null;
       pickerTarget = null;
     }
 
@@ -2194,6 +2195,8 @@ if (window.helpers) {
 
   function openCompactDateTimePicker(input){
     const p = ensurePicker();
+    // Ensure container is visible in case a prior bug hid it
+    if (p._column && p._column.style.display === 'none') p._column.style.display = 'flex';
     // Re-apply theme in case user toggled dark mode since creation
     if (typeof p._applyTheme === 'function') p._applyTheme();
     pickerTarget = input;
@@ -2204,7 +2207,7 @@ if (window.helpers) {
     if (p._timeEnd) p._timeEnd.style.display = p._rangeMode ? 'inline-block' : 'none';
     
     // Toggle between single and dual calendar with proper cleanup
-    const singleCal = p._daysGrid && p._daysGrid.parentElement && p._daysGrid.parentElement.parentElement;
+    const singleCal = p._daysGrid && p._daysGrid.parentElement; // .dtp-cal
     if (p._rangeMode) {
       // Range mode: show dual calendar, hide single calendar
       if (p._dualCalContainer) {

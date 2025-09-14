@@ -4740,6 +4740,19 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                     try { console.log(`📐 Layout set to ${layout} columns`); } catch(e){}
                 }
 
+                // Ensure planner panel visibility is immediately correct regardless of CSS class timing
+                function togglePlannerPanelForTable(tableOn){
+                    try {
+                        const panel = document.getElementById('panel-planner');
+                        if (!panel) return;
+                        Array.from(panel.children || []).forEach(function(child){
+                            if (child && child.id !== 'plannerTableFrame'){
+                                child.style.display = tableOn ? 'none' : '';
+                            }
+                        });
+                    } catch(e){}
+                }
+
                 function wireControls(){
                     const darkToggle = document.getElementById('darkModeToggle');
                     if (darkToggle && !darkToggle.__wired){
@@ -4765,12 +4778,17 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                                 document.body.classList.add('table-view');
                                 document.body.classList.remove('tile-view');
                                 if (iframe) iframe.style.display = '';
+                                // Immediately hide non-iframe planner content to avoid transient flashes
+                                togglePlannerPanelForTable(true);
                                 // Ensure the table iframe refreshes immediately when switching into table mode
                                 try { if (iframe && iframe.contentWindow) iframe.contentWindow.postMessage({ type: 'planner-table-refresh' }, '*'); } catch(e){}
+                                // Re-apply display settings if available (prevents style drift until submenu hover)
+                                try { if (window.displayOptions && typeof window.displayOptions.applySettings==='function') window.displayOptions.applySettings(); } catch(e){}
                             } else {
                                 document.body.classList.add('tile-view');
                                 document.body.classList.remove('table-view');
                                 if (iframe) iframe.style.display = 'none';
+                                togglePlannerPanelForTable(false);
                             }
                         });
                         viewToggle.__wired = true;
@@ -4902,6 +4920,8 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                         if (!iframe) return;
                         var isTable = document.body.classList.contains('table-view');
                         iframe.style.display = isTable ? '' : 'none';
+                        // Explicitly toggle other planner content visibility to match
+                        togglePlannerPanelForTable(isTable);
                     } catch(_e){}
                 });
             })();

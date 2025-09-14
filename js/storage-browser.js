@@ -1325,9 +1325,6 @@ async slaveCheckForUpdates() {
 					: "⚠️ Keine Standard-Datenhandler verfügbar, verwende direkten Fallback..."
 			);
 			let applied = false;
-			const dataForApply = hasFences ? this._cloneFilteredServerData(serverData) : serverData;
-
-			// Direkte Anwendung der Kachel-Daten
 			// Recompute conflict stripping for fallback path as well
 			let dataForApply = hasFences ? this._cloneFilteredServerData(serverData) : toApply;
 			if (dataForApply.primaryTiles && dataForApply.primaryTiles.length > 0) {

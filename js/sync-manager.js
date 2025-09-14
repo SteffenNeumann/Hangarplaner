@@ -113,102 +113,26 @@ class SharingManager {
   _clearFallbackTimers(){ try { if (this._fallbackReadInterval){ clearInterval(this._fallbackReadInterval); this._fallbackReadInterval = null; } if (this._fallbackWriteInterval){ clearInterval(this._fallbackWriteInterval); this._fallbackWriteInterval = null; } } catch(_e){} }
   _startFallbackReadPolling(){ try { if (!window.serverSync || typeof window.serverSync.loadFromServer !== 'function' || typeof window.serverSync.applyServerData !== 'function') return; this._clearFallbackTimers(); const poll = async()=>{ try { const serverData = await window.serverSync.loadFromServer(); if (serverData && !serverData.error){ await window.serverSync.applyServerData(serverData); } } catch(_e){} }; poll(); this._fallbackReadInterval = setInterval(poll, 15000); console.log('📡 Fallback Read-Polling aktiviert (15s)'); } catch(_e){} }
   _startFallbackWriteTimer(){ try { if (!window.serverSync) return; const writer = async()=>{ try { if (typeof window.serverSync.manualSync === 'function'){ await window.serverSync.manualSync(); } else if (typeof window.serverSync.syncWithServer === 'function'){ await window.serverSync.syncWithServer(); } } catch(_e){} }; this._fallbackWriteInterval = setInterval(writer, 120000); setTimeout(writer, 0); console.log('📝 Fallback Write-Timer aktiviert (120s)'); } catch(_e){} }
-  async _waitForServerSyncMethod(methodName, timeoutMs = 1500){ try { const start = Date.now(); while (Date.now() - start < timeoutMs){ if (window.serverSync && typeof window.serverSync[methodName] === 'function'){ return true; } await new Promise(r=>setTimeout(r,50)); } } catch(_e){} return false; }
-  _getServerSync(){ try { const ss = window.serverSync; if (ss && (typeof ss.startSlaveMode==='function' || typeof ss.startMasterMode==='function')) return ss; const sb = window.storageBrowser; if (sb && (typeof sb.startSlaveMode==='function' || typeof sb.startMasterMode==='function')){ try { window.serverSync = sb; } catch(_e){} return sb; } return window.serverSync || window.storageBrowser || null; } catch(_e){ return window.serverSync || null; } }
-  async _ensureRealServerSync(){
-    try {
-      // If current serverSync is a plain object without methods, but class is available, upgrade
-      const ss = window.serverSync || window.storageBrowser || null;
-      const hasMethods = !!(ss && (typeof ss.startSlaveMode==='function' || typeof ss.startMasterMode==='function'));
-      if (hasMethods) return true;
-      // If class not yet present, attempt dynamic load of storage-browser.js
-      if (typeof window.StorageBrowser !== 'function'){
-        if (!this._dynLoadAttempted){
-          this._dynLoadAttempted = true;
-          try {
-            const s = document.createElement('script');
-            s.src = 'js/storage-browser.js';
-            s.async = true;
-            s.crossOrigin = 'anonymous';
-            const p = new Promise((resolve)=>{ s.onload=()=>resolve(true); s.onerror=()=>resolve(false); });
-            document.head.appendChild(s);
-            await Promise.race([p, new Promise(r=>setTimeout(()=>r(false), 2000))]);
-          } catch(_e){}
-        }
-      }
-      if (typeof window.StorageBrowser === 'function'){
-        console.warn('⚠️ Detected plain serverSync object; re-initializing real ServerSync instance');
-        const newSS = new window.StorageBrowser();
-        try { window.serverSync = newSS; window.storageBrowser = newSS; } catch(_e){}
-        try {
-          const url = (localStorage.getItem('hangarServerSyncUrl')) || (window.location.origin + '/sync/data.php');
-          if (typeof newSS.initSync === 'function') await newSS.initSync(url);
-        } catch(_e){}
-        return true;
-      }
-    } catch(_e){}
-    return false;
-  }
-async enableStandaloneMode(){ try{
+  async enableStandaloneMode(){ try{
     console.log("🏠 Aktiviere Standalone-Modus...");
     try { if (window.serverSync && typeof window.serverSync.stopPeriodicSync === 'function'){ window.serverSync.stopPeriodicSync(); } } catch(_e){}
     try { if (window.serverSync && window.serverSync.slaveCheckInterval){ clearInterval(window.serverSync.slaveCheckInterval); window.serverSync.slaveCheckInterval = null; } } catch(_e){}
     this._clearFallbackTimers();
     if (window.serverSync){ window.serverSync.isMaster = false; window.serverSync.isSlaveActive = false; }
     this.syncMode = 'standalone'; this.isLiveSyncEnabled = false; this.isMasterMode = false;
-
-    // One-time initial server load (if not yet done) respecting your requirement
-    try {
-      const doneKey = 'standalone.firstLoadDone';
-      const already = localStorage.getItem(doneKey) === '1';
-      if (!already && window.serverSync && typeof window.serverSync.loadFromServer === 'function' && typeof window.serverSync.applyServerData === 'function'){
-        console.log('📥 Standalone: performing one-time initial server load...');
-        const data = await window.serverSync.loadFromServer({ force: true });
-        if (data && !data.error){
-          try { await window.serverSync.applyServerData(data); } catch(_e){}
-        }
-        try { localStorage.setItem(doneKey, '1'); } catch(_e){}
-      }
-    } catch(e){ console.warn('Standalone first-load skipped or failed', e); }
-
     this.updateAllSyncDisplays('Standalone', false); this.applyReadOnlyUIState(false); this.showNotification('Standalone-Modus aktiviert - Nur lokale Speicherung','info'); this._emitModeChanged();
     console.log('✅ Standalone-Modus aktiviert');
   } catch(e){ console.error('❌ Fehler beim Aktivieren des Standalone-Modus:', e); this.showNotification('Fehler beim Wechsel zu Standalone-Modus','error'); } }
   async enableSyncMode(){ try{
     console.log('📡 Aktiviere Sync-Modus (Slave)...');
-    // Ensure real ServerSync instance (upgrade from fallback object if needed)
-    try { await this._ensureRealServerSync(); } catch(_e){}
-    const ss = this._getServerSync();
-    if (!ss) throw new Error('ServerSync nicht verfügbar');
-    try { ss.isMaster = false; ss.isSlaveActive = true; } catch(_e){}
-    let started = false;
-    if (typeof ss.startSlaveMode === 'function'){
-      console.log('🔄 Starte Slave-Polling für Read-Modus...'); await ss.startSlaveMode(); started = true;
-      if (!ss.slaveCheckInterval){ setTimeout(async()=>{ try { await ss.startSlaveMode(); console.log('🔄 Slave-Polling Retry ausgeführt'); } catch(_e){} }, 2000); }
+    if (!window.serverSync) throw new Error('ServerSync nicht verfügbar');
+    window.serverSync.isMaster = false; window.serverSync.isSlaveActive = true;
+    if (typeof window.serverSync.startSlaveMode === 'function'){
+      console.log('🔄 Starte Slave-Polling für Read-Modus...'); await window.serverSync.startSlaveMode();
+      if (!window.serverSync.slaveCheckInterval){ setTimeout(async()=>{ await window.serverSync.startSlaveMode(); console.log('🔄 Slave-Polling Retry ausgeführt'); }, 2000); }
     } else {
-      // Wait briefly for ServerSync to finish loading (race-safe init)
-      const ready = await this._waitForServerSyncMethod('startSlaveMode', 3000);
-      if (ready){
-        const s2 = this._getServerSync();
-        try { s2.isMaster = false; s2.isSlaveActive = true; } catch(_e){}
-        await s2.startSlaveMode();
-        started = true;
-      } else {
-        console.warn('⚠️ startSlaveMode nicht verfügbar – aktiviere Fallback-Polling');
-        this._startFallbackReadPolling();
-        // Late-bind: try to switch from fallback to real startSlaveMode after a short delay
-        setTimeout(async ()=>{
-          try {
-            const s3 = this._getServerSync();
-            if (s3 && typeof s3.startSlaveMode === 'function'){
-              this._clearFallbackTimers();
-              try { s3.isMaster = false; s3.isSlaveActive = true; } catch(_e){}
-              await s3.startSlaveMode();
-              console.log('🔄 Fallback-Polling durch echtes startSlaveMode ersetzt');
-            }
-          } catch(_e){}
-        }, 2000);
-      }
+      console.warn('⚠️ startSlaveMode nicht verfügbar – aktiviere Fallback-Polling');
+      this._startFallbackReadPolling();
     }
     this.syncMode = 'sync'; this.isLiveSyncEnabled = true; this.isMasterMode = false; this.updateAllSyncDisplays('Sync', true); this.applyReadOnlyUIState(true); this.showNotification('Sync-Modus aktiviert - Empfange Server-Updates','info'); this._emitModeChanged(); console.log('✅ Sync-Modus (Slave) aktiviert');
   } catch(e){ console.error('❌ Fehler beim Aktivieren des Sync-Modus:', e); this.showNotification('Fehler beim Aktivieren der Synchronisation','error'); await this.enableStandaloneMode(); } }
@@ -216,36 +140,13 @@ async enableStandaloneMode(){ try{
     console.log('👑 Aktiviere Master-Modus...');
     if (!window.serverSync) throw new Error('ServerSync nicht verfügbar');
     window.serverSync.isMaster = true; window.serverSync.isSlaveActive = true; // Force read for multi-master
-    let _started = false;
-    // Ensure real ServerSync instance (upgrade from fallback object if needed)
-    try { await this._ensureRealServerSync(); } catch(_e){}
     if (typeof window.serverSync.startMasterMode === 'function'){
       await window.serverSync.startMasterMode();
-      _started = true;
     } else {
-      // Wait briefly for ServerSync to finish loading (race-safe init)
-      const ready = await this._waitForServerSyncMethod('startMasterMode', 3000);
-      if (ready){
-        await window.serverSync.startMasterMode();
-        _started = true;
-      } else {
-        console.warn('⚠️ startMasterMode nicht verfügbar – aktiviere Fallback Write/Read');
-        // Always enable fallback write and read-back in Master for convergence
-        this._startFallbackWriteTimer();
-        this._startFallbackReadPolling();
-        // Late-bind: attempt to switch from fallback to real startMasterMode shortly after
-        setTimeout(async ()=>{
-          try {
-            const s = this._getServerSync();
-            if (s && typeof s.startMasterMode === 'function'){
-              this._clearFallbackTimers();
-              try { s.isMaster = true; s.isSlaveActive = true; } catch(_e){}
-              await s.startMasterMode();
-              console.log('👑 Fallback Write/Read durch echtes startMasterMode ersetzt');
-            }
-          } catch(_e){}
-        }, 2000);
-      }
+      console.warn('⚠️ startMasterMode nicht verfügbar – aktiviere Fallback Write/Read');
+      // Always enable fallback write and read-back in Master for convergence
+      this._startFallbackWriteTimer();
+      this._startFallbackReadPolling();
     }
     try { const readToggle = document.getElementById('readDataToggle'); if (readToggle) readToggle.checked = true; } catch(_e){}
     this.syncMode = 'master'; this.isLiveSyncEnabled = true; this.isMasterMode = true; this.updateAllSyncDisplays('Master', true); this.applyReadOnlyUIState(false); this.showNotification('Master-Modus aktiviert - Sende Daten an Server', 'success'); this._emitModeChanged(); console.log('✅ Master-Modus aktiviert');
@@ -457,7 +358,7 @@ updateWidgetSyncDisplay(status,isActive){ const el = document.getElementById('sy
   setModeControlValue(mode){ try { const ctl = document.getElementById('syncModeControl'); if (ctl) ctl.value = mode; } catch(e){} }
   updateSyncStatusIndicator(){}
   async loadServerDataImmediately(){ try{ if (!window.serverSync || !window.serverSync.serverSyncUrl) return false; if (window.isApplyingServerData || window.isLoadingServerData) return false; const serverData = await window.serverSync.loadFromServer(); if (serverData && !serverData.error){ const applied = await window.serverSync.applyServerData(serverData); return !!applied; } return false; } catch(e){ return false; } }
-  loadSavedSharingSettings(){ try{ const settings = JSON.parse(localStorage.getItem('hangarSyncSettings') || '{}'); this.syncMode = settings.syncMode || 'standalone'; this.isLiveSyncEnabled = settings.isLiveSyncEnabled || false; this.isMasterMode = settings.isMasterMode || false; const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ modeCtl.value = this.syncMode; setTimeout(() => this.updateSyncModeByString(this.syncMode), 100); } } catch(e){ this.syncMode = 'standalone'; } }
+  loadSavedSharingSettings(){ try{ const settings = JSON.parse(localStorage.getItem('hangarSyncSettings') || '{}'); this.syncMode = settings.syncMode || 'master'; this.isLiveSyncEnabled = settings.isLiveSyncEnabled || false; this.isMasterMode = settings.isMasterMode || false; const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ modeCtl.value = this.syncMode; setTimeout(() => this.updateSyncModeByString(this.syncMode), 100); } } catch(e){ this.syncMode = 'master'; } }
   saveSharingSettings(){ try{ const settings = { syncMode: this.syncMode, isLiveSyncEnabled: this.isLiveSyncEnabled, isMasterMode: this.isMasterMode, lastSaved: new Date().toISOString() }; localStorage.setItem('hangarSyncSettings', JSON.stringify(settings)); } catch(e){} }
   showNotification(message, type = 'info'){
     try {

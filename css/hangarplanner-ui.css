@@ -3344,6 +3344,18 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 }
 
 
+/* Planner Table Mode visibility switches */
+.table-view #hangarGrid,
+.table-view #secondaryHangarGrid {
+	display: none !important;
+}
+.table-view #plannerTableFrame {
+	display: block !important;
+}
+.tile-view #plannerTableFrame {
+	display: none !important;
+}
+
 /* ==========================================================================
    SHARING & SYNCHRONIZATION STYLES
    ========================================================================== */

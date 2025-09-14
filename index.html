@@ -4686,12 +4686,15 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                     const viewToggle = document.getElementById('viewModeToggle');
                     if (viewToggle && !viewToggle.__wired){
                         viewToggle.addEventListener('change', function(){
+                            const iframe = document.getElementById('plannerTableFrame');
                             if (this.checked){
                                 document.body.classList.add('table-view');
                                 document.body.classList.remove('tile-view');
+                                if (iframe) iframe.style.display = '';
                             } else {
                                 document.body.classList.add('tile-view');
                                 document.body.classList.remove('table-view');
+                                if (iframe) iframe.style.display = 'none';
                             }
                         });
                         viewToggle.__wired = true;
@@ -4814,6 +4817,16 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                 // Ensure settings are re-applied when navigating back via bfcache
                 window.addEventListener('pageshow', function(){
                     setTimeout(function(){ try { fallbackInit(); } catch(e){} }, 120);
+                });
+
+                // Ensure planner table iframe is toggled consistently with body classes on load
+                document.addEventListener('DOMContentLoaded', function(){
+                    try {
+                        var iframe = document.getElementById('plannerTableFrame');
+                        if (!iframe) return;
+                        var isTable = document.body.classList.contains('table-view');
+                        iframe.style.display = isTable ? '' : 'none';
+                    } catch(_e){}
                 });
             })();
             </script>

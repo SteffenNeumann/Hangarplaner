@@ -423,11 +423,11 @@ window.location.replace('login.html');
 					<div class="sync-toggle-row">
 						<div class="sync-toggle-info">
 							<div class="sync-toggle-title">Mode</div>
-							<div class="sync-toggle-desc">Choose Standalone, Sync (read-only), or Master</div>
+							<div class="sync-toggle-desc">Choose Offline, Sync (read-only), or Master</div>
 						</div>
 						<div class="sync-toggle-control">
 							<select id="syncModeControl" class="sidebar-form-select" aria-label="Sync Mode" onchange="try{ if(window.sharingManager && typeof window.sharingManager.handleModeControlChange==='function'){ window.sharingManager.handleModeControlChange(this.value); } }catch(e){}">
-								<option value="standalone">Standalone</option>
+								<option value="offline">Offline</option>
 								<option value="sync">Sync (Read-Only)</option>
 								<option value="master">Master (Read+Write)</option>
 							</select>
@@ -725,7 +725,7 @@ window.location.replace('login.html');
 							<div class="status-row" data-open-submenu="sync" title="Open Sync settings">
 								<span class="status-label">Mode:</span>
 								<div class="status-value-group">
-									<span id="sync-mode" class="status-label-value">Standalone</span>
+								<span id="sync-mode" class="status-label-value">Offline</span>
 									<span id="headerLastLoad" class="header-time-badge" title="Last data load" style="display:none"></span>
 								</div>
 							</div>
@@ -812,11 +812,12 @@ window.location.replace('login.html');
 				function getStoredMode(){
 					try { const raw = localStorage.getItem('hangarSyncSettings'); if (!raw) return null; const s = JSON.parse(raw||'{}'); return typeof s?.syncMode === 'string' ? s.syncMode : null; } catch(_e){ return null; }
 				}
-				let mode = (window.sharingManager && window.sharingManager.syncMode) || getStoredMode() || 'standalone';
+				let mode = (window.sharingManager && window.sharingManager.syncMode) || getStoredMode() || 'offline';
+				if (mode === 'standalone') mode = 'offline'; // legacy mapping
 				el.classList.remove('master','slave','standalone');
 				if (mode === 'master') { el.textContent = 'Master'; el.classList.add('master'); }
 				else if (mode === 'sync') { el.textContent = 'Sync Read only'; el.classList.add('slave'); }
-				else { el.textContent = 'Standalone'; el.classList.add('standalone'); }
+				else { el.textContent = 'Offline'; el.classList.add('standalone'); }
 			} catch(e){}
 		}
 
@@ -1032,7 +1033,9 @@ document.addEventListener('syncModeChanged', () => { refreshHeaderModeLabel(); u
 		  function currentRole(){
 			try {
 			  if (window.sharingManager && typeof window.sharingManager.syncMode === 'string') {
-				  return window.sharingManager.syncMode;
+				  // Server presence still expects 'standalone'; map 'offline' back for transmission
+				  const m = window.sharingManager.syncMode;
+				  return (m === 'offline') ? 'standalone' : m;
 			  }
 			  const read = !!document.getElementById('readDataToggle')?.checked;
 			  const write = !!document.getElementById('writeDataToggle')?.checked;
@@ -1059,10 +1062,10 @@ document.addEventListener('syncModeChanged', () => { refreshHeaderModeLabel(); u
         } catch(e){}
       }
 
-      function renderList(users){
-        try {
-          const me = presence.sessionId;
-          const roleMap = { master: 'Master', sync: 'Sync', standalone: 'Standalone' };
+		  function renderList(users){
+			try {
+			  const me = presence.sessionId;
+			  const roleMap = { master: 'Master', sync: 'Sync', standalone: 'Offline' };
           const fmtLogin = (secs) => {
             try {
               const v = (typeof secs === 'number') ? secs : parseInt(secs, 10);
@@ -1085,7 +1088,7 @@ document.addEventListener('syncModeChanged', () => { refreshHeaderModeLabel(); u
           namesEl.innerHTML = parts.join(' ');
           namesEl.title = others.map(u => {
             const nm = (u.displayName||'').replace(/[<>]/g, '');
-            const lbl = roleMap[(u.role||'standalone').toLowerCase()]||'Standalone';
+						const lbl = roleMap[(u.role||'standalone').toLowerCase()]||'Offline';
             const lt = fmtLogin(u.loginAt);
             return lt ? `${nm} (${lbl}) — Login: ${lt}` : `${nm} (${lbl})`;
           }).join(', ');
@@ -3476,10 +3479,10 @@ You’ll see the result in the browser console.
 						if (window.sharingManager) return;
 						console.warn('SharingManager missing; installing minimal fallback');
 window.sharingManager = {
-							syncMode: 'standalone',
+							syncMode: 'offline',
 							initialized: true,
 							serverSyncUrl: (function(){ try { return window.location.origin + '/sync/data.php'; } catch(_e){ return '/sync/data.php'; } })(),
-updateAllSyncDisplays: function(){ try { const el = document.getElementById('sync-mode'); if (el){ const txt = this.syncMode==='master'?'Master':(this.syncMode==='sync'?'Sync':'Standalone'); el.textContent = txt; el.classList.remove('master','slave','standalone'); el.classList.add(this.syncMode==='master'?'master':(this.syncMode==='sync'?'slave':'standalone')); } } catch(e){} },
+updateAllSyncDisplays: function(){ try { const el = document.getElementById('sync-mode'); if (el){ const txt = this.syncMode==='master'?'Master':(this.syncMode==='sync'?'Sync':'Offline'); el.textContent = txt; el.classList.remove('master','slave','standalone'); el.classList.add(this.syncMode==='master'?'master':(this.syncMode==='sync'?'slave':'standalone')); } } catch(e){} },
 							applyReadOnlyUIState: function(isReadOnly){
 								try {
 									const ro = !!isReadOnly;
@@ -3561,13 +3564,13 @@ updateAllSyncDisplays: function(){ try { const el = document.getElementById('syn
 									}
 								} catch(e){ console.warn('fallback applyReadOnlyUIState failed', e); }
 							},
-							enableStandaloneMode: function(){ try{ if (window.serverSync){ window.serverSync.isMaster=false; window.serverSync.isSlaveActive=false; if (typeof window.serverSync.stopPeriodicSync==='function') window.serverSync.stopPeriodicSync(); } this.syncMode='standalone'; this.updateAllSyncDisplays(); this.applyReadOnlyUIState(false); } catch(e){ console.warn(e); } },
+	enableStandaloneMode: function(){ try{ if (window.serverSync){ window.serverSync.isMaster=false; window.serverSync.isSlaveActive=false; if (typeof window.serverSync.stopPeriodicSync==='function') window.serverSync.stopPeriodicSync(); } this.syncMode='offline'; this.updateAllSyncDisplays(); this.applyReadOnlyUIState(false); } catch(e){ console.warn(e); } },
 							enableSyncMode: function(){ try{ if (window.serverSync){ window.serverSync.isMaster=false; window.serverSync.isSlaveActive=true; if (typeof window.serverSync.startSlaveMode==='function') window.serverSync.startSlaveMode(); } this.syncMode='sync'; this.updateAllSyncDisplays(); this.applyReadOnlyUIState(true); } catch(e){ console.warn(e); } },
 							enableMasterMode: function(){ try{ if (window.serverSync){ window.serverSync.isMaster=true; window.serverSync.isSlaveActive=false; if (typeof window.serverSync.startMasterMode==='function') window.serverSync.startMasterMode(); } this.syncMode='master'; this.updateAllSyncDisplays(); this.applyReadOnlyUIState(false); } catch(e){ console.warn(e); } },
-							handleModeControlChange: function(v){ if (v==='standalone') this.enableStandaloneMode(); else if (v==='sync') this.enableSyncMode(); else if (v==='master') this.enableMasterMode(); },
+	handleModeControlChange: function(v){ if (v==='offline') this.enableStandaloneMode(); else if (v==='sync') this.enableSyncMode(); else if (v==='master') this.enableMasterMode(); },
 							performManualSync: async function(){ try{ if (!window.serverSync) return false; if (typeof window.serverSync.manualSync==='function') return await window.serverSync.manualSync(); if (typeof window.serverSync.syncWithServer==='function') return await window.serverSync.syncWithServer(); return false; } catch(e){ console.warn(e); return false; } }
 						};
-try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ modeCtl.value = 'standalone'; window.sharingManager.enableStandaloneMode(); modeCtl.addEventListener('change', (e)=>window.sharingManager.handleModeControlChange(e.target.value)); } } catch(_e){}
+try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ modeCtl.value = 'offline'; window.sharingManager.enableStandaloneMode(); modeCtl.addEventListener('change', (e)=>window.sharingManager.handleModeControlChange(e.target.value)); } } catch(_e){}
 						console.log('Minimal Sync Manager fallback installed');
 					}
 					window.hangarInitQueue = window.hangarInitQueue || [];

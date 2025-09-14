@@ -115,6 +115,25 @@ class SharingManager {
   _startFallbackWriteTimer(){ try { if (!window.serverSync) return; const writer = async()=>{ try { if (typeof window.serverSync.manualSync === 'function'){ await window.serverSync.manualSync(); } else if (typeof window.serverSync.syncWithServer === 'function'){ await window.serverSync.syncWithServer(); } } catch(_e){} }; this._fallbackWriteInterval = setInterval(writer, 120000); setTimeout(writer, 0); console.log('📝 Fallback Write-Timer aktiviert (120s)'); } catch(_e){} }
   async _waitForServerSyncMethod(methodName, timeoutMs = 1500){ try { const start = Date.now(); while (Date.now() - start < timeoutMs){ if (window.serverSync && typeof window.serverSync[methodName] === 'function'){ return true; } await new Promise(r=>setTimeout(r,50)); } } catch(_e){} return false; }
   _getServerSync(){ try { const ss = window.serverSync; if (ss && (typeof ss.startSlaveMode==='function' || typeof ss.startMasterMode==='function')) return ss; const sb = window.storageBrowser; if (sb && (typeof sb.startSlaveMode==='function' || typeof sb.startMasterMode==='function')){ try { window.serverSync = sb; } catch(_e){} return sb; } return window.serverSync || window.storageBrowser || null; } catch(_e){ return window.serverSync || null; } }
+  async _ensureRealServerSync(){
+    try {
+      // If current serverSync is a plain object without methods, but class is available, upgrade
+      const ss = window.serverSync || window.storageBrowser || null;
+      const hasMethods = !!(ss && (typeof ss.startSlaveMode==='function' || typeof ss.startMasterMode==='function'));
+      if (hasMethods) return true;
+      if (typeof window.StorageBrowser === 'function'){
+        console.warn('⚠️ Detected plain serverSync object; re-initializing real ServerSync instance');
+        const newSS = new window.StorageBrowser();
+        try { window.serverSync = newSS; window.storageBrowser = newSS; } catch(_e){}
+        try {
+          const url = (localStorage.getItem('hangarServerSyncUrl')) || (window.location.origin + '/sync/data.php');
+          if (typeof newSS.initSync === 'function') await newSS.initSync(url);
+        } catch(_e){}
+        return true;
+      }
+    } catch(_e){}
+    return false;
+  }
   async enableStandaloneMode(){ try{
     console.log("🏠 Aktiviere Standalone-Modus...");
     try { if (window.serverSync && typeof window.serverSync.stopPeriodicSync === 'function'){ window.serverSync.stopPeriodicSync(); } } catch(_e){}
@@ -127,6 +146,8 @@ class SharingManager {
   } catch(e){ console.error('❌ Fehler beim Aktivieren des Standalone-Modus:', e); this.showNotification('Fehler beim Wechsel zu Standalone-Modus','error'); } }
   async enableSyncMode(){ try{
     console.log('📡 Aktiviere Sync-Modus (Slave)...');
+    // Ensure real ServerSync instance (upgrade from fallback object if needed)
+    try { await this._ensureRealServerSync(); } catch(_e){}
     const ss = this._getServerSync();
     if (!ss) throw new Error('ServerSync nicht verfügbar');
     try { ss.isMaster = false; ss.isSlaveActive = true; } catch(_e){}
@@ -166,6 +187,8 @@ class SharingManager {
     if (!window.serverSync) throw new Error('ServerSync nicht verfügbar');
     window.serverSync.isMaster = true; window.serverSync.isSlaveActive = true; // Force read for multi-master
     let _started = false;
+    // Ensure real ServerSync instance (upgrade from fallback object if needed)
+    try { await this._ensureRealServerSync(); } catch(_e){}
     if (typeof window.serverSync.startMasterMode === 'function'){
       await window.serverSync.startMasterMode();
       _started = true;

@@ -1538,8 +1538,14 @@ if (window.helpers) {
       
       // Switch between single and dual calendar rendering
       if (picker._rangeMode) {
+        // Show dual calendar, hide single calendar
+        cal.style.display = 'none';
+        dualCalContainer.style.display = 'block';
         buildDualCalendar(picker._leftYear, picker._leftMonth, picker._rightYear, picker._rightMonth, picker._selectedDate);
       } else {
+        // Show single calendar, hide dual calendar
+        cal.style.display = 'block';
+        dualCalContainer.style.display = 'none';
         buildCalendar(picker._viewYear || new Date().getFullYear(), picker._viewMonth || new Date().getMonth(), picker._selectedDate);
       }
     });
@@ -1584,7 +1590,7 @@ if (window.helpers) {
     cal.appendChild(dow);
     cal.appendChild(daysGrid);
 
-    // Dual calendar container (for range mode)
+    // Dual calendar container (for range mode) - hidden by default
     const dualCalContainer = document.createElement('div');
     dualCalContainer.className = 'dtp-dual-months';
     dualCalContainer.style.display = 'none';
@@ -1831,18 +1837,16 @@ if (window.helpers) {
       buildCalendar(y, m, picker._selectedDate);
     });
 
-    // Dual month navigation handlers
+    // Dual month navigation handlers - truly independent
     leftPrev.addEventListener('click', () => {
       let y = picker._leftYear;
       let m = picker._leftMonth - 1;
       if (m < 0) { m = 11; y--; }
       
-      // Update right month to be consecutive
-      let rightY = y;
-      let rightM = m + 1;
-      if (rightM > 11) { rightM = 0; rightY++; }
-      
-      buildDualCalendar(y, m, rightY, rightM, picker._selectedDate);
+      // Only update left month, keep right month independent
+      picker._leftYear = y;
+      picker._leftMonth = m;
+      buildDualCalendar(y, m, picker._rightYear, picker._rightMonth, picker._selectedDate);
     });
     
     leftNext.addEventListener('click', () => {
@@ -1850,12 +1854,10 @@ if (window.helpers) {
       let m = picker._leftMonth + 1;
       if (m > 11) { m = 0; y++; }
       
-      // Update right month to be consecutive
-      let rightY = y;
-      let rightM = m + 1;
-      if (rightM > 11) { rightM = 0; rightY++; }
-      
-      buildDualCalendar(y, m, rightY, rightM, picker._selectedDate);
+      // Only update left month, keep right month independent
+      picker._leftYear = y;
+      picker._leftMonth = m;
+      buildDualCalendar(y, m, picker._rightYear, picker._rightMonth, picker._selectedDate);
     });
     
     rightPrev.addEventListener('click', () => {
@@ -1863,12 +1865,10 @@ if (window.helpers) {
       let m = picker._rightMonth - 1;
       if (m < 0) { m = 11; y--; }
       
-      // Update left month to be consecutive
-      let leftY = y;
-      let leftM = m - 1;
-      if (leftM < 0) { leftM = 11; leftY--; }
-      
-      buildDualCalendar(leftY, leftM, y, m, picker._selectedDate);
+      // Only update right month, keep left month independent
+      picker._rightYear = y;
+      picker._rightMonth = m;
+      buildDualCalendar(picker._leftYear, picker._leftMonth, y, m, picker._selectedDate);
     });
     
     rightNext.addEventListener('click', () => {
@@ -1876,12 +1876,10 @@ if (window.helpers) {
       let m = picker._rightMonth + 1;
       if (m > 11) { m = 0; y++; }
       
-      // Update left month to be consecutive
-      let leftY = y;
-      let leftM = m - 1;
-      if (leftM < 0) { leftM = 11; leftY--; }
-      
-      buildDualCalendar(leftY, leftM, y, m, picker._selectedDate);
+      // Only update right month, keep left month independent
+      picker._rightYear = y;
+      picker._rightMonth = m;
+      buildDualCalendar(picker._leftYear, picker._leftMonth, y, m, picker._selectedDate);
     });
 
     // Expose for open() to call
@@ -2179,11 +2177,15 @@ if (window.helpers) {
     if (p._timeEnd) p._timeEnd.style.display = p._rangeMode ? 'inline-block' : 'none';
     
     // Toggle between single and dual calendar
-    if (p._dualCalContainer) {
-      p._dualCalContainer.style.display = p._rangeMode ? 'block' : 'none';
-    }
-    if (p._daysGrid && p._daysGrid.parentElement) {
-      p._daysGrid.parentElement.style.display = p._rangeMode ? 'none' : 'block';
+    const singleCal = p._daysGrid && p._daysGrid.parentElement && p._daysGrid.parentElement.parentElement;
+    if (p._rangeMode) {
+      // Range mode: show dual calendar, hide single calendar
+      if (p._dualCalContainer) p._dualCalContainer.style.display = 'block';
+      if (singleCal) singleCal.style.display = 'none';
+    } else {
+      // Single mode: show single calendar, hide dual calendar  
+      if (p._dualCalContainer) p._dualCalContainer.style.display = 'none';
+      if (singleCal) singleCal.style.display = 'block';
     }
 
     // Keyboard navigation and close handlers

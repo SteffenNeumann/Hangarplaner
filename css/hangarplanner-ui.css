@@ -800,7 +800,6 @@ select.status-selector {
 	padding: 6px 8px; 
 	gap: 12px; 
 	border-top: 1px solid #e5e7eb;
-	background: #f9fafb;
 }
 
 .dtp-range-label { 
@@ -879,16 +878,20 @@ select.status-selector {
 
 /* Dual-month range mode layout */
 .dtp-dual-months {
-	display: grid;
-	grid-template-columns: 1fr 1fr;
+	display: flex;
+	flex-direction: row;
 	gap: 16px;
 	margin: 8px 0;
+	width: 100%;
 }
 
 .dtp-dual-months .dtp-month {
+	flex: 1;
+	min-width: 280px;
 	border: 1px solid #e5e7eb;
 	border-radius: 6px;
 	overflow: hidden;
+	background: #ffffff;
 }
 
 .dtp-dual-months .dtp-nav {
@@ -977,7 +980,7 @@ select.status-selector {
 /* Dark mode */
 .dark-mode .dtp-header { border-color: var(--border-color); background: var(--bg-secondary); }
 .dark-mode .dtp-header-date { color: var(--text-secondary); }
-.dark-mode .dtp-dual-months .dtp-month { border-color: var(--border-color); }
+.dark-mode .dtp-dual-months .dtp-month { border-color: var(--border-color); background: var(--bg-secondary); }
 .dark-mode .dtp-dual-months .dtp-nav { background: var(--bg-primary); border-color: var(--border-color); }
 .dark-mode .dtp-dual-months .dtp-month-label { color: var(--text-primary); }
 .dark-mode .dtp-dual-months .dtp-dow-row { background: var(--bg-secondary); border-color: var(--border-color); }
@@ -993,7 +996,6 @@ select.status-selector {
 
 /* Dark mode for controls */
 .dark-mode .dtp-controls {
-	background: var(--bg-primary);
 	border-color: var(--border-color);
 }
 

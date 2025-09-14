@@ -121,6 +121,21 @@ class SharingManager {
       const ss = window.serverSync || window.storageBrowser || null;
       const hasMethods = !!(ss && (typeof ss.startSlaveMode==='function' || typeof ss.startMasterMode==='function'));
       if (hasMethods) return true;
+      // If class not yet present, attempt dynamic load of storage-browser.js
+      if (typeof window.StorageBrowser !== 'function'){
+        if (!this._dynLoadAttempted){
+          this._dynLoadAttempted = true;
+          try {
+            const s = document.createElement('script');
+            s.src = 'js/storage-browser.js';
+            s.async = true;
+            s.crossOrigin = 'anonymous';
+            const p = new Promise((resolve)=>{ s.onload=()=>resolve(true); s.onerror=()=>resolve(false); });
+            document.head.appendChild(s);
+            await Promise.race([p, new Promise(r=>setTimeout(()=>r(false), 2000))]);
+          } catch(_e){}
+        }
+      }
       if (typeof window.StorageBrowser === 'function'){
         console.warn('⚠️ Detected plain serverSync object; re-initializing real ServerSync instance');
         const newSS = new window.StorageBrowser();
@@ -427,7 +442,7 @@ updateWidgetSyncDisplay(status,isActive){ const el = document.getElementById('sy
   setModeControlValue(mode){ try { const ctl = document.getElementById('syncModeControl'); if (ctl) ctl.value = mode; } catch(e){} }
   updateSyncStatusIndicator(){}
   async loadServerDataImmediately(){ try{ if (!window.serverSync || !window.serverSync.serverSyncUrl) return false; if (window.isApplyingServerData || window.isLoadingServerData) return false; const serverData = await window.serverSync.loadFromServer(); if (serverData && !serverData.error){ const applied = await window.serverSync.applyServerData(serverData); return !!applied; } return false; } catch(e){ return false; } }
-  loadSavedSharingSettings(){ try{ const settings = JSON.parse(localStorage.getItem('hangarSyncSettings') || '{}'); this.syncMode = settings.syncMode || 'master'; this.isLiveSyncEnabled = settings.isLiveSyncEnabled || false; this.isMasterMode = settings.isMasterMode || false; const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ modeCtl.value = this.syncMode; setTimeout(() => this.updateSyncModeByString(this.syncMode), 100); } } catch(e){ this.syncMode = 'master'; } }
+  loadSavedSharingSettings(){ try{ const settings = JSON.parse(localStorage.getItem('hangarSyncSettings') || '{}'); this.syncMode = settings.syncMode || 'standalone'; this.isLiveSyncEnabled = settings.isLiveSyncEnabled || false; this.isMasterMode = settings.isMasterMode || false; const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ modeCtl.value = this.syncMode; setTimeout(() => this.updateSyncModeByString(this.syncMode), 100); } } catch(e){ this.syncMode = 'standalone'; } }
   saveSharingSettings(){ try{ const settings = { syncMode: this.syncMode, isLiveSyncEnabled: this.isLiveSyncEnabled, isMasterMode: this.isMasterMode, lastSaved: new Date().toISOString() }; localStorage.setItem('hangarSyncSettings', JSON.stringify(settings)); } catch(e){} }
   showNotification(message, type = 'info'){
     try {

@@ -328,8 +328,8 @@ window.globalInitialization = {
 
 				// NEUE PRÜFUNG: Respektiere Sharing-Manager Modi
 				if (
-					window.sharingManager &&
-					window.sharingManager.syncMode === "standalone"
+window.sharingManager &&
+					window.sharingManager.syncMode === "offline"
 				) {
 					console.log(
 						"🏠 Standalone-Modus erkannt - Server-Datenladung wird über SharingManager verwaltet"

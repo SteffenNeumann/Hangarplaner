@@ -9,7 +9,7 @@
 /* BEGIN COPY FROM sharing-manager.js */
 class SharingManager {
   constructor() {
-    this.syncMode = "standalone";
+    this.syncMode = "offline";
     this.isLiveSyncEnabled = false;
     this.isMasterMode = false;
     this.initialized = false;
@@ -75,9 +75,11 @@ class SharingManager {
   _emitModeChanged(){ try { document.dispatchEvent(new CustomEvent('syncModeChanged', { detail: { mode: this.syncMode } })); } catch(_e){} }
   async updateSyncModeByString(mode){
     try {
-      if (mode === 'standalone') { await this.enableStandaloneMode(); }
-      else if (mode === 'sync') { await this.enableSyncMode(); await this.loadServerDataImmediately(); }
-      else if (mode === 'master') {
+      // Backward compatibility: map legacy 'standalone' to new 'offline'
+      const m = (mode === 'standalone') ? 'offline' : mode;
+      if (m === 'offline') { await this.enableStandaloneMode(); }
+      else if (m === 'sync') { await this.enableSyncMode(); await this.loadServerDataImmediately(); }
+      else if (m === 'master') {
         await this.enableMasterMode();
         await this.loadServerDataImmediately();
       }
@@ -114,32 +116,32 @@ class SharingManager {
   _startFallbackReadPolling(){ try { if (!window.serverSync || typeof window.serverSync.loadFromServer !== 'function' || typeof window.serverSync.applyServerData !== 'function') return; this._clearFallbackTimers(); const poll = async()=>{ try { const serverData = await window.serverSync.loadFromServer(); if (serverData && !serverData.error){ await window.serverSync.applyServerData(serverData); } } catch(_e){} }; poll(); this._fallbackReadInterval = setInterval(poll, 15000); console.log('📡 Fallback Read-Polling aktiviert (15s)'); } catch(_e){} }
   _startFallbackWriteTimer(){ try { if (!window.serverSync) return; const writer = async()=>{ try { if (typeof window.serverSync.manualSync === 'function'){ await window.serverSync.manualSync(); } else if (typeof window.serverSync.syncWithServer === 'function'){ await window.serverSync.syncWithServer(); } } catch(_e){} }; this._fallbackWriteInterval = setInterval(writer, 120000); setTimeout(writer, 0); console.log('📝 Fallback Write-Timer aktiviert (120s)'); } catch(_e){} }
   async enableStandaloneMode(){ try{
-    console.log("🏠 Aktiviere Standalone-Modus...");
+    console.log("🏠 Aktiviere Offline-Modus...");
     // Stop all periodic sync activity and ensure no background reads/writes
     try { if (window.serverSync && typeof window.serverSync.stopPeriodicSync === 'function'){ window.serverSync.stopPeriodicSync(); } } catch(_e){}
     try { if (window.serverSync && window.serverSync.slaveCheckInterval){ clearInterval(window.serverSync.slaveCheckInterval); window.serverSync.slaveCheckInterval = null; } } catch(_e){}
     this._clearFallbackTimers();
     if (window.serverSync){ window.serverSync.isMaster = false; window.serverSync.isSlaveActive = false; }
 
-    // Enter Standalone mode
-    this.syncMode = 'standalone'; this.isLiveSyncEnabled = false; this.isMasterMode = false;
-    this.updateAllSyncDisplays('Standalone', false);
-    // Standalone is not read-only; local edits remain possible, but no server writes/reads happen after the initial fetch
+    // Enter Offline mode
+    this.syncMode = 'offline'; this.isLiveSyncEnabled = false; this.isMasterMode = false;
+    this.updateAllSyncDisplays('Offline', false);
+    // Offline is not read-only; local edits remain possible, but no server writes/reads happen after the initial fetch
     this.applyReadOnlyUIState(false);
-    this.showNotification('Standalone-Modus aktiviert - Nur lokale Speicherung','info');
+    this.showNotification('Offline-Modus aktiviert - Nur lokale Speicherung','info');
     this._emitModeChanged();
 
     // Perform a single best-effort initial load from server, then stay offline
     try {
       const loaded = await this.loadServerDataImmediately();
       if (loaded) {
-        console.log('📥 Standalone: Einmalige Server-Datenladung abgeschlossen');
+        console.log('📥 Offline: Einmalige Server-Datenladung abgeschlossen');
       } else {
-        console.log('ℹ️ Standalone: Keine Server-Daten für Initial-Ladung verfügbar');
+        console.log('ℹ️ Offline: Keine Server-Daten für Initial-Ladung verfügbar');
       }
-    } catch(_e){ console.warn('⚠️ Standalone: Initial-Ladung fehlgeschlagen', _e); }
+    } catch(_e){ console.warn('⚠️ Offline: Initial-Ladung fehlgeschlagen', _e); }
 
-    console.log('✅ Standalone-Modus aktiviert');
+    console.log('✅ Offline-Modus aktiviert');
   } catch(e){ console.error('❌ Fehler beim Aktivieren des Standalone-Modus:', e); this.showNotification('Fehler beim Wechsel zu Standalone-Modus','error'); } }
   async enableSyncMode(){ try{
     console.log('📡 Aktiviere Sync-Modus (Slave)...');
@@ -217,9 +219,9 @@ class SharingManager {
     }
   }
   updateAllSyncDisplays(status = null, isActive = null){ if (status !== null && isActive !== null){ this.updateSyncStatusDisplay(status, isActive); this.updateWidgetSyncDisplay(status, isActive); } this.updateSyncStatusDisplayNew(); console.log(`🔄 Alle Sync-Anzeigen aktualisiert${status ? ` (${status}, ${isActive})` : ''}`); }
-  updateSyncStatusDisplayNew(){ const modeSpans = document.querySelectorAll('#currentSyncMode, #currentSyncModeSidebar, .currentSyncMode'); const syncStatusBtn = document.getElementById('syncStatusBtn'); let readEnabled=false, writeEnabled=false; let modeText='Standalone', modeEmoji='🏠', cssClass='standalone'; if (this.syncMode==='master'){ readEnabled=true; writeEnabled=true; modeText='Master'; modeEmoji='👑'; cssClass='mode-master'; } else if (this.syncMode==='sync'){ readEnabled=true; writeEnabled=false; modeText='Sync'; modeEmoji='📡'; cssClass='mode-sync'; } if (modeSpans && modeSpans.length){ modeSpans.forEach((el)=>{ const isCompact = el.classList.contains('compact'); el.textContent = modeText; el.className = `sync-mode-badge ${isCompact ? 'compact ' : ''}${cssClass}`; }); } try { const manualSyncBtn = document.getElementById('manualSyncBtn'); if (manualSyncBtn){ const enable = (this.syncMode==='master'); manualSyncBtn.disabled = !enable; manualSyncBtn.style.opacity = enable ? '' : '0.6'; manualSyncBtn.style.cursor = enable ? '' : 'not-allowed'; manualSyncBtn.title = enable ? 'Trigger a one-time sync now' : 'Switch to Master to allow manual sync'; } } catch(e){} if (syncStatusBtn){ syncStatusBtn.classList.remove('status-success','status-warning','status-error'); if (this.syncMode!=='standalone'){ syncStatusBtn.textContent = `${modeEmoji} ${modeText}`; syncStatusBtn.classList.add('status-success'); syncStatusBtn.title = `${modeText}-Modus aktiv - Klick für Details`; } else { syncStatusBtn.textContent = '📊 Status'; syncStatusBtn.title = 'Sync inaktiv - Klick für Details'; } } this.updateWidgetSyncDisplay(modeText, this.syncMode!=='standalone'); console.log(`🎯 UI aktualisiert: Read=${readEnabled}, Write=${writeEnabled}, Mode=${this.syncMode}`); }
+  updateSyncStatusDisplayNew(){ const modeSpans = document.querySelectorAll('#currentSyncMode, #currentSyncModeSidebar, .currentSyncMode'); const syncStatusBtn = document.getElementById('syncStatusBtn'); let readEnabled=false, writeEnabled=false; let modeText='Offline', modeEmoji='🏠', cssClass='standalone'; if (this.syncMode==='master'){ readEnabled=true; writeEnabled=true; modeText='Master'; modeEmoji='👑'; cssClass='mode-master'; } else if (this.syncMode==='sync'){ readEnabled=true; writeEnabled=false; modeText='Sync'; modeEmoji='📡'; cssClass='mode-sync'; } if (modeSpans && modeSpans.length){ modeSpans.forEach((el)=>{ const isCompact = el.classList.contains('compact'); el.textContent = modeText; el.className = `sync-mode-badge ${isCompact ? 'compact ' : ''}${cssClass}`; }); } try { const manualSyncBtn = document.getElementById('manualSyncBtn'); if (manualSyncBtn){ const enable = (this.syncMode==='master'); manualSyncBtn.disabled = !enable; manualSyncBtn.style.opacity = enable ? '' : '0.6'; manualSyncBtn.style.cursor = enable ? '' : 'not-allowed'; manualSyncBtn.title = enable ? 'Trigger a one-time sync now' : 'Switch to Master to allow manual sync'; } } catch(e){} if (syncStatusBtn){ syncStatusBtn.classList.remove('status-success','status-warning','status-error'); if (this.syncMode!=='offline'){ syncStatusBtn.textContent = `${modeEmoji} ${modeText}`; syncStatusBtn.classList.add('status-success'); syncStatusBtn.title = `${modeText}-Modus aktiv - Klick für Details`; } else { syncStatusBtn.textContent = '📊 Status'; syncStatusBtn.title = 'Sync inaktiv - Klick für Details'; } } this.updateWidgetSyncDisplay(modeText, this.syncMode!=='offline'); console.log(`🎯 UI aktualisiert: Read=${readEnabled}, Write=${writeEnabled}, Mode=${this.syncMode}`); }
   updateSyncStatusDisplay(status,isActive){ const syncStatusBtn = document.getElementById('syncStatusBtn'); if (!syncStatusBtn) return; syncStatusBtn.classList.remove('status-success','status-warning','status-error'); if (isActive){ let emoji='📊', cssClass='status-success', title='Sync Status'; if (status==='Master'){ emoji='👑'; cssClass='status-success'; title='Master-Modus aktiv - Klick für Modus-Wechsel, Rechtsklick für Details'; } else if (status==='Sync' || status==='Slave'){ cssClass='status-warning'; title='Sync-Modus aktiv - Klick für Modus-Wechsel, Rechtsklick für Details'; } syncStatusBtn.textContent = `${emoji} ${status}`; syncStatusBtn.classList.add(cssClass); syncStatusBtn.title = title; } else { syncStatusBtn.textContent = '📊 Status'; syncStatusBtn.title = 'Sync inaktiv - Klicken für Details'; } }
-updateWidgetSyncDisplay(status,isActive){ const el = document.getElementById('sync-mode'); if (!el) return; el.classList.remove('master','slave','standalone'); if (isActive){ if (status==='Master'){ el.textContent='Master'; el.classList.add('master'); } else if (status==='Sync' || status==='Slave'){ el.textContent='Sync Read only'; el.classList.add('slave'); } else { el.textContent=status; el.classList.add('master'); } } else { el.textContent='Standalone'; el.classList.add('standalone'); } }
+updateWidgetSyncDisplay(status,isActive){ const el = document.getElementById('sync-mode'); if (!el) return; el.classList.remove('master','slave','standalone'); if (isActive){ if (status==='Master'){ el.textContent='Master'; el.classList.add('master'); } else if (status==='Sync' || status==='Slave'){ el.textContent='Sync Read only'; el.classList.add('slave'); } else { el.textContent=status; el.classList.add('master'); } } else { el.textContent='Offline'; el.classList.add('standalone'); } }
   applyReadOnlyUIState(isReadOnly){
     try{
       const ro = !!isReadOnly;
@@ -376,7 +378,7 @@ updateWidgetSyncDisplay(status,isActive){ const el = document.getElementById('sy
   setModeControlValue(mode){ try { const ctl = document.getElementById('syncModeControl'); if (ctl) ctl.value = mode; } catch(e){} }
   updateSyncStatusIndicator(){}
   async loadServerDataImmediately(){ try{ if (!window.serverSync || !window.serverSync.serverSyncUrl) return false; if (window.isApplyingServerData || window.isLoadingServerData) return false; const serverData = await window.serverSync.loadFromServer(); if (serverData && !serverData.error){ const applied = await window.serverSync.applyServerData(serverData); return !!applied; } return false; } catch(e){ return false; } }
-  loadSavedSharingSettings(){ try{ const settings = JSON.parse(localStorage.getItem('hangarSyncSettings') || '{}'); this.syncMode = settings.syncMode || 'master'; this.isLiveSyncEnabled = settings.isLiveSyncEnabled || false; this.isMasterMode = settings.isMasterMode || false; const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ modeCtl.value = this.syncMode; setTimeout(() => this.updateSyncModeByString(this.syncMode), 100); } } catch(e){ this.syncMode = 'master'; } }
+  loadSavedSharingSettings(){ try{ const settings = JSON.parse(localStorage.getItem('hangarSyncSettings') || '{}'); let m = settings.syncMode || 'master'; if (m === 'standalone') m = 'offline'; this.syncMode = m; this.isLiveSyncEnabled = settings.isLiveSyncEnabled || false; this.isMasterMode = settings.isMasterMode || false; const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ modeCtl.value = this.syncMode; setTimeout(() => this.updateSyncModeByString(this.syncMode), 100); } } catch(e){ this.syncMode = 'master'; } }
   saveSharingSettings(){ try{ const settings = { syncMode: this.syncMode, isLiveSyncEnabled: this.isLiveSyncEnabled, isMasterMode: this.isMasterMode, lastSaved: new Date().toISOString() }; localStorage.setItem('hangarSyncSettings', JSON.stringify(settings)); } catch(e){} }
   showNotification(message, type = 'info'){
     try {

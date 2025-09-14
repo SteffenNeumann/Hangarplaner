@@ -893,7 +893,7 @@ window.location.replace('login.html');
 		if (writeToggleForLoad) writeToggleForLoad.addEventListener('change', updateHeaderLastLoad);
 		setTimeout(updateHeaderLastLoad, 0);
 		// Listen to mode changes and refresh header label
-		document.addEventListener('syncModeChanged', refreshHeaderModeLabel);
+document.addEventListener('syncModeChanged', () => { refreshHeaderModeLabel(); updateHeaderLastLoad(); });
 		const modeCtlHeader = document.getElementById('syncModeControl');
 		if (modeCtlHeader) modeCtlHeader.addEventListener('change', () => setTimeout(refreshHeaderModeLabel, 0));
 		setTimeout(refreshHeaderModeLabel, 0);

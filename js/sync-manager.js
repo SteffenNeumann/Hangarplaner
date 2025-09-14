@@ -75,6 +75,17 @@ class SharingManager {
   }
   handleModeControlChange(mode){ if (!mode) return; this.updateSyncModeByString(mode); }
   _emitModeChanged(){ try { document.dispatchEvent(new CustomEvent('syncModeChanged', { detail: { mode: this.syncMode } })); } catch(_e){} }
+  // Wait until window.serverSync exposes a specific method, up to timeoutMs
+  async _waitForServerSyncMethod(name, timeoutMs = 2500){
+    try {
+      const start = Date.now();
+      while ((Date.now() - start) < timeoutMs){
+        if (window.serverSync && typeof window.serverSync[name] === 'function') return true;
+        await new Promise(r => setTimeout(r, 100));
+      }
+    } catch(_e){}
+    return false;
+  }
   async updateSyncModeByString(mode){
     try {
       // Backward compatibility: map legacy 'standalone' to new 'offline'
@@ -173,9 +184,9 @@ class SharingManager {
     console.log('📡 Aktiviere Sync-Modus (Slave)...');
     if (!window.serverSync) throw new Error('ServerSync nicht verfügbar');
     window.serverSync.isMaster = false; window.serverSync.isSlaveActive = true;
-    if (typeof window.serverSync.startSlaveMode === 'function'){
+    if (await this._waitForServerSyncMethod('startSlaveMode', 3000)){
       console.log('🔄 Starte Slave-Polling für Read-Modus...'); await window.serverSync.startSlaveMode();
-      if (!window.serverSync.slaveCheckInterval){ setTimeout(async()=>{ await window.serverSync.startSlaveMode(); console.log('🔄 Slave-Polling Retry ausgeführt'); }, 2000); }
+      if (!window.serverSync.slaveCheckInterval){ setTimeout(async()=>{ try { await window.serverSync.startSlaveMode(); console.log('🔄 Slave-Polling Retry ausgeführt'); } catch(_e){} }, 2000); }
     } else {
       console.warn('⚠️ startSlaveMode nicht verfügbar – aktiviere Fallback-Polling');
       this._startFallbackReadPolling();
@@ -186,7 +197,7 @@ class SharingManager {
     console.log('👑 Aktiviere Master-Modus...');
     if (!window.serverSync) throw new Error('ServerSync nicht verfügbar');
     window.serverSync.isMaster = true; window.serverSync.isSlaveActive = true; // Force read for multi-master
-    if (typeof window.serverSync.startMasterMode === 'function'){
+    if (await this._waitForServerSyncMethod('startMasterMode', 3000)){
       await window.serverSync.startMasterMode();
     } else {
       console.warn('⚠️ startMasterMode nicht verfügbar – aktiviere Fallback Write/Read');

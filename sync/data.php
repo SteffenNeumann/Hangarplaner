@@ -296,6 +296,17 @@ else if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $serverPrimaryMap = $tiles_to_map($merged['primaryTiles']);
                 $serverSecondaryMap = $tiles_to_map($merged['secondaryTiles']);
                 $tileKeys = ['aircraftId','arrivalTime','departureTime','position','hangarPosition','status','towStatus','notes'];
+                // Normalization helper for conflict-safe comparisons
+                $normalize = function($field, $val){
+                    if ($val === null) return '';
+                    $s = is_string($val) ? trim($val) : (is_numeric($val) ? (string)$val : '');
+                    if ($field === 'status' || $field === 'towStatus') {
+                        $l = strtolower($s);
+                        if ($l === '' || $l === 'neutral') return 'neutral';
+                        return $l;
+                    }
+                    return $s;
+                };
 
                 $apply_tile_if_changed = function(&$map, $ptile) use ($tileKeys, $normalize_tile, &$appliedTiles, $displayName) {
                     $ptile = $normalize_tile($ptile);
@@ -343,10 +354,13 @@ else if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             } else {
                                 if (isset($serverPrimaryMap[$tid])) { $cur = $serverPrimaryMap[$tid][$field] ?? null; $curBy = $serverPrimaryMap[$tid]['updatedBy'] ?? ''; }
                             }
-                            // Compare with posted precondition
+                            // Compare with posted precondition (normalized). Only conflict if server diverged from expected AND differs from desired value.
                             if (array_key_exists($fid, $pre)) {
                                 $expected = $pre[$fid];
-                                if (($expected ?? '') !== ($cur ?? '')) {
+                                $curN = $normalize($field, $cur);
+                                $expN = $normalize($field, $expected);
+                                $valN = $normalize($field, $val);
+                                if ($expN !== $curN && $valN !== $curN) {
                                     $conflicts[] = [
                                         'tileId' => $tid,
                                         'field' => $field,
@@ -385,11 +399,11 @@ else if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             if ($isSecondary) {
                                 if (!isset($serverSecondaryMap[$tid])) { $serverSecondaryMap[$tid] = ['tileId' => $tid]; }
                                 $old = $serverSecondaryMap[$tid][$field] ?? null;
-                                if ($old !== $val) { $serverSecondaryMap[$tid][$field] = $val; $serverSecondaryMap[$tid]['updatedAt'] = date('c'); if (!empty($displayName)) { $serverSecondaryMap[$tid]['updatedBy'] = $displayName; } $appliedTiles++; }
+                                if ($normalize($field, $old) !== $normalize($field, $val)) { $serverSecondaryMap[$tid][$field] = $val; $serverSecondaryMap[$tid]['updatedAt'] = date('c'); if (!empty($displayName)) { $serverSecondaryMap[$tid]['updatedBy'] = $displayName; } $appliedTiles++; }
                             } else {
                                 if (!isset($serverPrimaryMap[$tid])) { $serverPrimaryMap[$tid] = ['tileId' => $tid]; }
                                 $old = $serverPrimaryMap[$tid][$field] ?? null;
-                                if ($old !== $val) { $serverPrimaryMap[$tid][$field] = $val; $serverPrimaryMap[$tid]['updatedAt'] = date('c'); if (!empty($displayName)) { $serverPrimaryMap[$tid]['updatedBy'] = $displayName; } $appliedTiles++; }
+                                if ($normalize($field, $old) !== $normalize($field, $val)) { $serverPrimaryMap[$tid][$field] = $val; $serverPrimaryMap[$tid]['updatedAt'] = date('c'); if (!empty($displayName)) { $serverPrimaryMap[$tid]['updatedBy'] = $displayName; } $appliedTiles++; }
                             }
                         }
                     }

@@ -725,7 +725,7 @@ window.location.replace('login.html');
 							<div class="status-row" data-open-submenu="sync" title="Open Sync settings">
 								<span class="status-label">Mode:</span>
 								<div class="status-value-group">
-									<span id="sync-mode" class="status-label-value">Standalone</span>
+								<span id="sync-mode" class="status-label-value">Offline</span>
 									<span id="headerLastLoad" class="header-time-badge" title="Last data load" style="display:none"></span>
 								</div>
 							</div>
@@ -812,11 +812,12 @@ window.location.replace('login.html');
 				function getStoredMode(){
 					try { const raw = localStorage.getItem('hangarSyncSettings'); if (!raw) return null; const s = JSON.parse(raw||'{}'); return typeof s?.syncMode === 'string' ? s.syncMode : null; } catch(_e){ return null; }
 				}
-				let mode = (window.sharingManager && window.sharingManager.syncMode) || getStoredMode() || 'standalone';
+				let mode = (window.sharingManager && window.sharingManager.syncMode) || getStoredMode() || 'offline';
+				if (mode === 'standalone') mode = 'offline'; // legacy mapping
 				el.classList.remove('master','slave','standalone');
 				if (mode === 'master') { el.textContent = 'Master'; el.classList.add('master'); }
 				else if (mode === 'sync') { el.textContent = 'Sync Read only'; el.classList.add('slave'); }
-				else { el.textContent = 'Standalone'; el.classList.add('standalone'); }
+				else { el.textContent = 'Offline'; el.classList.add('standalone'); }
 			} catch(e){}
 		}
 
@@ -1032,7 +1033,9 @@ document.addEventListener('syncModeChanged', () => { refreshHeaderModeLabel(); u
 		  function currentRole(){
 			try {
 			  if (window.sharingManager && typeof window.sharingManager.syncMode === 'string') {
-				  return window.sharingManager.syncMode;
+				  // Server presence still expects 'standalone'; map 'offline' back for transmission
+				  const m = window.sharingManager.syncMode;
+				  return (m === 'offline') ? 'standalone' : m;
 			  }
 			  const read = !!document.getElementById('readDataToggle')?.checked;
 			  const write = !!document.getElementById('writeDataToggle')?.checked;
@@ -1059,10 +1062,10 @@ document.addEventListener('syncModeChanged', () => { refreshHeaderModeLabel(); u
         } catch(e){}
       }
 
-      function renderList(users){
-        try {
-          const me = presence.sessionId;
-          const roleMap = { master: 'Master', sync: 'Sync', standalone: 'Standalone' };
+		  function renderList(users){
+			try {
+			  const me = presence.sessionId;
+			  const roleMap = { master: 'Master', sync: 'Sync', standalone: 'Offline' };
           const fmtLogin = (secs) => {
             try {
               const v = (typeof secs === 'number') ? secs : parseInt(secs, 10);
@@ -1085,7 +1088,7 @@ document.addEventListener('syncModeChanged', () => { refreshHeaderModeLabel(); u
           namesEl.innerHTML = parts.join(' ');
           namesEl.title = others.map(u => {
             const nm = (u.displayName||'').replace(/[<>]/g, '');
-            const lbl = roleMap[(u.role||'standalone').toLowerCase()]||'Standalone';
+						const lbl = roleMap[(u.role||'standalone').toLowerCase()]||'Offline';
             const lt = fmtLogin(u.loginAt);
             return lt ? `${nm} (${lbl}) — Login: ${lt}` : `${nm} (${lbl})`;
           }).join(', ');

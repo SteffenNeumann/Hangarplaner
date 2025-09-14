@@ -217,6 +217,18 @@ Flight number lookups frequently fail due to API limitations and data mapping ch
 - Server endpoint
   - `sync/data.php` accepts GET/POST; client-side gating prevents writes in read-only
 
+#### Sync Mode: Quick Start & Behavior
+- Enable Sync (read-only): set Read Data ON and Write Data OFF.
+- Behavior in Sync:
+  - Inputs for hangar tiles are disabled to prevent accidental edits.
+  - Display-only tweaks (e.g., layout and filter controls) still work and save locally only. The UI shows “Saved locally (read-only mode)”.
+  - The app periodically fetches server data while Read is ON; a subtle status indicator shows the current mode and last-load time.
+- Transitioning to Master (read/write): toggle Write Data ON (keep Read ON). Writes will include the required X-Sync-Role: master header.
+- Transitioning to Standalone (offline): turn both Read and Write OFF. No server traffic occurs; all changes remain in localStorage.
+- Startup gating: when Read is OFF at startup, the app skips initial server load and disables periodic read-back. Write-only mode is intentionally unsupported.
+- Manual sync: issuing a manual sync posts local changes and may read back, subject to gating rules (implemented via `window.serverSync.syncWithServer()`).
+- Debug helpers: `window.debugSync()` (shows flags/mode) and `window.testReadMode()` (toggles read-only polling for testing).
+
 #### Conflict Resolution (per-field, multi-master)
 - When two Masters edit the same field close in time, the client shows a modal:
   - "User {displayName} updated {field} (Tile N). Accept server or Keep mine?"
@@ -236,6 +248,50 @@ Flight number lookups frequently fail due to API limitations and data mapping ch
    - Changes persist and replicate to a read-only client
 3) Standalone
    - Disable both toggles; edits only affect local state; no server traffic
+
+## FAQ (Sync Mode and Data Flow)
+
+- Q: What is “Sync mode”?
+  - A: Sync mode is read-only collaboration: the client continuously reads from the server but does not write. It’s ideal for display stations or users who should not modify shared data.
+
+- Q: How do I enable Sync mode?
+  - A: Turn Read Data ON and Write Data OFF. Inputs for aircraft tiles become disabled, and a subtle status pill shows the mode and last-load time.
+
+- Q: Why can’t I edit when Sync mode is ON?
+  - A: Edit controls are intentionally disabled to enforce read-only behavior. Any display-only preferences save to localStorage and show “Saved locally (read-only mode)”.
+
+- Q: How do I become a writer (Master)?
+  - A: Toggle Write Data ON (keep Read ON). The client will include the header X-Sync-Role: master on POSTs to `sync/data.php`, which the server requires for writes.
+
+- Q: Can multiple Masters write at the same time?
+  - A: Yes. The system is multi-master. Conflicts are resolved at field level with a prompt offering “Accept server” or “Keep mine”. Last-write-wins semantics converge after short intervals.
+
+- Q: My changes don’t show up on other devices—what should I check?
+  - A: Ensure you are in Master mode (Write ON). Verify the Network tab shows POST requests to `sync/data.php` with X-Sync-Role: master and HTTP 200. Make sure other clients have Read ON to receive updates.
+
+- Q: I see 403 Forbidden when saving—why?
+  - A: The server rejects writes without X-Sync-Role: master. Turn Write ON (Master mode) or use the documented curl example with the header. In read-only Sync mode, POSTs are prevented by the client.
+
+- Q: What does “Saved locally (read-only mode)” mean?
+  - A: The change is stored only in the browser’s localStorage and will not be shared. Switch to Master (Write ON) to sync changes to the server.
+
+- Q: How can I force a data refresh from the server?
+  - A: Ensure Read is ON, then either trigger your app’s manual sync action (if available) or simply reload the page. For diagnostics, use `window.debugSync()` and watch GETs to `sync/data.php` in the Network panel.
+
+- Q: Does the server enforce a single master lock?
+  - A: No. There is no exclusive lock. Multi-master is supported; conflicts are handled client-side with prompts and short write-fences.
+
+- Q: How do presence-aware reads work in Master mode?
+  - A: By default, a Master applies server updates when at least one other Master is online and the last server writer is a different session (configurable via `serverSync.requireOtherMastersForRead`).
+
+- Q: How do I work completely offline?
+  - A: Turn both Read and Write OFF (Standalone). All changes are local; no requests are sent to the server.
+
+- Q: Where are the endpoints and required headers documented?
+  - A: See the “Server-side write enforcement (header contract)” section above and the provided curl example demonstrating X-Sync-Role: master.
+
+- Q: How can I test Sync quickly with two clients?
+  - A: Open the app in two browsers or devices. Set one to Master (Read ON, Write ON) and the other to Sync (Read ON, Write OFF). Edit on the Master and watch the other update without any POSTs.
 
 ---
 

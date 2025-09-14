@@ -113,6 +113,7 @@ class SharingManager {
   _clearFallbackTimers(){ try { if (this._fallbackReadInterval){ clearInterval(this._fallbackReadInterval); this._fallbackReadInterval = null; } if (this._fallbackWriteInterval){ clearInterval(this._fallbackWriteInterval); this._fallbackWriteInterval = null; } } catch(_e){} }
   _startFallbackReadPolling(){ try { if (!window.serverSync || typeof window.serverSync.loadFromServer !== 'function' || typeof window.serverSync.applyServerData !== 'function') return; this._clearFallbackTimers(); const poll = async()=>{ try { const serverData = await window.serverSync.loadFromServer(); if (serverData && !serverData.error){ await window.serverSync.applyServerData(serverData); } } catch(_e){} }; poll(); this._fallbackReadInterval = setInterval(poll, 15000); console.log('📡 Fallback Read-Polling aktiviert (15s)'); } catch(_e){} }
   _startFallbackWriteTimer(){ try { if (!window.serverSync) return; const writer = async()=>{ try { if (typeof window.serverSync.manualSync === 'function'){ await window.serverSync.manualSync(); } else if (typeof window.serverSync.syncWithServer === 'function'){ await window.serverSync.syncWithServer(); } } catch(_e){} }; this._fallbackWriteInterval = setInterval(writer, 120000); setTimeout(writer, 0); console.log('📝 Fallback Write-Timer aktiviert (120s)'); } catch(_e){} }
+  async _waitForServerSyncMethod(methodName, timeoutMs = 1500){ try { const start = Date.now(); while (Date.now() - start < timeoutMs){ if (window.serverSync && typeof window.serverSync[methodName] === 'function'){ return true; } await new Promise(r=>setTimeout(r,50)); } } catch(_e){} return false; }
   async enableStandaloneMode(){ try{
     console.log("🏠 Aktiviere Standalone-Modus...");
     try { if (window.serverSync && typeof window.serverSync.stopPeriodicSync === 'function'){ window.serverSync.stopPeriodicSync(); } } catch(_e){}
@@ -140,13 +141,22 @@ class SharingManager {
     console.log('👑 Aktiviere Master-Modus...');
     if (!window.serverSync) throw new Error('ServerSync nicht verfügbar');
     window.serverSync.isMaster = true; window.serverSync.isSlaveActive = true; // Force read for multi-master
+    let _started = false;
     if (typeof window.serverSync.startMasterMode === 'function'){
       await window.serverSync.startMasterMode();
+      _started = true;
     } else {
-      console.warn('⚠️ startMasterMode nicht verfügbar – aktiviere Fallback Write/Read');
-      // Always enable fallback write and read-back in Master for convergence
-      this._startFallbackWriteTimer();
-      this._startFallbackReadPolling();
+      // Wait briefly for ServerSync to finish loading (race-safe init)
+      const ready = await this._waitForServerSyncMethod('startMasterMode', 1500);
+      if (ready){
+        await window.serverSync.startMasterMode();
+        _started = true;
+      } else {
+        console.warn('⚠️ startMasterMode nicht verfügbar – aktiviere Fallback Write/Read');
+        // Always enable fallback write and read-back in Master for convergence
+        this._startFallbackWriteTimer();
+        this._startFallbackReadPolling();
+      }
     }
     try { const readToggle = document.getElementById('readDataToggle'); if (readToggle) readToggle.checked = true; } catch(_e){}
     this.syncMode = 'master'; this.isLiveSyncEnabled = true; this.isMasterMode = true; this.updateAllSyncDisplays('Master', true); this.applyReadOnlyUIState(false); this.showNotification('Master-Modus aktiviert - Sende Daten an Server', 'success'); this._emitModeChanged(); console.log('✅ Master-Modus aktiviert');

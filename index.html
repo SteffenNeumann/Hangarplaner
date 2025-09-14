@@ -457,7 +457,7 @@ window.location.replace('login.html');
 				</div>
 				<div class="sidebar-form-group">
 					<div class="sidebar-form-row">
-						<label for="viewModeToggle">Board/Row</label>
+						<label for="viewModeToggle">Board/Table</label>
 						<div class="input-container">
 							<div class="mode-toggle">
 								<label class="toggle-switch">
@@ -1818,6 +1818,54 @@ document.addEventListener('DOMContentLoaded', function(){
 
 					<!-- Panels -->
 					<div id="panel-planner" class="tab-panel" role="tabpanel" aria-labelledby="tab-planner">
+					<!-- Planner Table View (hidden by default; shown when Board/Table toggle is ON) -->
+					<div id="plannerTableView" class="hidden">
+						<div class="planner-table-wrapper">
+							<table id="plannerTable" class="planner-table" aria-label="Planner Table View">
+								<thead>
+									<tr class="planner-table-header">
+										<th data-col="hangarPosition" class="sortable">Hangar Pos <span class="sort-indicator">↕</span></th>
+										<th data-col="aircraftId" class="sortable">AC-ID <span class="sort-indicator">↕</span></th>
+										<th data-col="arrivalTime" class="sortable">Arr (UTC) <span class="sort-indicator">↕</span></th>
+										<th data-col="departureTime" class="sortable">Dep (UTC) <span class="sort-indicator">↕</span></th>
+										<th data-col="positionInfo" class="sortable">Position <span class="sort-indicator">↕</span></th>
+										<th data-col="towStatus" class="sortable">Tow Status <span class="sort-indicator">↕</span></th>
+										<th data-col="status" class="sortable">Status <span class="sort-indicator">↕</span></th>
+										<th data-col="notes" class="sortable">Notes <span class="sort-indicator">↕</span></th>
+									</tr>
+									<tr class="planner-filter-row">
+										<th><input id="flt_hangarPosition" class="planner-filter-input" type="text" placeholder="Filter" /></th>
+										<th><input id="flt_aircraftId" class="planner-filter-input" type="text" placeholder="Filter" /></th>
+										<th><input id="flt_arrivalTime" class="planner-filter-input" type="text" placeholder="Filter" title="e.g. 12:30 or 2025-09-14" /></th>
+										<th><input id="flt_departureTime" class="planner-filter-input" type="text" placeholder="Filter" title="e.g. 13:10 or 2025-09-14" /></th>
+										<th><input id="flt_positionInfo" class="planner-filter-input" type="text" placeholder="Filter" /></th>
+										<th>
+											<select id="flt_towStatus" class="planner-filter-select">
+												<option value="">All</option>
+												<option value="neutral">neutral</option>
+												<option value="initiated">initiated</option>
+												<option value="ongoing">ongoing</option>
+												<option value="on-position">on-position</option>
+											</select>
+										</th>
+										<th>
+											<select id="flt_status" class="planner-filter-select">
+												<option value="">All</option>
+												<option value="neutral">neutral</option>
+												<option value="ready">ready</option>
+												<option value="maintenance">maintenance</option>
+												<option value="aog">aog</option>
+											</select>
+										</th>
+										<th><input id="flt_notes" class="planner-filter-input" type="text" placeholder="Filter" /></th>
+									</tr>
+								</thead>
+								<tbody id="plannerTableBody"></tbody>
+							</table>
+							<div id="plannerTableStatus" class="planner-table-status"></div>
+						</div>
+					</div>
+
 					<!-- Abschnitt 1 Container -->
 					<div class="section-container">
 						<div id="hangarGrid" class="grid grid-cols-4 gap-4">
@@ -3357,7 +3405,8 @@ You’ll see the result in the browser console.
 			<script src="js/hangar.js"></script>
 			<script src="js/storage-browser.js"></script>
 			<script src="js/sync-manager.js"></script>
-			<script src="js/fleet-database-manager.js"></script>
+			<script src="js/fleet-database.js"></script>
+			<script src="js/planner-table-view.js"></script>
 						<script>
 				// Ensure Sharing Manager initializes (binds sync toggles and manual sync button)
 				window.hangarInitQueue = window.hangarInitQueue || [];

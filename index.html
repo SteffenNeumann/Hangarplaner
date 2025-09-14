@@ -1504,11 +1504,15 @@ document.addEventListener('syncModeChanged', () => { refreshHeaderModeLabel(); u
     };
     if (r) r.addEventListener('change', apply);
     if (w) w.addEventListener('change', apply);
+    // Also react to mode changes from single mode control
+    try { document.addEventListener('syncModeChanged', apply); } catch(_e){}
     apply();
   }
   function init(){ injectAll(); hookSyncToggles(); }
   window.hangarInitQueue = window.hangarInitQueue || [];
   window.hangarInitQueue.push(init);
+  // Ensure injection after full DOM load as a fallback (tiles present)
+  try { document.addEventListener('DOMContentLoaded', function(){ setTimeout(init, 600); }, { once: true }); } catch(_e){}
   document.addEventListener('secondaryTilesCreated', function(){ setTimeout(injectAll, 50); setTimeout(hookSyncToggles, 60); });
   // Expose for potential reuse
   window.clearSingleTile = clearSingleTile;

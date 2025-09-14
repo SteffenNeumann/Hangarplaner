@@ -1540,7 +1540,7 @@ if (window.helpers) {
       if (picker._rangeMode) {
         // Show dual calendar, hide single calendar
         cal.style.display = 'none';
-        dualCalContainer.style.display = 'block';
+        dualCalContainer.style.display = 'flex';
         buildDualCalendar(picker._leftYear, picker._leftMonth, picker._rightYear, picker._rightMonth, picker._selectedDate);
       } else {
         // Show single calendar, hide dual calendar
@@ -1594,6 +1594,9 @@ if (window.helpers) {
     const dualCalContainer = document.createElement('div');
     dualCalContainer.className = 'dtp-dual-months';
     dualCalContainer.style.display = 'none';
+    dualCalContainer.style.flexDirection = 'row';
+    dualCalContainer.style.flexWrap = 'nowrap';
+    dualCalContainer.style.alignItems = 'flex-start';
 
     // Left month
     const leftMonth = document.createElement('div');
@@ -2180,7 +2183,11 @@ if (window.helpers) {
     const singleCal = p._daysGrid && p._daysGrid.parentElement && p._daysGrid.parentElement.parentElement;
     if (p._rangeMode) {
       // Range mode: show dual calendar, hide single calendar
-      if (p._dualCalContainer) p._dualCalContainer.style.display = 'block';
+      if (p._dualCalContainer) {
+        p._dualCalContainer.style.display = 'flex';
+        p._dualCalContainer.style.flexDirection = 'row';
+        p._dualCalContainer.style.flexWrap = 'nowrap';
+      }
       if (singleCal) singleCal.style.display = 'none';
     } else {
       // Single mode: show single calendar, hide dual calendar  
@@ -2384,7 +2391,10 @@ if (window.helpers) {
     p._rightYear = p._selectedDate.getFullYear() + (p._selectedDate.getMonth() === 11 ? 1 : 0);
     
     // Toggle calendar display
-    if (p._dualCalContainer) p._dualCalContainer.style.display = 'block';
+    if (p._dualCalContainer) {
+      p._dualCalContainer.style.display = 'flex';
+      p._dualCalContainer.style.flexDirection = 'row';
+    }
     if (p._daysGrid && p._daysGrid.parentElement) p._daysGrid.parentElement.style.display = 'none';
     
     if (p._headerDate && p._formatLongDateLabel){

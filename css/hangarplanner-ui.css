@@ -876,22 +876,27 @@ select.status-selector {
 	background-size: 16px;
 }
 
-/* Dual-month range mode layout */
+/* Dual-month range mode layout - Force horizontal alignment */
 .dtp-dual-months {
-	display: flex;
-	flex-direction: row;
+	display: flex !important;
+	flex-direction: row !important;
+	flex-wrap: nowrap !important;
+	align-items: flex-start !important;
 	gap: 16px;
 	margin: 8px 0;
 	width: 100%;
+	max-width: 600px;
 }
 
 .dtp-dual-months .dtp-month {
-	flex: 1;
+	flex: 1 1 45% !important;
 	min-width: 280px;
+	max-width: 300px;
 	border: 1px solid #e5e7eb;
 	border-radius: 6px;
 	overflow: hidden;
 	background: #ffffff;
+	display: block;
 }
 
 .dtp-dual-months .dtp-nav {

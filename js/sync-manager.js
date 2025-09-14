@@ -150,8 +150,13 @@ class SharingManager {
     console.log(`✅ Sync-Modus aktualisiert: Read=${readEnabled}, Write=${writeEnabled}, Mode=${this.syncMode}`);
   }
   _clearFallbackTimers(){ try { if (this._fallbackReadInterval){ clearInterval(this._fallbackReadInterval); this._fallbackReadInterval = null; } if (this._fallbackWriteInterval){ clearInterval(this._fallbackWriteInterval); this._fallbackWriteInterval = null; } } catch(_e){} }
-  _startFallbackReadPolling(){ try { if (!window.serverSync || typeof window.serverSync.loadFromServer !== 'function' || typeof window.serverSync.applyServerData !== 'function') return; this._clearFallbackTimers(); const poll = async()=>{ try { const serverData = await window.serverSync.loadFromServer(); if (serverData && !serverData.error){ await window.serverSync.applyServerData(serverData); } } catch(_e){} }; poll(); this._fallbackReadInterval = setInterval(poll, 15000); console.log('📡 Fallback Read-Polling aktiviert (15s)'); } catch(_e){} }
-  _startFallbackWriteTimer(){ try { if (!window.serverSync) return; const writer = async()=>{ try { if (typeof window.serverSync.manualSync === 'function'){ await window.serverSync.manualSync(); } else if (typeof window.serverSync.syncWithServer === 'function'){ await window.serverSync.syncWithServer(); } } catch(_e){} }; this._fallbackWriteInterval = setInterval(writer, 120000); setTimeout(writer, 0); console.log('📝 Fallback Write-Timer aktiviert (120s)'); } catch(_e){} }
+  _startFallbackReadPolling(){ try { if (!window.serverSync || typeof window.serverSync.loadFromServer !== 'function' || typeof window.serverSync.applyServerData !== 'function') return; this._clearFallbackTimers(); const poll = async()=>{ try { const serverData = await window.serverSync.loadFromServer(); if (serverData && !serverData.error){ await window.serverSync.applyServerData(serverData); } } catch(_e){} }; poll(); // Use 3s to match normal slave polling
+    this._fallbackReadInterval = setInterval(poll, 3000);
+    console.log('📡 Fallback Read-Polling aktiviert (3s)'); } catch(_e){} }
+  _startFallbackWriteTimer(){ try { if (!window.serverSync) return; const writer = async()=>{ try { if (typeof window.serverSync.manualSync === 'function'){ await window.serverSync.manualSync(); } else if (typeof window.serverSync.syncWithServer === 'function'){ await window.serverSync.syncWithServer(); } } catch(_e){} }; // Use 5s interval to match normal master periodic sync cadence
+    this._fallbackWriteInterval = setInterval(writer, 5000);
+    setTimeout(writer, 0);
+    console.log('📝 Fallback Write-Timer aktiviert (5s)'); } catch(_e){} }
   async enableStandaloneMode(){ try{
     console.log("🏠 Aktiviere Offline-Modus...");
     // Stop all periodic sync activity and ensure no background reads/writes

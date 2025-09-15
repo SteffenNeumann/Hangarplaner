@@ -28,6 +28,12 @@ class ServerSync {
 		// Client-side write fencing to prevent self-echo/oscillation in multi-master
 		this._pendingWrites = {}; // { fieldId: timestampMs }
 		this._writeFenceMs = 3000; // fence TTL window (increased to protect typing)
+		// Conflict prompt window for suppression/fencing after user decision
+		this.conflictPromptWindowMs = 10000;
+		// Per-field conflict fence: prevents applying server values and re-prompting temporarily
+		this._conflictFenceUntil = {}; // { fieldId: untilTimestampMs }
+		// Per-field+serverValue suppression: avoid re-queuing the exact same conflict for a short TTL
+		this._conflictSuppressUntil = {}; // { `${fieldId}|${sig}`: untilTimestampMs }
 
 		// Baseline of last server-applied data to compute precise deltas (fieldUpdates)
 		this._baselinePrimary = {};
@@ -200,6 +206,33 @@ class ServerSync {
 	_markPendingWrite(fieldId){ try { if (!fieldId) return; this._pendingWrites[fieldId] = this._now(); } catch(_e){} }
 	_isWriteFenceActive(fieldId){ try { if (!fieldId) return false; const ts = this._pendingWrites[fieldId] || 0; return ts && (this._now() - ts) < this._writeFenceMs; } catch(_e){ return false; } }
 	_hasActiveFences(){ try { const now = this._now(); const win = this._writeFenceMs; return Object.values(this._pendingWrites||{}).some(ts => (now - ts) < win); } catch(_e){ return false; } }
+	// ===== Conflict-fence and suppression helpers (post-decision quiet period) =====
+	_isConflictFenceActive(fieldId){ try { if (!fieldId) return false; const until = this._conflictFenceUntil[fieldId] || 0; return this._now() < until; } catch(_e){ return false; } }
+	_setConflictFence(fieldId, untilTs){ try { if (!fieldId) return; this._conflictFenceUntil[fieldId] = untilTs; } catch(_e){} }
+	_valueSignature(val){ try { return JSON.stringify(val); } catch(_e){ try { return String(val); } catch(_e2){ return '""'; } } }
+	_isSuppressedConflict(fieldId, sig){ try { if (!fieldId) return false; const key = `${fieldId}|${sig}`; const until = this._conflictSuppressUntil[key] || 0; return this._now() < until; } catch(_e){ return false; } }
+	_suppressConflict(fieldId, sig, untilTs){ try { if (!fieldId) return; const key = `${fieldId}|${sig}`; this._conflictSuppressUntil[key] = untilTs; } catch(_e){} }
+	resolveConflictKeepMine(payload){
+		try {
+			if (!payload) return;
+			const tileId = parseInt(payload.tileId || 0, 10) || null;
+			let fieldId = payload.fieldId || null;
+			const field = payload.field || null;
+			if (!fieldId && tileId && field && typeof this._fieldIdFor === 'function') {
+				fieldId = this._fieldIdFor(tileId, field);
+			}
+			if (!fieldId) return;
+			const now = this._now();
+			const ttl = Math.max(3000, parseInt(this.conflictPromptWindowMs||10000,10)||10000);
+			// Install per-field conflict fence for quiet period
+			this._setConflictFence(fieldId, now + ttl);
+			// Suppress the exact same server value from re-prompting during TTL
+			const sig = this._valueSignature(payload.serverValue);
+			this._suppressConflict(fieldId, sig, now + ttl);
+			// Also mark a regular write fence so cloneFilteredServerData skips this field immediately
+			this._markPendingWrite(fieldId);
+		} catch(e){ console.warn('resolveConflictKeepMine failed', e); }
+	}
 	_fieldIdFor(tileId, key){
 		try {
 			const id = parseInt(tileId||0,10); if (!id) return null;
@@ -225,9 +258,9 @@ class ServerSync {
 				keys.forEach(k=>{
 					if (t.hasOwnProperty(k)){
 						const fid = this._fieldIdFor(id, k);
-						if (!fid || !this._isWriteFenceActive(fid)){
-							out[k] = t[k];
-						}
+							if (!fid || (!this._isWriteFenceActive(fid) && !this._isConflictFenceActive(fid))){
+								out[k] = t[k];
+							}
 					}
 				});
 				return out;
@@ -333,6 +366,12 @@ class ServerSync {
 						keys.forEach(k=>{
 							if (!Object.prototype.hasOwnProperty.call(t,k)) return; // server didn't provide this key
 							const srv = t[k];
+							const fieldId = this._fieldIdFor && this._fieldIdFor(id, k);
+							// If a conflict fence is active for this field, skip applying and do not prompt
+							if (fieldId && this._isConflictFenceActive(fieldId)) { try { delete arr[i][k]; } catch(_e){} return; }
+							// If the exact same server value was recently suppressed (after Keep Mine), skip
+							const __sig = this._valueSignature(srv);
+							if (fieldId && this._isSuppressedConflict(fieldId, __sig)) { try { delete arr[i][k]; } catch(_e){} return; }
 							const old = (b?.[k] ?? '');
 							const locVal = (l?.[k] ?? '');
 							const srvN = norm(k, srv);
@@ -778,8 +817,12 @@ async slaveCheckForUpdates() {
 					try {
 						const items = (payload && payload.conflicts) || [];
 						window.__conflictQueue = window.__conflictQueue || [];
-						items.forEach(item => window.__conflictQueue.push(item));
-						if (typeof window.__showNextConflict === 'function') setTimeout(()=>window.__showNextConflict(), 0);
+						if (typeof window.__enqueueConflicts === 'function') {
+							window.__enqueueConflicts(items);
+						} else {
+							items.forEach(item => window.__conflictQueue.push(item));
+							if (typeof window.__showNextConflict === 'function') setTimeout(()=>window.__showNextConflict(), 0);
+						}
 					} catch(_e){}
 					return false;
 				} else if (response.status === 423) {
@@ -869,8 +912,12 @@ async slaveCheckForUpdates() {
 				try {
 					const items = (payload && payload.conflicts) || [];
 					window.__conflictQueue = window.__conflictQueue || [];
-					items.forEach(item => window.__conflictQueue.push(item));
-					if (typeof window.__showNextConflict === 'function') setTimeout(()=>window.__showNextConflict(), 0);
+					if (typeof window.__enqueueConflicts === 'function') {
+						window.__enqueueConflicts(items);
+					} else {
+						items.forEach(item => window.__conflictQueue.push(item));
+						if (typeof window.__showNextConflict === 'function') setTimeout(()=>window.__showNextConflict(), 0);
+					}
 				} catch(_e){}
 				return false;
 			}
@@ -1313,8 +1360,12 @@ async slaveCheckForUpdates() {
 					if (Array.isArray(filt.conflicts) && filt.conflicts.length) {
 						try {
 							window.__conflictQueue = window.__conflictQueue || [];
-							filt.conflicts.forEach(c=>window.__conflictQueue.push(c));
-							if (typeof window.__showNextConflict==='function') setTimeout(()=>window.__showNextConflict(), 0);
+							if (typeof window.__enqueueConflicts === 'function') {
+								window.__enqueueConflicts(filt.conflicts);
+							} else {
+								filt.conflicts.forEach(c=>window.__conflictQueue.push(c));
+								if (typeof window.__showNextConflict==='function') setTimeout(()=>window.__showNextConflict(), 0);
+							}
 						} catch(_e){}
 					}
 				} catch(_e){}

@@ -3435,8 +3435,11 @@ You’ll see the result in the browser console.
 
 			<script>
 			(function(){
-				// Minimal conflict queue driver leveraging hp-modal styling
+				// Minimal conflict queue driver leveraging hp-modal styling with de-duplication and suppression awareness
 				window.__conflictQueue = window.__conflictQueue || [];
+				window.__conflictSeenKeys = window.__conflictSeenKeys || new Set();
+				function conflictKey(it){ try { const fid = it.fieldId || (window.serverSync && typeof window.serverSync._fieldIdFor==='function' ? window.serverSync._fieldIdFor(parseInt(it.tileId||0,10)||0, it.field||'') : `${it.field||''}-${it.tileId||''}`); const sig = JSON.stringify(it.serverValue); return `${fid}|${sig}`; } catch(_e){ return `${it.fieldId||''}|${it.tileId||''}|${String(it.serverValue||'')}`; } }
+				window.__enqueueConflicts = function(items){ try { if (!Array.isArray(items)) return; items.forEach(it=>{ const key = conflictKey(it); if (!window.__conflictSeenKeys.has(key)) { window.__conflictQueue.push(it); window.__conflictSeenKeys.add(key); } }); if (typeof window.__showNextConflict==='function') setTimeout(()=>window.__showNextConflict(), 0); } catch(_e){} };
 				let showing = false;
 				let current = null;
 				function el(id){ return document.getElementById(id); }
@@ -3457,7 +3460,9 @@ You’ll see the result in the browser console.
 					try {
 						if (!window.serverSync || typeof window.serverSync.syncFieldUpdates !== 'function') return;
 						const updates = {}; updates[item.fieldId] = item.localValue ?? '';
-						// Extend local write fence to avoid immediate echo overwrite
+						// Inform ServerSync to fence and suppress this conflict promptly
+						try { if (typeof window.serverSync.resolveConflictKeepMine === 'function') window.serverSync.resolveConflictKeepMine(item); } catch(_e){}
+						// Extend local write fence to avoid immediate echo overwrite (typing fence)
 						try { if (typeof window.serverSync._markPendingWrite==='function') window.serverSync._markPendingWrite(item.fieldId); } catch(_e){}
 						await window.serverSync.syncFieldUpdates(updates, {});
 					} catch(_e){}
@@ -3466,6 +3471,9 @@ You’ll see the result in the browser console.
 				window.__showNextConflict = function(){
 					if (showing) return; if (!window.__conflictQueue || window.__conflictQueue.length===0) return;
 					current = window.__conflictQueue.shift();
+					try { current.__key = conflictKey(current); } catch(_e){}
+					// Drop stale duplicates of the same conflict key from the remaining queue
+					try { window.__conflictQueue = window.__conflictQueue.filter(it => conflictKey(it) !== current.__key); } catch(_e){}
 					const ov = el('conflictModalOverlay'); if (!ov) return;
 					el('conflictField').textContent = `${current.field||''} (Tile ${current.tileId||''})`;
 					el('conflictUpdatedBy').textContent = (current.updatedBy||'unknown');
@@ -3475,8 +3483,8 @@ You’ll see the result in the browser console.
 				};
 				function wire(){
 					const acc = el('conflictAcceptBtn'); const keep = el('conflictKeepBtn'); const ov = el('conflictModalOverlay');
-					if (acc && !acc.__wired){ acc.__wired=true; acc.addEventListener('click', async ()=>{ const item=current; hide(); if (item) await applyServerValue(item); window.__showNextConflict(); }); }
-					if (keep && !keep.__wired){ keep.__wired=true; keep.addEventListener('click', async ()=>{ const item=current; hide(); if (item) await keepMineAndPost(item); window.__showNextConflict(); }); }
+					if (acc && !acc.__wired){ acc.__wired=true; acc.addEventListener('click', async ()=>{ const item=current; const key=current && current.__key; hide(); if (item) await applyServerValue(item); try { if (key) window.__conflictSeenKeys.delete(key); } catch(_e){} window.__showNextConflict(); }); }
+					if (keep && !keep.__wired){ keep.__wired=true; keep.addEventListener('click', async ()=>{ const item=current; const key=current && current.__key; hide(); if (item) await keepMineAndPost(item); try { if (key) window.__conflictSeenKeys.delete(key); } catch(_e){} window.__showNextConflict(); }); }
 					if (ov && !ov.__wired){ ov.__wired=true; ov.addEventListener('click', (e)=>{ if (e.target===ov){ hide(); window.__showNextConflict(); } }); }
 				}
 				if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', wire, { once: true }); else wire();

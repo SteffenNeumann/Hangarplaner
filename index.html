@@ -4008,6 +4008,31 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
 					} catch(_){}
 				})();
 
+				// Final safety override after all scripts load: ensure robust formatter takes precedence
+				(function(){
+					try {
+						window.addEventListener('load', function(){
+							try {
+								window.formatAircraftId = function(arg){
+									try {
+										if (typeof window.safeFormatAircraftId === 'function') return window.safeFormatAircraftId(arg) || '';
+										// Fallback: coerce to string and normalize
+										let s = '';
+										try { s = (typeof arg === 'string') ? (arg || '') : ((arg && typeof arg.value === 'string') ? (arg.value || '') : ''); } catch(_){ s=''; }
+										s = (s || '').toString().trim();
+										if (!s) { if (arg && typeof arg.value === 'string') { arg.value = ''; } return ''; }
+										const clean = s.replace(/-/g, '').toUpperCase();
+										let out = clean.charAt(0) || '';
+										if (clean.length > 1) out += '-' + clean.substring(1);
+										if (arg && typeof arg.value === 'string') { arg.value = out; }
+										return out;
+									} catch(e){ return ''; }
+								};
+							} catch(_e){}
+						});
+					} catch(_){ }
+				})();
+
 				function setupAircraftIdFormatting() {
 					document
 						.querySelectorAll('input[id^="aircraft-"]')

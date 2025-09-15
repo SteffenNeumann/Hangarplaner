@@ -722,7 +722,7 @@ function setupEventListenersForTile(tileElement, cellId) {
 		aircraftInput.addEventListener("input", function (e) {
 			// NUR Formatierung während der Eingabe, KEIN API-Aufruf
 				if (typeof formatAircraftId === "function") {
-					const formatted = formatAircraftId(e.target.value || '');
+					const formatted = formatAircraftId(e.target);
 					if (formatted && formatted !== e.target.value) {
 						e.target.value = formatted;
 					}
@@ -732,7 +732,7 @@ function setupEventListenersForTile(tileElement, cellId) {
 		});
 		aircraftInput.addEventListener("blur", function (e) {
 			if (typeof formatAircraftId === "function") {
-				const formatted = formatAircraftId(e.target.value || '');
+				const formatted = formatAircraftId(e.target);
 				if (formatted && formatted !== e.target.value) {
 					e.target.value = formatted;
 				}

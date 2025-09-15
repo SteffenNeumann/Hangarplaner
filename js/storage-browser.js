@@ -28,12 +28,6 @@ class ServerSync {
 		// Client-side write fencing to prevent self-echo/oscillation in multi-master
 		this._pendingWrites = {}; // { fieldId: timestampMs }
 		this._writeFenceMs = 3000; // fence TTL window (increased to protect typing)
-		// Conflict prompt window for suppression/fencing after user decision
-		this.conflictPromptWindowMs = 10000;
-		// Per-field conflict fence: prevents applying server values and re-prompting temporarily
-		this._conflictFenceUntil = {}; // { fieldId: untilTimestampMs }
-		// Per-field+serverValue suppression: avoid re-queuing the exact same conflict for a short TTL
-		this._conflictSuppressUntil = {}; // { `${fieldId}|${sig}`: untilTimestampMs }
 			// Presence-aware reads in Master mode: only read/apply when another Master is online
 			// Default OFF for simpler, more reliable convergence in multi-master
 			this.requireOtherMastersForRead = false;
@@ -230,33 +224,6 @@ class ServerSync {
 			return !!users.find(u => ((u?.role || '').toLowerCase() === 'master') && u.sessionId && u.sessionId !== mySession);
 		} catch(e){ return false; }
 	}
-	// ===== Conflict-fence and suppression helpers (post-decision quiet period) =====
-	_isConflictFenceActive(fieldId){ try { if (!fieldId) return false; const until = this._conflictFenceUntil[fieldId] || 0; return this._now() < until; } catch(_e){ return false; } }
-	_setConflictFence(fieldId, untilTs){ try { if (!fieldId) return; this._conflictFenceUntil[fieldId] = untilTs; } catch(_e){} }
-	_valueSignature(val){ try { return JSON.stringify(val); } catch(_e){ try { return String(val); } catch(_e2){ return '""'; } } }
-	_isSuppressedConflict(fieldId, sig){ try { if (!fieldId) return false; const key = `${fieldId}|${sig}`; const until = this._conflictSuppressUntil[key] || 0; return this._now() < until; } catch(_e){ return false; } }
-	_suppressConflict(fieldId, sig, untilTs){ try { if (!fieldId) return; const key = `${fieldId}|${sig}`; this._conflictSuppressUntil[key] = untilTs; } catch(_e){} }
-	resolveConflictKeepMine(payload){
-		try {
-			if (!payload) return;
-			const tileId = parseInt(payload.tileId || 0, 10) || null;
-			let fieldId = payload.fieldId || null;
-			const field = payload.field || null;
-			if (!fieldId && tileId && field && typeof this._fieldIdFor === 'function') {
-				fieldId = this._fieldIdFor(tileId, field);
-			}
-			if (!fieldId) return;
-			const now = this._now();
-			const ttl = Math.max(3000, parseInt(this.conflictPromptWindowMs||10000,10)||10000);
-			// Install per-field conflict fence for quiet period
-			this._setConflictFence(fieldId, now + ttl);
-			// Suppress the exact same server value from re-prompting during TTL
-			const sig = this._valueSignature(payload.serverValue);
-			this._suppressConflict(fieldId, sig, now + ttl);
-			// Also mark a regular write fence so cloneFilteredServerData skips this field immediately
-			this._markPendingWrite(fieldId);
-		} catch(e){ console.warn('resolveConflictKeepMine failed', e); }
-	}
 	_fieldIdFor(tileId, key){
 		try {
 			const id = parseInt(tileId||0,10); if (!id) return null;
@@ -282,9 +249,9 @@ class ServerSync {
 				keys.forEach(k=>{
 					if (t.hasOwnProperty(k)){
 						const fid = this._fieldIdFor(id, k);
-							if (!fid || (!this._isWriteFenceActive(fid) && !this._isConflictFenceActive(fid))){
-								out[k] = t[k];
-							}
+						if (!fid || !this._isWriteFenceActive(fid)){
+							out[k] = t[k];
+						}
 					}
 				});
 				return out;
@@ -361,66 +328,6 @@ class ServerSync {
 		 * Detect conflicts and filter server data so we only apply other users' changes
 		 * A conflict is when the same field diverged from the baseline both locally and on the server.
 		 */
-		_filterConflicts(serverData){
-			const result = { data: serverData, conflicts: [] };
-			try {
-				// Build current local map and use existing baseline
-				const localData = this.collectCurrentData && this.collectCurrentData();
-				const local = this._buildTileMap(localData||{});
-				const basePrimary = this._baselinePrimary || {};
-				const baseSecondary = this._baselineSecondary || {};
-				const keys = ['aircraftId','arrivalTime','departureTime','position','hangarPosition','status','towStatus','notes'];
-				const norm = (field, val) => {
-					if (val === null || val === undefined) return '';
-					let s = (typeof val === 'string') ? val.trim() : ('' + val);
-					if (field === 'status' || field === 'towStatus') {
-						const l = s.toLowerCase();
-						return (l === '' || l === 'neutral') ? 'neutral' : l;
-					}
-					return s;
-				};
-				function cloneTiles(arr){ return (arr||[]).map(t=>({ ...t })); }
-				const filtered = { ...serverData, primaryTiles: cloneTiles(serverData?.primaryTiles||[]), secondaryTiles: cloneTiles(serverData?.secondaryTiles||[]) };
-				const checkList = [ { arr: filtered.primaryTiles, base: basePrimary, loc: local.primary, isSecondary:false }, { arr: filtered.secondaryTiles, base: baseSecondary, loc: local.secondary, isSecondary:true } ];
-				checkList.forEach(({arr, base, loc, isSecondary})=>{
-					for (let i=0;i<arr.length;i++){
-						const t = arr[i]; const id = parseInt(t?.tileId||0,10); if (!id) continue;
-						const b = base[id] || {};
-						const l = loc[id] || {};
-						keys.forEach(k=>{
-							if (!Object.prototype.hasOwnProperty.call(t,k)) return; // server didn't provide this key
-							const srv = t[k];
-							const fieldId = this._fieldIdFor && this._fieldIdFor(id, k);
-							// If a conflict fence is active for this field, skip applying and do not prompt
-							if (fieldId && this._isConflictFenceActive(fieldId)) { try { delete arr[i][k]; } catch(_e){} return; }
-							// If the exact same server value was recently suppressed (after Keep Mine), skip
-							const __sig = this._valueSignature(srv);
-							if (fieldId && this._isSuppressedConflict(fieldId, __sig)) { try { delete arr[i][k]; } catch(_e){} return; }
-							// If the server's last writer session for this tile equals mine, do not report a conflict
-							try {
-								const mySid = (typeof this.getSessionId==='function') ? this.getSessionId() : (localStorage.getItem('serverSync.sessionId') || '');
-								const tileWriter = (t && (t.updatedBySession || '')) || (serverData && serverData.metadata && serverData.metadata.lastWriterSession) || '';
-								if (mySid && tileWriter && mySid === tileWriter) { return; }
-							} catch(_e){}
-							const old = (b?.[k] ?? '');
-							const locVal = (l?.[k] ?? '');
-							const srvN = norm(k, srv);
-							const oldN = norm(k, old);
-							const locN = norm(k, locVal);
-							if (srvN === oldN) return; // server did not change this field relative to baseline
-							if (locN === oldN) return; // only server changed -> safe to apply
-							if (locN === srvN) { return; } // both already equal -> no conflict
-							// Conflict detected — remove server value from filtered copy and queue it
-							try { delete arr[i][k]; } catch(_e){}
-							const fieldId = this._fieldIdFor && this._fieldIdFor(id, k);
-							result.conflicts.push({ tileId:id, field:k, fieldId, serverValue:srv, localValue:locVal, updatedBy: (t?.updatedBy||serverData?.metadata?.lastWriter||''), updatedBySession: (t?.updatedBySession || serverData?.metadata?.lastWriterSession || '') });
-						});
-					}
-				});
-				result.data = filtered;
-			} catch(e){ console.warn('conflict filter failed', e); }
-			return result;
-		}
 
 	/**
 	 * Internal: build a fetch timeout signal with a safe fallback when AbortSignal.timeout is not available

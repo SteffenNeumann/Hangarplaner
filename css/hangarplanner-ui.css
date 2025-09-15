@@ -3344,25 +3344,15 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 }
 
 
-/* Planner Table Mode visibility switches */
+/* Planner Table Mode visibility switches (updated for inline panel) */
 .table-view #hangarGrid,
 .table-view #secondaryHangarGrid {
 	display: none !important;
 }
-.table-view #plannerTableFrame {
-	display: block !important;
-}
- .tile-view #plannerTableFrame {
-	display: none !important;
-}
-/* Hide planner tile sections entirely in table mode */
-.table-view #panel-planner .section-container {
-	display: none !important;
-}
-/* In table view, show only the iframe inside the planner panel */
-.table-view #panel-planner > *:not(#plannerTableFrame) {
-	display: none !important;
-}
+/* Inline table panel visibility is handled via hidden class from JS */
+/* Ensure base planner panel hides when table-view is active (safety) */
+.table-view #panel-planner { display: none !important; }
+.tile-view #panel-planner-table { display: none !important; }
 
 /* ==========================================================================
    SHARING & SYNCHRONIZATION STYLES

@@ -1830,8 +1830,6 @@ document.addEventListener('DOMContentLoaded', function(){
 
 					<!-- Panels -->
 					<div id="panel-planner" class="tab-panel" role="tabpanel" aria-labelledby="tab-planner">
-					<!-- Planner Table subpage in iframe (hidden by default; shown when Board/Table is ON) -->
-					<iframe id="plannerTableFrame" src="planner-table.html" title="Planner Table" style="width:100%; height: calc(100vh - 220px); border: none; display: none; background: transparent;"></iframe>
 
 					<!-- Abschnitt 1 Container -->
 					<div class="section-container">
@@ -2999,6 +2997,40 @@ type="datetime-local"
 					</div>
 
 					</div> <!-- /panel-planner -->
+
+					<!-- Planner Table Panel (inline, replaces former iframe approach) -->
+					<div id="panel-planner-table" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-planner">
+						<div id="plannerTableView" class="p-3">
+							<div class="fleet-table-container">
+								<table id="plannerTable" class="fleet-table" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+									<colgroup>
+										<col style="width:110px">
+										<col style="width:140px">
+										<col style="width:140px">
+										<col style="width:140px">
+										<col style="width:220px">
+										<col style="width:140px">
+										<col style="width:140px">
+										<col style="width:auto">
+									</colgroup>
+									<thead>
+										<tr class="planner-table-header">
+											<th data-col="hangarPosition" class="sortable">Hangar Pos <span class="sort-indicator">↕</span></th>
+											<th data-col="aircraftId" class="sortable">AC-ID <span class="sort-indicator">↕</span></th>
+											<th data-col="arrivalTime" class="sortable">Arr (UTC) <span class="sort-indicator">↕</span></th>
+											<th data-col="departureTime" class="sortable">Dep (UTC) <span class="sort-indicator">↕</span></th>
+											<th data-col="positionInfo" class="sortable">Position <span class="sort-indicator">↕</span></th>
+											<th data-col="towStatus" class="sortable">Tow Status <span class="sort-indicator">↕</span></th>
+											<th data-col="status" class="sortable">Status <span class="sort-indicator">↕</span></th>
+											<th data-col="notes" class="sortable">Notes <span class="sort-indicator">↕</span></th>
+										</tr>
+									</thead>
+									<tbody id="plannerTableBody"></tbody>
+								</table>
+							</div>
+							<div id="plannerTableStatus" class="legend"></div>
+						</div>
+					</div>
 
 					<!-- Timetable Panel -->
 					<div id="panel-timetable" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-timetable" style="height: calc(100vh - 60px);">
@@ -4779,12 +4811,19 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                 function togglePlannerPanelForTable(tableOn){
                     try {
                         const panel = document.getElementById('panel-planner');
-                        if (!panel) return;
-                        Array.from(panel.children || []).forEach(function(child){
-                            if (child && child.id !== 'plannerTableFrame'){
-                                child.style.display = tableOn ? 'none' : '';
-                            }
-                        });
+                        const tablePanel = document.getElementById('panel-planner-table');
+                        if (!panel || !tablePanel) return;
+                        if (tableOn) {
+                            panel.classList.add('hidden');
+                            panel.setAttribute('aria-hidden','true');
+                            tablePanel.classList.remove('hidden');
+                            tablePanel.setAttribute('aria-hidden','false');
+                        } else {
+                            tablePanel.classList.add('hidden');
+                            tablePanel.setAttribute('aria-hidden','true');
+                            panel.classList.remove('hidden');
+                            panel.setAttribute('aria-hidden','false');
+                        }
                     } catch(e){}
                 }
 
@@ -4808,21 +4847,15 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                     const viewToggle = document.getElementById('viewModeToggle');
                     if (viewToggle && !viewToggle.__wired){
                         viewToggle.addEventListener('change', function(){
-                            const iframe = document.getElementById('plannerTableFrame');
                             if (this.checked){
                                 document.body.classList.add('table-view');
                                 document.body.classList.remove('tile-view');
-                                if (iframe) iframe.style.display = '';
-                                // Immediately hide non-iframe planner content to avoid transient flashes
                                 togglePlannerPanelForTable(true);
-                                // Ensure the table iframe refreshes immediately when switching into table mode
-                                try { if (iframe && iframe.contentWindow) iframe.contentWindow.postMessage({ type: 'planner-table-refresh' }, '*'); } catch(e){}
                                 // Re-apply display settings if available (prevents style drift until submenu hover)
                                 try { if (window.displayOptions && typeof window.displayOptions.applySettings==='function') window.displayOptions.applySettings(); } catch(e){}
                             } else {
                                 document.body.classList.add('tile-view');
                                 document.body.classList.remove('table-view');
-                                if (iframe) iframe.style.display = 'none';
                                 togglePlannerPanelForTable(false);
                             }
                         });
@@ -4951,11 +4984,7 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                 // Ensure planner table iframe is toggled consistently with body classes on load
                 document.addEventListener('DOMContentLoaded', function(){
                     try {
-                        var iframe = document.getElementById('plannerTableFrame');
-                        if (!iframe) return;
                         var isTable = document.body.classList.contains('table-view');
-                        iframe.style.display = isTable ? '' : 'none';
-                        // Explicitly toggle other planner content visibility to match
                         togglePlannerPanelForTable(isTable);
                     } catch(_e){}
                 });
@@ -4964,10 +4993,6 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                     try {
                         var isTable = document.body.classList.contains('table-view');
                         togglePlannerPanelForTable(isTable);
-                        var iframe = document.getElementById('plannerTableFrame');
-                        if (isTable && iframe && iframe.contentWindow) {
-                            iframe.contentWindow.postMessage({ type: 'planner-table-refresh' }, '*');
-                        }
                     } catch(_e){}
                     // Apply again shortly after, to win races with late init
                     setTimeout(function(){
@@ -4991,19 +5016,37 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                   database: document.getElementById('panel-database'),
                   faq: document.getElementById('panel-faq')
                 };
+                var tablePanel = document.getElementById('panel-planner-table');
 					var buttons = document.querySelectorAll('#topTabs .tab-btn[role="tab"]');
                 // Toggle buttons (ARIA)
                 buttons.forEach(function(btn){
                   var isActive = btn.getAttribute('data-tab') === tab;
                   btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
                 });
-                // Toggle panels
+                // Toggle panels (base)
                 Object.keys(panels).forEach(function(k){
                   if (!panels[k]) return;
                   var active = (k === tab);
                   panels[k].classList.toggle('hidden', !active);
                   panels[k].setAttribute('aria-hidden', active ? 'false' : 'true');
                 });
+                // Special handling for Planner: show either tiles or table subpanel
+                try {
+                  if (tab === 'planner') {
+                    var isTable = document.body.classList.contains('table-view');
+                    if (panels.planner) {
+                      panels.planner.classList.toggle('hidden', isTable ? true : false);
+                      panels.planner.setAttribute('aria-hidden', isTable ? 'true' : 'false');
+                    }
+                    if (tablePanel) {
+                      tablePanel.classList.toggle('hidden', isTable ? false : true);
+                      tablePanel.setAttribute('aria-hidden', isTable ? 'false' : 'true');
+                    }
+                  } else {
+                    // When not on Planner tab, ensure table subpanel is hidden too
+                    if (tablePanel) { tablePanel.classList.add('hidden'); tablePanel.setAttribute('aria-hidden','true'); }
+                  }
+                } catch(_e){}
                 saveTab(tab);
                 try {
                   if (tab === 'planner' && window.displayOptions && typeof window.displayOptions.updateUI === 'function'){
@@ -5133,5 +5176,6 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
               window.addEventListener('pageshow', sendRefresh);
             })();
             </script>
+<script src="js/planner-table-view.js"></script>
 	</body>
 </html>

@@ -573,15 +573,13 @@ applyDarkMode(enabled) {
 		}
 		// Also toggle planner table container visibility immediately if present
 		try {
-			const iframe = document.getElementById('plannerTableFrame');
-			const grid = document.getElementById('hangarGrid');
-			const sec = document.getElementById('secondaryHangarGrid');
-			if (iframe) iframe.style.display = tableView ? '' : 'none';
-			if (grid) grid.style.display = tableView ? 'none' : '';
-			if (sec) sec.style.display = tableView ? 'none' : '';
-			// If switching into table mode, ask iframe to refresh
-			if (tableView) {
-				try { if (iframe && iframe.contentWindow) iframe.contentWindow.postMessage({ type: 'planner-table-refresh' }, '*'); } catch(_e){}
+			const tilesPanel = document.getElementById('panel-planner');
+			const tablePanel = document.getElementById('panel-planner-table');
+			if (tilesPanel && tablePanel) {
+				tilesPanel.classList.toggle('hidden', !!tableView);
+				tilesPanel.setAttribute('aria-hidden', tableView ? 'true' : 'false');
+				tablePanel.classList.toggle('hidden', !tableView);
+				tablePanel.setAttribute('aria-hidden', tableView ? 'false' : 'true');
 			}
 		} catch(_e){}
 	},

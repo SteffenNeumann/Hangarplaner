@@ -2,10 +2,9 @@
   // Planner Table View module
   // Renders a table alternative to the tile grids using existing tile data and enforces the same edit/sync rules.
   
-  // DEPRECATED: This module is superseded by the iframe-based table (planner-table.html + js/planner-table.js).
-  // It remains for reference only and is not used by index.html. If accidentally loaded inside the iframe, bail out.
+  // Inline table view (now primary). It must run in the main window, not inside an iframe.
   if (window !== window.parent) {
-    try { console.warn('planner-table-view.js is deprecated; using iframe-based table instead.'); } catch(_){}
+    try { console.warn('planner-table-view.js: not running inside iframes.'); } catch(_){}
     return;
   }
 
@@ -264,14 +263,11 @@
   // Toggle interaction with Display toggle
   function applyViewVisibility(){
     try {
-      const body = document.body;
-      const isTable = body.classList.contains('table-view');
-      const tbl = document.getElementById('plannerTableView');
-      const grid = document.getElementById('hangarGrid');
-      const sec = document.getElementById('secondaryHangarGrid');
-      if (tbl) tbl.classList.toggle('hidden', !isTable);
-      if (grid) grid.style.display = isTable ? 'none' : '';
-      if (sec) sec.style.display = isTable ? 'none' : '';
+      const isTable = document.body.classList.contains('table-view');
+      const tablePanel = document.getElementById('panel-planner-table');
+      const plannerPanel = document.getElementById('panel-planner');
+      if (tablePanel) tablePanel.classList.toggle('hidden', !isTable);
+      if (plannerPanel) plannerPanel.classList.toggle('hidden', !!isTable);
       if (isTable) refresh();
     } catch(_){}
   }

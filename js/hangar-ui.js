@@ -673,8 +673,15 @@ function setupEventListenersForTile(tileElement, cellId) {
 		aircraftInput.addEventListener("input", function (e) {
 			// NUR Formatierung während der Eingabe, KEIN API-Aufruf
 			try {
-				if (typeof formatAircraftId === "function") {
-					const formatted = formatAircraftId(e.target && typeof e.target.value === 'string' ? e.target.value : '');
+				if (typeof window.safeFormatAircraftId === 'function') {
+					const formatted = window.safeFormatAircraftId(e.target);
+					if (formatted && formatted !== e.target.value) {
+						e.target.value = formatted;
+					}
+				} else if (typeof formatAircraftId === "function") {
+					let formatted;
+					try { formatted = formatAircraftId(e.target); } catch(_e1) {}
+					if (typeof formatted !== 'string') { try { formatted = formatAircraftId(e.target && typeof e.target.value === 'string' ? e.target.value : ''); } catch(_e2) {} }
 					if (formatted && formatted !== e.target.value) {
 						e.target.value = formatted;
 					}
@@ -685,8 +692,15 @@ function setupEventListenersForTile(tileElement, cellId) {
 		});
 		aircraftInput.addEventListener("blur", function (e) {
 			try {
-				if (typeof formatAircraftId === "function") {
-					const formatted = formatAircraftId(e.target && typeof e.target.value === 'string' ? e.target.value : '');
+				if (typeof window.safeFormatAircraftId === 'function') {
+					const formatted = window.safeFormatAircraftId(e.target);
+					if (formatted && formatted !== e.target.value) {
+						e.target.value = formatted;
+					}
+				} else if (typeof formatAircraftId === "function") {
+					let formatted;
+					try { formatted = formatAircraftId(e.target); } catch(_e1) {}
+					if (typeof formatted !== 'string') { try { formatted = formatAircraftId(e.target && typeof e.target.value === 'string' ? e.target.value : ''); } catch(_e2) {} }
 					if (formatted && formatted !== e.target.value) {
 						e.target.value = formatted;
 					}

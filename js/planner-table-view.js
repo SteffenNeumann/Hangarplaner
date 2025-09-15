@@ -39,9 +39,7 @@
   function canReadOnly(){
     try {
       if (window.sharingManager && typeof window.sharingManager.syncMode === 'string') return window.sharingManager.syncMode === 'sync';
-      const r = !!document.getElementById('readDataToggle')?.checked;
-      const w = !!document.getElementById('writeDataToggle')?.checked;
-      return r && !w;
+      return false;
     } catch(e){ return false; }
   }
   function getVisibleTileRows(){

@@ -160,9 +160,8 @@
     });
   }
 
-  function isReadOnly(){
-    try { const p = window.parent; if (!p) return false; if (p.sharingManager && typeof p.sharingManager.syncMode==='string') return p.sharingManager.syncMode==='sync';
-      const r = !!p.document.getElementById('readDataToggle')?.checked; const w = !!p.document.getElementById('writeDataToggle')?.checked; return r && !w; } catch(_) { return false; }
+  function isReadOnly(){ try { const p = window.parent; if (!p) return false; if (p.sharingManager && typeof p.sharingManager.syncMode==='string') return p.sharingManager.syncMode==='sync'; return false; } catch(_) { return false; }
+  }
   }
   function isMaster(){ try { const p=window.parent; if (!p) return false; if (p.serverSync && p.serverSync.isMaster===true) return true; if (p.sharingManager && p.sharingManager.isMasterMode===true) return true; } catch(_){} return false; }
   function isSecondaryRow(row){ try { return parseInt(row.tileId,10) >= 100; } catch(_) { return false; } }

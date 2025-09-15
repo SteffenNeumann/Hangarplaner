@@ -471,16 +471,16 @@ class ServerSync {
 		try {
 			// In Master mode we always read for multi-master convergence
 			if (this.isMaster === true) return true;
-			// Prefer explicit toggles when present
-			const readToggle = document.getElementById('readDataToggle');
-			if (readToggle) return !!readToggle.checked;
-			// Fall back to sharingManager state if available
+			// Use single-mode selector state
 			if (window.sharingManager && typeof window.sharingManager.syncMode === 'string') {
-				return window.sharingManager.syncMode === 'sync' || window.sharingManager.syncMode === 'master';
+				const m = window.sharingManager.syncMode;
+				return m === 'sync' || m === 'master';
 			}
-		} catch (e) { /* noop */ }
-		// Safe default: do not read unless explicitly enabled
-		return false;
+			// Fallback to internal slave activity flag
+			return !!this.isSlaveActive;
+		} catch (_) {
+			return !!this.isSlaveActive;
+		}
 	}
 
 	/**

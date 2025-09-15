@@ -778,15 +778,14 @@ window.location.replace('login.html');
 				return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 			} catch(e){ return ''; }
 		}
-		function isReadEnabled(){
-			try {
-				if (window.sharingManager && typeof window.sharingManager.syncMode === 'string') {
-					return window.sharingManager.syncMode === 'sync' || window.sharingManager.syncMode === 'master';
-				}
-				const read = !!document.getElementById('readDataToggle')?.checked;
-				return !!read;
-			} catch(e){ return false; }
-		}
+function isReadEnabled(){
+    try {
+      if (window.sharingManager && typeof window.sharingManager.syncMode === 'string') {
+        return window.sharingManager.syncMode === 'sync' || window.sharingManager.syncMode === 'master';
+      }
+      return false;
+    } catch(e){ return false; }
+  }
 		function updateHeaderLastLoad(){
 			const el = document.getElementById('headerLastLoad');
 			if (!el) return;
@@ -887,11 +886,7 @@ window.location.replace('login.html');
 
 		// Keep last-load timestamp updated
 		document.addEventListener('serverDataLoaded', updateHeaderLastLoad);
-		const readToggleForLoad = document.getElementById('readDataToggle');
-		const writeToggleForLoad = document.getElementById('writeDataToggle');
-		if (readToggleForLoad) readToggleForLoad.addEventListener('change', updateHeaderLastLoad);
-		if (writeToggleForLoad) writeToggleForLoad.addEventListener('change', updateHeaderLastLoad);
-		setTimeout(updateHeaderLastLoad, 0);
+  setTimeout(updateHeaderLastLoad, 0);
 		// Listen to mode changes and refresh header label
 document.addEventListener('syncModeChanged', () => { refreshHeaderModeLabel(); updateHeaderLastLoad(); });
 		const modeCtlHeader = document.getElementById('syncModeControl');
@@ -1029,20 +1024,16 @@ document.addEventListener('syncModeChanged', () => { refreshHeaderModeLabel(); u
       nameInput.addEventListener('blur', saveName);
       nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); nameInput.blur(); } });
 
-		  function currentRole(){
-			try {
-			  if (window.sharingManager && typeof window.sharingManager.syncMode === 'string') {
-				  // Server presence still expects 'standalone'; map 'offline' back for transmission
-				  const m = window.sharingManager.syncMode;
-				  return (m === 'offline') ? 'standalone' : m;
-			  }
-			  const read = !!document.getElementById('readDataToggle')?.checked;
-			  const write = !!document.getElementById('writeDataToggle')?.checked;
-			  if (write) return 'master';
-			  if (read) return 'sync';
-			  return 'standalone';
-			} catch(e){ return 'standalone'; }
-		  }
+  function currentRole(){
+            try {
+              if (window.sharingManager && typeof window.sharingManager.syncMode === 'string') {
+                  // Server presence still expects 'standalone'; map 'offline' back for transmission
+                  const m = window.sharingManager.syncMode;
+                  return (m === 'offline') ? 'standalone' : m;
+              }
+              return 'standalone';
+            } catch(e){ return 'standalone'; }
+          }
 
       async function heartbeat(){
         try {
@@ -1383,14 +1374,12 @@ document.addEventListener('syncModeChanged', () => { refreshHeaderModeLabel(); u
 <!-- Per-tile header delete button (hover-only) -->
 <script>
 (function(){
-  function isReadOnlySync(){
+function isReadOnlySync(){
     try {
       if (window.sharingManager && typeof window.sharingManager.syncMode === 'string') {
         return window.sharingManager.syncMode === 'sync';
       }
-      const read = !!document.getElementById('readDataToggle')?.checked;
-      const write = !!document.getElementById('writeDataToggle')?.checked;
-      return read && !write; // Sync (read-only)
+      return false;
     } catch(e){ return false; }
   }
   function getCellIdFromTile(tile){
@@ -1496,17 +1485,13 @@ document.addEventListener('syncModeChanged', () => { refreshHeaderModeLabel(); u
     document.querySelectorAll('#hangarGrid .hangar-cell, #secondaryHangarGrid .hangar-cell').forEach(injectDeleteIntoTile);
   }
   function hookSyncToggles(){
-    const r = document.getElementById('readDataToggle');
-    const w = document.getElementById('writeDataToggle');
-    const apply = ()=>{
+  const apply = ()=>{
       const ro = isReadOnlySync();
       document.querySelectorAll('.tile-delete-btn').forEach(btn=>{
         if (ro) btn.setAttribute('aria-disabled','true'); else btn.removeAttribute('aria-disabled');
       });
     };
-    if (r) r.addEventListener('change', apply);
-    if (w) w.addEventListener('change', apply);
-    // Also react to mode changes from single mode control
+    // React only to single-mode changes
     try { document.addEventListener('syncModeChanged', apply); } catch(_e){}
     apply();
   }
@@ -4280,13 +4265,12 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
               }
 
               // New helpers for server-backed rendering (Option A)
-              function canReadFromServer(){
+  function canReadFromServer(){
                 try {
                   if (window.sharingManager && typeof window.sharingManager.syncMode === 'string'){
                     return window.sharingManager.syncMode === 'sync' || window.sharingManager.syncMode === 'master';
                   }
-                  const readToggle = document.getElementById('readDataToggle');
-                  return !!(readToggle && readToggle.checked);
+                  return false;
                 } catch(_) { return false; }
               }
               function getServerUrl(){

@@ -43,21 +43,6 @@ class SharingManager {
 	 * ÜBERARBEITET: Setzt Event-Handler für neue Dual-Toggle-UI
 	 */
 	setupEventHandlers() {
-		// Read Data Toggle - Empfängt Server-Updates
-		const readDataToggle = document.getElementById("readDataToggle");
-		if (readDataToggle) {
-			readDataToggle.addEventListener("change", (e) => {
-				this.handleReadDataToggle(e.target.checked);
-			});
-		}
-
-		// Write Data Toggle - Sendet Daten an Server (Master-Modus)
-		const writeDataToggle = document.getElementById("writeDataToggle");
-		if (writeDataToggle) {
-			writeDataToggle.addEventListener("change", (e) => {
-				this.handleWriteDataToggle(e.target.checked);
-			});
-		}
 
 		// Manual Sync Button
 		const manualSyncBtn = document.getElementById("manualSyncBtn");
@@ -96,24 +81,6 @@ class SharingManager {
 	/**
 	 * NEUE Dual-Toggle-Handler: Read Data Toggle
 	 */
-	async handleReadDataToggle(enabled) {
-		const writeDataToggle = document.getElementById("writeDataToggle");
-		const isWriteEnabled = writeDataToggle?.checked || false;
-
-		await this.updateSyncMode(enabled, isWriteEnabled);
-		console.log(`📥 Read Data Toggle: ${enabled ? "AN" : "AUS"}`);
-	}
-
-	/**
-	 * NEUE Dual-Toggle-Handler: Write Data Toggle
-	 */
-	async handleWriteDataToggle(enabled) {
-		const readDataToggle = document.getElementById("readDataToggle");
-		const isReadEnabled = readDataToggle?.checked || false;
-
-		await this.updateSyncMode(isReadEnabled, enabled);
-		console.log(`📤 Write Data Toggle: ${enabled ? "AN" : "AUS"}`);
-	}
 
 	// New: single-mode control handler
 	handleModeControlChange(mode) {
@@ -354,8 +321,6 @@ class SharingManager {
 				this.isLiveSyncEnabled = true;
 				this.isMasterMode = true;
 
-				// Ensure Read toggle reflects policy (if present)
-				try { const readToggle = document.getElementById('readDataToggle'); if (readToggle) readToggle.checked = true; } catch(_e){}
 
 		// UI aktualisieren
 				this.updateAllSyncDisplays("Master", true);
@@ -1146,28 +1111,8 @@ syncModeElement.classList.remove("master", "slave", "standalone");
 				modeCtl.value = this.syncMode;
 				setTimeout(() => this.updateSyncModeByString(this.syncMode), 100);
 			} else {
-				// Fallback: Dual-Toggles basierend auf Modus
-				const readToggle = document.getElementById("readDataToggle");
-				const writeToggle = document.getElementById("writeDataToggle");
-				if (readToggle && writeToggle) {
-					switch (this.syncMode) {
-						case "sync":
-							readToggle.checked = true;
-							writeToggle.checked = false;
-							setTimeout(() => this.enableSyncMode(), 100);
-							break;
-						case "master":
-							readToggle.checked = true;
-							writeToggle.checked = true;
-							setTimeout(() => this.enableMasterMode(), 100);
-							break;
-						default:
-							readToggle.checked = false;
-							writeToggle.checked = false;
-							this.updateAllSyncDisplays();
-							this.applyReadOnlyUIState(false);
-					}
-				}
+				// Fallback without legacy toggles: just apply mode
+				setTimeout(() => this.updateSyncModeByString(this.syncMode), 100);
 			}
 
 			console.log(

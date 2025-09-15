@@ -27,14 +27,6 @@ class SharingManager {
     console.log("🔗 Sharing Manager initialisiert - Modus:", this.syncMode);
   }
   setupEventHandlers() {
-    const readDataToggle = document.getElementById("readDataToggle");
-    if (readDataToggle) {
-      readDataToggle.addEventListener("change", (e) => { this.handleReadDataToggle(e.target.checked); });
-    }
-    const writeDataToggle = document.getElementById("writeDataToggle");
-    if (writeDataToggle) {
-      writeDataToggle.addEventListener("change", (e) => { this.handleWriteDataToggle(e.target.checked); });
-    }
     const manualSyncBtn = document.getElementById("manualSyncBtn");
     if (manualSyncBtn) { manualSyncBtn.addEventListener("click", () => { this.performManualSync(); }); }
     const modeControl = document.getElementById("syncModeControl");
@@ -61,18 +53,6 @@ class SharingManager {
   async debugTestRead(){ try { const url = this._getServerUrlSafe(); this._debugLog(`GET ${url}`); const res = await fetch(url + (url.includes('?') ? '&' : '?') + 'action=load', { headers: { 'Accept':'application/json' }}); this._debugLog(`GET status ${res.status}`); const text = await res.text(); this._debugLog(`Body (first 200): ${text.slice(0,200)}`); try { const json = JSON.parse(text); if (window.serverSync && typeof window.serverSync.applyServerData==='function'){ const applied = await window.serverSync.applyServerData(json); this._debugLog(`applyServerData: ${applied}`); } } catch(_e){} } catch(e){ this._debugLog(`READ error: ${e.message}`); } }
   async debugTestWrite(){ try { const url = this._getServerUrlSafe(); const sid = (window.serverSync && typeof window.serverSync.getSessionId==='function') ? window.serverSync.getSessionId() : (localStorage.getItem('serverSync.sessionId') || ''); const dname = (localStorage.getItem('presence.displayName') || '').trim(); const body = { metadata: { debugPing: new Date().toISOString(), timestamp: Math.round(Date.now()) } }; this._debugLog(`POST ${url}`); const res = await fetch(url, { method:'POST', headers: { 'Content-Type':'application/json', 'X-Sync-Role':'master', 'X-Sync-Session': sid, 'X-Display-Name': dname }, body: JSON.stringify(body) }); this._debugLog(`POST status ${res.status}`); const text = await res.text(); this._debugLog(`Body (first 200): ${text.slice(0,200)}`); await this.debugTestRead(); } catch(e){ this._debugLog(`WRITE error: ${e.message}`); } }
 
-  async handleReadDataToggle(enabled){
-    const writeDataToggle = document.getElementById("writeDataToggle");
-    const isWriteEnabled = writeDataToggle?.checked || false;
-    await this.updateSyncMode(enabled, isWriteEnabled);
-    console.log(`📥 Read Data Toggle: ${enabled ? "AN" : "AUS"}`);
-  }
-  async handleWriteDataToggle(enabled){
-    const readDataToggle = document.getElementById("readDataToggle");
-    const isReadEnabled = readDataToggle?.checked || false;
-    await this.updateSyncMode(isReadEnabled, enabled);
-    console.log(`📤 Write Data Toggle: ${enabled ? "AN" : "AUS"}`);
-  }
   handleModeControlChange(mode){ if (!mode) return; this.updateSyncModeByString(mode); }
   _emitModeChanged(){ try { document.dispatchEvent(new CustomEvent('syncModeChanged', { detail: { mode: this.syncMode } })); } catch(_e){} }
   // Wait until window.serverSync exposes a specific method, up to timeoutMs
@@ -210,7 +190,6 @@ class SharingManager {
       this._startFallbackWriteTimer();
       this._startFallbackReadPolling();
     }
-    try { const readToggle = document.getElementById('readDataToggle'); if (readToggle) readToggle.checked = true; } catch(_e){}
     this.syncMode = 'master'; this.isLiveSyncEnabled = true; this.isMasterMode = true; this.updateAllSyncDisplays('Master', true); this.applyReadOnlyUIState(false); this.showNotification('Master-Modus aktiviert - Sende Daten an Server', 'success'); this._emitModeChanged(); console.log('✅ Master-Modus aktiviert');
   } catch(e){ console.error('❌ Fehler beim Aktivieren des Master-Modus:', e); this.showNotification('Fehler beim Aktivieren des Master-Modus','error'); await this.enableSyncMode(); } }
   async performLiveSync(){ if (!this.isLiveSyncEnabled) return; try { if (window.serverSync && window.serverSync.syncWithServer){ const success = await window.serverSync.syncWithServer(); if (success){ console.log('🔄 Live Sync erfolgreich'); this.updateSyncStatusIndicator('success'); } else { console.warn('⚠️ Live Sync teilweise fehlgeschlagen'); this.updateSyncStatusIndicator('warning'); } } } catch(e){ console.error('❌ Live Sync Fehler:', e); this.updateSyncStatusIndicator('error'); } }
@@ -420,7 +399,9 @@ updateWidgetSyncDisplay(status,isActive){ const el = document.getElementById('sy
   setModeControlValue(mode){ try { const ctl = document.getElementById('syncModeControl'); if (ctl) ctl.value = mode; } catch(e){} }
   updateSyncStatusIndicator(){}
   async loadServerDataImmediately(){ try{ if (!window.serverSync || !window.serverSync.serverSyncUrl) return false; if (window.isApplyingServerData || window.isLoadingServerData) return false; const serverData = await window.serverSync.loadFromServer(); if (serverData && !serverData.error){ const applied = await window.serverSync.applyServerData(serverData); return !!applied; } return false; } catch(e){ return false; } }
-  loadSavedSharingSettings(){ try{ const settings = JSON.parse(localStorage.getItem('hangarSyncSettings') || '{}'); let m = settings.syncMode || 'master'; if (m === 'standalone') m = 'offline'; this.syncMode = m; this.isLiveSyncEnabled = settings.isLiveSyncEnabled || false; this.isMasterMode = settings.isMasterMode || false; const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ modeCtl.value = this.syncMode; setTimeout(() => this.updateSyncModeByString(this.syncMode), 100); } } catch(e){ this.syncMode = 'master'; } }
+  loadSavedSharingSettings(){ try{ const settings = JSON.parse(localStorage.getItem('hangarSyncSettings') || '{}'); let m = settings.syncMode || 'master'; if (m === 'standalone') m = 'offline'; this.syncMode = m; this.isLiveSyncEnabled = settings.isLiveSyncEnabled || false; this.isMasterMode = settings.isMasterMode || false; const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ modeCtl.value = this.syncMode; setTimeout(() => this.updateSyncModeByString(this.syncMode), 100); } else { // Fallback without toggles: just apply mode
+      setTimeout(() => this.updateSyncModeByString(this.syncMode), 100);
+    } } catch(e){ this.syncMode = 'master'; } }
   saveSharingSettings(){ try{ const settings = { syncMode: this.syncMode, isLiveSyncEnabled: this.isLiveSyncEnabled, isMasterMode: this.isMasterMode, lastSaved: new Date().toISOString() }; localStorage.setItem('hangarSyncSettings', JSON.stringify(settings)); } catch(e){} }
   showNotification(message, type = 'info'){
     try {

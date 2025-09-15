@@ -1836,19 +1836,6 @@ async slaveCheckForUpdates() {
 		};
 	}
 
-	/**
-	 * Cleanup beim Zerstören
-	 */
-	destroy() {
-		this.stopPeriodicSync();
-
-		if (this.autoSaveTimeout) {
-			clearTimeout(this.autoSaveTimeout);
-			this.autoSaveTimeout = null;
-		}
-
-		console.log("🗑️ Server-Sync zerstört und bereinigt");
-	}
 
 	/**
 	 * Testet die Server-Verbindung
@@ -2007,21 +1994,54 @@ async slaveCheckForUpdates() {
 
 	/**
 	 * NEUE METHODE: Bereinigt alle Intervalle und Ressourcen
+	 * Vereinheitlichtes destroy(): entfernt doppelte Definition und räumt alle Timer/Flags konsistent auf
 	 */
 	destroy() {
-		this.stopPeriodicSync();
+		try {
+			// Stop scheduled write loop
+			this.stopPeriodicSync();
+		} catch(_) {}
 
-		if (this.slaveCheckInterval) {
-			clearInterval(this.slaveCheckInterval);
-			this.slaveCheckInterval = null;
-			console.log("🧹 Slave-Check-Intervall bereinigt");
-		}
+		// Stop polling for reads (slave/master read-backs)
+		try {
+			if (this.slaveCheckInterval) {
+				clearInterval(this.slaveCheckInterval);
+				this.slaveCheckInterval = null;
+				console.log("🧹 Slave-Check-Intervall bereinigt");
+			}
+		} catch(_) {}
 
+		// Clear autosave timeout if present
+		try {
+			if (this.autoSaveTimeout) {
+				clearTimeout(this.autoSaveTimeout);
+				this.autoSaveTimeout = null;
+			}
+		} catch(_) {}
+
+		// Clear load watchdog timer if present
+		try {
+			if (this._loadWatchdogId) {
+				clearTimeout(this._loadWatchdogId);
+				this._loadWatchdogId = null;
+			}
+		} catch(_) {}
+
+		// Reset transient state and baselines
+		try { this._pendingWrites = {}; } catch(_) {}
+		try { this._baselinePrimary = {}; this._baselineSecondary = {}; } catch(_) {}
+
+		// Reset core properties
 		this.serverSyncUrl = null;
 		this.lastDataChecksum = null;
 		this.lastServerTimestamp = 0;
 		this.isMaster = false;
 		this.isSlaveActive = false;
+
+		// Reset global flags to safe defaults
+		try { window.isSavingToServer = false; } catch(_) {}
+		try { window.isLoadingServerData = false; } catch(_) {}
+		try { window.isApplyingServerData = false; } catch(_) {}
 
 		console.log("🧹 ServerSync vollständig bereinigt");
 	}

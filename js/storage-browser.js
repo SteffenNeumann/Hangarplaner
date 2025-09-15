@@ -846,19 +846,9 @@ async slaveCheckForUpdates() {
 					} catch(_e){}
 					return true;
 				} else if (response.status === 409) {
-					let payload = null; try { payload = await response.json(); } catch(_e){}
-					console.warn('⚠️ Conflict detected on write', payload);
-					try {
-						const items = (payload && payload.conflicts) || [];
-						window.__conflictQueue = window.__conflictQueue || [];
-						if (typeof window.__enqueueConflicts === 'function') {
-							window.__enqueueConflicts(items);
-						} else {
-							items.forEach(item => window.__conflictQueue.push(item));
-							if (typeof window.__showNextConflict === 'function') setTimeout(()=>window.__showNextConflict(), 0);
-						}
-					} catch(_e){}
-					return false;
+					// Last-write-wins: accept server state, perform read-back, and continue
+					try { await this.slaveCheckForUpdates(); } catch(_e){}
+					return true;
 				} else if (response.status === 423) {
 					let payload = null;
 					try { payload = await response.json(); } catch(_e) {}
@@ -944,19 +934,9 @@ async slaveCheckForUpdates() {
 			const res = await fetch(serverUrl, { method: 'POST', headers, body: JSON.stringify(body), signal });
 			cancel && cancel();
 			if (res.status === 409) {
-				let payload = null; try { payload = await res.json(); } catch(_e){}
-				console.warn('⚠️ Conflict detected on targeted write', payload);
-				try {
-					const items = (payload && payload.conflicts) || [];
-					window.__conflictQueue = window.__conflictQueue || [];
-					if (typeof window.__enqueueConflicts === 'function') {
-						window.__enqueueConflicts(items);
-					} else {
-						items.forEach(item => window.__conflictQueue.push(item));
-						if (typeof window.__showNextConflict === 'function') setTimeout(()=>window.__showNextConflict(), 0);
-					}
-				} catch(_e){}
-				return false;
+				// Last-write-wins: accept server state, perform read-back, and continue
+				try { const data = await this.loadFromServer(); if (data && !data.error) await this.applyServerData(data); } catch(_e){}
+				return true;
 			}
 			if (!res.ok) {
 				let detail = '';
@@ -1464,25 +1444,8 @@ async slaveCheckForUpdates() {
 					}
 				}
 			} catch(_e){}
-			// Detect conflicts only in Master mode; in read-only we always apply server changes
+			// Last-write-wins policy: always apply server data; no conflict prompts
 			let toApply = serverData;
-			if (this._isMasterMode()) {
-				try {
-					const filt = this._filterConflicts(serverData);
-					toApply = filt.data || serverData;
-					if (Array.isArray(filt.conflicts) && filt.conflicts.length) {
-						try {
-							window.__conflictQueue = window.__conflictQueue || [];
-							if (typeof window.__enqueueConflicts === 'function') {
-								window.__enqueueConflicts(filt.conflicts);
-							} else {
-								filt.conflicts.forEach(c=>window.__conflictQueue.push(c));
-								if (typeof window.__showNextConflict==='function') setTimeout(()=>window.__showNextConflict(), 0);
-							}
-						} catch(_e){}
-					}
-				} catch(_e){}
-			}
 			// NEUE LOGIK: Verwende zentralen Datenkoordinator wenn keine aktiven Write-Fences bestehen,
 			// andernfalls wende nur nicht-gefenzte Felder direkt an, um Oscillation zu vermeiden
 			const hasFences = this._hasActiveFences();

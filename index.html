@@ -196,11 +196,11 @@ window.location.replace('login.html');
 </script>
 
 <script>
-// Render docs/DATE-TIME-PICKER.md into the FAQ panel and build a TOC
+// Render docs/SYNC-MODE-FAQ.md + docs/DATE-TIME-PICKER.md into the FAQ panel and build a TOC
 (function(){
   function escapeHtml(s){
     // Escape only the essentials to avoid breaking JS syntax in this inline script
-    return String(s).replace(/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]); });
+    return String(s).replace(/[&<>\"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]); });
   }
   function listify(text, regex, tag){
     const lines = text.split('\n');
@@ -275,7 +275,7 @@ window.location.replace('login.html');
       const text = (h.textContent||'').trim();
       if (lvl > last) { for(let i=0;i<lvl-last;i++) html += '<ul>'; }
       if (lvl < last) { for(let i=0;i<last-lvl;i++) html += '</ul>'; }
-      html += `<li><a href="#${h.id}">${escapeHtml(text)}</a></li>`;
+      html += `<li><a href=\"#${h.id}\">${escapeHtml(text)}</a></li>`;
       last = lvl;
     });
     for(let i=0;i<last-2;i++) html += '</ul>';
@@ -298,16 +298,25 @@ window.location.replace('login.html');
     if (!container) return;
     let md = '';
     try {
-      const res = await fetch('docs/DATE-TIME-PICKER.md', { cache: 'no-store' });
-      if (res.ok) {
-        md = await res.text();
-      }
+      // Fetch both guides and concatenate
+      const [syncRes, dtpRes] = await Promise.all([
+        fetch('docs/SYNC-MODE-FAQ.md', { cache: 'no-store' }),
+        fetch('docs/DATE-TIME-PICKER.md', { cache: 'no-store' }),
+      ]);
+      let syncText = '', dtpText = '';
+      if (syncRes && syncRes.ok) syncText = await syncRes.text();
+      if (dtpRes && dtpRes.ok) dtpText = await dtpRes.text();
+      md = [syncText, dtpText].filter(Boolean).join('\n\n---\n\n');
     } catch(e){ /* ignore fetch errors, will use fallback */ }
     if (!md) {
-      const embedded = document.getElementById('faqMdEmbedded');
-      if (embedded) { md = embedded.textContent || embedded.innerText || ''; }
+      // Fallback to embedded markdowns if fetch failed (file:// or offline)
+      const syncEmbedded = document.getElementById('faqMdSyncEmbedded');
+      const dtpEmbedded = document.getElementById('faqMdEmbedded');
+      const syncText = syncEmbedded ? (syncEmbedded.textContent || syncEmbedded.innerText || '') : '';
+      const dtpText = dtpEmbedded ? (dtpEmbedded.textContent || dtpEmbedded.innerText || '') : '';
+      md = [syncText, dtpText].filter(Boolean).join('\n\n---\n\n');
     }
-    if (!md) { container.innerHTML = '<p style="color:#b91c1c">Failed to load documentation.</p>'; return; }
+    if (!md) { container.innerHTML = '<p style=\"color:#b91c1c\">Failed to load documentation.</p>'; return; }
     container.innerHTML = mdToHtml(md);
     buildTOC();
   }
@@ -3017,7 +3026,7 @@ type="datetime-local"
                               </svg>
                               Help & Documentation
                             </h1>
-                            <p class="faq-hero-subtitle">Everything you need to know about using HangarPlaner's date & time picker</p>
+<p class="faq-hero-subtitle">Documentation for Sync Mode and the Date & Time Picker</p>
                           </div>
                         </div>
 
@@ -3106,6 +3115,29 @@ type="datetime-local"
                         </div>
 
                         <!-- Embedded fallback of the Markdown so FAQ also works when opened via file:// -->
+                        <script type="text/markdown" id="faqMdSyncEmbedded">
+# Sync Mode – Full FAQ and Guide
+
+This guide covers how Sync works in HangarPlaner: the three modes, headers and endpoints, conflict handling, presence, manual sync, and troubleshooting.
+
+---
+
+## Overview
+
+HangarPlaner supports three synchronization modes:
+- Standalone (Offline): local only; no server reads or writes after an initial best-effort load.
+- Read-only (Sync): reads from server; local edits do not write to server.
+- Read/Write (Master): writes to server and reads from server; multi-master supported.
+
+---
+
+## Quick Start
+
+- Enable Sync (read-only): Read Data ON, Write Data OFF.
+- Become Master: toggle Write Data ON (Read stays ON).
+- Go Offline: turn both Read and Write OFF (Standalone).
+
+</script>
                         <script type="text/markdown" id="faqMdEmbedded">
 # Date & Time Picker – FAQ
 

@@ -3239,14 +3239,14 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 	width: 100%;
 }
 
-.table-view .p-4 {
+.table-view .hangar-cell .p-4 {
 	padding: 0.5rem !important;
 	display: flex !important;
 	flex-direction: row !important;
 	align-items: center !important;
 	width: 100%;
 }
-.table-view .p-3 {
+.table-view .hangar-cell .p-3 {
 	padding: 0.5rem !important;
 	display: flex !important;
 	flex-direction: row !important;

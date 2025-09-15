@@ -34,6 +34,8 @@ class ServerSync {
 		this._conflictFenceUntil = {}; // { fieldId: untilTimestampMs }
 		// Per-field+serverValue suppression: avoid re-queuing the exact same conflict for a short TTL
 		this._conflictSuppressUntil = {}; // { `${fieldId}|${sig}`: untilTimestampMs }
+		// Presence-aware reads in Master mode: only read/apply when another Master is online
+		this.requireOtherMastersForRead = true;
 
 		// Baseline of last server-applied data to compute precise deltas (fieldUpdates)
 		this._baselinePrimary = {};
@@ -206,6 +208,27 @@ class ServerSync {
 	_markPendingWrite(fieldId){ try { if (!fieldId) return; this._pendingWrites[fieldId] = this._now(); } catch(_e){} }
 	_isWriteFenceActive(fieldId){ try { if (!fieldId) return false; const ts = this._pendingWrites[fieldId] || 0; return ts && (this._now() - ts) < this._writeFenceMs; } catch(_e){ return false; } }
 	_hasActiveFences(){ try { const now = this._now(); const win = this._writeFenceMs; return Object.values(this._pendingWrites||{}).some(ts => (now - ts) < win); } catch(_e){ return false; } }
+	// ===== Presence helpers (online Masters) =====
+	_getPresenceUrl(){
+		try {
+			let base = this.getServerUrl();
+			if (typeof base !== 'string' || !base.length) base = (window.location.origin + '/sync/data.php');
+			const url = base.replace(/data\.php(?:\?.*)?$/i, 'presence.php');
+			return /presence\.php/i.test(url) ? url : (window.location.origin + '/sync/presence.php');
+		} catch(e){ try { return window.location.origin + '/sync/presence.php'; } catch(_e2){ return '/sync/presence.php'; } }
+	}
+	async _hasOtherMastersOnline(){
+		try {
+			const url = this._getPresenceUrl() + '?action=list';
+			const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+			if (!res.ok) return false;
+			const data = await res.json();
+			const users = Array.isArray(data?.users) ? data.users : [];
+			let mySession = '';
+			try { mySession = this.getSessionId ? (this.getSessionId()||'') : (localStorage.getItem('presence.sessionId')||''); } catch(_e){}
+			return !!users.find(u => ((u?.role || '').toLowerCase() === 'master') && u.sessionId && u.sessionId !== mySession);
+		} catch(e){ return false; }
+	}
 	// ===== Conflict-fence and suppression helpers (post-decision quiet period) =====
 	_isConflictFenceActive(fieldId){ try { if (!fieldId) return false; const until = this._conflictFenceUntil[fieldId] || 0; return this._now() < until; } catch(_e){ return false; } }
 	_setConflictFence(fieldId, untilTs){ try { if (!fieldId) return; this._conflictFenceUntil[fieldId] = untilTs; } catch(_e){} }
@@ -786,15 +809,17 @@ async slaveCheckForUpdates() {
 					// Read-after-write: delay read-back if user is actively typing to avoid caret jump
 					try {
 						const typingActive = !!(window.hangarEventManager && typeof window.hangarEventManager.isUserTypingRecently === 'function' && window.hangarEventManager.isUserTypingRecently(2000));
-						if (this.canReadFromServer && this.canReadFromServer()) {
-							if (typingActive) {
-								setTimeout(async () => {
-									try { if (this.canReadFromServer && this.canReadFromServer()) { await this.slaveCheckForUpdates(); } } catch(_e){}
-								}, 2000);
-							} else {
-								await this.slaveCheckForUpdates();
+							let allowReadBack = true;
+							try { if (this._isMasterMode() && this.requireOtherMastersForRead) { allowReadBack = await this._hasOtherMastersOnline(); } } catch(_e){ allowReadBack = false; }
+							if (allowReadBack && this.canReadFromServer && this.canReadFromServer()) {
+								if (typingActive) {
+									setTimeout(async () => {
+										try { if (this.canReadFromServer && this.canReadFromServer()) { await this.slaveCheckForUpdates(); } } catch(_e){}
+									}, 2000);
+								} else {
+									await this.slaveCheckForUpdates();
+								}
 							}
-						}
 					} catch(_e) {}
 					// Update baseline optimistically if we posted deltas and did not read back yet
 					try {
@@ -937,7 +962,9 @@ async slaveCheckForUpdates() {
 			// Optional immediate read-back to converge, but avoid while typing
 			try {
 				const typingActive = !!(window.hangarEventManager && typeof window.hangarEventManager.isUserTypingRecently === 'function' && window.hangarEventManager.isUserTypingRecently(2000));
-				if (this.canReadFromServer && this.canReadFromServer()) {
+				let allowReadBack = true;
+				try { if (this._isMasterMode() && this.requireOtherMastersForRead) { allowReadBack = await this._hasOtherMastersOnline(); } } catch(_e){ allowReadBack = false; }
+				if (allowReadBack && this.canReadFromServer && this.canReadFromServer()) {
 					if (typingActive) {
 						setTimeout(async () => {
 							try { if (this.canReadFromServer && this.canReadFromServer()) { const data = await this.loadFromServer(); if (data && !data.error) await this.applyServerData(data); } } catch(_e){}
@@ -1351,6 +1378,18 @@ async slaveCheckForUpdates() {
 			}
 
 			// *** PRIORITÄT 2: Kachel-Daten anwenden ***
+			// Presence-aware gating: In Master mode, skip applying tile updates unless other Masters are online
+			try {
+				if (this._isMasterMode && this._isMasterMode() && this.requireOtherMastersForRead) {
+					let otherOnline = false;
+					try { otherOnline = await this._hasOtherMastersOnline(); } catch(_e) { otherOnline = false; }
+					if (!otherOnline) {
+						console.log('↩️ Presence gating: no other Master online — skipping tile updates');
+						try { this.lastLoadedAt = Date.now(); document.dispatchEvent(new CustomEvent('serverDataLoaded', { detail: { loadedAt: this.lastLoadedAt } })); } catch(e){}
+						return true;
+					}
+				}
+			} catch(_e){}
 			// Detect conflicts only in Master mode; in read-only we always apply server changes
 			let toApply = serverData;
 			if (this._isMasterMode()) {

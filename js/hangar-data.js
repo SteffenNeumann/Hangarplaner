@@ -1927,12 +1927,9 @@ window.hangarData.updateAircraftFromFlightData = async function (
 			}
 
 			// Position aktualisieren oder löschen (versuche beide möglichen Felder)
-			let positionInput = tile.querySelector(`#position-${cellId}`);
-			if (!positionInput) {
-				positionInput = tile.querySelector(`#hangar-position-${cellId}`);
-			}
+			const positionInput = tile.querySelector(`#position-${cellId}`);
 			console.log(
-				`🔍 Position Input gefunden für ${cellId}:`,
+				`🔍 Position (info grid) Input gefunden für ${cellId}:`,
 				!!positionInput,
 				positionInput?.id
 			);
@@ -1941,7 +1938,7 @@ window.hangarData.updateAircraftFromFlightData = async function (
 					// Position löschen wenn keine Daten gefunden wurden
 					positionInput.value = "";
 					console.log(
-						`🧹 Position für Kachel ${cellId} gelöscht (keine Daten)`
+						`🧹 Position (info) für Kachel ${cellId} gelöscht (keine Daten)`
 					);
 				} else if (
 					flightData.positionText &&
@@ -1950,11 +1947,11 @@ window.hangarData.updateAircraftFromFlightData = async function (
 				) {
 					positionInput.value = flightData.positionText;
 					console.log(
-						`✅ Position für Kachel ${cellId}: ${flightData.positionText}`
+						`✅ Position (info) für Kachel ${cellId}: ${flightData.positionText}`
 					);
 				}
 			} else {
-				console.warn(`❌ Position Input nicht gefunden für Kachel ${cellId}`);
+				console.warn(`❌ Position (info) Input nicht gefunden für Kachel ${cellId} — überspringe Routen-Schreibvorgang (keine Fallback auf hangar-position)`);
 			}
 
 			// Optional: Notizen mit zusätzlichen Informationen aktualisieren
@@ -2010,10 +2007,7 @@ window.hangarData.updateAircraftFromFlightData = async function (
 					const departureInput = tile.querySelector(
 						`#departure-time-${cellId}`
 					);
-					let positionInput = tile.querySelector(`#position-${cellId}`);
-					if (!positionInput) {
-						positionInput = tile.querySelector(`#hangar-position-${cellId}`);
-					}
+					const positionInput = tile.querySelector(`#position-${cellId}`);
 
 					coordData[`cell_${cellId}`] = {
 						aircraftId: currentValue,

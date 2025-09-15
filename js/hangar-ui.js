@@ -241,7 +241,12 @@ const uiSettings = {
 				) {
 					tileValues.push({
 						cellId: cellId,
-						position: position,
+						// Keep legacy 'position' field for backward-compatibility (represents header hangar position)
+						position: hangarPosition,
+						// Also store explicit hangarPosition field for clarity going forward
+						hangarPosition: hangarPosition,
+						// Store separate info-grid route position explicitly
+						routePosition: position,
 						aircraftId: aircraftId,
 						manualInput: manualInputValue,
 						arrivalTime: arrivalTime,
@@ -980,12 +985,17 @@ function collectTileData(cellId) {
 				? aircraftElement.value || ""
 				: "";
 
-		const positionElement = document.getElementById(
-			`hangar-position-${cellId}`
-		);
+		// Header Hangar Position (hangar-position-#)
+		const hangarPosEl = document.getElementById(`hangar-position-${cellId}`);
+		const hangarPosition =
+			hangarPosEl && containerElement.contains(hangarPosEl)
+				? hangarPosEl.value || ""
+				: "";
+		// Info grid route Position (position-#)
+		const infoPosEl = document.getElementById(`position-${cellId}`);
 		const position =
-			positionElement && containerElement.contains(positionElement)
-				? positionElement.value || ""
+			infoPosEl && containerElement.contains(infoPosEl)
+				? infoPosEl.value || ""
 				: "";
 
 		const manualInputElement = document.getElementById(

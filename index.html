@@ -3977,6 +3977,37 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
 				}
 				window.safeFormatAircraftId = safeFormatAircraftId;
 
+				// Ensure global formatAircraftId is robust regardless of earlier definitions
+				(function(){
+					try {
+						if (typeof window.formatAircraftId === 'function' && !window.__formatAircraftIdPatched) {
+							const original = window.formatAircraftId;
+							function coerce(valOrEl){
+								try {
+									if (typeof valOrEl === 'string') return valOrEl || '';
+									if (valOrEl && typeof valOrEl.value === 'string') return valOrEl.value || '';
+								} catch(_){}
+								return '';
+							}
+							window.formatAircraftId = function(arg){
+								try {
+									let s = coerce(arg);
+									s = (s || '').toString().trim();
+									if (!s) { if (arg && typeof arg.value === 'string') { arg.value = ''; } return ''; }
+									const clean = s.replace(/-/g, '').toUpperCase();
+									let out = clean.charAt(0) || '';
+									if (clean.length > 1) out += '-' + clean.substring(1);
+									if (arg && typeof arg.value === 'string') { arg.value = out; }
+									return out;
+								} catch(e) {
+									try { return original(arg) || ''; } catch(_) { return ''; }
+								}
+							};
+							window.__formatAircraftIdPatched = true;
+						}
+					} catch(_){}
+				})();
+
 				function setupAircraftIdFormatting() {
 					document
 						.querySelectorAll('input[id^="aircraft-"]')

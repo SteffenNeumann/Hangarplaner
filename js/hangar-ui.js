@@ -692,6 +692,7 @@ function setupEventListenersForTile(tileElement, cellId) {
 		});
 		aircraftInput.addEventListener("blur", function (e) {
 			try {
+				if (!e || !e.target || typeof e.target.value !== 'string') return;
 				if (typeof window.safeFormatAircraftId === 'function') {
 					const formatted = window.safeFormatAircraftId(e.target);
 					if (formatted && formatted !== e.target.value) {
@@ -708,7 +709,7 @@ function setupEventListenersForTile(tileElement, cellId) {
 			} catch(_e) {}
 			// KORREKTUR: Aircraft ID Change Handler NUR bei blur - API-Aufruf erst nach vollständiger Eingabe
 			if (window.hangarEvents && window.hangarEvents.handleAircraftIdChange) {
-				window.hangarEvents.handleAircraftIdChange(e.target.id, e.target.value);
+				try { window.hangarEvents.handleAircraftIdChange(e.target.id, e.target.value); } catch(_) {}
 			}
 		});
 		aircraftInput.setAttribute("data-listener-added", "true");

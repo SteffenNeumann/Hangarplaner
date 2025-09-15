@@ -1439,8 +1439,13 @@ async function performScreenReset(){
 						const el = document.getElementById(id);
 						if (el){
 							const isSelect = el.tagName === 'SELECT';
+							const isAircraft = /^aircraft-/.test(id);
+							// Always notify main listeners
 							el.dispatchEvent(new Event(isSelect ? 'change' : 'input', { bubbles: true }));
-							el.dispatchEvent(new Event('blur', { bubbles: true }));
+							// Avoid blur on freshly cleared aircraft inputs to prevent formatter re-entry during reset
+							if (!isAircraft) {
+								el.dispatchEvent(new Event('blur', { bubbles: true }));
+							}
 						}
 					});
 				}

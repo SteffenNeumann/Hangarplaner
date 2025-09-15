@@ -3506,6 +3506,8 @@ You’ll see the result in the browser console.
 			<script src="js/airport-flights.js"></script>
 			<script src="js/api-facade.js"></script>
 			<script src="js/hangar-events.js"></script>
+			<!-- Safety shim: ensure global clearedFieldIds exists for legacy code paths -->
+			<script>(function(){ try { if (!('clearedFieldIds' in window)) { window.clearedFieldIds = []; } } catch(_){} })();</script>
 			<script src="js/hangar-pdf.js"></script>
 			<script src="js/hangar.js"></script>
 			<script src="js/storage-browser.js"></script>
@@ -4044,18 +4046,47 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
 			<!-- Event-Handler für Aircraft ID Formatierung -->
 			<script>
 				// Zentrale Aircraft ID Formatierung
+				// Safe wrapper that tolerates both old and new formatter signatures
+				function safeFormatAircraftId(valOrEl){
+					try {
+						if (typeof formatAircraftId === 'function'){
+							// Try as-is (element or string)
+							try { const r1 = formatAircraftId(valOrEl); if (typeof r1 === 'string') return r1; } catch(_e1){}
+							// Try string form
+							try {
+								const s = (typeof valOrEl === 'string') ? (valOrEl || '') : (((valOrEl && typeof valOrEl.value === 'string') ? (valOrEl.value || '') : ''));
+								const r2 = formatAircraftId(s);
+								if (typeof r2 === 'string') return r2;
+							} catch(_e2){}
+							// Try element-like fallback
+							try {
+								const s = (typeof valOrEl === 'string') ? (valOrEl || '') : (((valOrEl && typeof valOrEl.value === 'string') ? (valOrEl.value || '') : ''));
+								const r3 = formatAircraftId({ value: s });
+								if (typeof r3 === 'string') return r3;
+							} catch(_e3){}
+						}
+					} catch(_e){}
+					// Fallback basic normalizer
+					try {
+						let s = (typeof valOrEl === 'string') ? (valOrEl || '') : (((valOrEl && typeof valOrEl.value === 'string') ? (valOrEl.value || '') : ''));
+						s = s.replace(/-/g, '').toUpperCase();
+						return s ? (s.charAt(0) + (s.length>1 ? ('-' + s.substring(1)) : '')) : '';
+					} catch(_) { return ''; }
+				}
+				window.safeFormatAircraftId = safeFormatAircraftId;
+
 				function setupAircraftIdFormatting() {
 					document
 						.querySelectorAll('input[id^="aircraft-"]')
 						.forEach((input) => {
 							input.addEventListener("input", function (e) {
-								try { this.value = formatAircraftId(this.value || ''); } catch(_e) {}
+								try { this.value = (window.safeFormatAircraftId ? window.safeFormatAircraftId(this) : this.value || ''); } catch(_e) {}
 								// KORREKTUR: Aircraft ID Change Handler ENTFERNT vom input Event
 								// API-Aufrufe sollen nur beim Verlassen des Feldes (blur) stattfinden
 							});
 
 							input.addEventListener("blur", function (e) {
-								try { this.value = formatAircraftId(this.value || ''); } catch(_e) {}
+								try { this.value = (window.safeFormatAircraftId ? window.safeFormatAircraftId(this) : this.value || ''); } catch(_e) {}
 								// KORREKTUR: Aircraft ID Change Handler NUR bei blur - API-Aufruf erst nach vollständiger Eingabe
 								if (
 									window.hangarEvents &&

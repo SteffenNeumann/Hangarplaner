@@ -4499,6 +4499,44 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
             })();
             </script>
 
+            <!-- Ensure Change Log column exists in Planner even with cached HTML -->
+            <script>
+            (function(){
+              function ensurePlannerChangeLog(){
+                try {
+                  var panel = document.getElementById('panel-planner');
+                  if (!panel) return;
+                  var col = document.getElementById('plannerChangeLogColumn');
+                  if (!col){
+                    col = document.createElement('aside');
+                    col.id = 'plannerChangeLogColumn';
+                    col.className = 'planner-changelog';
+                    col.setAttribute('aria-label','Change Log');
+                    col.innerHTML = '<div class="changelog-header"><span class="changelog-title">Change Log</span><button id="changeLogClearBtn" class="sidebar-btn sidebar-btn-secondary" title="Clear the change log">Clear</button></div><div id="changeLogList" class="changelog-list" aria-live="polite"></div>';
+                    panel.insertBefore(col, panel.firstChild);
+                  } else {
+                    if (!document.getElementById('changeLogList')){
+                      var list = document.createElement('div');
+                      list.id = 'changeLogList';
+                      list.className = 'changelog-list';
+                      list.setAttribute('aria-live','polite');
+                      col.appendChild(list);
+                    }
+                    if (!document.getElementById('changeLogClearBtn')){
+                      var header = col.querySelector('.changelog-header');
+                      if (!header){ header = document.createElement('div'); header.className='changelog-header'; col.insertBefore(header, col.firstChild); }
+                      header.innerHTML = '<span class="changelog-title">Change Log</span><button id="changeLogClearBtn" class="sidebar-btn sidebar-btn-secondary" title="Clear the change log">Clear</button>';
+                    }
+                  }
+                  // Remove old block in Project submenu if present
+                  var old = document.querySelector('#submenu-project #projectChangeLog');
+                  if (old && old.parentNode) old.parentNode.removeChild(old);
+                } catch(e){}
+              }
+              if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', ensurePlannerChangeLog, { once:true }); else ensurePlannerChangeLog();
+            })();
+            </script>
+
             <!-- Zeit-Update Script für Info Widget -->
             <script>
 				// Zeit-Update Funktionen für Info Widget

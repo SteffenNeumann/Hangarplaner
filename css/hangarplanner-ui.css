@@ -3912,15 +3912,17 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   border-left: 1px solid var(--menu-border);
   box-shadow: -2px 0 6px rgba(0,0,0,0.03);
   overflow: hidden;
+  z-index: 20;
 }
 .dark-mode .planner-changelog { background: var(--bg-primary); border-left-color: var(--border-color); }
 
 /* Ensure planner container reserves space for the column */
 #panel-planner { position: relative; }
-#panel-planner .hangar-container { padding-right: 360px; }
+/* Reserve space on the main scroll container so the right column is visible */
+.hangar-container { padding-right: 360px; }
 @media (max-width: 1200px){
   .planner-changelog { position: static; width: 100%; height: auto; border-left: 0; border-top: 1px solid var(--menu-border); }
-  #panel-planner .hangar-container { padding-right: 0; }
+  .hangar-container { padding-right: 0; }
 }
 
 .changelog-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }

@@ -1373,9 +1373,10 @@ window.clearSingleTile = window.clearSingleTile || function(cellId){
 // Wire Display submenu: Reset screen (confirm and clear all tile inputs except Hangar Position)
 const resetScreenBtn = document.getElementById('resetScreenBtn');
 if (resetScreenBtn) {
-	async function performScreenReset(){
+async function performScreenReset(){
 		const ss = window.serverSync;
 		let resetSucceeded = false;
+		let clearedFieldIds = [];
 		try {
 			// Suspend incoming reads to avoid the next poll re-filling tiles before we POST the cleared state
 			try { if (ss && typeof ss.suspendReads === 'function') ss.suspendReads(); } catch(_e){}
@@ -1392,7 +1393,7 @@ if (resetScreenBtn) {
 
 			// 2) Reset inputs for all tiles (primary and secondary), except Hangar Position
 			const tiles = document.querySelectorAll('#hangarGrid .hangar-cell, #secondaryHangarGrid .hangar-cell');
-			const clearedFieldIds = [];
+			clearedFieldIds.length = 0;
 			tiles.forEach(tile => {
 				// Clear aircraft id
 				tile.querySelectorAll('input[id^="aircraft-"]').forEach(el => { el.value = ''; clearedFieldIds.push(el.id); });

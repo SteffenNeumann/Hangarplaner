@@ -4049,13 +4049,13 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
 						.querySelectorAll('input[id^="aircraft-"]')
 						.forEach((input) => {
 							input.addEventListener("input", function (e) {
-								formatAircraftId(e.target);
+								try { this.value = formatAircraftId(this.value || ''); } catch(_e) {}
 								// KORREKTUR: Aircraft ID Change Handler ENTFERNT vom input Event
 								// API-Aufrufe sollen nur beim Verlassen des Feldes (blur) stattfinden
 							});
 
 							input.addEventListener("blur", function (e) {
-								formatAircraftId(e.target);
+								try { this.value = formatAircraftId(this.value || ''); } catch(_e) {}
 								// KORREKTUR: Aircraft ID Change Handler NUR bei blur - API-Aufruf erst nach vollständiger Eingabe
 								if (
 									window.hangarEvents &&

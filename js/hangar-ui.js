@@ -509,55 +509,6 @@ const uiSettings = {
 	},
 };
 
-/**
- * Formatiert die Aircraft ID:
- * - Konvertiert zu Großbuchstaben
- * - Fügt nach dem ersten Buchstaben einen Bindestrich ein, falls nicht vorhanden
- *
- * @param {string} input - Die eingegebene Aircraft ID
- * @returns {string} - Die formatierte Aircraft ID
- */
-function formatAircraftId(input) {
-	if (!input) return input;
-
-	// Zu Großbuchstaben konvertieren
-	input = input.toUpperCase();
-
-	// Prüfen, ob bereits ein Bindestrich vorhanden ist
-	if (input.length > 1 && !input.includes("-")) {
-		// Bindestrich nach dem ersten Buchstaben einfügen
-		input = input.charAt(0) + "-" + input.substring(1);
-	}
-
-	return input;
-}
-
-/**
- * Fügt Event-Listener für die Formatierung der Aircraft ID zu allen entsprechenden Eingabefeldern hinzu
- */
-function setupAircraftIdFormatting() {
-	const aircraftIdInputs = document.querySelectorAll(".aircraft-id");
-
-	aircraftIdInputs.forEach((input) => {
-		// Format bei Eingabe anwenden
-		input.addEventListener("input", function () {
-			const formattedValue = formatAircraftId(this.value);
-			// Nur aktualisieren, wenn sich der Wert tatsächlich geändert hat
-			if (formattedValue !== this.value) {
-				this.value = formattedValue;
-			}
-		});
-
-		// Format beim Verlassen des Feldes anwenden (für den Fall, dass die Eingabe anders erfolgt)
-		input.addEventListener("blur", function () {
-			this.value = formatAircraftId(this.value);
-		});
-	});
-
-	// console.log(
-	//	`Aircraft ID-Formatierung für ${aircraftIdInputs.length} Eingabefelder eingerichtet`
-	// );
-}
 
 // Placeholder für restliche Funktionen - diese werden aus der originalen Datei übernommen
 
@@ -721,22 +672,26 @@ function setupEventListenersForTile(tileElement, cellId) {
 	if (aircraftInput && !aircraftInput.hasAttribute("data-listener-added")) {
 		aircraftInput.addEventListener("input", function (e) {
 			// NUR Formatierung während der Eingabe, KEIN API-Aufruf
+			try {
 				if (typeof formatAircraftId === "function") {
-					const formatted = formatAircraftId(e.target);
+					const formatted = formatAircraftId(e.target && typeof e.target.value === 'string' ? e.target.value : '');
 					if (formatted && formatted !== e.target.value) {
 						e.target.value = formatted;
 					}
 				}
+			} catch(_e) {}
 			// KORREKTUR: Aircraft ID Change Handler ENTFERNT vom input Event
 			// API-Aufrufe sollen nur beim Verlassen des Feldes (blur) stattfinden
 		});
 		aircraftInput.addEventListener("blur", function (e) {
-			if (typeof formatAircraftId === "function") {
-				const formatted = formatAircraftId(e.target);
-				if (formatted && formatted !== e.target.value) {
-					e.target.value = formatted;
+			try {
+				if (typeof formatAircraftId === "function") {
+					const formatted = formatAircraftId(e.target && typeof e.target.value === 'string' ? e.target.value : '');
+					if (formatted && formatted !== e.target.value) {
+						e.target.value = formatted;
+					}
 				}
-			}
+			} catch(_e) {}
 			// KORREKTUR: Aircraft ID Change Handler NUR bei blur - API-Aufruf erst nach vollständiger Eingabe
 			if (window.hangarEvents && window.hangarEvents.handleAircraftIdChange) {
 				window.hangarEvents.handleAircraftIdChange(e.target.id, e.target.value);

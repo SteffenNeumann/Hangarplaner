@@ -649,20 +649,9 @@ window.location.replace('login.html');
 					</div>
 				</div>
 
-				<!-- Change Log section -->
-				<div class="panel-divider"></div>
-				<div class="sync-mode-description">Change Log records user edits to tiles on this device. Entries are saved locally and include time, username, and a quick link to the edited field.</div>
-				<div class="sidebar-form-group" id="projectChangeLog">
-					<div class="sidebar-form-row" style="justify-content: space-between; align-items: center;">
-						<label style="margin: 0;">Change Log</label>
-						<div class="input-container" style="gap: 6px; justify-content: flex-end;">
-							<button id="changeLogClearBtn" class="sidebar-btn sidebar-btn-secondary" title="Clear the change log" style="min-height: 28px; font-size: 12px; padding: 0 10px;">Clear</button>
-						</div>
-					</div>
-					<div id="changeLogList" style="max-height: 240px; overflow-y: auto; background: transparent; border-radius: 8px; padding: 8px;">
-						<!-- Entries rendered here -->
-					</div>
-				</div>
+					<!-- Change Log moved to planner right column -->
+					<div class="panel-divider"></div>
+					<div class="sync-mode-description">Change Log is visible in the planner view (right column).</div>
 			</div>
 
 			<!-- Hauptbereich mit Hangar-Kacheln -->
@@ -1831,6 +1820,15 @@ document.addEventListener('DOMContentLoaded', function(){
 
 					<!-- Panels -->
 					<div id="panel-planner" class="tab-panel" role="tabpanel" aria-labelledby="tab-planner">
+
+						<!-- Right-side Change Log Column -->
+						<aside id="plannerChangeLogColumn" class="planner-changelog" aria-label="Change Log">
+							<div class="changelog-header">
+								<span class="changelog-title">Change Log</span>
+								<button id="changeLogClearBtn" class="sidebar-btn sidebar-btn-secondary" title="Clear the change log">Clear</button>
+							</div>
+							<div id="changeLogList" class="changelog-list" aria-live="polite"></div>
+						</aside>
 
 					<!-- Abschnitt 1 Container -->
 					<div class="section-container">

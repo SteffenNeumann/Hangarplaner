@@ -721,19 +721,19 @@ function setupEventListenersForTile(tileElement, cellId) {
 	if (aircraftInput && !aircraftInput.hasAttribute("data-listener-added")) {
 		aircraftInput.addEventListener("input", function (e) {
 			// NUR Formatierung während der Eingabe, KEIN API-Aufruf
-			if (typeof formatAircraftId === "function") {
-				const formatted = formatAircraftId(e.target.value);
-				if (formatted !== e.target.value) {
-					e.target.value = formatted;
+				if (typeof formatAircraftId === "function") {
+					const formatted = formatAircraftId(e.target.value || '');
+					if (formatted && formatted !== e.target.value) {
+						e.target.value = formatted;
+					}
 				}
-			}
 			// KORREKTUR: Aircraft ID Change Handler ENTFERNT vom input Event
 			// API-Aufrufe sollen nur beim Verlassen des Feldes (blur) stattfinden
 		});
 		aircraftInput.addEventListener("blur", function (e) {
 			if (typeof formatAircraftId === "function") {
-				const formatted = formatAircraftId(e.target.value);
-				if (formatted !== e.target.value) {
+				const formatted = formatAircraftId(e.target.value || '');
+				if (formatted && formatted !== e.target.value) {
 					e.target.value = formatted;
 				}
 			}

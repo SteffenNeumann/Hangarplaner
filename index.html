@@ -4071,23 +4071,28 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
 				}
 
 				// Formatierung: Erster Buchstabe + Bindestrich + Rest in Großbuchstaben
-				function formatAircraftId(input) {
-					if (!input || typeof input.value !== 'string') return;
-					let value = (input.value || '').trim();
-					if (!value || value.length === 0) return;
-
-					// Entferne alle Bindestriche und konvertiere zu Großbuchstaben
-					let cleanValue = value.replace(/-/g, "").toUpperCase();
-
-					if (cleanValue.length > 0) {
-						// Erster Buchstabe + Bindestrich + Rest
-						let formatted = cleanValue.charAt(0);
-						if (cleanValue.length > 1) {
-							formatted += "-" + cleanValue.substring(1);
-						}
-
-						input.value = formatted;
+				function formatAircraftId(inputOrValue) {
+					// Accept either the input element or a raw string; return the formatted string.
+					let el = null;
+					let value = '';
+					if (typeof inputOrValue === 'string') {
+						value = (inputOrValue || '').trim();
+					} else if (inputOrValue && typeof inputOrValue.value === 'string') {
+						el = inputOrValue;
+						value = (el.value || '').trim();
+					} else {
+						return '';
 					}
+					if (!value) return '';
+
+					// Remove hyphens and uppercase
+					let cleanValue = value.replace(/-/g, "").toUpperCase();
+					let formatted = cleanValue.charAt(0);
+					if (cleanValue.length > 1) {
+						formatted += '-' + cleanValue.substring(1);
+					}
+					if (el) { el.value = formatted; }
+					return formatted;
 				}
 			</script>
 

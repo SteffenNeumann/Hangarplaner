@@ -438,10 +438,11 @@ const response = await fetch(postUrl, {
 
 				if (fieldId.includes("aircraft-")) {
 					tileGroups[cellId].aircraftId = value;
-				} else if (
-					fieldId.includes("position-") ||
-					fieldId.includes("hangar-position-")
-				) {
+				} else if (/^hangar-position-/.test(fieldId)) {
+					// Header field in tile header → hangarPosition
+					tileGroups[cellId].hangarPosition = value;
+				} else if (/^position-/.test(fieldId)) {
+					// Route/Info grid position → position
 					tileGroups[cellId].position = value;
 				} else if (fieldId.includes("notes-")) {
 					tileGroups[cellId].notes = value;

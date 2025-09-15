@@ -689,13 +689,17 @@ function applyLoadedTileData(data) {
 			}
 		}
 
-		// Position Info Grid setzen (legacy key) oder moderne 'position'
+		// Header Hangar Position (legacy 'position' maps to header)
+		const hangarPosInputLegacy = document.getElementById(`hangar-position-${id}`);
+		if (hangarPosInputLegacy && Object.prototype.hasOwnProperty.call(tile, 'position')) {
+			hangarPosInputLegacy.value = tile.position || '';
+		}
+
+		// Position Info Grid setzen (use explicit legacy key 'positionInfoGrid' only)
 		const positionInfoInput = document.getElementById(`position-${id}`);
 		if (positionInfoInput) {
 			if (Object.prototype.hasOwnProperty.call(tile, 'positionInfoGrid')) {
 				positionInfoInput.value = tile.positionInfoGrid || '';
-			} else if (Object.prototype.hasOwnProperty.call(tile, 'position')) {
-				positionInfoInput.value = tile.position || '';
 			}
 		}
 			});

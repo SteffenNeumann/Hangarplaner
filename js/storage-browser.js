@@ -953,9 +953,8 @@ async slaveCheckForUpdates() {
 							aircraftId: row.aircraft || '',
 							arrivalTime: row.arrival || '',
 							departureTime: row.departure || '',
-							position: row.position || '',
-							// keep hangarPosition as part of position data if present
-							hangarPosition: row.hangarPosition || '',
+							// Legacy 'position' is header hangar position in old format; keep it in hangarPosition
+							hangarPosition: (row.hangarPosition || row.position || ''),
 							status: row.status || 'neutral',
 							towStatus: row.tow || 'neutral',
 							notes: row.notes || '',

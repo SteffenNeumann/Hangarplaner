@@ -34,8 +34,9 @@ class ServerSync {
 		this._conflictFenceUntil = {}; // { fieldId: untilTimestampMs }
 		// Per-field+serverValue suppression: avoid re-queuing the exact same conflict for a short TTL
 		this._conflictSuppressUntil = {}; // { `${fieldId}|${sig}`: untilTimestampMs }
-		// Presence-aware reads in Master mode: only read/apply when another Master is online
-		this.requireOtherMastersForRead = true;
+			// Presence-aware reads in Master mode: only read/apply when another Master is online
+			// Default OFF for simpler, more reliable convergence in multi-master
+			this.requireOtherMastersForRead = false;
 
 		// Baseline of last server-applied data to compute precise deltas (fieldUpdates)
 		this._baselinePrimary = {};
@@ -395,6 +396,12 @@ class ServerSync {
 							// If the exact same server value was recently suppressed (after Keep Mine), skip
 							const __sig = this._valueSignature(srv);
 							if (fieldId && this._isSuppressedConflict(fieldId, __sig)) { try { delete arr[i][k]; } catch(_e){} return; }
+							// If the server's last writer session for this tile equals mine, do not report a conflict
+							try {
+								const mySid = (typeof this.getSessionId==='function') ? this.getSessionId() : (localStorage.getItem('serverSync.sessionId') || '');
+								const tileWriter = (t && (t.updatedBySession || '')) || (serverData && serverData.metadata && serverData.metadata.lastWriterSession) || '';
+								if (mySid && tileWriter && mySid === tileWriter) { return; }
+							} catch(_e){}
 							const old = (b?.[k] ?? '');
 							const locVal = (l?.[k] ?? '');
 							const srvN = norm(k, srv);
@@ -406,7 +413,7 @@ class ServerSync {
 							// Conflict detected — remove server value from filtered copy and queue it
 							try { delete arr[i][k]; } catch(_e){}
 							const fieldId = this._fieldIdFor && this._fieldIdFor(id, k);
-							result.conflicts.push({ tileId:id, field:k, fieldId, serverValue:srv, localValue:locVal, updatedBy: (t?.updatedBy||serverData?.metadata?.lastWriter||'') });
+							result.conflicts.push({ tileId:id, field:k, fieldId, serverValue:srv, localValue:locVal, updatedBy: (t?.updatedBy||serverData?.metadata?.lastWriter||''), updatedBySession: (t?.updatedBySession || serverData?.metadata?.lastWriterSession || '') });
 						});
 					}
 				});
@@ -781,12 +788,14 @@ async slaveCheckForUpdates() {
 			if (this.isMaster) {
 				headers["X-Sync-Role"] = "master";
 			}
-			// Always provide a stable session for server lock coordination
+			// Always provide a stable session for server coordination and a non-empty display name
 			try {
 				const sid = this.getSessionId();
 				if (sid) headers["X-Sync-Session"] = sid;
-				const dname = (localStorage.getItem('presence.displayName') || '').trim();
-				if (dname) headers["X-Display-Name"] = dname;
+				let dname = '';
+				try { dname = (localStorage.getItem('presence.displayName') || '').trim(); } catch(_e){}
+				if (!dname) { try { dname = 'User-' + String(sid||'').slice(-4); } catch(_e) { dname = 'User'; } }
+				headers["X-Display-Name"] = dname;
 			} catch(_e) {}
 			const response = await fetch(serverUrl, {
 				method: "POST",
@@ -924,7 +933,10 @@ async slaveCheckForUpdates() {
 			if (this.isMaster) headers["X-Sync-Role"] = "master";
 			try {
 				const sid = this.getSessionId(); if (sid) headers["X-Sync-Session"] = sid;
-				const dname = (localStorage.getItem('presence.displayName') || '').trim(); if (dname) headers["X-Display-Name"] = dname;
+				let dname = '';
+				try { dname = (localStorage.getItem('presence.displayName') || '').trim(); } catch(_e){}
+				if (!dname) { try { dname = 'User-' + String(sid||'').slice(-4); } catch(_e) { dname = 'User'; } }
+				headers["X-Display-Name"] = dname;
 			} catch(_e){}
 
 			const { signal, cancel } = this._createTimeoutSignal(10000);

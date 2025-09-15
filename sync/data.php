@@ -308,7 +308,7 @@ else if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     return $s;
                 };
 
-                $apply_tile_if_changed = function(&$map, $ptile) use ($tileKeys, $normalize_tile, &$appliedTiles, $displayName) {
+                $apply_tile_if_changed = function(&$map, $ptile) use ($tileKeys, $normalize_tile, &$appliedTiles, $displayName, $sessionId) {
                     $ptile = $normalize_tile($ptile);
                     $id = intval($ptile['tileId'] ?? 0);
                     if (!$id) return;
@@ -326,6 +326,7 @@ else if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $map[$id]['tileId'] = $id;
                         $map[$id]['updatedAt'] = date('c');
                         if (!empty($displayName)) { $map[$id]['updatedBy'] = $displayName; }
+                        $map[$id]['updatedBySession'] = $sessionId;
                         $appliedTiles++;
                     }
                 };
@@ -354,6 +355,11 @@ else if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             } else {
                                 if (isset($serverPrimaryMap[$tid])) { $cur = $serverPrimaryMap[$tid][$field] ?? null; $curBy = $serverPrimaryMap[$tid]['updatedBy'] ?? ''; }
                             }
+                            // Self-write guard: if the last writer session for this tile equals the posting session, do not produce a conflict
+                            $tileCurSid = '';
+                            if ($isSecondary) { if (isset($serverSecondaryMap[$tid])) { $tileCurSid = $serverSecondaryMap[$tid]['updatedBySession'] ?? ''; } }
+                            else { if (isset($serverPrimaryMap[$tid])) { $tileCurSid = $serverPrimaryMap[$tid]['updatedBySession'] ?? ''; } }
+                            if (!empty($tileCurSid) && $tileCurSid === $sessionId) { continue; }
                             // Compare with posted precondition (normalized). Only conflict if server diverged from expected AND differs from desired value.
                             if (array_key_exists($fid, $pre)) {
                                 $expected = $pre[$fid];
@@ -368,6 +374,7 @@ else if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         'serverValue' => $cur,
                                         'localValue' => $val,
                                         'updatedBy' => $curBy,
+                                        'updatedBySession' => $isSecondary ? ($serverSecondaryMap[$tid]['updatedBySession'] ?? '') : ($serverPrimaryMap[$tid]['updatedBySession'] ?? ''),
                                     ];
                                 }
                             }
@@ -399,11 +406,11 @@ else if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             if ($isSecondary) {
                                 if (!isset($serverSecondaryMap[$tid])) { $serverSecondaryMap[$tid] = ['tileId' => $tid]; }
                                 $old = $serverSecondaryMap[$tid][$field] ?? null;
-                                if ($normalize($field, $old) !== $normalize($field, $val)) { $serverSecondaryMap[$tid][$field] = $val; $serverSecondaryMap[$tid]['updatedAt'] = date('c'); if (!empty($displayName)) { $serverSecondaryMap[$tid]['updatedBy'] = $displayName; } $appliedTiles++; }
+                                if ($normalize($field, $old) !== $normalize($field, $val)) { $serverSecondaryMap[$tid][$field] = $val; $serverSecondaryMap[$tid]['updatedAt'] = date('c'); if (!empty($displayName)) { $serverSecondaryMap[$tid]['updatedBy'] = $displayName; } $serverSecondaryMap[$tid]['updatedBySession'] = $sessionId; $appliedTiles++; }
                             } else {
                                 if (!isset($serverPrimaryMap[$tid])) { $serverPrimaryMap[$tid] = ['tileId' => $tid]; }
                                 $old = $serverPrimaryMap[$tid][$field] ?? null;
-                                if ($normalize($field, $old) !== $normalize($field, $val)) { $serverPrimaryMap[$tid][$field] = $val; $serverPrimaryMap[$tid]['updatedAt'] = date('c'); if (!empty($displayName)) { $serverPrimaryMap[$tid]['updatedBy'] = $displayName; } $appliedTiles++; }
+                                if ($normalize($field, $old) !== $normalize($field, $val)) { $serverPrimaryMap[$tid][$field] = $val; $serverPrimaryMap[$tid]['updatedAt'] = date('c'); if (!empty($displayName)) { $serverPrimaryMap[$tid]['updatedBy'] = $displayName; } $serverPrimaryMap[$tid]['updatedBySession'] = $sessionId; $appliedTiles++; }
                             }
                         }
                     }

@@ -558,8 +558,8 @@ class ServerSync {
 		// Zusätzlich Updates empfangen (15 Sekunden Intervall)
 		this.slaveCheckInterval = setInterval(async () => {
 			await this.slaveCheckForUpdates();
-		}, 15000); // 15 Sekunden für Master-Update-Check
-		console.log("👑 Master-Modus: Empfange zusätzlich Updates (15s, Read forced ON)");
+		}, 5000); // 5 Sekunden für Master-Update-Check
+		console.log("👑 Master-Modus: Empfange zusätzlich Updates (5s, Read forced ON)");
 
 		// Sofort einen ersten Update-Check und Schreibversuch starten
 		try {
@@ -645,7 +645,7 @@ class ServerSync {
 				clearInterval(this.slaveCheckInterval);
 				this.slaveCheckInterval = null;
 			}
-			const intervalMs = this.isMaster ? 30000 : 3000;
+			const intervalMs = this.isMaster ? 5000 : 3000;
 			this.slaveCheckInterval = setInterval(async () => { try { await this.slaveCheckForUpdates(); } catch(_){} }, intervalMs);
 			if (immediate) {
 				try { this.slaveCheckForUpdates(); } catch(_e) {}
@@ -1305,6 +1305,21 @@ async slaveCheckForUpdates() {
 				};
 				console.log('🔁 Normalized legacy server data → primaryTiles/secondaryTiles');
 			}
+			// Heuristic legacy fix: if hangarPosition missing but position looks like a header slot (e.g., "1A"), treat it as hangarPosition
+			try {
+				const looksLikeHeader = (v)=>{ try { if (!v) return false; const s = String(v).trim(); if (!s || s.length>5) return false; return /^[A-Za-z]?[0-9]{1,2}[A-Za-z]?$/.test(s); } catch(_) { return false; } };
+				['primaryTiles','secondaryTiles'].forEach(key=>{
+					const arr = Array.isArray(serverData[key]) ? serverData[key] : [];
+					arr.forEach(t=>{
+						try {
+							if ((!t.hangarPosition || t.hangarPosition==='') && t.position && looksLikeHeader(t.position)){
+								t.hangarPosition = t.position;
+								t.position = '';
+							}
+						} catch(_e){}
+					});
+				});
+			} catch(_e){}
 			// Legacy: tilesData (object of cells)
 			if (!serverData.primaryTiles && serverData.tilesData && typeof serverData.tilesData === 'object'){
 				const entries = Object.entries(serverData.tilesData);

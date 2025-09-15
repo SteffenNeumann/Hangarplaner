@@ -4072,8 +4072,9 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
 
 				// Formatierung: Erster Buchstabe + Bindestrich + Rest in Großbuchstaben
 				function formatAircraftId(input) {
-					let value = input.value.trim();
-					if (value.length === 0) return;
+					if (!input || typeof input.value !== 'string') return;
+					let value = (input.value || '').trim();
+					if (!value || value.length === 0) return;
 
 					// Entferne alle Bindestriche und konvertiere zu Großbuchstaben
 					let cleanValue = value.replace(/-/g, "").toUpperCase();

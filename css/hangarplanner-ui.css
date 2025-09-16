@@ -3936,7 +3936,7 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   padding: var(--tile-grid-padding, 16px) 12px var(--tile-grid-padding, 16px) 12px;
   background: #fff;
   border-left: 1px solid var(--menu-border);
-  border-top: 1px solid var(--menu-border);
+  border-top: 0px solid var(--menu-border);
   border-bottom: 1px solid var(--menu-border);
   box-shadow: none;
   display: flex;

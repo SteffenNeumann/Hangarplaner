@@ -3904,35 +3904,90 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 .dark-mode #submenu-project #projectChangeLog #changeLogList { border-color: var(--border-color); }
 .dark-mode #submenu-project #projectChangeLog #changeLogList .border-b { border-color: var(--border-color); }
 
-/* Planner right-side Change Log column */
+/* Planner right-side Change Log column — embedded as grid column */
+#panel-planner {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 16px;
+  align-items: start;
+}
+/* Collapsed state keeps a thin handle visible */
+#panel-planner.changelog-collapsed { grid-template-columns: 1fr 18px; }
+
+/* Right column styles (no overlay) */
 .planner-changelog {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 340px;
-  height: 100%;
+  position: relative;
+  width: 100%;
   padding: 12px;
   background: #fff;
   border-left: 1px solid var(--menu-border);
-  box-shadow: -2px 0 6px rgba(0,0,0,0.03);
-  overflow: hidden;
-  z-index: 20;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* allow internal scroll area to size */
 }
 .dark-mode .planner-changelog { background: var(--bg-primary); border-left-color: var(--border-color); }
 
-/* Ensure planner container reserves space for the column */
-#panel-planner { position: relative; }
-/* Reserve space on the main scroll container so the right column is visible */
-.hangar-container { padding-right: 360px; }
+/* Remove padding-right reservation from old overlay approach */
+/* .hangar-container { padding-right: 360px; }  — no longer needed */
+
+/* Responsive stacking: Change Log below tiles on narrow screens */
 @media (max-width: 1200px){
-  .planner-changelog { position: static; width: 100%; height: auto; border-left: 0; border-top: 1px solid var(--menu-border); }
-  .hangar-container { padding-right: 0; }
+  #panel-planner { grid-template-columns: 1fr; }
+  .planner-changelog {
+    grid-column: 1 / -1;
+    border-left: 0;
+    border-top: 1px solid var(--menu-border);
+    order: 2; /* ensure below tiles */
+  }
 }
 
-.changelog-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+/* Header with subtle toggle handle */
+.changelog-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; position: relative; }
 .changelog-title { font-weight: 600; color: #334155; }
 .dark-mode .changelog-title { color: var(--text-primary); }
-.changelog-list { height: calc(100% - 44px); overflow-y: auto; border: 1px solid var(--menu-border); border-radius: 8px; padding: 8px; background: transparent; }
+
+/* Toggle button: left edge chevron */
+.changelog-toggle {
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  transform: translate(-100%, -50%);
+  width: 18px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--menu-border);
+  border-right: none;
+  border-radius: 6px 0 0 6px;
+  background: #fff;
+  color: #64748b;
+  cursor: pointer;
+}
+.dark-mode .changelog-toggle {
+  background: var(--bg-primary);
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+}
+/* Rotate chevron when collapsed */
+#panel-planner.changelog-collapsed .changelog-toggle svg { transform: rotate(180deg); }
+
+/* On mobile, place toggle inside header to avoid overflow */
+@media (max-width: 1200px){
+  .changelog-toggle {
+    position: static;
+    transform: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: 1px solid var(--menu-border);
+    margin-right: 8px;
+  }
+}
+
+/* Internal scroll for list */
+.changelog-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; border: 1px solid var(--menu-border); border-radius: 8px; padding: 8px; background: transparent; }
 .dark-mode .changelog-list { border-color: var(--border-color); }
 
 /* ==========================================================================

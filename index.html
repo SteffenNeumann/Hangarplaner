@@ -1806,8 +1806,11 @@ document.addEventListener('DOMContentLoaded', function(){
 					<div id="panel-planner" class="tab-panel" role="tabpanel" aria-labelledby="tab-planner">
 
 						<!-- Right-side Change Log Column -->
-						<aside id="plannerChangeLogColumn" class="planner-changelog" aria-label="Change Log">
+<aside id="plannerChangeLogColumn" class="planner-changelog" aria-label="Change Log">
 							<div class="changelog-header">
+                                <button id="changelogToggle" class="changelog-toggle" aria-controls="plannerChangeLogColumn" aria-expanded="true" title="Collapse/Expand Change Log" type="button">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                                </button>
 								<span class="changelog-title">Change Log</span>
 								<button id="changeLogClearBtn" class="sidebar-btn sidebar-btn-secondary" title="Clear the change log">Clear</button>
 							</div>
@@ -4503,7 +4506,41 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
 
               // Central init
               window.hangarInitQueue = window.hangarInitQueue || [];
-              window.hangarInitQueue.push(function(){ try { attachListeners(); wireClear(); ChangeLog.render(); } catch(_){} });
+window.hangarInitQueue.push(function(){ try { attachListeners(); wireClear(); ChangeLog.render(); } catch(_){} });
+// Wire collapse/expand for Planner Change Log column
+window.hangarInitQueue.push(function(){
+  try {
+    var panel = document.getElementById('panel-planner');
+    var toggle = document.getElementById('changelogToggle');
+    var col = document.getElementById('plannerChangeLogColumn');
+    if (!panel || !col || !toggle) return;
+    var KEY = 'planner.changelog.collapsed';
+    function apply(state){
+      panel.classList.toggle('changelog-collapsed', !!state);
+      var expanded = !state;
+      try { toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false'); } catch(_e){}
+      // When collapsed, hide header text and list but keep handle
+      try {
+        var list = document.getElementById('changeLogList');
+        var title = col.querySelector('.changelog-title');
+        var clearBtn = document.getElementById('changeLogClearBtn');
+        if (list) list.style.display = expanded ? '' : 'none';
+        if (title) title.style.display = expanded ? '' : 'none';
+        if (clearBtn) clearBtn.style.display = expanded ? '' : 'none';
+      } catch(_e){}
+    }
+    var saved = false;
+    try { saved = localStorage.getItem(KEY) === '1'; } catch(_e){}
+    // default expanded per user preference
+    apply(saved);
+    toggle.addEventListener('click', function(e){
+      e.preventDefault();
+      var now = !panel.classList.contains('changelog-collapsed');
+      apply(now);
+      try { localStorage.setItem(KEY, now ? '1' : '0'); } catch(_e){}
+    });
+  } catch(_e){}
+});
               // Also refresh when server data loads or mode changes
               try { document.addEventListener('serverDataLoaded', ()=>{ try { ChangeLog.render(); } catch(_){} }); } catch(_e){}
               try { document.addEventListener('syncModeChanged', ()=>{ try { ChangeLog.render(); } catch(_){} }); } catch(_e){}
@@ -4525,7 +4562,7 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                     col.id = 'plannerChangeLogColumn';
                     col.className = 'planner-changelog';
                     col.setAttribute('aria-label','Change Log');
-                    col.innerHTML = '<div class="changelog-header"><span class="changelog-title">Change Log</span><button id="changeLogClearBtn" class="sidebar-btn sidebar-btn-secondary" title="Clear the change log">Clear</button></div><div id="changeLogList" class="changelog-list" aria-live="polite"></div>';
+col.innerHTML = '<div class="changelog-header"><button id="changelogToggle" class="changelog-toggle" aria-controls="plannerChangeLogColumn" aria-expanded="true" title="Collapse/Expand Change Log" type="button"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"9 18 15 12 9 6\"/></svg></button><span class=\"changelog-title\">Change Log</span><button id=\"changeLogClearBtn\" class=\"sidebar-btn sidebar-btn-secondary\" title=\"Clear the change log\">Clear</button></div><div id=\"changeLogList\" class=\"changelog-list\" aria-live=\"polite\"></div>';
                     panel.insertBefore(col, panel.firstChild);
                   } else {
                     if (!document.getElementById('changeLogList')){
@@ -4538,7 +4575,7 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                     if (!document.getElementById('changeLogClearBtn')){
                       var header = col.querySelector('.changelog-header');
                       if (!header){ header = document.createElement('div'); header.className='changelog-header'; col.insertBefore(header, col.firstChild); }
-                      header.innerHTML = '<span class="changelog-title">Change Log</span><button id="changeLogClearBtn" class="sidebar-btn sidebar-btn-secondary" title="Clear the change log">Clear</button>';
+header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-controls="plannerChangeLogColumn" aria-expanded="true" title="Collapse/Expand Change Log" type="button"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"9 18 15 12 9 6\"/></svg></button><span class=\"changelog-title\">Change Log</span><button id=\"changeLogClearBtn\" class=\"sidebar-btn sidebar-btn-secondary\" title=\"Clear the change log\">Clear</button>';
                     }
                   }
                   // Remove old block in Project submenu if present

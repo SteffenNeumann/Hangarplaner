@@ -684,13 +684,20 @@ function setupEventListenersForTile(tileElement, cellId) {
 		aircraftInput.addEventListener("blur", function (e) {
 			try {
 				if (!e || !e.target || typeof e.target.value !== 'string') return;
+				const prev = (e.target.value || '').toString();
+				let formatted = '';
 				if (typeof window.safeFormatAircraftId === 'function') {
-					const f = window.safeFormatAircraftId(e.target);
-					if (typeof f === 'string') e.target.value = f;
-				} else if (typeof formatAircraftId === "function") {
-					const f = formatAircraftId(e.target);
-					if (typeof f === 'string') e.target.value = f;
-			}
+					formatted = window.safeFormatAircraftId(e.target) || '';
+				} else if (typeof formatAircraftId === 'function') {
+					formatted = formatAircraftId(e.target) || '';
+				}
+				// Guard: if formatter produced empty but user had content, keep a sane fallback
+				if (formatted.trim().length === 0 && prev.trim().length > 0) {
+					// Minimal fallback: uppercase and keep hyphen if present
+					e.target.value = prev.trim().toUpperCase();
+				} else if (formatted.trim().length > 0) {
+					e.target.value = formatted;
+				}
 			} catch(_e) {}
 			// KORREKTUR: Aircraft ID Change Handler NUR bei blur - API-Aufruf erst nach vollständiger Eingabe
 			if (

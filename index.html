@@ -4056,12 +4056,18 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
 
 							input.addEventListener("blur", function (e) {
 								try {
+									const prev = (this.value || '').toString();
+									let formatted = '';
 									if (typeof window.safeFormatAircraftId === 'function') {
-										const f = window.safeFormatAircraftId(this);
-										if (typeof f === 'string') this.value = f;
+										formatted = window.safeFormatAircraftId(this) || '';
 									} else if (typeof formatAircraftId === 'function') {
-										const f = formatAircraftId(this);
-										if (typeof f === 'string') this.value = f;
+										formatted = formatAircraftId(this) || '';
+									}
+									// Guard: if formatter produced empty but user had content, keep a sane fallback
+									if (formatted.trim().length === 0 && prev.trim().length > 0) {
+										this.value = prev.trim().toUpperCase();
+									} else if (formatted.trim().length > 0) {
+										this.value = formatted;
 									}
 								} catch(_e) {}
 								// KORREKTUR: Aircraft ID Change Handler NUR bei blur - API-Aufruf erst nach vollständiger Eingabe

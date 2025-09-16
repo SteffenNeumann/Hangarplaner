@@ -178,23 +178,7 @@
 			.dark-mode #towing-reminder-widget .status-label-value { color: #cbd5e1; }
 			.dark-mode #towingReminderList { color: #ef4444 !important; }
 		</style>
-<script>
-// Early auth guard: redirect unauthenticated users to /login.html
-(function(){
-  try {
-    var xhr = new XMLHttpRequest();
-xhr.open('GET', 'sync/auth.php?action=session', false); // synchronous, very early
-    xhr.send(null);
-    var ok = false;
-    if (xhr.status === 200) {
-      try { var data = JSON.parse(xhr.responseText||'{}'); ok = !!(data && data.success && data.user); } catch(e){}
-    }
-    if (!ok) {
-window.location.replace('login.html');
-    }
-  } catch(e) { /* ignore; if it fails, page continues */ }
-})();
-</script>
+<!-- Early auth guard removed; rely on server-side protection or async client checks to avoid sync XHR stall -->
 
 <script>
 // Render docs/SYNC-MODE-FAQ.md + docs/DATE-TIME-PICKER.md into the FAQ panel and build a TOC
@@ -650,8 +634,23 @@ window.location.replace('login.html');
 				</div>
 
 					<!-- Change Log moved to planner right column -->
-					<div class="panel-divider"></div>
-					<div class="sync-mode-description">Change Log is visible in the planner view (right column).</div>
+				<div class="panel-divider"></div>
+				<div class="sync-mode-description">Change Log is visible in the planner view (right column).</div>
+
+				<!-- Aircraft Search (Project submenu) -->
+				<div class="panel-divider"></div>
+				<div class="submenu-title">Aircraft Search</div>
+				<div class="sidebar-form-group">
+					<div class="sidebar-form-row">
+						<label for="searchAircraft">Search Aircraft ID</label>
+						<div class="input-container">
+							<input id="searchAircraft" type="text" placeholder="e.g. D-ABCD" class="sidebar-form-control" />
+						</div>
+					</div>
+					<div class="sidebar-input-group">
+						<button id="btnSearch" class="sidebar-btn sidebar-btn-primary">Search</button>
+					</div>
+				</div>
 			</div>
 
 			<!-- Hauptbereich mit Hangar-Kacheln -->

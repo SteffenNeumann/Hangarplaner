@@ -282,10 +282,14 @@ const response = await fetch(postUrl, {
 			// Stop here; legacy immediate single-field path not needed when aggregation is enabled
 			return;
 
-			// IMPORTANT: For field-level updates, always send fieldUpdates directly to avoid overwriting unrelated fields in multi-master
+		} // end aggregated path
 
-			// Sammle alle aktuellen Daten für vollständige Server-Synchronisation (Fallback)
-			let allData = null;
+		// Legacy single-field fallback path (kept for clarity; normally not executed when aggregation path returns)
+
+		// IMPORTANT: For field-level updates, always send fieldUpdates directly to avoid overwriting unrelated fields in multi-master
+
+		// Sammle alle aktuellen Daten für vollständige Server-Synchronisation (Fallback)
+		let allData = null;
 			if (
 				window.hangarData &&
 				typeof window.hangarData.collectAllHangarData === "function"

@@ -703,16 +703,20 @@ function setupEventListenersForTile(tileElement, cellId) {
 				);
 			}
 		});
-		towSelector.addEventListener("change", function () {
-			if (typeof updateTowStatusStyles === "function") {
-				updateTowStatusStyles(this);
-			}
-		});
-		towSelector.setAttribute("data-listener-added", "true");
+		// Fix: declare and guard towSelector for this tile
+		const towSelector = tileElement.querySelector(`#tow-status-${cellId}`);
+		if (towSelector && !towSelector.hasAttribute("data-listener-added")) {
+			towSelector.addEventListener("change", function () {
+				if (typeof updateTowStatusStyles === "function") {
+					updateTowStatusStyles(this);
+				}
+			});
+			towSelector.setAttribute("data-listener-added", "true");
 
-		// Initial Towing Status setzen
-		if (typeof updateTowStatusStyles === "function") {
-			updateTowStatusStyles(towSelector);
+			// Initial Towing Status setzen
+			if (typeof updateTowStatusStyles === "function") {
+				updateTowStatusStyles(towSelector);
+			}
 		}
 	}
 }

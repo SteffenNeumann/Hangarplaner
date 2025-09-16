@@ -633,8 +633,7 @@
 					</div>
 				</div>
 
-					<!-- Change Log moved to planner right column -->
-				<div class="panel-divider"></div>
+
 				
 
 				<!-- Aircraft Search (Project submenu) -->
@@ -4397,12 +4396,18 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                   if (Array.isArray(data?.primaryTiles)) tiles.push(...data.primaryTiles);
                   if (Array.isArray(data?.secondaryTiles)) tiles.push(...data.secondaryTiles);
                   const entries = [];
+                  let mySession = '';
+                  try { mySession = (localStorage.getItem('presence.sessionId') || '').toString().trim(); } catch(_e){}
                   tiles.forEach(t => {
                     const id = parseInt(t?.tileId || 0, 10);
-                    const user = (t?.updatedBy || '').toString().trim();
+                    const sid = (t?.updatedBySession || '').toString().trim();
+                    let user = (t?.updatedBy || '').toString().trim();
                     const ts = Date.parse(t?.updatedAt || '') || 0;
-                    if (!id || !user || !ts) return;
-                    if (myName && user === myName) return; // only other users
+                    if (!id || !ts) return;
+                    // Prefer session-based self-filter; fallback to name-based if no session info
+                    if (sid && mySession && sid === mySession) return;
+                    if (!sid && myName && user && user === myName) return;
+                    if (!user) { user = sid ? ('User-' + sid.slice(-4)) : 'User'; }
                     const pick = chooseFieldForTile(t);
                     entries.push({ ts, user, fieldId: pick.fieldId, prefix: pick.prefix, cellId: id, value: pick.value });
                   });

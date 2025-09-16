@@ -1882,26 +1882,28 @@ async slaveCheckForUpdates() {
 	reactivateEventHandlers() {
 		console.log("🔄 Reaktiviere Event-Handler nach Server-Load...");
 
-		// Event-Handler für sekundäre Kacheln reaktivieren - MIT VERBESSERTER LOGIK
-		if (window.setupSecondaryTileEventListeners) {
-			setTimeout(() => {
-				const result = window.setupSecondaryTileEventListeners();
-				console.log(
-					"✅ Event-Handler für sekundäre Kacheln reaktiviert (global):",
-					result
-				);
-			}, 100);
-		} else if (
-			window.hangarUI &&
-			window.hangarUI.setupSecondaryTileEventListeners
-		) {
-			setTimeout(() => {
-				const result = window.hangarUI.setupSecondaryTileEventListeners();
-				console.log(
-					"✅ Event-Handler für sekundäre Kacheln reaktiviert (hangarUI):",
-					result
-				);
-			}, 100);
+		// Event-Handler für sekundäre Kacheln reaktivieren - MIT VERBESSERTER LOGIK (gated auf Event-Manager Bereitschaft)
+		const __emReady = !!(window.hangarEventManager && window.hangarEventManager.safeAddEventListener);
+		if (window.setupSecondaryTileEventListeners || (window.hangarUI && window.hangarUI.setupSecondaryTileEventListeners)) {
+			if (__emReady) {
+				setTimeout(() => {
+					try {
+						const fn = window.setupSecondaryTileEventListeners || (window.hangarUI && window.hangarUI.setupSecondaryTileEventListeners);
+						const result = fn ? fn() : false;
+						console.log("✅ Event-Handler für sekundäre Kacheln reaktiviert (gated):", result);
+					} catch (e) { console.warn('setupSecondaryTileEventListeners (gated) failed', e); }
+				}, 100);
+			} else {
+				// Defer until Event Manager signals ready to avoid race and log noise
+				try {
+					document.addEventListener('eventManagerReady', () => {
+						try {
+							const fn = window.setupSecondaryTileEventListeners || (window.hangarUI && window.hangarUI.setupSecondaryTileEventListeners);
+							if (fn) fn();
+						} catch (_e) {}
+					}, { once: true });
+				} catch (_e) {}
+			}
 		} else {
 			console.warn("⚠️ setupSecondaryTileEventListeners nicht verfügbar");
 		}

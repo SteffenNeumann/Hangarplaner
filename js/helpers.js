@@ -1302,32 +1302,31 @@ if (window.helpers) {
 
   const onInput = (e)=>{
     const raw = e.target.value || '';
-    // Handle special shortcuts first
-    if (raw === '.') {
-      // Don't mask the dot, let it be processed on blur
-      return;
-    }
-    // Handle +/- day shortcuts like +1, -2, etc.
-    if (/^[+-]\d+$/.test(raw)) {
-      // Don't mask shortcuts, let them be processed on blur
-      return;
-    }
-    // If user types ISO, show compact immediately
+    // Handle special shortcuts first (do not transform while typing)
+    if (raw === '.') return;
+    if (/^[+-]\d+$/.test(raw)) return; // +1, -2, etc.
+
+    // If user types full ISO, show compact immediately
     if (isISODateTimeLocal(raw)){
       e.target.value = formatISOToCompactUTC(raw);
       return;
     }
-    // Allow typing time-only (HH:mm) without masking
-    if (isHHmm(raw)) {
-      // keep as typed; canonicalization runs on blur
-      return;
+
+    // Allow time-only typing without interfering; normalize on blur
+    if (isHHmm(raw)) return;
+
+    // Allow partial numeric typing (1, 12, 123, 1234) without forcing format
+    if (/^\d{1,4}$/.test(raw)) return;
+
+    // Allow full compact pattern dd.mm.yy,HH:MM to pass through as-is
+    if (isCompactDateTime(raw)) return;
+
+    // For other mixed input, attempt a gentle digits-to-compact transformation,
+    // but only if it actually produces a more structured string; otherwise, keep raw
+    const next = digitsToCompact(raw);
+    if (next && next !== raw) {
+      e.target.value = next;
     }
-    // Allow typing 4-digit time (1230) or partial typing (123, 12, 1) without masking
-    if (is4DigitTime(raw) || /^\d{1,4}$/.test(raw)) {
-      // keep as typed; conversion runs on blur
-      return;
-    }
-    e.target.value = digitsToCompact(raw);
   };
 
   const onBlur = (e)=>{
@@ -1386,9 +1385,15 @@ if (window.helpers) {
       e.target.value = formatISOToCompactUTC(iso); // keep display compact
       e.target.dataset.iso = iso; // store ISO reference on the element
     } else {
-      // invalid → clear
-      e.target.value = '';
-      delete e.target.dataset.iso;
+      // invalid input: leave the user's raw string to let them correct it
+      // do not force-clear while staying in the field; only clear if completely empty
+      if (!raw) {
+        e.target.value = '';
+        delete e.target.dataset.iso;
+      } else {
+        // keep as typed and remove any stale ISO reference
+        delete e.target.dataset.iso;
+      }
     }
   };
 

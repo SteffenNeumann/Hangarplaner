@@ -3917,8 +3917,11 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   align-items: start;
 }
 /* Explicit placement: main (tiles) left, changelog right */
-#panel-planner .planner-main { grid-column: 1; min-width: 0; }
-#plannerChangeLogColumn { grid-column: 2; }
+#panel-planner .planner-main { grid-column: 1; grid-row: 1; min-width: 0; }
+#plannerChangeLogColumn { grid-column: 2; grid-row: 1; }
+/* Ensure divider and secondary tiles follow below the first row */
+#panel-planner > .section-divider { grid-column: 1; grid-row: 2; }
+#panel-planner > .section-container:nth-of-type(2) { grid-column: 1; grid-row: 3; }
 /* Collapsed state keeps a thin handle visible */
 #panel-planner.changelog-collapsed { grid-template-columns: 1fr 18px; }
 
@@ -3926,7 +3929,7 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 .planner-changelog {
   position: relative;
   width: 100%;
-  padding: 12px;
+  padding: 0 12px 12px 12px; /* no top padding so aligns with tiles */
   background: #fff;
   border-left: 1px solid var(--menu-border);
   box-shadow: none;
@@ -3950,10 +3953,12 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
     border-left: 0;
     border-top: 1px solid var(--menu-border);
   }
+  /* Divider sits after tiles in mobile */
+  #panel-planner > .section-divider { grid-column: 1 / -1; grid-row: 3; }
 }
 
 /* Header with subtle toggle handle */
-.changelog-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; position: relative; }
+.changelog-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px 0; position: relative; }
 .changelog-title { font-weight: 600; color: #334155; }
 .dark-mode .changelog-title { color: var(--text-primary); }
 

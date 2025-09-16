@@ -1916,6 +1916,10 @@ input:checked + .toggle-slider:before {
 	box-shadow: none; /* design says no shadows */
 }
 .submenu-panel.hidden { display: none; }
+/* Ensure scrim hides when toggled */
+.submenu-scrim.hidden { display: none; }
+/* Global utility hidden class used throughout the app */
+.hidden { display: none !important; }
 /* Scrim overlay for temporary submenu drawer */
 .submenu-scrim {
 	position: fixed;

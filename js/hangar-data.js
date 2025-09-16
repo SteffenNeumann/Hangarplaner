@@ -1369,11 +1369,17 @@ function applyProjectData(projectData) {
 					console.warn(`Position Input für Tile ${id} nicht gefunden`);
 				}
 
-				// Aircraft ID setzen
+				// Aircraft ID setzen (bewahre Nutzerwert, wenn Server leer liefert)
 				const aircraftInput = document.getElementById(`aircraft-${id}`);
 				if (aircraftInput) {
-					aircraftInput.value = aircraftId || "";
-					console.log(`Aircraft ID für Tile ${id} gesetzt: ${aircraftId}`);
+					const incoming = (aircraftId || '').trim();
+					const current = (aircraftInput.value || '').trim();
+					if (incoming.length > 0 || current.length === 0) {
+						aircraftInput.value = incoming;
+						console.log(`Aircraft ID für Tile ${id} gesetzt: ${incoming}`);
+					} else {
+						console.log(`⏭️ Leere Server-AIRCRAFT_ID ignoriert – Nutzerwert behalten: ${current}`);
+					}
 				} else {
 					console.warn(`Aircraft Input für Tile ${id} nicht gefunden`);
 				}

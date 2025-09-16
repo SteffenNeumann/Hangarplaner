@@ -1484,21 +1484,29 @@ async slaveCheckForUpdates() {
 			const tileId = tileData.tileId || (isSecondary ? 101 + index : 1 + index);
 			console.log(`🔄 Verarbeite Kachel ${tileId}:`, tileData);
 
-			// Aircraft ID (apply even when empty string)
+			// Aircraft ID — do not overwrite a non-empty user value with empty server data
 			if (Object.prototype.hasOwnProperty.call(tileData, 'aircraftId')) {
 				const aircraftInput = document.getElementById(`aircraft-${tileId}`);
 				if (aircraftInput) {
-					const newVal = tileData.aircraftId || '';
+					const incomingRaw = (typeof tileData.aircraftId === 'string') ? tileData.aircraftId : '';
+					const incoming = incomingRaw.trim();
+					const current = (aircraftInput.value || '').trim();
 					const oldValue = aircraftInput.value;
-					if (document.activeElement === aircraftInput && oldValue === newVal) {
-						// skip to preserve caret when unchanged
+					if (incoming.length > 0) {
+						if (!(document.activeElement === aircraftInput && current === incoming)) {
+							aircraftInput.value = incoming;
+						}
+						console.log(`✈️ Aircraft ID gesetzt: ${tileId} = ${current} → ${incoming}`);
+						successfullyApplied++;
 					} else {
-						aircraftInput.value = newVal;
+						// Server provided empty/blank aircraftId: keep user value if present
+						if (current.length === 0) {
+							aircraftInput.value = '';
+							console.log(`✈️ Aircraft ID geleert (leer und kein vorhandener Wert): ${tileId}`);
+						} else {
+							console.log(`⏭️ Leere Server-AIRCRAFT_ID ignoriert – behalte Nutzerwert: ${tileId} = ${current}`);
+						}
 					}
-					console.log(
-						`✈️ Aircraft ID gesetzt: ${tileId} = ${oldValue} → ${newVal}`
-					);
-					successfullyApplied++;
 				} else {
 					console.warn(`❌ Aircraft Input nicht gefunden: aircraft-${tileId}`);
 					failedToApply++;

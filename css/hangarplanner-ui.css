@@ -3911,6 +3911,9 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   gap: 16px;
   align-items: start;
 }
+/* Explicit placement: main (tiles) left, changelog right */
+#panel-planner .planner-main { grid-column: 1; min-width: 0; }
+#plannerChangeLogColumn { grid-column: 2; }
 /* Collapsed state keeps a thin handle visible */
 #panel-planner.changelog-collapsed { grid-template-columns: 1fr 18px; }
 
@@ -3934,11 +3937,13 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 /* Responsive stacking: Change Log below tiles on narrow screens */
 @media (max-width: 1200px){
   #panel-planner { grid-template-columns: 1fr; }
+  /* Place tiles first, changelog second */
+  #panel-planner .planner-main { grid-column: 1; grid-row: 1; }
   .planner-changelog {
     grid-column: 1 / -1;
+    grid-row: 2;
     border-left: 0;
     border-top: 1px solid var(--menu-border);
-    order: 2; /* ensure below tiles */
   }
 }
 

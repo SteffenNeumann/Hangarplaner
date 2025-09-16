@@ -4039,6 +4039,9 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
 					document
 						.querySelectorAll('input[id^="aircraft-"]')
 						.forEach((input) => {
+							// Guard against duplicate wiring
+							if (input.hasAttribute('data-aircraft-format-wired')) return;
+							input.setAttribute('data-aircraft-format-wired', 'true');
 							input.addEventListener("input", function (e) {
 								try {
 									// Live-typing normalization: uppercase and add hyphen after first letter

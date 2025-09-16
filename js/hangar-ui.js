@@ -690,7 +690,7 @@ function setupEventListenersForTile(tileElement, cellId) {
 				} else if (typeof formatAircraftId === "function") {
 					const f = formatAircraftId(e.target);
 					if (typeof f === 'string') e.target.value = f;
-				}
+			}
 			} catch(_e) {}
 			// KORREKTUR: Aircraft ID Change Handler NUR bei blur - API-Aufruf erst nach vollständiger Eingabe
 			if (
@@ -703,6 +703,8 @@ function setupEventListenersForTile(tileElement, cellId) {
 				);
 			}
 		});
+		// Mark this aircraft input as wired to avoid duplicate listeners
+		aircraftInput.setAttribute("data-listener-added", "true");
 		// Fix: declare and guard towSelector for this tile
 		const towSelector = tileElement.querySelector(`#tow-status-${cellId}`);
 		if (towSelector && !towSelector.hasAttribute("data-listener-added")) {

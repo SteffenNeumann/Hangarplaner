@@ -878,13 +878,20 @@ const response = await fetch(postUrl, {
 			`${handlerPrefix}_input`
 		);
 
-		this.safeAddEventListener(
-			element,
-			"blur",
-			(event) => {
-				if (window.isApplyingServerData) {
-					return;
-				}
+		// Avoid duplicate blur listeners on aircraft inputs
+		if (element.id && element.id.startsWith('aircraft-') && element.hasAttribute('data-aircraft-blur-wired')) {
+			// already wired via UI initialization
+		} else {
+			if (element.id && element.id.startsWith('aircraft-')) {
+				element.setAttribute('data-aircraft-blur-wired', 'true');
+			}
+			this.safeAddEventListener(
+				element,
+				"blur",
+				(event) => {
+					if (window.isApplyingServerData) {
+						return;
+					}
 
 				// KORREKTUR: Spezielle Behandlung für Aircraft ID Felder beim Verlassen des Feldes
 				if (event.target.id.startsWith("aircraft-")) {
@@ -929,6 +936,7 @@ const response = await fetch(postUrl, {
 			},
 			`${handlerPrefix}_blur`
 		);
+		}
 
 		this.safeAddEventListener(
 			element,

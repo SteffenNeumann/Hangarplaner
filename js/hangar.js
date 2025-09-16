@@ -1675,45 +1675,60 @@ document.addEventListener("DOMContentLoaded", function () {
  * Wird als MutationObserver implementiert, um alle Änderungen zu erfassen
  */
 function setupStatusSync() {
-	// Updated: sync the old sidebar fetchStatus text into the new header widgets
 	const fetchStatus = document.getElementById("fetchStatus");
-	const headerUpdateStatus = document.getElementById("headerUpdateStatus");
-	const headerUpdateMeta = document.getElementById("headerUpdateMeta");
+	const headerStatus = document.getElementById("header-status");
 
-	if (!fetchStatus || !headerUpdateStatus) {
-		console.warn("Status-Elemente nicht gefunden, Synchronisation nicht möglich");
+	if (!fetchStatus || !headerStatus) {
+		console.warn(
+			"Status-Elemente nicht gefunden, Synchronisation nicht möglich"
+		);
 		return;
 	}
 
-	function applyText() {
-		const newText = fetchStatus.textContent || "Bereit";
-		headerUpdateStatus.textContent = newText;
-		if (headerUpdateStatus) headerUpdateStatus.title = newText;
-		if (headerUpdateMeta) headerUpdateMeta.setAttribute("title", newText);
+	// Initiale Synchronisation
+	headerStatus.textContent = fetchStatus.textContent || "Bereit";
+	// Wichtig: Sowohl title als auch data-tooltip Attribute synchronisieren
+	headerStatus.title = fetchStatus.textContent || "Bereit";
+	headerStatus.setAttribute(
+		"data-tooltip",
+		fetchStatus.textContent || "Status-Informationen werden hier angezeigt"
+	);
+
+	// Status-Klassen übertragen
+	if (fetchStatus.classList.contains("success")) {
+		headerStatus.className = "success";
+	} else if (fetchStatus.classList.contains("error")) {
+		headerStatus.className = "error";
+	} else if (fetchStatus.classList.contains("warning")) {
+		headerStatus.className = "warning";
 	}
 
-	function applyClass() {
-		// Map classes to a minimal set; headerUpdateStatus has no color classes defined here,
-		// but we can keep this if you later want to style by class
-		headerUpdateStatus.classList.remove("success", "error", "warning");
-		if (fetchStatus.classList.contains("success")) {
-			headerUpdateStatus.classList.add("success");
-		} else if (fetchStatus.classList.contains("error")) {
-			headerUpdateStatus.classList.add("error");
-		} else if (fetchStatus.classList.contains("warning")) {
-			headerUpdateStatus.classList.add("warning");
-		}
-	}
-
-	// Initial
-	applyText();
-	applyClass();
-
-	const observer = new MutationObserver(() => {
-		applyText();
-		applyClass();
+	// MutationObserver für automatische Synchronisation einrichten
+	const observer = new MutationObserver((mutations) => {
+		mutations.forEach((mutation) => {
+			if (mutation.type === "childList" || mutation.type === "characterData") {
+				const newText = fetchStatus.textContent || "Bereit";
+				headerStatus.textContent = newText;
+				headerStatus.title = newText; // Tooltip-Inhalt aktualisieren
+				headerStatus.setAttribute("data-tooltip", newText); // Zusätzliches Tooltip-Attribut aktualisieren
+			} else if (
+				mutation.type === "attributes" &&
+				mutation.attributeName === "class"
+			) {
+				// Status-Klassen übernehmen
+				headerStatus.className = "";
+				if (fetchStatus.classList.contains("success")) {
+					headerStatus.className = "success";
+				} else if (fetchStatus.classList.contains("error")) {
+					headerStatus.className = "error";
+				} else if (fetchStatus.classList.contains("warning")) {
+					headerStatus.className = "warning";
+				}
+			}
+		});
 	});
 
+	// Beobachte Änderungen an Text und Attributen
 	observer.observe(fetchStatus, {
 		childList: true,
 		characterData: true,
@@ -1721,6 +1736,10 @@ function setupStatusSync() {
 		attributes: true,
 		attributeFilter: ["class"],
 	});
+
+	// console.log(
+	// 	"Status-Synchronisation zwischen fetchStatus und header-status eingerichtet"
+	// );
 }
 
 // Führe die Statussynchornisation nach dem initialen Laden aus

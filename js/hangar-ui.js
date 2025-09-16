@@ -1136,11 +1136,31 @@ setupSecondaryTileEventListeners: function () {
 		// Ensure Event Manager is ready before scanning and wiring handlers
 		if (!window.hangarEventManager || !window.hangarEventManager.safeAddEventListener) {
 			try {
-				console.warn("⚠️ Event-Manager noch nicht bereit – versuche erneut nach Initialisierung (sekundäre Kacheln)");
-				document.addEventListener('eventManagerReady', () => {
-					try { if (window.hangarUI && window.hangarUI.setupSecondaryTileEventListeners) window.hangarUI.setupSecondaryTileEventListeners(); } catch(_e){}
-				}, { once: true });
-				setTimeout(() => { try { if (window.hangarUI && window.hangarUI.setupSecondaryTileEventListeners) window.hangarUI.setupSecondaryTileEventListeners(); } catch(_e){} }, 400);
+				// Demote noise to debug and log only once per session
+				if (!window.__emSecondaryWarnedOnce) {
+					console.debug("Event-Manager noch nicht bereit – retry after init (sekundäre Kacheln)");
+					window.__emSecondaryWarnedOnce = true;
+				}
+				// Avoid stacking multiple retries
+				if (!window.__emSecondaryRetryScheduled) {
+					window.__emSecondaryRetryScheduled = true;
+					document.addEventListener('eventManagerReady', () => {
+						try {
+							window.__emSecondaryRetryScheduled = false;
+							if (window.hangarUI && window.hangarUI.setupSecondaryTileEventListeners) {
+								window.hangarUI.setupSecondaryTileEventListeners();
+							}
+						} catch(_e) { window.__emSecondaryRetryScheduled = false; }
+					}, { once: true });
+					window.__emSecondaryRetryId = setTimeout(() => {
+						try {
+							window.__emSecondaryRetryScheduled = false;
+							if (window.hangarUI && window.hangarUI.setupSecondaryTileEventListeners) {
+								window.hangarUI.setupSecondaryTileEventListeners();
+							}
+						} catch(_e) { window.__emSecondaryRetryScheduled = false; }
+					}, 400);
+				}
 			} catch(_e){}
 			return false;
 		}

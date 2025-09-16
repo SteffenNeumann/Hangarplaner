@@ -327,7 +327,12 @@ html, body, button, input, select, textarea {
 
 /* === END TIMETABLE STYLES === */
 /* Reduce gap between header and tab bar when tabs are present */
-.with-tabs .hangar-container { padding-top: 0px; }
+.with-tabs .hangar-container { padding-top: 0px !important; }
+/* Remove any spacing between tabs and planner content */
+#topTabs { margin-bottom: 0 !important; }
+#panel-planner .section-container { margin-top: 0 !important; }
+#panel-planner .planner-main { padding-top: 0 !important; margin-top: 0 !important; }
+#hangarGrid { margin-top: 0 !important; }
 .hangar-cell[style*="background"],
 .hangar-cell[class*="orange"],
 .hangar-cell[class*="status"],

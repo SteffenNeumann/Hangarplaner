@@ -661,17 +661,19 @@ const response = await fetch(postUrl, {
 
 				// KORREKTUR: Spezielle Behandlung für Aircraft ID Felder beim Verlassen des Feldes
 				if (event.target.id.startsWith("aircraft-")) {
-					// Prüfe ob Aircraft ID geleert wurde und lösche zugehörige Flugdaten
+					// Only call handler on blur; but do NOT let empty API responses clear user value.
 					if (
 						window.hangarEvents &&
 						typeof window.hangarEvents.handleAircraftIdChange === "function"
 					) {
-						window.hangarEvents.handleAircraftIdChange(
-							event.target.id,
-							event.target.value
-						);
+						try {
+							window.hangarEvents.handleAircraftIdChange(
+								event.target.id,
+								event.target.value
+							);
+						} catch (e) { /* noop */ }
 					}
-} else if (
+				}
 					(event.target.id.startsWith('arrival-time-') || event.target.id.startsWith('departure-time-')) &&
 					typeof window.helpers !== 'undefined'
 				) {

@@ -418,30 +418,39 @@ function applyFlightDataToUI(flightData) {
 				const currentValue = aircraftInput.value.trim();
 
 				// Warnung bei Überschreibung bestehender Daten
-				if (currentValue && currentValue !== flight.aircraftId) {
-					console.warn(
-						`⚠️ API überschreibt Aircraft ID in Kachel ${cellId}: "${currentValue}" → "${flight.aircraftId}"`
-					);
-
-					// Optional: Benutzerbestätigung anfordern
-					if (window.showNotification) {
-						window.showNotification(
-							`API-Daten überschreiben Aircraft ID in Kachel ${cellId}`,
-							"warning"
+				// Only override user-entered Aircraft ID if API provides a non-empty value
+				const apiAcId = (flight && typeof flight.aircraftId === 'string') ? flight.aircraftId.trim() : '';
+				const currentValue = (aircraftInput && typeof aircraftInput.value === 'string') ? aircraftInput.value.trim() : '';
+				if (apiAcId) {
+					if (currentValue && currentValue !== apiAcId) {
+						console.warn(
+							`⚠️ API überschreibt Aircraft ID in Kachel ${cellId}: "${currentValue}" → "${apiAcId}"`
+						);
+						// Optional: Benutzerbestätigung anfordern
+						if (window.showNotification) {
+							window.showNotification(
+								`API-Daten überschreiben Aircraft ID in Kachel ${cellId}`,
+								"warning"
+							);
+						}
+					}
+					aircraftInput.value = apiAcId;
+					if (typeof saveFlightTimeValueToLocalStorage === 'function') {
+						saveFlightTimeValueToLocalStorage(
+							cellId,
+							"aircraftId",
+							apiAcId
 						);
 					}
+					console.log(
+						`✅ Aircraft ID für Kachel ${cellId} von API gesetzt: ${apiAcId}`
+					);
+				} else {
+					// Do not clear user-entered Aircraft ID when API lacks a value
+					console.log(
+						`⏭️ API liefert keine Aircraft ID für Kachel ${cellId} – Eingabe des Nutzers bleibt erhalten (${currentValue})`
+					);
 				}
-
-				aircraftInput.value = flight.aircraftId;
-				saveFlightTimeValueToLocalStorage(
-					cellId,
-					"aircraftId",
-					flight.aircraftId
-				);
-
-				console.log(
-					`✅ Aircraft ID für Kachel ${cellId} von API gesetzt: ${flight.aircraftId}`
-				);
 			}
 
 			// Arrival Time

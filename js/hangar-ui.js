@@ -671,8 +671,15 @@ function setupEventListenersForTile(tileElement, cellId) {
 	const aircraftInput = tileElement.querySelector(`#aircraft-${cellId}`);
 	if (aircraftInput && !aircraftInput.hasAttribute("data-listener-added")) {
 		aircraftInput.addEventListener("input", function (e) {
-			// Do not transform during typing; only normalize on blur to avoid inhibiting input/paste
-			// Previously we applied safeFormatAircraftId()/formatAircraftId() on each input event.
+			try {
+				// Live-typing normalization: uppercase and add hyphen after first letter
+				let raw = this.value || '';
+				let clean = raw.replace(/-/g, '').toUpperCase();
+				let out = clean.length > 1 ? (clean.charAt(0) + '-' + clean.slice(1)) : clean;
+				if (out !== this.value) {
+					this.value = out;
+				}
+			} catch(_) {}
 		});
 		aircraftInput.addEventListener("blur", function (e) {
 			try {

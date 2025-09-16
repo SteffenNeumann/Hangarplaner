@@ -4038,8 +4038,15 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
 						.querySelectorAll('input[id^="aircraft-"]')
 						.forEach((input) => {
 							input.addEventListener("input", function (e) {
-								// Do not transform while typing; normalize on blur only to avoid inhibiting input/paste
-								// Previously this applied safeFormatAircraftId() on each input event.
+								try {
+									// Live-typing normalization: uppercase and add hyphen after first letter
+									let raw = this.value || '';
+									let clean = raw.replace(/-/g, '').toUpperCase();
+									let out = clean.length > 1 ? (clean.charAt(0) + '-' + clean.slice(1)) : clean;
+									if (out !== this.value) {
+										this.value = out;
+									}
+								} catch(_) {}
 							});
 
 							input.addEventListener("blur", function (e) {

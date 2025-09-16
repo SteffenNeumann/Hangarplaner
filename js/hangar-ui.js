@@ -671,53 +671,31 @@ function setupEventListenersForTile(tileElement, cellId) {
 	const aircraftInput = tileElement.querySelector(`#aircraft-${cellId}`);
 	if (aircraftInput && !aircraftInput.hasAttribute("data-listener-added")) {
 		aircraftInput.addEventListener("input", function (e) {
-			// NUR Formatierung während der Eingabe, KEIN API-Aufruf
-			try {
-				if (typeof window.safeFormatAircraftId === 'function') {
-					const formatted = window.safeFormatAircraftId(e.target);
-					if (formatted && formatted !== e.target.value) {
-						e.target.value = formatted;
-					}
-				} else if (typeof formatAircraftId === "function") {
-					let formatted;
-					try { formatted = formatAircraftId(e.target); } catch(_e1) {}
-					if (typeof formatted !== 'string') { try { formatted = formatAircraftId(e.target && typeof e.target.value === 'string' ? e.target.value : ''); } catch(_e2) {} }
-					if (formatted && formatted !== e.target.value) {
-						e.target.value = formatted;
-					}
-				}
-			} catch(_e) {}
-			// KORREKTUR: Aircraft ID Change Handler ENTFERNT vom input Event
-			// API-Aufrufe sollen nur beim Verlassen des Feldes (blur) stattfinden
+			// Do not transform during typing; only normalize on blur to avoid inhibiting input/paste
+			// Previously we applied safeFormatAircraftId()/formatAircraftId() on each input event.
 		});
 		aircraftInput.addEventListener("blur", function (e) {
 			try {
 				if (!e || !e.target || typeof e.target.value !== 'string') return;
 				if (typeof window.safeFormatAircraftId === 'function') {
-					const formatted = window.safeFormatAircraftId(e.target);
-					if (formatted && formatted !== e.target.value) {
-						e.target.value = formatted;
-					}
+					const f = window.safeFormatAircraftId(e.target);
+					if (typeof f === 'string') e.target.value = f;
 				} else if (typeof formatAircraftId === "function") {
-					let formatted;
-					try { formatted = formatAircraftId(e.target); } catch(_e1) {}
-					if (typeof formatted !== 'string') { try { formatted = formatAircraftId(e.target && typeof e.target.value === 'string' ? e.target.value : ''); } catch(_e2) {} }
-					if (formatted && formatted !== e.target.value) {
-						e.target.value = formatted;
-					}
+					const f = formatAircraftId(e.target);
+					if (typeof f === 'string') e.target.value = f;
 				}
 			} catch(_e) {}
 			// KORREKTUR: Aircraft ID Change Handler NUR bei blur - API-Aufruf erst nach vollständiger Eingabe
-			if (window.hangarEvents && window.hangarEvents.handleAircraftIdChange) {
-				try { window.hangarEvents.handleAircraftIdChange(e.target.id, e.target.value); } catch(_) {}
+			if (
+				window.hangarEvents &&
+				typeof window.hangarEvents.handleAircraftIdChange === "function"
+			) {
+				window.hangarEvents.handleAircraftIdChange(
+					e.target.id,
+					e.target.value
+				);
 			}
 		});
-		aircraftInput.setAttribute("data-listener-added", "true");
-	}
-
-	// Towing Status Event-Listener
-	const towSelector = tileElement.querySelector(`#tow-status-${cellId}`);
-	if (towSelector && !towSelector.hasAttribute("data-listener-added")) {
 		towSelector.addEventListener("change", function () {
 			if (typeof updateTowStatusStyles === "function") {
 				updateTowStatusStyles(this);

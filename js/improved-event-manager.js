@@ -649,6 +649,8 @@ const response = await fetch(postUrl, {
 					return;
 				}
 				const fid = event.target.id || '';
+				// Mark field as locally edited and mark a write fence immediately to avoid server echo overriding while typing
+				try { if (window.serverSync && typeof window.serverSync._markPendingWrite === 'function') { window.serverSync._markPendingWrite(fid); } } catch(_e){}
 				if (this.isFreeTextFieldId(fid)) {
 					this._lastTypingAt = Date.now();
 					// Local save after 500ms, server flush after typing idle window
@@ -729,6 +731,8 @@ const response = await fetch(postUrl, {
 				// um Doppelaufrufe zu verhindern - wird nur bei blur behandelt
 
 				const fid = event.target.id || '';
+				// Mark fence on change for non-free-text fields too
+				try { if (window.serverSync && typeof window.serverSync._markPendingWrite === 'function') { window.serverSync._markPendingWrite(fid); } } catch(_e){}
 				const isFree = this.isFreeTextFieldId(fid);
 				this.debouncedFieldUpdate(fid, event.target.value, 150, { flushDelayMs: isFree ? this.TYPING_DEBOUNCE_MS : 150, source: 'change' });
 			},
@@ -878,6 +882,8 @@ const response = await fetch(postUrl, {
 					return;
 				}
 				const fid = event.target.id || '';
+				// Mark fence early on input to prevent echo overwrite
+				try { if (window.serverSync && typeof window.serverSync._markPendingWrite === 'function') { window.serverSync._markPendingWrite(fid); } } catch(_e){}
 				if (this.isFreeTextFieldId(fid)) {
 					this._lastTypingAt = Date.now();
 					this.debouncedFieldUpdate(fid, event.target.value, 500, { flushDelayMs: this.TYPING_DEBOUNCE_MS, source: 'input' });
@@ -969,6 +975,7 @@ const response = await fetch(postUrl, {
 				}
 
 				const fid = event.target.id || '';
+				try { if (window.serverSync && typeof window.serverSync._markPendingWrite === 'function') { window.serverSync._markPendingWrite(fid); } } catch(_e){}
 				const isFree = this.isFreeTextFieldId(fid);
 				this.debouncedFieldUpdate(fid, event.target.value, 150, { flushDelayMs: isFree ? this.TYPING_DEBOUNCE_MS : 150, source: 'change' });
 			},

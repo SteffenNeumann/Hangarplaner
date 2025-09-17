@@ -27,7 +27,7 @@ class ServerSync {
 
 		// Client-side write fencing to prevent self-echo/oscillation in multi-master
 		this._pendingWrites = {}; // { fieldId: timestampMs }
-		this._writeFenceMs = 3000; // fence TTL window (increased to protect typing)
+		this._writeFenceMs = 7000; // fence TTL window (increased to reduce oscillation in multi-master)
 			// Presence-aware reads in Master mode: only read/apply when another Master is online
 			// Default OFF for simpler, more reliable convergence in multi-master
 			this.requireOtherMastersForRead = false;
@@ -737,9 +737,9 @@ async slaveCheckForUpdates() {
 								}
 							}
 					} catch(_e) {}
-					// Update baseline optimistically if we posted deltas and did not read back yet
+					// Update baseline optimistically if we posted deltas
 					try {
-						if (requestBody && requestBody.fieldUpdates && (!this.isSlaveActive)) {
+						if (requestBody && requestBody.fieldUpdates) {
 							// Apply deltas to local baseline so subsequent diffs are correct
 							Object.entries(requestBody.fieldUpdates).forEach(([fid, val])=>{
 								const m = fid.match(/^(aircraft|arrival-time|departure-time|hangar-position|position|status|tow-status|notes)-(\d+)$/);
@@ -1476,6 +1476,29 @@ async slaveCheckForUpdates() {
 			tiles.length,
 			"Kacheln"
 		);
+
+		// Helpers to decide whether a server value should be applied to a specific field now
+		const recentlyEdited = (fid, windowMs = (this._writeFenceMs || 7000)) => {
+			try {
+				if (!fid) return false;
+				const getLE = (typeof window.getLastLocalEdit === 'function') ? window.getLastLocalEdit : null;
+				if (!getLE) return false;
+				const e = getLE(fid);
+				return !!(e && e.editedAt && (Date.now() - e.editedAt) < windowMs);
+			} catch(_e){ return false; }
+		};
+		const canApplyField = (fid, el) => {
+			try {
+				if (!fid) return true;
+				// Skip when user is actively editing this element
+				if (el && document.activeElement === el) return false;
+				// Skip when a write fence is active for this field
+				if (typeof this._isWriteFenceActive === 'function' && this._isWriteFenceActive(fid)) return false;
+				// Skip when the user very recently edited this specific field
+				if (recentlyEdited(fid)) return false;
+				return true;
+			} catch(_e){ return true; }
+		};
 
 		let successfullyApplied = 0;
 		let failedToApply = 0;

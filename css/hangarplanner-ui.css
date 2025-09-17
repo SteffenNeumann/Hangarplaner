@@ -4044,7 +4044,7 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 }
 
 /* Header with subtle toggle handle */
-.changelog-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px 0; position: relative; overflow: visible; }
+.changelog-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px 0; position: static; overflow: visible; }
 .changelog-title { font-weight: 600; color: #334155; }
 .dark-mode .changelog-title { color: var(--text-primary); }
 
@@ -4074,6 +4074,9 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   pointer-events: none;
   transition: opacity 120ms ease;
 }
+
+/* Ensure infobox establishes a positioning context for centering */
+#infobox { position: absolute; }
 
 /* Always visible in collapsed state so user can expand */
 #panel-planner.changelog-collapsed .changelog-toggle { opacity: 1; pointer-events: auto; right: -18px; }

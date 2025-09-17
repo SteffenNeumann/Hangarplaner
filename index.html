@@ -1802,10 +1802,10 @@ document.addEventListener('DOMContentLoaded', function(){
 					</div>
 
 					<!-- Panels -->
-					<div id="panel-planner" class="tab-panel" role="tabpanel" aria-labelledby="tab-planner">
+<div id="panel-planner" class="tab-panel" role="tabpanel" aria-labelledby="tab-planner">
 
-						<!-- Right-side Info Box Container -->
-						<div id="infobox" class="planner-infobox">
+						<!-- Right-side Info Box Container (overlay) -->
+						<div id="infobox" class="planner-infobox" aria-label="Info Box">
 							<!-- Change Log Column -->
 							<aside id="plannerChangeLogColumn" class="planner-changelog" aria-label="Change Log">
 								<div class="changelog-header">
@@ -4530,11 +4530,18 @@ window.hangarInitQueue.push(function(){
     var panel = document.getElementById('panel-planner');
     var toggle = document.getElementById('changelogToggle');
     var col = document.getElementById('plannerChangeLogColumn');
-    if (!panel || !col || !toggle) return;
+    var infobox = document.getElementById('infobox');
+    if (!panel || !col || !toggle || !infobox) return;
     var KEY = 'planner.changelog.collapsed';
     function apply(state){
       panel.classList.toggle('changelog-collapsed', !!state);
       var expanded = !state;
+      // Update CSS variable width directly for animation
+      if (expanded) {
+        panel.style.setProperty('--infobox-width', (parseInt(localStorage.getItem('planner.infobox.width')||'340',10)||340)+'px');
+      } else {
+        panel.style.setProperty('--infobox-width','18px');
+      }
       try { toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false'); } catch(_e){}
       // When collapsed, hide header text and list but keep handle
       try {
@@ -4608,16 +4615,22 @@ window.hangarInitQueue.push(function(){
       var saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         startWidth = Math.max(minWidth, Math.min(maxWidth, parseInt(saved, 10)));
-        panel.style.gridTemplateColumns = 'minmax(0,1fr) ' + startWidth + 'px';
+        panel.style.setProperty('--infobox-width', startWidth + 'px');
+      } else {
+        panel.style.setProperty('--infobox-width', startWidth + 'px');
       }
     } catch(e) {}
     
+    function onLeftEdge(ev){
+      var rect = infobox.getBoundingClientRect();
+      var x = (ev.touches? ev.touches[0].clientX : ev.clientX);
+      return Math.abs(x - rect.left) <= 6;
+    }
+    
     function startResize(e) {
-      if (e.target !== infobox && !infobox.contains(e.target)) return;
-      if (e.offsetX > 6) return; // Only trigger on left edge
-      
+      if (!onLeftEdge(e)) return;
       isResizing = true;
-      startX = e.clientX;
+      startX = (e.touches? e.touches[0].clientX : e.clientX);
       startWidth = infobox.offsetWidth;
       document.body.style.cursor = 'col-resize';
       document.body.style.userSelect = 'none';
@@ -4626,26 +4639,17 @@ window.hangarInitQueue.push(function(){
     
     function doResize(e) {
       if (!isResizing) return;
-      
-      var diff = startX - e.clientX; // negative because we're dragging from right to left
+      var x = (e.touches? e.touches[0].clientX : e.clientX);
+      var diff = startX - x;
       var newWidth = Math.max(minWidth, Math.min(maxWidth, startWidth + diff));
-      
-      panel.style.gridTemplateColumns = 'minmax(0,1fr) ' + newWidth + 'px';
-      
-      // Handle collapsed state
-      if (panel.classList.contains('changelog-collapsed')) {
-        panel.style.gridTemplateColumns = '1fr 18px';
-      }
+      panel.style.setProperty('--infobox-width', newWidth + 'px');
     }
     
     function stopResize() {
       if (!isResizing) return;
-      
       isResizing = false;
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
-      
-      // Save current width
       try {
         var currentWidth = infobox.offsetWidth;
         localStorage.setItem(STORAGE_KEY, currentWidth.toString());
@@ -4658,21 +4662,8 @@ window.hangarInitQueue.push(function(){
     document.addEventListener('mouseup', stopResize);
     
     // Touch events for mobile
-    infobox.addEventListener('touchstart', function(e) {
-      var touch = e.touches[0];
-      var rect = infobox.getBoundingClientRect();
-      if (touch.clientX - rect.left > 6) return;
-      
-      startResize({ clientX: touch.clientX, target: infobox, preventDefault: function(){}, offsetX: 0 });
-    });
-    
-    document.addEventListener('touchmove', function(e) {
-      if (!isResizing) return;
-      e.preventDefault();
-      var touch = e.touches[0];
-      doResize({ clientX: touch.clientX });
-    });
-    
+    infobox.addEventListener('touchstart', startResize, { passive: false });
+    document.addEventListener('touchmove', function(e){ if(isResizing){ e.preventDefault(); doResize(e); } }, { passive: false });
     document.addEventListener('touchend', stopResize);
     
   } catch(_e) {}

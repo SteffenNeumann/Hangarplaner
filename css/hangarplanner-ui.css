@@ -1927,6 +1927,13 @@ input:checked + .toggle-slider:before {
 }
 
 .submenu-panel.hidden { 
+  /* Keep panel in DOM for transition */
+  display: block !important;
+  transform: translateX(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+/* Global hidden should not hide submenu instantly */
 	transform: translateX(-100%);
 	opacity: 0;
 	pointer-events: none;
@@ -1946,7 +1953,11 @@ input:checked + .toggle-slider:before {
 	opacity: 1;
 	transition: opacity 0.2s ease;
 }
-.submenu-scrim.hidden {
+.submenu-scrim.hidden { 
+  display: block !important;
+  opacity: 0;
+  pointer-events: none;
+}
 	opacity: 0;
 	pointer-events: none;
 	/* Keep in DOM for smooth fade instead of display: none */
@@ -3925,40 +3936,16 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 .dark-mode #submenu-project #projectChangeLog #changeLogList { border-color: var(--border-color); }
 .dark-mode #submenu-project #projectChangeLog #changeLogList .border-b { border-color: var(--border-color); }
 
-/* Planner right-side Change Log column — embedded as grid column */
+/* Planner panel: reserve space for right-side infobox using a CSS variable */
 #panel-planner {
-  display: grid;
-  grid-template-columns: minmax(0,1fr) 340px;
-  gap: 16px;
-  align-items: stretch; /* Force full height */
+  position: relative;
+  --infobox-width: 340px;
+  padding-right: var(--infobox-width);
   min-height: calc(100vh - var(--planner-sticky-offset, 0px));
+  transition: padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-/* Make first-row items stretch to fill height */
-#panel-planner .planner-main,
-#panel-planner #infobox { align-self: stretch; }
-/* Explicit placement: main (tiles) left, infobox right */
-#panel-planner .planner-main { grid-column: 1; grid-row: 1; min-width: 0; }
-#infobox { grid-column: 2; grid-row: 1; }
-/* Ensure divider and secondary tiles follow below the first row */
-#panel-planner > .section-divider { grid-column: 1; grid-row: 2; }
-#outerSectionContainer { grid-column: 1; grid-row: 3; }
-/* Collapsed state keeps a thin handle visible with animation */
-#panel-planner {
-  transition: grid-template-columns 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-#panel-planner.changelog-collapsed { 
-  grid-template-columns: 1fr 18px;
-}
-#panel-planner.changelog-collapsed .planner-changelog {
-  /* Ensure collapsed state doesn't interfere with sticky positioning */
-  overflow-y: visible;
-  max-height: none;
-}
-
-/* Smooth resize animation for infobox */
-.planner-infobox {
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
+/* Collapsed state sets narrow width variable */
+#panel-planner.changelog-collapsed { --infobox-width: 18px; }
 
 /* Animation for changelog content visibility */
 .changelog-header .changelog-title,
@@ -3974,20 +3961,25 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   transform: translateX(-10px);
 }
 
-/* Right-side info box container - takes full right column with resize handle */
+/* Right-side info box container - overlay, outside of left grid */
 .planner-infobox {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  width: 100%;
-  height: 100%; /* Force full height */
-  min-width: 280px;
+  width: var(--infobox-width);
+  min-width: 18px;
   max-width: 800px;
+  height: calc(100dvh - var(--planner-sticky-offset, 0px));
   padding: var(--tile-grid-padding, 16px) 12px var(--tile-grid-padding, 16px) 12px;
   border-left: 1px solid var(--menu-border);
   background: #fff;
-  position: relative;
-  overflow: visible;
+  position: sticky;
+  right: 0;
+  top: var(--planner-sticky-offset, 0px);
+  bottom: auto;
+  overflow-y: auto;
+  z-index: 12;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Resize handle on hover */
@@ -4055,28 +4047,22 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 
 /* Responsive stacking: infobox below tiles on narrow screens */
 @media (max-width: 1200px){
-  #panel-planner { grid-template-columns: 1fr; }
-  /* Place tiles first, infobox second */
-  #panel-planner .planner-main { grid-column: 1; grid-row: 1; }
+  #panel-planner { padding-right: 0; }
   .planner-infobox {
-    grid-column: 1 / -1;
-    grid-row: 2;
+    position: static;
+    width: auto;
+    height: auto;
     border-left: 0;
     border-top: 1px solid var(--menu-border);
+    overflow: visible;
   }
   .planner-changelog {
     position: static;
     max-height: none;
     overflow-y: visible;
   }
-  /* Divider sits after infobox in mobile */
-  #panel-planner > .section-divider { grid-column: 1 / -1; grid-row: 3; }
-  /* Outer section under divider on mobile */
-  #outerSectionContainer { grid-column: 1 / -1; grid-row: 4; }
   /* Dark mode border color for mobile */
-  .dark-mode .planner-infobox {
-    border-top-color: var(--border-color);
-  }
+  .dark-mode .planner-infobox { border-top-color: var(--border-color); }
 }
 
 /* Header with subtle toggle handle */
@@ -4087,9 +4073,9 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 /* Toggle button: left edge chevron - positioned relative to infobox */
 .changelog-toggle {
   position: absolute;
-  left: -32px; /* Moved further left to be visible outside infobox */
-  top: 50%;
-  transform: translate(0, -50%); /* Simplified transform */
+  left: -22px; /* Overhang slightly outside the border */
+  top: 24px; /* place near top header */
+  transform: none;
   width: 18px;
   height: 28px;
   display: inline-flex;
@@ -4101,7 +4087,8 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   background: #fff;
   color: #64748b;
   cursor: pointer;
-  z-index: 20; /* Higher z-index to ensure visibility */
+  z-index: 50; /* Above everything on right rail */
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
 }
 .dark-mode .changelog-toggle {
   background: var(--bg-primary);

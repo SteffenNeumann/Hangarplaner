@@ -1804,17 +1804,23 @@ document.addEventListener('DOMContentLoaded', function(){
 					<!-- Panels -->
 					<div id="panel-planner" class="tab-panel" role="tabpanel" aria-labelledby="tab-planner">
 
-						<!-- Right-side Change Log Column -->
-<aside id="plannerChangeLogColumn" class="planner-changelog" aria-label="Change Log">
-							<div class="changelog-header">
-                                <button id="changelogToggle" class="changelog-toggle" aria-controls="plannerChangeLogColumn" aria-expanded="true" title="Collapse/Expand Change Log" type="button">
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                                </button>
-								<span class="changelog-title">Change Log</span>
-								<button id="changeLogClearBtn" class="sidebar-btn sidebar-btn-secondary" title="Clear the change log">Clear</button>
-							</div>
-							<div id="changeLogList" class="changelog-list" aria-live="polite"></div>
-						</aside>
+						<!-- Right-side Info Box Container -->
+						<div id="infobox" class="planner-infobox">
+							<!-- Change Log Column -->
+							<aside id="plannerChangeLogColumn" class="planner-changelog" aria-label="Change Log">
+								<div class="changelog-header">
+									<button id="changelogToggle" class="changelog-toggle" aria-controls="plannerChangeLogColumn" aria-expanded="true" title="Collapse/Expand Change Log" type="button">
+										<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+									</button>
+									<span class="changelog-title">Change Log</span>
+									<button id="changeLogClearBtn" class="sidebar-btn sidebar-btn-secondary" title="Clear the change log">Clear</button>
+								</div>
+								<div id="changeLogList" class="changelog-list" aria-live="polite"></div>
+							</aside>
+							
+							<!-- Space for future containers below Change Log -->
+							<!-- Additional info containers can be added here later -->
+						</div>
 
 <!-- Abschnitt 1 Container -->
 					<div class="section-container planner-main">
@@ -4600,6 +4606,17 @@ window.hangarInitQueue.push(function(){
                 try {
                   var panel = document.getElementById('panel-planner');
                   if (!panel) return;
+                  
+                  // Ensure infobox container exists
+                  var infobox = document.getElementById('infobox');
+                  if (!infobox) {
+                    infobox = document.createElement('div');
+                    infobox.id = 'infobox';
+                    infobox.className = 'planner-infobox';
+                    panel.insertBefore(infobox, panel.firstChild);
+                  }
+                  
+                  // Ensure changelog column exists within infobox
                   var col = document.getElementById('plannerChangeLogColumn');
                   if (!col){
                     col = document.createElement('aside');
@@ -4607,7 +4624,7 @@ window.hangarInitQueue.push(function(){
                     col.className = 'planner-changelog';
                     col.setAttribute('aria-label','Change Log');
 col.innerHTML = '<div class="changelog-header"><button id="changelogToggle" class="changelog-toggle" aria-controls="plannerChangeLogColumn" aria-expanded="true" title="Collapse/Expand Change Log" type="button"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"9 18 15 12 9 6\"/></svg></button><span class=\"changelog-title\">Change Log</span><button id=\"changeLogClearBtn\" class=\"sidebar-btn sidebar-btn-secondary\" title=\"Clear the change log\">Clear</button></div><div id=\"changeLogList\" class=\"changelog-list\" aria-live=\"polite\"></div>';
-                    panel.insertBefore(col, panel.firstChild);
+                    infobox.appendChild(col);
                   } else {
                     if (!document.getElementById('changeLogList')){
                       var list = document.createElement('div');

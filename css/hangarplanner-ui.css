@@ -3918,10 +3918,10 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 }
 /* Make first-row items align at start instead of stretching */
 #panel-planner .planner-main,
-#panel-planner #plannerChangeLogColumn { align-self: start; }
-/* Explicit placement: main (tiles) left, changelog right */
+#panel-planner #infobox { align-self: start; }
+/* Explicit placement: main (tiles) left, infobox right */
 #panel-planner .planner-main { grid-column: 1; grid-row: 1; min-width: 0; }
-#plannerChangeLogColumn { grid-column: 2; grid-row: 1; }
+#infobox { grid-column: 2; grid-row: 1; }
 /* Ensure divider and secondary tiles follow below the first row */
 #panel-planner > .section-divider { grid-column: 1; grid-row: 2; }
 #outerSectionContainer { grid-column: 1; grid-row: 3; }
@@ -3933,19 +3933,33 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   max-height: none;
 }
 
-/* Right column styles - sticky scrollable rail */
+/* Right-side info box container - takes full right column */
+.planner-infobox {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  min-height: 0;
+  padding: var(--tile-grid-padding, 16px) 12px var(--tile-grid-padding, 16px) 12px;
+  border-left: 1px solid var(--menu-border);
+  background: #fff;
+}
+.dark-mode .planner-infobox {
+  background: var(--bg-primary);
+  border-left-color: var(--border-color);
+}
+
+/* Change Log column within infobox - now sticky scrollable */
 .planner-changelog {
   position: sticky;
   top: var(--planner-sticky-offset, 0px);
   max-height: calc(100dvh - var(--planner-sticky-offset, 0px));
   overflow-y: auto;
   width: 100%;
-  /* Match tiles top/bottom inner spacing */
-  padding: var(--tile-grid-padding, 16px) 12px var(--tile-grid-padding, 16px) 12px;
-  background: #fff;
-  border-left: 1px solid var(--menu-border);
-  border-top: 0px solid var(--menu-border);
-  border-bottom: 1px solid var(--menu-border);
+  /* Reduced padding since infobox handles outer spacing */
+  padding: 0;
+  background: transparent;
+  border: none;
   box-shadow: none;
   display: flex;
   flex-direction: column;
@@ -3957,24 +3971,30 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 /* Remove padding-right reservation from old overlay approach */
 /* .hangar-container { padding-right: 360px; }  — no longer needed */
 
-/* Responsive stacking: Change Log below tiles on narrow screens */
+/* Responsive stacking: infobox below tiles on narrow screens */
 @media (max-width: 1200px){
   #panel-planner { grid-template-columns: 1fr; }
-  /* Place tiles first, changelog second */
+  /* Place tiles first, infobox second */
   #panel-planner .planner-main { grid-column: 1; grid-row: 1; }
-  .planner-changelog {
-    position: static;
-    max-height: none;
-    overflow-y: visible;
+  .planner-infobox {
     grid-column: 1 / -1;
     grid-row: 2;
     border-left: 0;
     border-top: 1px solid var(--menu-border);
   }
-  /* Divider sits after tiles in mobile */
+  .planner-changelog {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+  }
+  /* Divider sits after infobox in mobile */
   #panel-planner > .section-divider { grid-column: 1 / -1; grid-row: 3; }
   /* Outer section under divider on mobile */
   #outerSectionContainer { grid-column: 1 / -1; grid-row: 4; }
+  /* Dark mode border color for mobile */
+  .dark-mode .planner-infobox {
+    border-top-color: var(--border-color);
+  }
 }
 
 /* Header with subtle toggle handle */

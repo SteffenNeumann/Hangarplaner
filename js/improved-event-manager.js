@@ -18,7 +18,7 @@ class HangarEventManager {
 		this._flushInFlight = false;
 
 		// Typing UX controls
-		this.TYPING_DEBOUNCE_MS = 2000; // how long to wait after last keystroke before sending text to server
+		this.TYPING_DEBOUNCE_MS = 5000; // how long to wait after last keystroke before sending text to server (increased to reduce mid-typing writes)
 		this.BLUR_SAVE_DELAY_MS = 150; // local debounce on blur before sync
 		this._lastTypingAt = 0;
 

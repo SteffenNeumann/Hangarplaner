@@ -27,7 +27,7 @@ class ServerSync {
 
 		// Client-side write fencing to prevent self-echo/oscillation in multi-master
 		this._pendingWrites = {}; // { fieldId: timestampMs }
-		this._writeFenceMs = 7000; // fence TTL window (increased to reduce oscillation in multi-master)
+		this._writeFenceMs = 12000; // fence TTL window (further increased to reduce oscillation in multi-master)
 			// Presence-aware reads in Master mode: only read/apply when another Master is online
 			// Default OFF for simpler, more reliable convergence in multi-master
 			this.requireOtherMastersForRead = false;
@@ -622,6 +622,17 @@ async slaveCheckForUpdates() {
 			return true; // Kein Fehler, nur keine Berechtigung
 		}
 
+		// If user is actively typing, skip this periodic sync to avoid mid-typing oscillation
+		try {
+			if (window.hangarEventManager && typeof window.hangarEventManager.isUserTypingRecently === 'function'){
+				const win = Math.min(15000, (this._writeFenceMs || 7000));
+				if (window.hangarEventManager.isUserTypingRecently(win)) {
+					// Defer until typing settles
+					return true;
+				}
+			}
+		} catch(_e){}
+
 		// Verhindere gleichzeitige Sync-Operationen
 		if (window.isSavingToServer) {
 			// console.log("⏸️ Server-Sync übersprungen (Speicherung läuft bereits)");
@@ -724,18 +735,19 @@ async slaveCheckForUpdates() {
 					}
 					// Read-after-write: delay read-back if user is actively typing to avoid caret jump
 					try {
-						const typingActive = !!(window.hangarEventManager && typeof window.hangarEventManager.isUserTypingRecently === 'function' && window.hangarEventManager.isUserTypingRecently(2000));
-							let allowReadBack = true;
-							try { if (this._isMasterMode() && this.requireOtherMastersForRead) { allowReadBack = await this._hasOtherMastersOnline(); } } catch(_e){ allowReadBack = false; }
-							if (allowReadBack && this.canReadFromServer && this.canReadFromServer()) {
-								if (typingActive) {
-									setTimeout(async () => {
-										try { if (this.canReadFromServer && this.canReadFromServer()) { await this.slaveCheckForUpdates(); } } catch(_e){}
-									}, 2000);
-								} else {
-									await this.slaveCheckForUpdates();
-								}
+						const typingWin = Math.min(15000, (this._writeFenceMs || 7000));
+						const typingActive = !!(window.hangarEventManager && typeof window.hangarEventManager.isUserTypingRecently === 'function' && window.hangarEventManager.isUserTypingRecently(typingWin));
+						let allowReadBack = true;
+						try { if (this._isMasterMode() && this.requireOtherMastersForRead) { allowReadBack = await this._hasOtherMastersOnline(); } } catch(_e){ allowReadBack = false; }
+						if (allowReadBack && this.canReadFromServer && this.canReadFromServer()) {
+							if (typingActive) {
+								setTimeout(async () => {
+									try { if (this.canReadFromServer && this.canReadFromServer()) { await this.slaveCheckForUpdates(); } } catch(_e){}
+								}, Math.max(1500, Math.floor(typingWin/2)));
+							} else {
+								await this.slaveCheckForUpdates();
 							}
+						}
 					} catch(_e) {}
 					// Update baseline optimistically if we posted deltas
 					try {
@@ -860,14 +872,15 @@ async slaveCheckForUpdates() {
 
 			// Optional immediate read-back to converge, but avoid while typing
 			try {
-				const typingActive = !!(window.hangarEventManager && typeof window.hangarEventManager.isUserTypingRecently === 'function' && window.hangarEventManager.isUserTypingRecently(2000));
+				const typingWin = Math.min(15000, (this._writeFenceMs || 7000));
+				const typingActive = !!(window.hangarEventManager && typeof window.hangarEventManager.isUserTypingRecently === 'function' && window.hangarEventManager.isUserTypingRecently(typingWin));
 				let allowReadBack = true;
 				try { if (this._isMasterMode() && this.requireOtherMastersForRead) { allowReadBack = await this._hasOtherMastersOnline(); } } catch(_e){ allowReadBack = false; }
 				if (allowReadBack && this.canReadFromServer && this.canReadFromServer()) {
 					if (typingActive) {
 						setTimeout(async () => {
 							try { if (this.canReadFromServer && this.canReadFromServer()) { const data = await this.loadFromServer(); if (data && !data.error) await this.applyServerData(data); } } catch(_e){}
-						}, 2000);
+						}, Math.max(1500, Math.floor(typingWin/2)));
 					} else {
 						const data = await this.loadFromServer();
 						if (data && !data.error) await this.applyServerData(data);

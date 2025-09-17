@@ -3959,7 +3959,7 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   border-left: 1px solid var(--menu-border);
   background: #fff;
   z-index: 12;
-  overflow: hidden; /* inner area handles scroll */
+  overflow: visible; /* allow toggle button to overhang the border */
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -4051,8 +4051,8 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 /* Toggle button: left edge chevron - positioned relative to infobox */
 .changelog-toggle {
   position: absolute;
-  left: -22px; /* Overhang slightly outside the border */
-  top: 24px; /* place near top header */
+  left: -16px; /* Overhang slightly outside the border */
+  top: 6px; /* align within header */
   transform: none;
   width: 18px;
   height: 28px;
@@ -4065,7 +4065,7 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   background: #fff;
   color: #64748b;
   cursor: pointer;
-  z-index: 50; /* Above everything on right rail */
+  z-index: 100; /* ensure visibility above tiles and infobox */
   box-shadow: 0 1px 2px rgba(0,0,0,0.08);
 }
 .dark-mode .changelog-toggle {

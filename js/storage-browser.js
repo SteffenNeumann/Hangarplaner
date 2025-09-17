@@ -1364,8 +1364,8 @@ async slaveCheckForUpdates() {
 					}
 				}
 			} catch(_e){}
-			// Last-write-wins policy: always apply server data; no conflict prompts
-			let toApply = serverData;
+					// Last-write-wins baseline, but protect locally edited fields in multi-master
+					let toApply = serverData;
 			// NEUE LOGIK: Verwende zentralen Datenkoordinator wenn keine aktiven Write-Fences bestehen,
 			// andernfalls wende nur nicht-gefenzte Felder direkt an, um Oscillation zu vermeiden
 			const hasFences = this._hasActiveFences();
@@ -1436,12 +1436,12 @@ async slaveCheckForUpdates() {
 				console.log("✅ Server-Daten über direkten Fallback angewendet");
 				try { this._updateBaselineFromServerData(serverData); } catch(_e){}
 				try { this.lastLoadedAt = Date.now(); document.dispatchEvent(new CustomEvent('serverDataLoaded', { detail: { loadedAt: this.lastLoadedAt } })); } catch(e){}
-				return true;
-			} else {
-				console.warn("⚠️ Keine Server-Daten konnten angewendet werden");
-				console.warn("⚠️ Keine Server-Daten konnten angewendet werden");
-				return false;
-			}
+					return true;
+				} else {
+					console.warn("⚠️ Keine Server-Daten konnten angewendet werden");
+					console.warn("⚠️ Keine Server-Daten konnten angewendet werden");
+					return false;
+				}
 		} catch (error) {
 			console.error("❌ Fehler beim Anwenden der Server-Daten:", error);
 			return false;

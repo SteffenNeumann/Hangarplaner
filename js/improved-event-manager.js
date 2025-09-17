@@ -219,50 +219,20 @@ class HangarEventManager {
 					if (this._flushInFlight) { this._pendingFlushTimer = null; this._pendingFlushDueAt = 0; return; }
 					this._flushInFlight = true;
 					try {
-						const updates = { ...(this._pendingFieldUpdates||{}) };
+					const updates = { ...(this._pendingFieldUpdates||{}) };
 						this._pendingFieldUpdates = {};
 						this._pendingFlushTimer = null;
 						this._pendingFlushDueAt = 0;
 						if (!postUrl){ this._flushInFlight = false; return; }
-						// Build body
-						const body = { metadata: { timestamp: Date.now(), lastWriter }, settings: {}, fieldUpdates: updates };
-						// Post
-// Ensure we always have a session id, even if serverSync.getSessionId is unavailable
-let sidHeader = '';
-try {
-  if (window.serverSync && typeof window.serverSync.getSessionId === 'function') {
-    sidHeader = window.serverSync.getSessionId();
-  } else {
-    sidHeader = localStorage.getItem('serverSync.sessionId') || '';
-    if (!sidHeader) {
-      sidHeader = Math.random().toString(36).slice(2) + Date.now().toString(36);
-      try { localStorage.setItem('serverSync.sessionId', sidHeader); } catch(_e){}
-    }
-  }
-} catch(_e){}
-
-const response = await fetch(postUrl, {
-							method: 'POST',
-							headers: {
-								'Content-Type': 'application/json',
-								'X-Sync-Role': 'master',
-								'X-Sync-Session': sidHeader,
-								'X-Display-Name': lastWriter,
-							},
-							body: JSON.stringify(body),
-						});
-						if (response.ok) {
-							// Optional read-back to converge if Read is ON
-							const canRead = !!(window.serverSync && typeof window.serverSync.canReadFromServer === 'function' && window.serverSync.canReadFromServer());
-							if (canRead && typeof window.serverSync.loadFromServer === 'function' && typeof window.serverSync.applyServerData === 'function') {
-								try {
-									const data = await window.serverSync.loadFromServer();
-									if (data && !data.error) await window.serverSync.applyServerData(data);
-								} catch(_e){}
+						// Route aggregated field updates through serverSync to leverage preconditions and conflict handling
+						try {
+							if (window.serverSync && typeof window.serverSync.syncFieldUpdates === 'function'){
+								await window.serverSync.syncFieldUpdates(updates, { aggregated: true });
+							} else {
+								// Fallback: trigger a full sync if serverSync is not ready
+								await (window.serverSync?.syncWithServer?.() || Promise.resolve(false));
 							}
-						} else {
-							console.warn('⚠️ Aggregated Server-Sync fehlgeschlagen', response.status);
-						}
+						} catch(err){ console.warn('aggregate flush failed', err); }
 					} catch(err){ console.warn('aggregate flush failed', err); }
 					finally { this._flushInFlight = false; }
 				};

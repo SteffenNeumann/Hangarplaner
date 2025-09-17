@@ -4007,7 +4007,7 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 /* Change Log column inside infobox - fills and scrolls */
 .planner-changelog {
   flex: 1 1 auto;
-  overflow-y: auto;
+  overflow: visible; /* allow header toggle to overhang */
   width: 100%;
   padding: 0;
   background: transparent;
@@ -4044,15 +4044,15 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 }
 
 /* Header with subtle toggle handle */
-.changelog-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px 0; position: relative; }
+.changelog-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px 0; position: relative; overflow: visible; }
 .changelog-title { font-weight: 600; color: #334155; }
 .dark-mode .changelog-title { color: var(--text-primary); }
 
 /* Toggle button: left edge chevron - positioned relative to infobox */
 .changelog-toggle {
   position: absolute;
-  left: -16px; /* Overhang slightly outside the border */
-  top: 6px; /* align within header */
+left: -8px; /* Overhang slightly outside the border */
+top: 10px; /* align within header */
   transform: none;
   width: 18px;
   height: 28px;

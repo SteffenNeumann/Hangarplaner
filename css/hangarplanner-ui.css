@@ -1919,21 +1919,9 @@ input:checked + .toggle-slider:before {
 	overflow-y: auto;
 	z-index: 40;
 	box-shadow: none; /* design says no shadows */
-	/* Smooth slide animation */
-	transform: translateX(0);
-	opacity: 1;
-	transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
-	            opacity 0.2s ease;
 }
 
-.submenu-panel.hidden { 
-  /* Keep panel in DOM for transition */
-  display: block !important;
-  transform: translateX(-100%);
-  opacity: 0;
-  pointer-events: none;
-}
-/* Global hidden should not hide submenu instantly */
+.submenu-panel.hidden { display: none; }
 	transform: translateX(-100%);
 	opacity: 0;
 	pointer-events: none;
@@ -1950,14 +1938,8 @@ input:checked + .toggle-slider:before {
 	right: 0;
 	background: rgba(0, 0, 0, 0.25);
 	z-index: 35; /* between left-menu (30) and submenu-panel (40) */
-	opacity: 1;
-	transition: opacity 0.2s ease;
 }
-.submenu-scrim.hidden { 
-  display: block !important;
-  opacity: 0;
-  pointer-events: none;
-}
+.submenu-scrim.hidden { display: none; }
 	opacity: 0;
 	pointer-events: none;
 	/* Keep in DOM for smooth fade instead of display: none */
@@ -3961,24 +3943,23 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   transform: translateX(-10px);
 }
 
-/* Right-side info box container - overlay, outside of left grid */
+/* Right-side info box container - overlay, absolute at panel right */
 .planner-infobox {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
   width: var(--infobox-width);
   min-width: 18px;
   max-width: 800px;
-  height: calc(100dvh - var(--planner-sticky-offset, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   padding: var(--tile-grid-padding, 16px) 12px var(--tile-grid-padding, 16px) 12px;
   border-left: 1px solid var(--menu-border);
   background: #fff;
-  position: sticky;
-  right: 0;
-  top: var(--planner-sticky-offset, 0px);
-  bottom: auto;
-  overflow-y: auto;
   z-index: 12;
+  overflow: hidden; /* inner area handles scroll */
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -4023,14 +4004,11 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   border-left-color: var(--border-color);
 }
 
-/* Change Log column within infobox - now sticky scrollable */
+/* Change Log column inside infobox - fills and scrolls */
 .planner-changelog {
-  position: sticky;
-  top: var(--planner-sticky-offset, 0px);
-  max-height: calc(100dvh - var(--planner-sticky-offset, 0px));
+  flex: 1 1 auto;
   overflow-y: auto;
   width: 100%;
-  /* Reduced padding since infobox handles outer spacing */
   padding: 0;
   background: transparent;
   border: none;

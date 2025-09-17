@@ -4398,57 +4398,188 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
               }
               function buildServerEntries(data, myName){
                 try {
+                  // Helper: normalize values per field for stable comparisons
+                  const norm = (field, val) => {
+                    try {
+                      if (val === null || typeof val === 'undefined') return '';
+                      let s = (typeof val === 'string') ? val.trim() : ('' + val).trim();
+                      if (field === 'status' || field === 'towStatus') {
+                        const l = s.toLowerCase();
+                        if (!l || l === 'neutral') return 'neutral';
+                        return l;
+                      }
+                      return s;
+                    } catch(_) { return ''; }
+                  };
+                  // Map server tile -> simple baseline object with only relevant keys
+                  const toBaseline = (t) => ({
+                    aircraftId: norm('aircraftId', t?.aircraftId),
+                    hangarPosition: norm('hangarPosition', t?.hangarPosition),
+                    position: norm('position', t?.position),
+                    notes: norm('notes', t?.notes),
+                    status: norm('status', t?.status),
+                    towStatus: norm('towStatus', t?.towStatus),
+                    arrivalTime: norm('arrivalTime', t?.arrivalTime),
+                    departureTime: norm('departureTime', t?.departureTime),
+                  });
+                  const fieldToId = (field, id) => {
+                    const key = String(field);
+                    if (key === 'aircraftId') return `aircraft-${id}`;
+                    if (key === 'hangarPosition') return `hangar-position-${id}`;
+                    if (key === 'position') return `position-${id}`;
+                    if (key === 'notes') return `notes-${id}`;
+                    if (key === 'status') return `status-${id}`;
+                    if (key === 'towStatus') return `tow-status-${id}`;
+                    if (key === 'arrivalTime') return `arrival-time-${id}`;
+                    if (key === 'departureTime') return `departure-time-${id}`;
+                    return `aircraft-${id}`;
+                  };
+                  const fieldToPrefix = (field) => {
+                    const map = { aircraftId:'aircraft', hangarPosition:'hangar-position', position:'position', notes:'notes', status:'status', towStatus:'tow-status', arrivalTime:'arrival-time', departureTime:'departure-time' };
+                    return map[field] || 'aircraft';
+                  };
+                  // Load previous server baseline from sessionStorage (per page session)
+                  const loadBaseline = () => { try { const raw = sessionStorage.getItem('changeLog.serverBaseline'); return raw ? JSON.parse(raw) : {}; } catch(_) { return {}; } };
+                  const saveBaseline = (obj) => { try { sessionStorage.setItem('changeLog.serverBaseline', JSON.stringify(obj)); } catch(_){} };
+
                   const tiles = [];
                   if (Array.isArray(data?.primaryTiles)) tiles.push(...data.primaryTiles);
                   if (Array.isArray(data?.secondaryTiles)) tiles.push(...data.secondaryTiles);
+
+                  // Build current baseline map
+                  const currentMap = {};
+                  tiles.forEach(t => { const id = parseInt(t?.tileId || 0, 10); if (id) currentMap[id] = toBaseline(t); });
+
+                  // If no stored baseline yet, initialize and return no entries (first load)
+                  const prev = loadBaseline();
+                  if (!prev || Object.keys(prev).length === 0) { saveBaseline(currentMap); return []; }
+
                   const entries = [];
                   let mySession = '';
                   try { mySession = (localStorage.getItem('presence.sessionId') || '').toString().trim(); } catch(_e){}
+
                   tiles.forEach(t => {
                     const id = parseInt(t?.tileId || 0, 10);
+                    if (!id) return;
                     const sid = (t?.updatedBySession || '').toString().trim();
                     let user = (t?.updatedBy || '').toString().trim();
                     const ts = Date.parse(t?.updatedAt || '') || 0;
-                    if (!id || !ts) return;
-                    // Prefer session-based self-filter; fallback to name-based if no session info
+                    // Skip if no timestamp (no recent change known)
+                    if (!ts) return;
+                    // Self-filter
                     if (sid && mySession && sid === mySession) return;
                     if (!sid && myName && user && user === myName) return;
                     if (!user) { user = sid ? ('User-' + sid.slice(-4)) : 'User'; }
-                    const pick = chooseFieldForTile(t);
-                    entries.push({ ts, user, fieldId: pick.fieldId, prefix: pick.prefix, cellId: id, value: pick.value });
+
+                    const nowB = currentMap[id] || {};
+                    const oldB = prev[id] || {};
+                    const keys = ['aircraftId','hangarPosition','position','notes','status','towStatus','arrivalTime','departureTime'];
+                    keys.forEach(k => {
+                      const vOld = oldB[k] || '';
+                      const vNew = nowB[k] || '';
+                      if (vOld !== vNew) {
+                        const fieldId = fieldToId(k, id);
+                        const prefix = fieldToPrefix(k);
+                        entries.push({ ts, user, fieldId, prefix, cellId: id, value: vNew });
+                      }
+                    });
                   });
-                  // Sort newest first, cap length for UI sanity
+
+                  // Update stored baseline to current snapshot
+                  saveBaseline(currentMap);
+
+                  // Sort newest first, then group by (ts, cellId, user)
                   entries.sort((a,b)=> b.ts - a.ts);
-                  return entries.slice(0, 200);
+                  const grouped = [];
+                  const keyOf = (r)=> `${r.ts}|${r.cellId}|${r.user}`;
+                  const map = new Map();
+                  entries.forEach(r => {
+                    const k = keyOf(r);
+                    if (!map.has(k)) map.set(k, []);
+                    map.get(k).push(r);
+                  });
+                  map.forEach((arr, k) => {
+                    if (arr.length === 1) {
+                      grouped.push(arr[0]);
+                    } else {
+                      // Convert to grouped entry shape
+                      const a0 = arr[0];
+                      grouped.push({
+                        ts: a0.ts,
+                        user: a0.user,
+                        cellId: a0.cellId,
+                        fields: arr.map(x => ({ prefix: x.prefix, fieldId: x.fieldId, value: x.value }))
+                      });
+                    }
+                  });
+                  // Keep order by ts desc
+                  grouped.sort((a,b)=> b.ts - a.ts);
+                  return grouped.slice(0,200);
                 } catch(_) { return []; }
               }
               function renderEntries(entryList){
                 const list = document.getElementById('changeLogList');
                 if (!list) return;
                 const suppress = serverSuppressed() && canReadFromServer();
-                const items = (entryList||[]).map((e, idx) => {
+
+                // Build HTML items; support both grouped entries (with fields[]) and single-field entries
+                const items = (entryList||[]).map((e, gi) => {
                   const when = formatTime(e.ts);
-                  const desc = `${e.user} • ${FIELD_LABELS[e.prefix]||e.prefix} @ ${getTileLabel(e.cellId)}`;
-                  const val = (e.value||'').toString();
-                  const prettyVal = val.length > 60 ? (val.slice(0,60)+'…') : val;
-                  const id = `goTo_${idx}_${e.cellId}_${e.prefix}`;
-                  return `
-                    <div class=\"flex items-start justify-between gap-2 py-1 border-b\">
-                      <div class=\"text-xs flex-grow\">
-                        <div class=\"font-semibold\" style=\"color:#475569\">${when}</div>
-                        <a id=\"${id}\" href=\"#\" class=\"text-blue-600 hover:text-blue-800 hover:underline\" style=\"color:#3b82f6; text-decoration:none;\" title=\"Go to field\">${desc}</a>
-                        ${prettyVal ? `<div class=\"\" style=\"color:#94a3b8\">→ ${prettyVal}</div>`:''}
-                      </div>
-                    </div>`;
+                  const tileLabel = getTileLabel(e.cellId);
+                  const headerDesc = `${e.user} • @ ${tileLabel}`;
+
+                  if (Array.isArray(e.fields) && e.fields.length) {
+                    // Render a grouped entry with per-field sublinks
+                    const subs = e.fields.map((f, fi) => {
+                      const prettyVal = (f.value||'').toString();
+                      const shown = prettyVal.length > 60 ? (prettyVal.slice(0,60)+'…') : prettyVal;
+                      const id = `goTo_${gi}_${fi}_${e.cellId}_${f.prefix}`;
+                      const label = FIELD_LABELS[f.prefix] || f.prefix;
+                      return `<div class=\"\" style=\"margin-left:8px; color:#64748b;\">• <a id=\"${id}\" href=\"#\" class=\"text-blue-600 hover:text-blue-800 hover:underline\" style=\"color:#3b82f6; text-decoration:none;\" title=\"Go to field\">${label}</a>${shown ? `: ${shown}` : ''}</div>`;
+                    }).join('');
+                    return `
+                      <div class=\"flex items-start justify-between gap-2 py-1 border-b\">
+                        <div class=\"text-xs flex-grow\">
+                          <div class=\"font-semibold\" style=\"color:#475569\">${when}</div>
+                          <div style=\"color:#1f2937\">${headerDesc}</div>
+                          ${subs}
+                        </div>
+                      </div>`;
+                  } else {
+                    // Single-field entry fallback
+                    const desc = `${e.user} • ${FIELD_LABELS[e.prefix]||e.prefix} @ ${tileLabel}`;
+                    const val = (e.value||'').toString();
+                    const prettyVal = val.length > 60 ? (val.slice(0,60)+'…') : val;
+                    const id = `goTo_${gi}_${e.cellId}_${e.prefix}`;
+                    return `
+                      <div class=\"flex items-start justify-between gap-2 py-1 border-b\">
+                        <div class=\"text-xs flex-grow\">
+                          <div class=\"font-semibold\" style=\"color:#475569\">${when}</div>
+                          <a id=\"${id}\" href=\"#\" class=\"text-blue-600 hover:text-blue-800 hover:underline\" style=\"color:#3b82f6; text-decoration:none;\" title=\"Go to field\">${desc}</a>
+                          ${prettyVal ? `<div class=\"\" style=\"color:#94a3b8\">→ ${prettyVal}</div>`:''}
+                        </div>
+                      </div>`;
+                  }
                 });
+
                 const notice = suppress ? `<div class=\"text-xs\" style=\"margin-bottom:6px; color:#64748b;\">Server updates hidden. <button id=\"changeLogShowServerBtn\" class=\"sidebar-btn sidebar-btn-secondary\" style=\"min-height:22px; font-size:11px; padding:0 8px; margin-left:6px;\">Show</button></div>` : '';
                 list.innerHTML = notice + items.join('');
-                // Wire links
-                (entryList||[]).forEach((e, idx) => {
-                  const id = `goTo_${idx}_${e.cellId}_${e.prefix}`;
-                  const link = document.getElementById(id);
-                  if (link) link.addEventListener('click', (ev)=>{ ev.preventDefault(); navigateTo(e.fieldId, e.cellId); });
+
+                // Wire links for both grouped and single entries
+                (entryList||[]).forEach((e, gi) => {
+                  if (Array.isArray(e.fields) && e.fields.length) {
+                    e.fields.forEach((f, fi) => {
+                      const id = `goTo_${gi}_${fi}_${e.cellId}_${f.prefix}`;
+                      const link = document.getElementById(id);
+                      if (link) link.addEventListener('click', (ev)=>{ ev.preventDefault(); navigateTo(f.fieldId, e.cellId); });
+                    });
+                  } else {
+                    const id = `goTo_${gi}_${e.cellId}_${e.prefix}`;
+                    const link = document.getElementById(id);
+                    if (link) link.addEventListener('click', (ev)=>{ ev.preventDefault(); navigateTo(e.fieldId, e.cellId); });
+                  }
                 });
+
                 // Wire show server button if present
                 if (suppress){
                   const showBtn = document.getElementById('changeLogShowServerBtn');

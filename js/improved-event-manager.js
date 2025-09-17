@@ -704,6 +704,8 @@ class HangarEventManager {
 				// Mark fence on change for non-free-text fields too
 				try { if (window.serverSync && typeof window.serverSync._markPendingWrite === 'function') { window.serverSync._markPendingWrite(fid); } } catch(_e){}
 				const isFree = this.isFreeTextFieldId(fid);
+				// Hard lock this field from server applies for a short window after local change
+				try { window.__fieldApplyLockUntil = window.__fieldApplyLockUntil || {}; window.__fieldApplyLockUntil[fid] = Date.now() + 15000; } catch(_e){}
 				this.debouncedFieldUpdate(fid, event.target.value, 150, { flushDelayMs: isFree ? this.TYPING_DEBOUNCE_MS : 150, source: 'change' });
 			},
 			`${containerType}_change`
@@ -947,6 +949,8 @@ class HangarEventManager {
 				const fid = event.target.id || '';
 				try { if (window.serverSync && typeof window.serverSync._markPendingWrite === 'function') { window.serverSync._markPendingWrite(fid); } } catch(_e){}
 				const isFree = this.isFreeTextFieldId(fid);
+				// Hard lock this field from server applies for a short window after local change
+				try { window.__fieldApplyLockUntil = window.__fieldApplyLockUntil || {}; window.__fieldApplyLockUntil[fid] = Date.now() + 15000; } catch(_e){}
 				this.debouncedFieldUpdate(fid, event.target.value, 150, { flushDelayMs: isFree ? this.TYPING_DEBOUNCE_MS : 150, source: 'change' });
 			},
 			`${handlerPrefix}_change`

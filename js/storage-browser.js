@@ -27,7 +27,7 @@ class ServerSync {
 
 		// Client-side write fencing to prevent self-echo/oscillation in multi-master
 		this._pendingWrites = {}; // { fieldId: timestampMs }
-		this._writeFenceMs = 12000; // fence TTL window (further increased to reduce oscillation in multi-master)
+		this._writeFenceMs = 20000; // fence TTL window (further increased to reduce oscillation in multi-master)
 			// Presence-aware reads in Master mode: only read/apply when another Master is online
 			// Default OFF for simpler, more reliable convergence in multi-master
 			this.requireOtherMastersForRead = false;
@@ -688,8 +688,9 @@ async slaveCheckForUpdates() {
 				} catch(_e){}
 				requestBody = { metadata: { timestamp: Date.now() }, fieldUpdates: delta, preconditions: pre, settings: currentData.settings || {} };
 			} else {
-				// Fallback auf vollständige Daten (z.B. erstes Speichern ohne Baseline)
-				requestBody = currentData;
+				// Do not post a full payload in multi-master; skip to avoid overwriting unrelated fields
+				console.log('⏭️ No field delta; skip POST to avoid overwriting unrelated fields (multi-master safe)');
+				return true;
 			}
 
 			// Optimierung: Verwende AbortController für Timeout
@@ -853,9 +854,75 @@ async slaveCheckForUpdates() {
 			const res = await fetch(serverUrl, { method: 'POST', headers, body: JSON.stringify(body), signal });
 			cancel && cancel();
 			if (res.status === 409) {
-				// Last-write-wins: accept server state, perform read-back, and continue
-				try { const data = await this.loadFromServer(); if (data && !data.error) await this.applyServerData(data); } catch(_e){}
-				return true;
+				// Intelligent 409 handling: if the user recently edited the conflicting fields, keep local by re-posting with server preconditions
+				try {
+					if (options && options._retryFrom409) {
+						// Already retried once, accept server
+						const data = await this.loadFromServer();
+						if (data && !data.error) await this.applyServerData(data);
+						return true;
+					}
+					let payload = null;
+					try { payload = await res.json(); } catch(_e){}
+					const conflicts = (payload && Array.isArray(payload.conflicts)) ? payload.conflicts : [];
+					const keepUpdates = {};
+					const pre = {};
+					const KEEP_WIN = Math.min(15000, (this._writeFenceMs || 7000) + 3000);
+					const getLE = (typeof window.getLastLocalEdit === 'function') ? window.getLastLocalEdit : null;
+					if (conflicts.length && getLE) {
+						conflicts.forEach(c => {
+							const fid = (c && c.fieldId) ? String(c.fieldId) : '';
+							if (!fid) return;
+							const le = getLE(fid);
+							if (le && le.editedAt && ((Date.now() - le.editedAt) < KEEP_WIN)) {
+								// Keep local for this field
+								let v = (fieldUpdates && Object.prototype.hasOwnProperty.call(fieldUpdates, fid)) ? fieldUpdates[fid] : (le.value || '');
+								keepUpdates[fid] = v;
+								// Use serverValue from conflict as precondition to pass on retry
+								if (c && Object.prototype.hasOwnProperty.call(c, 'serverValue')) pre[fid] = (c.serverValue ?? '');
+							}
+						});
+					}
+					if (Object.keys(keepUpdates).length > 0) {
+						// Retry a targeted write keeping local values for conflicting fields only
+						const body2 = { metadata: { timestamp: Date.now() }, fieldUpdates: keepUpdates, preconditions: pre, settings: {} };
+						const headers2 = { "Content-Type": "application/json" };
+						if (this.isMaster) headers2["X-Sync-Role"] = "master";
+						try {
+							const sid = this.getSessionId(); if (sid) headers2["X-Sync-Session"] = sid;
+							let dname = '';
+							try { dname = (localStorage.getItem('presence.displayName') || '').trim(); } catch(_e){}
+							if (!dname) { try { dname = 'User-' + String(sid||'').slice(-4); } catch(_e) { dname = 'User'; } }
+							headers2["X-Display-Name"] = dname;
+						} catch(_e){}
+						const { signal: sig2, cancel: cancel2 } = this._createTimeoutSignal(10000);
+						const url2 = this.getServerUrl();
+						const res2 = await fetch(url2, { method: 'POST', headers: headers2, body: JSON.stringify(body2), signal: sig2 });
+						cancel2 && cancel2();
+						if (res2.ok) {
+							// Success: optionally read-back if not typing
+							try {
+								const typingWin = Math.min(15000, (this._writeFenceMs || 7000));
+								const typingActive = !!(window.hangarEventManager && typeof window.hangarEventManager.isUserTypingRecently === 'function' && window.hangarEventManager.isUserTypingRecently(typingWin));
+								if (!typingActive && this.canReadFromServer && this.canReadFromServer()) {
+									const d = await this.loadFromServer(); if (d && !d.error) await this.applyServerData(d);
+								}
+							} catch(_e){}
+							return true;
+						} else {
+							// Retry failed: accept server state now
+							try { const d = await this.loadFromServer(); if (d && !d.error) await this.applyServerData(d); } catch(_e){}
+							return true;
+						}
+					}
+					// No recent local edit to protect: accept server
+					const d = await this.loadFromServer();
+					if (d && !d.error) await this.applyServerData(d);
+					return true;
+				} catch(err) {
+					try { const d = await this.loadFromServer(); if (d && !d.error) await this.applyServerData(d); } catch(_e){}
+					return true;
+				}
 			}
 			if (!res.ok) {
 				let detail = '';
@@ -1503,6 +1570,13 @@ async slaveCheckForUpdates() {
 		const canApplyField = (fid, el) => {
 			try {
 				if (!fid) return true;
+				// Hard lock: if field is locked from local change, do not apply server value
+				try {
+					if (window.__fieldApplyLockUntil && window.__fieldApplyLockUntil[fid]){
+						if (Date.now() < window.__fieldApplyLockUntil[fid]) return false;
+						delete window.__fieldApplyLockUntil[fid];
+					}
+				} catch(_e){}
 				// Skip when user is actively editing this element
 				if (el && document.activeElement === el) return false;
 				// Skip when a write fence is active for this field

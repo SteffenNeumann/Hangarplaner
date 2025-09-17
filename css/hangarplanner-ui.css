@@ -3912,13 +3912,13 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 /* Planner right-side Change Log column — embedded as grid column */
 #panel-planner {
   display: grid;
-  grid-template-columns: 1fr 340px;
+  grid-template-columns: minmax(0,1fr) 340px;
   gap: 16px;
   align-items: start;
 }
-/* Make first-row items stretch to equal height */
+/* Make first-row items align at start instead of stretching */
 #panel-planner .planner-main,
-#panel-planner #plannerChangeLogColumn { align-self: stretch; }
+#panel-planner #plannerChangeLogColumn { align-self: start; }
 /* Explicit placement: main (tiles) left, changelog right */
 #panel-planner .planner-main { grid-column: 1; grid-row: 1; min-width: 0; }
 #plannerChangeLogColumn { grid-column: 2; grid-row: 1; }
@@ -3927,10 +3927,18 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 #outerSectionContainer { grid-column: 1; grid-row: 3; }
 /* Collapsed state keeps a thin handle visible */
 #panel-planner.changelog-collapsed { grid-template-columns: 1fr 18px; }
+#panel-planner.changelog-collapsed .planner-changelog {
+  /* Ensure collapsed state doesn't interfere with sticky positioning */
+  overflow-y: visible;
+  max-height: none;
+}
 
-/* Right column styles (no overlay) */
+/* Right column styles - sticky scrollable rail */
 .planner-changelog {
-  position: relative;
+  position: sticky;
+  top: var(--planner-sticky-offset, 0px);
+  max-height: calc(100dvh - var(--planner-sticky-offset, 0px));
+  overflow-y: auto;
   width: 100%;
   /* Match tiles top/bottom inner spacing */
   padding: var(--tile-grid-padding, 16px) 12px var(--tile-grid-padding, 16px) 12px;
@@ -3941,7 +3949,7 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   box-shadow: none;
   display: flex;
   flex-direction: column;
-  min-height: 0; /* allow internal scroll area to size */
+  min-height: 0;
   margin-top: 0;
 }
 .dark-mode .planner-changelog { background: var(--bg-primary); border-left-color: var(--border-color); border-top-color: var(--border-color); border-bottom-color: var(--border-color); }
@@ -3955,6 +3963,9 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   /* Place tiles first, changelog second */
   #panel-planner .planner-main { grid-column: 1; grid-row: 1; }
   .planner-changelog {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
     grid-column: 1 / -1;
     grid-row: 2;
     border-left: 0;

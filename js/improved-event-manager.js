@@ -522,9 +522,11 @@ const response = await fetch(postUrl, {
 	 */
 	init() {
 		if (this.initialized) {
-			console.warn("⚠️ Event-Manager bereits initialisiert");
+			console.debug("ℹ️ Event-Manager bereits initialisiert - überspringe");
 			return;
 		}
+
+		console.log("🔧 Initialisiere Event-Manager...");
 
 		// Bestehende Event-Handler bereinigen
 		this.cleanupExistingHandlers();
@@ -533,7 +535,15 @@ const response = await fetch(postUrl, {
 		this.setupUnifiedEventHandlers();
 
 		this.initialized = true;
-		try { document.dispatchEvent(new CustomEvent('eventManagerReady')); } catch(_e){}
+		console.log("✅ Event-Manager erfolgreich initialisiert");
+		
+		// Dispatch event to notify other components
+		try {
+			document.dispatchEvent(new CustomEvent('eventManagerReady'));
+			console.debug("📢 eventManagerReady Event gesendet");
+		} catch(_e) {
+			console.warn("⚠️ Fehler beim Senden des eventManagerReady Events:", _e);
+		}
 	}
 
 	cleanupExistingHandlers() {
@@ -1026,12 +1036,34 @@ window.hangarInitQueue.push(function () {
 		"🎯 Event Manager wird über zentrale Initialisierung gestartet..."
 	);
 
+	// Reduce timeout and add fallback for immediate initialization
 	setTimeout(() => {
-		if (window.hangarEventManager) {
+		if (window.hangarEventManager && !window.hangarEventManager.initialized) {
+			console.log("⚡ Initialisiere Event Manager...");
 			window.hangarEventManager.init();
 		}
-	}, 200);
+	}, 100); // Reduced from 200ms to 100ms for faster startup
 });
+
+// Additional immediate initialization attempt for cases where DOM is already ready
+if (document.readyState === 'loading') {
+	document.addEventListener('DOMContentLoaded', () => {
+		setTimeout(() => {
+			if (window.hangarEventManager && !window.hangarEventManager.initialized) {
+				console.log("⚡ Event Manager DOMContentLoaded Fallback-Initialisierung");
+				window.hangarEventManager.init();
+			}
+		}, 50);
+	});
+} else {
+	// DOM already loaded, try immediate init
+	setTimeout(() => {
+		if (window.hangarEventManager && !window.hangarEventManager.initialized) {
+			console.log("⚡ Event Manager sofortige Fallback-Initialisierung");
+			window.hangarEventManager.init();
+		}
+	}, 10);
+}
 
 // Für Debugging
 window.getEventManagerStatus = () => window.hangarEventManager.getStatus();

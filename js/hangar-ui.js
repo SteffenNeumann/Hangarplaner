@@ -1138,7 +1138,7 @@ setupSecondaryTileEventListeners: function () {
 			try {
 				// Demote noise to debug and log only once per session
 				if (!window.__emSecondaryWarnedOnce) {
-					console.debug("Event-Manager noch nicht bereit – retry after init (sekundäre Kacheln)");
+					console.debug("⏳ Event-Manager noch nicht bereit – retry after init (sekundäre Kacheln)");
 					window.__emSecondaryWarnedOnce = true;
 				}
 				// Avoid stacking multiple retries
@@ -1152,14 +1152,18 @@ setupSecondaryTileEventListeners: function () {
 							}
 						} catch(_e) { window.__emSecondaryRetryScheduled = false; }
 					}, { once: true });
+					// Reduced timeout for faster retry, but still allow Event Manager to initialize
 					window.__emSecondaryRetryId = setTimeout(() => {
 						try {
 							window.__emSecondaryRetryScheduled = false;
 							if (window.hangarUI && window.hangarUI.setupSecondaryTileEventListeners) {
 								window.hangarUI.setupSecondaryTileEventListeners();
 							}
-						} catch(_e) { window.__emSecondaryRetryScheduled = false; }
-					}, 400);
+						} catch(_e) { 
+							console.warn("⚠️ Retry für secondary tiles setup fehlgeschlagen:", _e);
+							window.__emSecondaryRetryScheduled = false; 
+						}
+					}, 300); // Reduced from 400ms to 300ms
 				}
 			} catch(_e){}
 			return false;

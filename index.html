@@ -4555,6 +4555,36 @@ window.hangarInitQueue.push(function(){
     });
   } catch(_e){}
 });
+
+// Calculate and set sticky offset for Change Log column
+window.hangarInitQueue.push(function(){
+  try {
+    function updateStickyOffset(){
+      var panel = document.getElementById('panel-planner');
+      var topTabs = document.getElementById('topTabs');
+      if (!panel) return;
+      
+      var offset = 0;
+      if (topTabs) {
+        offset = topTabs.offsetHeight || 0;
+      }
+      
+      panel.style.setProperty('--planner-sticky-offset', offset + 'px');
+    }
+    
+    // Set initial offset
+    updateStickyOffset();
+    
+    // Update on window resize
+    window.addEventListener('resize', updateStickyOffset);
+    
+    // Update when tabs might change (e.g., orientation changes)
+    if (window.matchMedia) {
+      window.matchMedia('(orientation: portrait)').addEventListener('change', updateStickyOffset);
+      window.matchMedia('(orientation: landscape)').addEventListener('change', updateStickyOffset);
+    }
+  } catch(_e){}
+});
               // Also refresh when server data loads or mode changes
               try { document.addEventListener('serverDataLoaded', ()=>{ try { ChangeLog.render(); } catch(_){} }); } catch(_e){}
               try { document.addEventListener('syncModeChanged', ()=>{ try { ChangeLog.render(); } catch(_){} }); } catch(_e){}

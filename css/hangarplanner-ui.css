@@ -1919,10 +1919,19 @@ input:checked + .toggle-slider:before {
 	overflow-y: auto;
 	z-index: 40;
 	box-shadow: none; /* design says no shadows */
+	/* Smooth slide animation */
+	transform: translateX(0);
+	opacity: 1;
+	transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+	            opacity 0.2s ease;
 }
-.submenu-panel.hidden { display: none; }
-/* Ensure scrim hides when toggled */
-.submenu-scrim.hidden { display: none; }
+
+.submenu-panel.hidden { 
+	transform: translateX(-100%);
+	opacity: 0;
+	pointer-events: none;
+	/* Keep in DOM for smooth animation instead of display: none */
+}
 /* Global utility hidden class used throughout the app */
 .hidden { display: none !important; }
 /* Scrim overlay for temporary submenu drawer */
@@ -1934,6 +1943,13 @@ input:checked + .toggle-slider:before {
 	right: 0;
 	background: rgba(0, 0, 0, 0.25);
 	z-index: 35; /* between left-menu (30) and submenu-panel (40) */
+	opacity: 1;
+	transition: opacity 0.2s ease;
+}
+.submenu-scrim.hidden {
+	opacity: 0;
+	pointer-events: none;
+	/* Keep in DOM for smooth fade instead of display: none */
 }
 .submenu-title {
 	color: var(--menu-text);
@@ -3916,33 +3932,98 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   gap: 16px;
   align-items: start;
 }
-/* Make first-row items align at start instead of stretching */
+/* Make first-row items stretch to fill height */
 #panel-planner .planner-main,
-#panel-planner #infobox { align-self: start; }
+#panel-planner #infobox { align-self: stretch; }
 /* Explicit placement: main (tiles) left, infobox right */
 #panel-planner .planner-main { grid-column: 1; grid-row: 1; min-width: 0; }
 #infobox { grid-column: 2; grid-row: 1; }
 /* Ensure divider and secondary tiles follow below the first row */
 #panel-planner > .section-divider { grid-column: 1; grid-row: 2; }
 #outerSectionContainer { grid-column: 1; grid-row: 3; }
-/* Collapsed state keeps a thin handle visible */
-#panel-planner.changelog-collapsed { grid-template-columns: 1fr 18px; }
+/* Collapsed state keeps a thin handle visible with animation */
+#panel-planner {
+  transition: grid-template-columns 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+#panel-planner.changelog-collapsed { 
+  grid-template-columns: 1fr 18px;
+}
 #panel-planner.changelog-collapsed .planner-changelog {
   /* Ensure collapsed state doesn't interfere with sticky positioning */
   overflow-y: visible;
   max-height: none;
 }
 
-/* Right-side info box container - takes full right column */
+/* Smooth resize animation for infobox */
+.planner-infobox {
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Animation for changelog content visibility */
+.changelog-header .changelog-title,
+.changelog-header .sidebar-btn,
+.changelog-list {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+#panel-planner.changelog-collapsed .changelog-header .changelog-title,
+#panel-planner.changelog-collapsed .changelog-header .sidebar-btn,
+#panel-planner.changelog-collapsed .changelog-list {
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+/* Right-side info box container - takes full right column with resize handle */
 .planner-infobox {
   display: flex;
   flex-direction: column;
   gap: 16px;
   width: 100%;
-  min-height: 0;
+  min-height: 100%;
+  min-width: 280px;
+  max-width: 800px;
   padding: var(--tile-grid-padding, 16px) 12px var(--tile-grid-padding, 16px) 12px;
   border-left: 1px solid var(--menu-border);
   background: #fff;
+  position: relative;
+  overflow: visible;
+}
+
+/* Resize handle on hover */
+.planner-infobox::before {
+  content: '';
+  position: absolute;
+  left: -3px;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  background: transparent;
+  cursor: col-resize;
+  z-index: 10;
+  transition: background-color 0.2s ease;
+}
+
+.planner-infobox:hover::before {
+  background: rgba(99, 102, 241, 0.3);
+}
+
+/* Visual grab handle on hover */
+.planner-infobox::after {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 30px;
+  background: rgba(99, 102, 241, 0);
+  border-radius: 2px;
+  transition: background-color 0.2s ease;
+  pointer-events: none;
+}
+
+.planner-infobox:hover::after {
+  background: rgba(99, 102, 241, 0.6);
 }
 .dark-mode .planner-infobox {
   background: var(--bg-primary);
@@ -4002,10 +4083,10 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 .changelog-title { font-weight: 600; color: #334155; }
 .dark-mode .changelog-title { color: var(--text-primary); }
 
-/* Toggle button: left edge chevron */
+/* Toggle button: left edge chevron - positioned relative to infobox */
 .changelog-toggle {
   position: absolute;
-  left: -8px;
+  left: -20px; /* Adjusted to account for infobox padding and resize handle */
   top: 50%;
   transform: translate(-100%, -50%);
   width: 18px;
@@ -4019,14 +4100,20 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   background: #fff;
   color: #64748b;
   cursor: pointer;
+  z-index: 15; /* Above resize handle */
 }
 .dark-mode .changelog-toggle {
   background: var(--bg-primary);
   border-color: var(--border-color);
   color: var(--text-secondary);
 }
-/* Rotate chevron when collapsed */
-#panel-planner.changelog-collapsed .changelog-toggle svg { transform: rotate(180deg); }
+/* Rotate chevron when collapsed with smooth animation */
+.changelog-toggle svg {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+#panel-planner.changelog-collapsed .changelog-toggle svg { 
+  transform: rotate(180deg); 
+}
 
 /* On mobile, place toggle inside header to avoid overflow */
 @media (max-width: 1200px){

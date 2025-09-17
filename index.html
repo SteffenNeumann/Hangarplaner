@@ -4588,6 +4588,95 @@ window.hangarInitQueue.push(function(){
     }
   } catch(_e){}
 });
+
+// Add manual resize functionality for infobox
+window.hangarInitQueue.push(function(){
+  try {
+    var infobox = document.getElementById('infobox');
+    var panel = document.getElementById('panel-planner');
+    if (!infobox || !panel) return;
+    
+    var isResizing = false;
+    var startX = 0;
+    var startWidth = 340; // default width
+    var minWidth = 280;
+    var maxWidth = 800;
+    
+    // Store/restore width from localStorage
+    var STORAGE_KEY = 'planner.infobox.width';
+    try {
+      var saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        startWidth = Math.max(minWidth, Math.min(maxWidth, parseInt(saved, 10)));
+        panel.style.gridTemplateColumns = 'minmax(0,1fr) ' + startWidth + 'px';
+      }
+    } catch(e) {}
+    
+    function startResize(e) {
+      if (e.target !== infobox && !infobox.contains(e.target)) return;
+      if (e.offsetX > 6) return; // Only trigger on left edge
+      
+      isResizing = true;
+      startX = e.clientX;
+      startWidth = infobox.offsetWidth;
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    }
+    
+    function doResize(e) {
+      if (!isResizing) return;
+      
+      var diff = startX - e.clientX; // negative because we're dragging from right to left
+      var newWidth = Math.max(minWidth, Math.min(maxWidth, startWidth + diff));
+      
+      panel.style.gridTemplateColumns = 'minmax(0,1fr) ' + newWidth + 'px';
+      
+      // Handle collapsed state
+      if (panel.classList.contains('changelog-collapsed')) {
+        panel.style.gridTemplateColumns = '1fr 18px';
+      }
+    }
+    
+    function stopResize() {
+      if (!isResizing) return;
+      
+      isResizing = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      
+      // Save current width
+      try {
+        var currentWidth = infobox.offsetWidth;
+        localStorage.setItem(STORAGE_KEY, currentWidth.toString());
+      } catch(e) {}
+    }
+    
+    // Mouse events for resize
+    infobox.addEventListener('mousedown', startResize);
+    document.addEventListener('mousemove', doResize);
+    document.addEventListener('mouseup', stopResize);
+    
+    // Touch events for mobile
+    infobox.addEventListener('touchstart', function(e) {
+      var touch = e.touches[0];
+      var rect = infobox.getBoundingClientRect();
+      if (touch.clientX - rect.left > 6) return;
+      
+      startResize({ clientX: touch.clientX, target: infobox, preventDefault: function(){}, offsetX: 0 });
+    });
+    
+    document.addEventListener('touchmove', function(e) {
+      if (!isResizing) return;
+      e.preventDefault();
+      var touch = e.touches[0];
+      doResize({ clientX: touch.clientX });
+    });
+    
+    document.addEventListener('touchend', stopResize);
+    
+  } catch(_e) {}
+});
               // Also refresh when server data loads or mode changes
               try { document.addEventListener('serverDataLoaded', ()=>{ try { ChangeLog.render(); } catch(_){} }); } catch(_e){}
               try { document.addEventListener('syncModeChanged', ()=>{ try { ChangeLog.render(); } catch(_){} }); } catch(_e){}

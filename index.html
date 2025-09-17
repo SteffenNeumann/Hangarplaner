@@ -4456,19 +4456,30 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                 }
               }
 
+              const VIEW_KEY = 'changeLog.lastClearedAt';
+              function getLastClearedAt(){
+                try { return parseInt(localStorage.getItem(VIEW_KEY)||'0',10) || 0; } catch(_){ return 0; }
+              }
+              function setLastClearedAt(ts){
+                try { localStorage.setItem(VIEW_KEY, String(ts||Date.now())); } catch(_){}
+              }
+
               async function render(){
                 try {
                   const myName = getUserName();
+                  const lastCleared = getLastClearedAt();
                   if (canReadFromServer() && !serverSuppressed()){
                     const data = await fetchServerJson();
                     if (data){
-                      const serverEntries = buildServerEntries(data, myName);
+                      const serverEntries = buildServerEntries(data, myName).filter(e => (e?.ts||0) > lastCleared);
                       if (serverEntries && serverEntries.length){ renderEntries(serverEntries); return; }
                     }
                   }
                   // Fallback: local-only entries from this device (others-only)
                   const entries = load();
-                  const onlyOthers = entries.filter(e => (e && typeof e.user === 'string') ? (e.user.trim() !== myName) : true);
+                  const onlyOthers = entries
+                    .filter(e => (e && typeof e.user === 'string') ? (e.user.trim() !== myName) : true)
+                    .filter(e => (e?.ts||0) > lastCleared);
                   // keep newest first
                   onlyOthers.sort((a,b)=> (b.ts||0) - (a.ts||0));
                   renderEntries(onlyOthers);
@@ -4492,7 +4503,7 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                   } catch(_){}
                 },
                 render,
-                clear(){ try { save([]); if (canReadFromServer()) { suppressServer(5*60*1000); } } finally { render(); } },
+                clear(){ try { setLastClearedAt(Date.now()); } finally { render(); } },
               };
 
               function attachListeners(){

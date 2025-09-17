@@ -1515,7 +1515,9 @@ async slaveCheckForUpdates() {
 					const incoming = incomingRaw.trim();
 					const current = (aircraftInput.value || '').trim();
 					const oldValue = aircraftInput.value;
-					if (incoming.length > 0) {
+					const fid = `aircraft-${tileId}`;
+					if (!canApplyField(fid, aircraftInput)) { /* skip overwrite while actively edited */ }
+					else if (incoming.length > 0) {
 						if (!(document.activeElement === aircraftInput && current === incoming)) {
 							aircraftInput.value = incoming;
 						}
@@ -1542,11 +1544,14 @@ async slaveCheckForUpdates() {
 				if (hangarPosInput) {
 					const newVal = tileData.hangarPosition || '';
 					const oldValue = hangarPosInput.value;
-					if (!(document.activeElement === hangarPosInput && oldValue === newVal)) {
-						hangarPosInput.value = newVal;
+					const fid = `hangar-position-${tileId}`;
+					if (canApplyField(fid, hangarPosInput)){
+						if (!(document.activeElement === hangarPosInput && oldValue === newVal)) {
+							hangarPosInput.value = newVal;
+						}
+						console.log(`📍 Hangar Position gesetzt: ${tileId} = ${oldValue} → ${newVal}`);
+						successfullyApplied++;
 					}
-					console.log(`📍 Hangar Position gesetzt: ${tileId} = ${oldValue} → ${newVal}`);
-					successfullyApplied++;
 				} else {
 					console.warn(`❌ Hangar Position Input nicht gefunden: hangar-position-${tileId}`);
 					failedToApply++;
@@ -1559,11 +1564,14 @@ async slaveCheckForUpdates() {
 				if (posInfoInput) {
 					const newVal = tileData.position || '';
 					const oldValue = posInfoInput.value;
-					if (!(document.activeElement === posInfoInput && oldValue === newVal)) {
-						posInfoInput.value = newVal;
+					const fid = `position-${tileId}`;
+					if (canApplyField(fid, posInfoInput)){
+						if (!(document.activeElement === posInfoInput && oldValue === newVal)) {
+							posInfoInput.value = newVal;
+						}
+						console.log(`📍 Pos (info) gesetzt: ${tileId} = ${oldValue} → ${newVal}`);
+						successfullyApplied++;
 					}
-					console.log(`📍 Pos (info) gesetzt: ${tileId} = ${oldValue} → ${newVal}`);
-					successfullyApplied++;
 				} else {
 					console.warn(`❌ Position (info) Input nicht gefunden: position-${tileId}`);
 					failedToApply++;
@@ -1575,10 +1583,13 @@ async slaveCheckForUpdates() {
 				const notesInput = document.getElementById(`notes-${tileId}`);
 				if (notesInput) {
 					const newVal = tileData.notes || '';
-					if (!(document.activeElement === notesInput && notesInput.value === newVal)) {
-						notesInput.value = newVal;
+					const fid = `notes-${tileId}`;
+					if (canApplyField(fid, notesInput)){
+						if (!(document.activeElement === notesInput && notesInput.value === newVal)) {
+							notesInput.value = newVal;
+						}
+						console.log(`📝 Notizen gesetzt: ${tileId} = ${newVal}`);
 					}
-					console.log(`📝 Notizen gesetzt: ${tileId} = ${newVal}`);
 				}
 			}
 
@@ -1586,8 +1597,10 @@ async slaveCheckForUpdates() {
 			if (Object.prototype.hasOwnProperty.call(tileData, 'arrivalTime')) {
 				const arrivalInput = document.getElementById(`arrival-time-${tileId}`);
 				if (arrivalInput) {
-					let toSet = tileData.arrivalTime || '';
-					// Convert ISO format to compact display format for all input types
+					const fid = `arrival-time-${tileId}`;
+					if (canApplyField(fid, arrivalInput)){
+						let toSet = tileData.arrivalTime || '';
+						// Convert ISO format to compact display format for all input types
 					if (toSet && window.helpers) {
 						const h = window.helpers;
 						if (h.isISODateTimeLocal && h.isISODateTimeLocal(toSet)) {
@@ -1610,9 +1623,10 @@ async slaveCheckForUpdates() {
 							}
 						}
 					}
-					arrivalInput.value = toSet || '';
-					try { if (!toSet && arrivalInput.dataset) delete arrivalInput.dataset.iso; } catch(_e){}
-					console.log(`🛬 Ankunftszeit gesetzt: ${tileId} = ${toSet || ''}`);
+						arrivalInput.value = toSet || '';
+						try { if (!toSet && arrivalInput.dataset) delete arrivalInput.dataset.iso; } catch(_e){}
+						console.log(`🛬 Ankunftszeit gesetzt: ${tileId} = ${toSet || ''}`);
+					}
 				}
 			}
 
@@ -1620,8 +1634,10 @@ async slaveCheckForUpdates() {
 			if (Object.prototype.hasOwnProperty.call(tileData, 'departureTime')) {
 				const departureInput = document.getElementById(`departure-time-${tileId}`);
 				if (departureInput) {
-					let toSet = tileData.departureTime || '';
-					// Convert ISO format to compact display format for all input types
+					const fid = `departure-time-${tileId}`;
+					if (canApplyField(fid, departureInput)){
+						let toSet = tileData.departureTime || '';
+						// Convert ISO format to compact display format for all input types
 					if (toSet && window.helpers) {
 						const h = window.helpers;
 						if (h.isISODateTimeLocal && h.isISODateTimeLocal(toSet)) {
@@ -1644,9 +1660,10 @@ async slaveCheckForUpdates() {
 							}
 						}
 					}
-					departureInput.value = toSet || '';
-					try { if (!toSet && departureInput.dataset) delete departureInput.dataset.iso; } catch(_e){}
-					console.log(`🛫 Abflugzeit gesetzt: ${tileId} = ${toSet || ''}`);
+						departureInput.value = toSet || '';
+						try { if (!toSet && departureInput.dataset) delete departureInput.dataset.iso; } catch(_e){}
+						console.log(`🛫 Abflugzeit gesetzt: ${tileId} = ${toSet || ''}`);
+					}
 				}
 			}
 
@@ -1654,8 +1671,11 @@ async slaveCheckForUpdates() {
 			if (Object.prototype.hasOwnProperty.call(tileData, 'status')) {
 				const statusSelect = document.getElementById(`status-${tileId}`);
 				if (statusSelect) {
-					statusSelect.value = tileData.status || 'neutral';
-					console.log(`🚦 Status gesetzt: ${tileId} = ${tileData.status || 'neutral'}`);
+					const fid = `status-${tileId}`;
+					if (canApplyField(fid, statusSelect)){
+						statusSelect.value = tileData.status || 'neutral';
+						console.log(`🚦 Status gesetzt: ${tileId} = ${tileData.status || 'neutral'}`);
+					}
 				}
 			}
 
@@ -1664,9 +1684,11 @@ async slaveCheckForUpdates() {
 				const towStatusSelect = document.getElementById(`tow-status-${tileId}`);
 				if (towStatusSelect) {
 					const oldValue = towStatusSelect.value;
-					towStatusSelect.value = tileData.towStatus || 'neutral';
-					console.log(`🚚 Tow Status gesetzt: ${tileId} = ${oldValue} → ${towStatusSelect.value}`);
-					try {
+					const fid = `tow-status-${tileId}`;
+					if (canApplyField(fid, towStatusSelect)){
+						towStatusSelect.value = tileData.towStatus || 'neutral';
+						console.log(`🚚 Tow Status gesetzt: ${tileId} = ${oldValue} → ${towStatusSelect.value}`);
+						try {
 						if (typeof window.updateTowStatusStyles === 'function') {
 							window.updateTowStatusStyles(towStatusSelect);
 						} else if (typeof updateTowStatusStyles === 'function') {
@@ -1684,11 +1706,12 @@ async slaveCheckForUpdates() {
 						console.warn('⚠️ Tow-Status Styling-Aktualisierung fehlgeschlagen:', e);
 					}
 					successfullyApplied++;
+						}
+					}
 				} else {
 					console.warn(`❌ Tow Status Select nicht gefunden: tow-status-${tileId}`);
 					failedToApply++;
 				}
-			}
 
             // Last-Update Badge aus geladenen Daten wiederherstellen (falls vorhanden)
             if (tileData.updatedAt && typeof window.createOrUpdateLastUpdateBadge === 'function') {

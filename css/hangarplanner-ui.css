@@ -3930,7 +3930,8 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   display: grid;
   grid-template-columns: minmax(0,1fr) 340px;
   gap: 16px;
-  align-items: start;
+  align-items: stretch; /* Force full height */
+  min-height: calc(100vh - var(--planner-sticky-offset, 0px));
 }
 /* Make first-row items stretch to fill height */
 #panel-planner .planner-main,
@@ -3979,7 +3980,7 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   flex-direction: column;
   gap: 16px;
   width: 100%;
-  min-height: 100%;
+  height: 100%; /* Force full height */
   min-width: 280px;
   max-width: 800px;
   padding: var(--tile-grid-padding, 16px) 12px var(--tile-grid-padding, 16px) 12px;
@@ -4086,9 +4087,9 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 /* Toggle button: left edge chevron - positioned relative to infobox */
 .changelog-toggle {
   position: absolute;
-  left: -20px; /* Adjusted to account for infobox padding and resize handle */
+  left: -32px; /* Moved further left to be visible outside infobox */
   top: 50%;
-  transform: translate(-100%, -50%);
+  transform: translate(0, -50%); /* Simplified transform */
   width: 18px;
   height: 28px;
   display: inline-flex;
@@ -4100,7 +4101,7 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   background: #fff;
   color: #64748b;
   cursor: pointer;
-  z-index: 15; /* Above resize handle */
+  z-index: 20; /* Higher z-index to ensure visibility */
 }
 .dark-mode .changelog-toggle {
   background: var(--bg-primary);

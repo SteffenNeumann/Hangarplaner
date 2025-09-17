@@ -4048,26 +4048,35 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 .changelog-title { font-weight: 600; color: #334155; }
 .dark-mode .changelog-title { color: var(--text-primary); }
 
-/* Toggle button: left edge chevron - positioned relative to infobox */
+/* Toggle button: right edge handle, appears on hover of infobox */
+.planner-infobox { position: absolute; }
+.planner-infobox:hover .changelog-toggle { opacity: 1; pointer-events: auto; }
+
 .changelog-toggle {
   position: absolute;
-left: -8px; /* Overhang slightly outside the border */
-top: 10px; /* align within header */
-  transform: none;
-  width: 18px;
-  height: 28px;
+  right: -18px; /* sit outside right edge */
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px; /* +10px */
+  height: 38px; /* +10px */
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--menu-border);
-  border-right: none;
-  border-radius: 6px 0 0 6px;
+  border-left: none;
+  border-radius: 0 6px 6px 0;
   background: #fff;
   color: #64748b;
   cursor: pointer;
   z-index: 100; /* ensure visibility above tiles and infobox */
-  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
 }
+
+/* Always visible in collapsed state so user can expand */
+#panel-planner.changelog-collapsed .changelog-toggle { opacity: 1; pointer-events: auto; right: -18px; }
 .dark-mode .changelog-toggle {
   background: var(--bg-primary);
   border-color: var(--border-color);

@@ -1809,7 +1809,7 @@ document.addEventListener('DOMContentLoaded', function(){
 							<!-- Change Log Column -->
 							<aside id="plannerChangeLogColumn" class="planner-changelog" aria-label="Change Log">
 								<div class="changelog-header">
-									<button id="changelogToggle" class="changelog-toggle" aria-controls="plannerChangeLogColumn" aria-expanded="true" title="Collapse/Expand Change Log" type="button">
+<button id="changelogToggle" class="changelog-toggle" aria-controls="plannerChangeLogColumn" aria-expanded="true" title="Hide side panel" aria-label="Hide side panel" type="button">
 										<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
 									</button>
 									<span class="changelog-title">Change Log</span>
@@ -4554,14 +4554,16 @@ window.hangarInitQueue.push(function(){
       } catch(_e){}
     }
     var saved = false;
-    try { saved = localStorage.getItem(KEY) === '1'; } catch(_e){}
+try { saved = localStorage.getItem(KEY) === '1'; } catch(_e){}
     // default expanded per user preference
     apply(saved);
+    toggle.setAttribute('title', saved ? 'Show side panel' : 'Hide side panel');
     toggle.addEventListener('click', function(e){
       e.preventDefault();
-      var now = !panel.classList.contains('changelog-collapsed');
+var now = !panel.classList.contains('changelog-collapsed');
       apply(now);
       try { localStorage.setItem(KEY, now ? '1' : '0'); } catch(_e){}
+      try { toggle.setAttribute('title', now ? 'Show side panel' : 'Hide side panel'); } catch(_e){}
     });
   } catch(_e){}
 });

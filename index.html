@@ -4434,23 +4434,20 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                   const id = `goTo_${idx}_${e.cellId}_${e.prefix}`;
                   return `
                     <div class=\"flex items-start justify-between gap-2 py-1 border-b\">
-                      <div class=\"text-xs\">
+                      <div class=\"text-xs flex-grow\">
                         <div class=\"font-semibold\" style=\"color:#475569\">${when}</div>
-                        <div class=\"\" style=\"color:#64748b\">${desc}</div>
+                        <a id=\"${id}\" href=\"#\" class=\"text-blue-600 hover:text-blue-800 hover:underline\" style=\"color:#3b82f6; text-decoration:none;\" title=\"Go to field\">${desc}</a>
                         ${prettyVal ? `<div class=\"\" style=\"color:#94a3b8\">→ ${prettyVal}</div>`:''}
-                      </div>
-                      <div>
-                        <button id=\"${id}\" class=\"sidebar-btn sidebar-btn-primary\" style=\"min-height:28px; font-size:12px; padding:0 10px;\" title=\"Go to field\">Go</button>
                       </div>
                     </div>`;
                 });
                 const notice = suppress ? `<div class=\"text-xs\" style=\"margin-bottom:6px; color:#64748b;\">Server updates hidden. <button id=\"changeLogShowServerBtn\" class=\"sidebar-btn sidebar-btn-secondary\" style=\"min-height:22px; font-size:11px; padding:0 8px; margin-left:6px;\">Show</button></div>` : '';
                 list.innerHTML = notice + items.join('');
-                // Wire buttons
+                // Wire links
                 (entryList||[]).forEach((e, idx) => {
                   const id = `goTo_${idx}_${e.cellId}_${e.prefix}`;
-                  const btn = document.getElementById(id);
-                  if (btn) btn.addEventListener('click', (ev)=>{ ev.preventDefault(); navigateTo(e.fieldId, e.cellId); });
+                  const link = document.getElementById(id);
+                  if (link) link.addEventListener('click', (ev)=>{ ev.preventDefault(); navigateTo(e.fieldId, e.cellId); });
                 });
                 // Wire show server button if present
                 if (suppress){

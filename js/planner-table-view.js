@@ -145,6 +145,12 @@
         // Attach change handlers for editing
         wireRowEditors(tr, row.tileId, ro);
         tbody.appendChild(tr);
+        
+        // Initialize tow status styling
+        const towSelect = tr.querySelector('.tow-status-selector');
+        if (towSelect) {
+          towSelect.setAttribute('data-value', row.towStatus);
+        }
       });
 
       if (status){
@@ -188,7 +194,7 @@
     const opts = Object.entries(towOptions).map(([value, text]) => 
       `<option value="${esc(value)}" ${String(val)===value?'selected':''}>${esc(text)}</option>`
     ).join('');
-    return `<td class="planner-td"><select data-col="${col}" id="${esc(id)}" class="planner-select tow-status-selector" ${ro?'disabled':''}>${opts}</select></td>`;
+    return `<td class="planner-td"><select data-col="${col}" id="${esc(id)}" class="planner-select tow-status-selector" data-value="${esc(val)}" ${ro?'disabled':''}>${opts}</select></td>`;
   }
 
   function updateSortIndicators(){
@@ -210,7 +216,15 @@
       arrivalTime: (v)=>{ writeTimeTo(`#arrival-time-${tileId}`, v); },
       departureTime: (v)=>{ writeTimeTo(`#departure-time-${tileId}`, v); },
       positionInfo: (v)=>{ setIdValue(`position-${tileId}`, v); eventFire(`#position-${tileId}`, 'input'); },
-      towStatus: (v)=>{ setIdValue(`tow-status-${tileId}`, v); eventFire(`#tow-status-${tileId}`, 'change'); },
+      towStatus: (v)=>{ 
+        setIdValue(`tow-status-${tileId}`, v); 
+        eventFire(`#tow-status-${tileId}`, 'change');
+        // Update tow status styling in table view
+        const towSelect = document.querySelector(`#tow-${tileId}`);
+        if (towSelect) {
+          towSelect.setAttribute('data-value', v);
+        }
+      },
       status: (v)=>{ 
         setIdValue(`status-${tileId}`, v); 
         eventFire(`#status-${tileId}`, 'change');

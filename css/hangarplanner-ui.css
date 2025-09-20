@@ -4277,18 +4277,46 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   /* Inherit status colors from main status-light styles */
 }
 
-/* Tow status selector styling in table view */
+/* Tow status selector styling in table view - improved consistency */
 .planner-select.tow-status-selector {
   min-width: 120px;
   font-size: 12px;
   padding: 4px 8px;
   border-radius: 4px;
-  background-color: #f3f4f6;
-  border: 1px solid #d1d5db;
-  color: #4b5563;
+  background-color: #f3f4f6 !important;
+  border: 1px solid #d1d5db !important;
+  color: #4b5563 !important;
+  font-weight: 500;
+  text-align: center;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* Specific styling for tow status options */
+/* Dynamic styling based on selected value */
+.planner-select.tow-status-selector[data-value="initiated"] {
+  background-color: #fff1e6 !important;
+  color: #b45309 !important;
+  border-color: #f59e0b !important;
+}
+
+.planner-select.tow-status-selector[data-value="ongoing"] {
+  background-color: #e0f2fe !important;
+  color: #0369a1 !important;
+  border-color: #0ea5e9 !important;
+}
+
+.planner-select.tow-status-selector[data-value="on-position"] {
+  background-color: #dcfce7 !important;
+  color: #166534 !important;
+  border-color: #10b981 !important;
+}
+
+.planner-select.tow-status-selector[data-value="neutral"] {
+  background-color: #f3f4f6 !important;
+  color: #4b5563 !important;
+  border-color: #d1d5db !important;
+}
+
+/* Option styling - fallback for browsers that support it */
 .planner-select.tow-status-selector option[value="initiated"] {
   background-color: #fff1e6;
   color: #b45309;
@@ -4321,12 +4349,51 @@ body.table-view #panel-planner-table {
 
 /* Table view infobox positioning and resizing */
 #panel-planner-table #infobox-table {
-  position: absolute;
+  position: fixed;
   top: 0;
   right: 0;
   width: var(--infobox-width);
-  height: 100%;
+  height: 100vh;
   z-index: 10;
+  background: var(--bg-primary, #ffffff);
+  border-left: 1px solid var(--menu-border, #e6e6e6);
+}
+
+/* Ensure changelog fills the full height */
+#panel-planner-table .planner-changelog {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+#panel-planner-table .changelog-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Make notes input use full column width */
+.planner-td input[data-col="notes"], 
+.planner-input[data-col="notes"] {
+  width: 100% !important;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Ensure table cells don't constrain notes input */
+#plannerTable tbody td:last-child {
+  min-width: 200px;
+  width: auto;
+}
+
+/* Notes cell specific styling */
+.planner-td:has(input[data-col="notes"]) {
+  padding: 0 2px;
+}
+
+.planner-td:has(input[data-col="notes"]) input {
+  padding: 8px;
+  margin: 0;
 }
 
 /* Resize handle for table view */
@@ -4390,6 +4457,43 @@ body.table-view #panel-planner-table {
 .dark-mode .planner-select.tow-status-selector option[value="on-position"] {
   background-color: rgba(22, 101, 52, 0.2);
   color: #4ade80;
+}
+
+/* Dark mode styling for tow status selectors with data attributes */
+.dark-mode .planner-select.tow-status-selector {
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+.dark-mode .planner-select.tow-status-selector[data-value="initiated"] {
+  background-color: rgba(181, 67, 9, 0.2) !important;
+  color: #fbbf24 !important;
+  border-color: #f59e0b !important;
+}
+
+.dark-mode .planner-select.tow-status-selector[data-value="ongoing"] {
+  background-color: rgba(3, 105, 161, 0.2) !important;
+  color: #60a5fa !important;
+  border-color: #0ea5e9 !important;
+}
+
+.dark-mode .planner-select.tow-status-selector[data-value="on-position"] {
+  background-color: rgba(22, 101, 52, 0.2) !important;
+  color: #4ade80 !important;
+  border-color: #10b981 !important;
+}
+
+.dark-mode .planner-select.tow-status-selector[data-value="neutral"] {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Dark mode for table view infobox */
+.dark-mode #panel-planner-table #infobox-table {
+  background: var(--bg-primary);
+  border-left-color: var(--border-color);
 }
 
 /* Responsive layout for table view */

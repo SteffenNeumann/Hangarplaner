@@ -172,15 +172,25 @@
     return `<td class="planner-td"><input data-col="${col}" id="${esc(id)}" type="${type}" class="planner-input" ${ro?'disabled':''} value="${esc(val)}"></td>`;
   }
   function cellSelect(id, val, ro, options, col){
-    const opts = options.map(o=>`<option value="${esc(o)}" ${String(val)===o?'selected':''}>${esc(o)}</option>`).join('');
-    return `<td class="planner-td"><select data-col="${col}" id="${esc(id)}" class="planner-select" ${ro?'disabled':''}>${opts}</select></td>`;
+    const opts = options.map(o=>{
+      if (typeof o === 'object' && o !== null && o.val !== undefined) {
+        const label = (o.text !== undefined) ? o.text : o.val;
+        return `<option value="${esc(o.val)}" ${String(val)===o.val?'selected':''}>${esc(label)}</option>`;
+      } else {
+        const v = String(o);
+        return `<option value="${esc(v)}" ${String(val)===v?'selected':''}>${esc(v)}</option>`;
+      }
+    }).join('');
+    return `<td class=\"planner-td\"><select data-col=\"${col}\" id=\"${esc(id)}\" class=\"planner-select\" ${ro?'disabled':''}>${opts}</select></td>`;
   }
   function cellSelectWithAmpel(id, val, ro, options, col){
     const opts = options.map(o=>{
       if (typeof o === 'object' && o.val !== undefined) {
-        return `<option value="${esc(o.val)}" ${String(val)===o.val?'selected':''}>${esc(o.text || o.val)}</option>`;
+        const label = (o.text !== undefined) ? o.text : o.val;
+        return `<option value="${esc(o.val)}" ${String(val)===o.val?'selected':''}>${esc(label)}</option>`;
       } else {
-        return `<option value="${esc(o)}" ${String(val)===o?'selected':''}>${esc(o)}</option>`;
+        const v = String(o);
+        return `<option value="${esc(v)}" ${String(val)===v?'selected':''}>${esc(v)}</option>`;
       }
     }).join('');
     const statusLight = `<span class=\"status-light\" data-status=\"${esc(val)}\" aria-label=\"Status: ${esc(val)}\"></span>`;

@@ -4284,11 +4284,18 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   padding: 4px 8px;
   border-radius: 4px;
   background-color: transparent !important;
-  border: 1px solid #d1d5db !important;
+  border: none !important;
   color: #4b5563 !important;
   font-weight: 500;
   text-align: center;
   transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Add border back for non-neutral values */
+.planner-select.tow-status-selector[data-value="initiated"],
+.planner-select.tow-status-selector[data-value="ongoing"], 
+.planner-select.tow-status-selector[data-value="on-position"] {
+  border: 1px solid !important;
 }
 
 /* Dynamic styling based on selected value - Multiple selector approaches */
@@ -4321,7 +4328,7 @@ table .planner-select.tow-status-selector[data-value="neutral"],
 .planner-td select.tow-status-selector[data-value="neutral"] {
   background-color: transparent !important;
   color: #4b5563 !important;
-  border-color: #d1d5db !important;
+  border: none !important;
 }
 
 /* Option styling - fallback for browsers that support it */
@@ -4476,7 +4483,7 @@ body.table-view #panel-planner-table {
 /* Dark mode styling for tow status selectors with data attributes */
 .dark-mode .planner-select.tow-status-selector {
   background-color: transparent !important;
-  border-color: var(--border-color) !important;
+  border: none !important;
   color: var(--text-primary) !important;
 }
 
@@ -4501,7 +4508,14 @@ body.table-view #panel-planner-table {
 .dark-mode .planner-select.tow-status-selector[data-value="neutral"] {
   background-color: transparent !important;
   color: var(--text-primary) !important;
-  border-color: var(--border-color) !important;
+  border: none !important;
+}
+
+/* Add borders back for non-neutral dark mode values */
+.dark-mode .planner-select.tow-status-selector[data-value="initiated"],
+.dark-mode .planner-select.tow-status-selector[data-value="ongoing"],
+.dark-mode .planner-select.tow-status-selector[data-value="on-position"] {
+  border: 1px solid !important;
 }
 
 /* Dark mode for table view infobox */

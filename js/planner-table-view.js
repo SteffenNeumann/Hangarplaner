@@ -151,6 +151,12 @@
         if (towSelect) {
           towSelect.setAttribute('data-value', row.towStatus);
         }
+        
+        // Initialize status selector styling
+        const statusSelect = tr.querySelector('.status-selector');
+        if (statusSelect && window.updateStatusSelectorStyles) {
+          window.updateStatusSelectorStyles(statusSelect);
+        }
       });
 
       if (status){
@@ -182,7 +188,7 @@
       }
     }).join('');
     const statusLight = `<span class="status-light" data-status="${esc(val)}" aria-label="Status: ${esc(val)}"></span>`;
-    return `<td class="planner-td"><div class="status-cell">${statusLight}<select data-col="${col}" id="${esc(id)}" class="planner-select" ${ro?'disabled':''}>${opts}</select></div></td>`;
+    return `<td class="planner-td"><div class="status-cell">${statusLight}<select data-col="${col}" id="${esc(id)}" class="status-selector" ${ro?'disabled':''}>${opts}</select></div></td>`;
   }
   function cellTowStatus(id, val, ro, col){
     const towOptions = {
@@ -236,12 +242,17 @@
           statusLight.setAttribute('data-status', v);
           statusLight.setAttribute('aria-label', `Status: ${v}`);
         }
+        // Update status selector styling in table view
+        const statusSelect = document.querySelector(`#stat-${tileId}`);
+        if (statusSelect && window.updateStatusSelectorStyles) {
+          window.updateStatusSelectorStyles(statusSelect);
+        }
       },
       notes: (v)=>{ setIdValue(`notes-${tileId}`, v); eventFire(`#notes-${tileId}`, 'input'); }
     };
     if (readOnly) return; // no wiring when read-only
 
-    tr.querySelectorAll('input.planner-input, select.planner-select, select.tow-status-selector').forEach(el => {
+    tr.querySelectorAll('input.planner-input, select.planner-select, select.tow-status-selector, select.status-selector').forEach(el => {
       el.addEventListener('change', async function(){ await applyEditorChange(this, handlers); });
       el.addEventListener('blur', async function(){ await applyEditorChange(this, handlers); });
       if (el.tagName === 'INPUT') el.addEventListener('input', deb(function(){ applyEditorChange(el, handlers); }, 400));

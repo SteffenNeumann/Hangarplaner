@@ -201,6 +201,64 @@ window.globalInitialization = {
 			window.updateStatusLights = window.hangarUI.updateStatusLights;
 			// console.log("✅ updateStatusLights global verfügbar gemacht");
 		}
+
+		// updateStatusSelectorStyles global verfügbar machen
+		if (!window.updateStatusSelectorStyles) {
+			window.updateStatusSelectorStyles = function (select) {
+				try {
+					// Remove all status styling classes
+					select.classList.remove(
+						"status-neutral",
+						"status-ready",
+						"status-maintenance",
+						"status-aog"
+					);
+
+					// Add new styling class based on value
+					const value = select.value;
+					select.classList.add(`status-${value}`);
+
+					// Reset inline styles to let CSS handle styling
+					select.style.backgroundColor = '';
+					select.style.color = '';
+					select.style.borderColor = '';
+					select.style.borderLeftColor = '';
+
+					// Dark mode fallback for Safari/UA consistency
+					try {
+						const isDark = document.documentElement.classList.contains('dark-mode') || document.body.classList.contains('dark-mode');
+						if (isDark && !select.disabled) {
+							if (value === 'neutral') {
+								select.style.backgroundColor = 'var(--input-bg)';
+								select.style.borderColor = 'transparent';
+								select.style.color = 'var(--text-secondary)';
+								select.style.borderLeftColor = '#64748b';
+							} else if (value === 'ready') {
+								select.style.backgroundColor = 'rgba(16, 185, 129, 0.15)';
+								select.style.borderColor = '#065f46';
+								select.style.color = '#a7f3d0';
+								select.style.borderLeftColor = '#10b981';
+							} else if (value === 'maintenance') {
+								select.style.backgroundColor = 'rgba(245, 158, 11, 0.15)';
+								select.style.borderColor = '#b45309';
+								select.style.color = '#fdba74';
+								select.style.borderLeftColor = '#f59e0b';
+							} else if (value === 'aog') {
+								select.style.backgroundColor = 'rgba(220, 38, 38, 0.15)';
+								select.style.borderColor = '#991b1b';
+								select.style.color = '#fca5a5';
+								select.style.borderLeftColor = '#dc2626';
+							}
+						}
+					} catch (e) { /* ignore */ }
+
+					// console.log(`🔧 Status-Selector aktualisiert: ${value}`);
+				} catch (error) {
+					console.error("❌ Fehler beim Aktualisieren des Status-Selectors:", error);
+				}
+			};
+			// console.log("✅ updateStatusSelectorStyles global verfügbar gemacht");
+		}
 	},
 
 	/**

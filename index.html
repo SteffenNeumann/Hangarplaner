@@ -4488,33 +4488,9 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                   // Update stored baseline to current snapshot
                   saveBaseline(currentMap);
 
-                  // Sort newest first, then group by (ts, cellId, user)
+                  // Sort newest first and return atomic entries
                   entries.sort((a,b)=> b.ts - a.ts);
-                  const grouped = [];
-                  const keyOf = (r)=> `${r.ts}|${r.cellId}|${r.user}`;
-                  const map = new Map();
-                  entries.forEach(r => {
-                    const k = keyOf(r);
-                    if (!map.has(k)) map.set(k, []);
-                    map.get(k).push(r);
-                  });
-                  map.forEach((arr, k) => {
-                    if (arr.length === 1) {
-                      grouped.push(arr[0]);
-                    } else {
-                      // Convert to grouped entry shape
-                      const a0 = arr[0];
-                      grouped.push({
-                        ts: a0.ts,
-                        user: a0.user,
-                        cellId: a0.cellId,
-                        fields: arr.map(x => ({ prefix: x.prefix, fieldId: x.fieldId, value: x.value }))
-                      });
-                    }
-                  });
-                  // Keep order by ts desc
-                  grouped.sort((a,b)=> b.ts - a.ts);
-                  return grouped.slice(0,200);
+                  return entries.slice(0,200);
                 } catch(_) { return []; }
               }
               function renderEntries(entryList){
@@ -4522,13 +4498,13 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                 if (!list) return;
                 const suppress = serverSuppressed() && canReadFromServer();
 
-                // Build HTML items; support both grouped entries (with fields[]) and single-field entries
+                // Build HTML items (atomic entries)
                 const items = (entryList||[]).map((e, gi) => {
                   const when = formatTime(e.ts);
                   const tileLabel = getTileLabel(e.cellId);
                   const headerDesc = `${e.user} • @ ${tileLabel}`;
 
-                  if (Array.isArray(e.fields) && e.fields.length) {
+                  if (false && Array.isArray(e.fields) && e.fields.length) {
                     // Render a grouped entry with per-field sublinks
                     const subs = e.fields.map((f, fi) => {
                       const prettyVal = (f.value||'').toString();
@@ -4591,17 +4567,36 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
               var __changeLogLastClearedAt = 0;
               function getLastClearedAt(){ return __changeLogLastClearedAt || 0; }
               function setLastClearedAt(ts){ __changeLogLastClearedAt = ts || Date.now(); }
+              // Session-accumulated events to avoid flicker between renders
+              var __changeLogEvents = [];
+              var __changeLogKeys = new Set();
+              function addEventList(list){
+                (list||[]).forEach(e => {
+                  if (!e || !e.ts || !e.cellId) return;
+                  const key = `${e.ts}|${e.cellId}|${e.prefix||''}|${(e.value||'').toString()}`;
+                  if (__changeLogKeys.has(key)) return;
+                  __changeLogKeys.add(key);
+                  __changeLogEvents.push(e);
+                });
+                // Cap size
+                if (__changeLogEvents.length > 400) {
+                  __changeLogEvents.sort((a,b)=> (b.ts||0)-(a.ts||0));
+                  __changeLogEvents = __changeLogEvents.slice(0,400);
+                  // rebuild key set
+                  __changeLogKeys = new Set(__changeLogEvents.map(e => `${e.ts}|${e.cellId}|${e.prefix||''}|${(e.value||'').toString()}`));
+                }
+              }
 
               async function render(){
                 try {
                   const myName = getUserName();
                   const lastCleared = getLastClearedAt();
-                  let merged = [];
+                  let newOnThisTick = [];
                   if (canReadFromServer() && !serverSuppressed()){
                     const data = await fetchServerJson();
                     if (data){
                       const serverEntries = (buildServerEntries(data, myName) || []).filter(e => (e?.ts||0) > lastCleared);
-                      if (serverEntries && serverEntries.length) merged = merged.concat(serverEntries);
+                      if (serverEntries && serverEntries.length) newOnThisTick = newOnThisTick.concat(serverEntries);
                     }
                   }
                   // Include local entries from this device (others only) newer than lastCleared
@@ -4609,10 +4604,13 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                   const onlyOthers = entries
                     .filter(e => (e && typeof e.user === 'string') ? (e.user.trim() !== myName) : true)
                     .filter(e => (e?.ts||0) > lastCleared);
-                  merged = merged.concat(onlyOthers);
-                  // keep newest first and render union
-                  merged.sort((a,b)=> (b.ts||0) - (a.ts||0));
-                  renderEntries(merged);
+                  newOnThisTick = newOnThisTick.concat(onlyOthers);
+
+                  // Accumulate across renders to avoid flicker
+                  addEventList(newOnThisTick);
+
+                  const toRender = (__changeLogEvents || []).filter(e => (e?.ts||0) > lastCleared).sort((a,b)=> (b.ts||0)-(a.ts||0));
+                  renderEntries(toRender);
                 } catch(_){}
               }
 

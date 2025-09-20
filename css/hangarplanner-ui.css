@@ -1945,7 +1945,7 @@ input:checked + .toggle-slider:before {
 	/* Keep in DOM for smooth fade instead of display: none */
 }
 .submenu-title {
-	color: var(--menu-text);
+	color: #334155; /* Dark slate for better contrast in light mode */
 	font-weight: 700;
 	margin-bottom: 12px;
 	padding-bottom: 6px;

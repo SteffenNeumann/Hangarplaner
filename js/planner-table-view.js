@@ -152,15 +152,7 @@
           towSelect.setAttribute('data-value', row.towStatus);
         }
         
-        // Initialize status selector styling
-        const statusSelect = tr.querySelector('.status-selector');
-        if (statusSelect) {
-          // Set value attribute for CSS attribute selectors to work
-          statusSelect.setAttribute('value', row.status);
-          if (window.updateStatusSelectorStyles) {
-            window.updateStatusSelectorStyles(statusSelect);
-          }
-        }
+        // Status select in table view intentionally plain (no chip design)
       });
 
       if (status){
@@ -191,8 +183,8 @@
         return `<option value="${esc(o)}" ${String(val)===o?'selected':''}>${esc(o)}</option>`;
       }
     }).join('');
-    const statusLight = `<span class="status-light" data-status="${esc(val)}" aria-label="Status: ${esc(val)}"></span>`;
-    return `<td class="planner-td"><div class="status-cell">${statusLight}<select data-col="${col}" id="${esc(id)}" class="status-selector" ${ro?'disabled':''}>${opts}</select></div></td>`;
+    const statusLight = `<span class=\"status-light\" data-status=\"${esc(val)}\" aria-label=\"Status: ${esc(val)}\"></span>`;
+    return `<td class=\"planner-td\"><div class=\"status-cell\">${statusLight}<select data-col=\"${col}\" id=\"${esc(id)}\" class=\"planner-select status-plain\" ${ro?'disabled':''}>${opts}</select></div></td>`;
   }
   function cellTowStatus(id, val, ro, col){
     const towOptions = {
@@ -246,21 +238,7 @@
           statusLight.setAttribute('data-status', v);
           statusLight.setAttribute('aria-label', `Status: ${v}`);
         }
-        // Update status selector styling in table view
-        const statusSelect = document.querySelector(`#stat-${tileId}`);
-        if (statusSelect) {
-          // Set value attribute for CSS attribute selectors to work
-          statusSelect.setAttribute('value', v);
-          if (window.updateStatusSelectorStyles) {
-            window.updateStatusSelectorStyles(statusSelect);
-          }
-          // Force refresh CSS styling with a slight delay to ensure attribute selectors work
-          setTimeout(() => {
-            statusSelect.style.display = 'none';
-            statusSelect.offsetHeight; // Force reflow
-            statusSelect.style.display = '';
-          }, 50);
-        }
+        // Table view keeps status select plain; no chip styling applied
       },
       notes: (v)=>{ setIdValue(`notes-${tileId}`, v); eventFire(`#notes-${tileId}`, 'input'); }
     };

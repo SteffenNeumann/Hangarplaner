@@ -4551,6 +4551,88 @@ html:not(.dark-mode) .planner-select.status-selector.status-aog {
   border-left-color: #dc2626 !important;
 }
 
+/* Additional table-specific status selector rules to ensure exact match with board view */
+table .status-selector[value="neutral"],
+#plannerTable .status-selector[value="neutral"],
+.planner-td select.status-selector[value="neutral"] {
+  background: transparent !important;
+  color: #475569 !important;
+  border-color: transparent !important;
+  border-left: 0 !important;
+  box-shadow: none !important;
+}
+
+table .status-selector[value="ready"],
+#plannerTable .status-selector[value="ready"],
+.planner-td select.status-selector[value="ready"] {
+  background: #ecfdf5 !important;
+  color: #065f46 !important;
+  border-color: #a7f3d0 !important;
+  border-left-color: #10b981 !important;
+  border-left-width: 3px !important;
+}
+
+table .status-selector[value="maintenance"],
+#plannerTable .status-selector[value="maintenance"],
+.planner-td select.status-selector[value="maintenance"] {
+  background: #fff7ed !important;
+  color: #9a3412 !important;
+  border-color: #fed7aa !important;
+  border-left-color: #f59e0b !important;
+  border-left-width: 3px !important;
+}
+
+table .status-selector[value="aog"],
+#plannerTable .status-selector[value="aog"],
+.planner-td select.status-selector[value="aog"] {
+  background: #fef2f2 !important;
+  color: #991b1b !important;
+  border-color: #fecaca !important;
+  border-left-color: #dc2626 !important;
+  border-left-width: 3px !important;
+}
+
+/* Dark mode table-specific status selector rules */
+.dark-mode table .status-selector[value="neutral"],
+.dark-mode #plannerTable .status-selector[value="neutral"],
+.dark-mode .planner-td select.status-selector[value="neutral"] {
+  background: var(--input-bg) !important;
+  color: var(--text-secondary) !important;
+  border: 1px solid transparent !important;
+  border-left-color: #64748b !important;
+  border-left-width: 3px !important;
+}
+
+.dark-mode table .status-selector[value="ready"],
+.dark-mode #plannerTable .status-selector[value="ready"],
+.dark-mode .planner-td select.status-selector[value="ready"] {
+  background: rgba(16, 185, 129, 0.15) !important;
+  border-color: #065f46 !important;
+  color: #a7f3d0 !important;
+  border-left-color: #10b981 !important;
+  border-left-width: 3px !important;
+}
+
+.dark-mode table .status-selector[value="maintenance"],
+.dark-mode #plannerTable .status-selector[value="maintenance"],
+.dark-mode .planner-td select.status-selector[value="maintenance"] {
+  background: rgba(245, 158, 11, 0.15) !important;
+  border-color: #b45309 !important;
+  color: #fdba74 !important;
+  border-left-color: #f59e0b !important;
+  border-left-width: 3px !important;
+}
+
+.dark-mode table .status-selector[value="aog"],
+.dark-mode #plannerTable .status-selector[value="aog"],
+.dark-mode .planner-td select.status-selector[value="aog"] {
+  background: rgba(220, 38, 38, 0.15) !important;
+  border-color: #991b1b !important;
+  color: #fca5a5 !important;
+  border-left-color: #dc2626 !important;
+  border-left-width: 3px !important;
+}
+
 /* Table view layout - ensure changelog is visible */
 body.table-view .planner-infobox {
   display: block;

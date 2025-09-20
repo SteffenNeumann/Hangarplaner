@@ -154,8 +154,12 @@
         
         // Initialize status selector styling
         const statusSelect = tr.querySelector('.status-selector');
-        if (statusSelect && window.updateStatusSelectorStyles) {
-          window.updateStatusSelectorStyles(statusSelect);
+        if (statusSelect) {
+          // Set value attribute for CSS attribute selectors to work
+          statusSelect.setAttribute('value', row.status);
+          if (window.updateStatusSelectorStyles) {
+            window.updateStatusSelectorStyles(statusSelect);
+          }
         }
       });
 
@@ -244,8 +248,18 @@
         }
         // Update status selector styling in table view
         const statusSelect = document.querySelector(`#stat-${tileId}`);
-        if (statusSelect && window.updateStatusSelectorStyles) {
-          window.updateStatusSelectorStyles(statusSelect);
+        if (statusSelect) {
+          // Set value attribute for CSS attribute selectors to work
+          statusSelect.setAttribute('value', v);
+          if (window.updateStatusSelectorStyles) {
+            window.updateStatusSelectorStyles(statusSelect);
+          }
+          // Force refresh CSS styling with a slight delay to ensure attribute selectors work
+          setTimeout(() => {
+            statusSelect.style.display = 'none';
+            statusSelect.offsetHeight; // Force reflow
+            statusSelect.style.display = '';
+          }, 50);
         }
       },
       notes: (v)=>{ setIdValue(`notes-${tileId}`, v); eventFire(`#notes-${tileId}`, 'input'); }

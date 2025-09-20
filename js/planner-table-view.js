@@ -104,6 +104,17 @@
       let va = a[col], vb = b[col];
       // try numeric compare for tileId, fallback string
       if (col === 'tileId') { va = +va || 0; vb = +vb || 0; }
+      // Custom sorting for status and tow status to group by status type
+      else if (col === 'status') {
+        const statusOrder = { 'neutral': 0, 'ready': 1, 'maintenance': 2, 'aog': 3 };
+        va = statusOrder[va] !== undefined ? statusOrder[va] : 999;
+        vb = statusOrder[vb] !== undefined ? statusOrder[vb] : 999;
+      }
+      else if (col === 'towStatus') {
+        const towOrder = { 'neutral': 0, 'initiated': 1, 'ongoing': 2, 'on-position': 3 };
+        va = towOrder[va] !== undefined ? towOrder[va] : 999;
+        vb = towOrder[vb] !== undefined ? towOrder[vb] : 999;
+      }
       else { va = String(va||'').toLowerCase(); vb = String(vb||'').toLowerCase(); }
       if (va < vb) return -1*sign; if (va > vb) return 1*sign; return 0;
     });
@@ -127,8 +138,8 @@
           cellInput(`arr-${row.tileId}`, displayTime(row.arrivalTime), 'text', ro, 'arrivalTime'),
           cellInput(`dep-${row.tileId}`, displayTime(row.departureTime), 'text', ro, 'departureTime'),
           cellInput(`pos-${row.tileId}`, row.positionInfo, 'text', ro, 'positionInfo'),
-          cellSelect(`tow-${row.tileId}`, row.towStatus, ro, ['neutral','initiated','ongoing','on-position'], 'towStatus'),
-          cellSelect(`stat-${row.tileId}`, row.status, ro, ['neutral','ready','maintenance','aog'], 'status'),
+          cellTowStatus(`tow-${row.tileId}`, row.towStatus, ro, 'towStatus'),
+          cellSelectWithAmpel(`stat-${row.tileId}`, row.status, ro, [{val: 'neutral', text: ''}, {val: 'ready', text: 'Ready'}, {val: 'maintenance', text: 'MX'}, {val: 'aog', text: 'AOG'}], 'status'),
           cellInput(`notes-${row.tileId}`, row.notes, 'text', ro, 'notes')
         ].join('');
         // Attach change handlers for editing
@@ -156,6 +167,29 @@
     const opts = options.map(o=>`<option value="${esc(o)}" ${String(val)===o?'selected':''}>${esc(o)}</option>`).join('');
     return `<td class="planner-td"><select data-col="${col}" id="${esc(id)}" class="planner-select" ${ro?'disabled':''}>${opts}</select></td>`;
   }
+  function cellSelectWithAmpel(id, val, ro, options, col){
+    const opts = options.map(o=>{
+      if (typeof o === 'object' && o.val !== undefined) {
+        return `<option value="${esc(o.val)}" ${String(val)===o.val?'selected':''}>${esc(o.text || o.val)}</option>`;
+      } else {
+        return `<option value="${esc(o)}" ${String(val)===o?'selected':''}>${esc(o)}</option>`;
+      }
+    }).join('');
+    const statusLight = `<span class="status-light" data-status="${esc(val)}" aria-label="Status: ${esc(val)}"></span>`;
+    return `<td class="planner-td"><div class="status-cell">${statusLight}<select data-col="${col}" id="${esc(id)}" class="planner-select" ${ro?'disabled':''}>${opts}</select></div></td>`;
+  }
+  function cellTowStatus(id, val, ro, col){
+    const towOptions = {
+      'neutral': '',
+      'initiated': 'Initiated',
+      'ongoing': 'In Progress', 
+      'on-position': 'On Position'
+    };
+    const opts = Object.entries(towOptions).map(([value, text]) => 
+      `<option value="${esc(value)}" ${String(val)===value?'selected':''}>${esc(text)}</option>`
+    ).join('');
+    return `<td class="planner-td"><select data-col="${col}" id="${esc(id)}" class="planner-select tow-status-selector" ${ro?'disabled':''}>${opts}</select></td>`;
+  }
 
   function updateSortIndicators(){
     const headers = $all('#plannerTable thead .planner-table-header th.sortable');
@@ -177,12 +211,21 @@
       departureTime: (v)=>{ writeTimeTo(`#departure-time-${tileId}`, v); },
       positionInfo: (v)=>{ setIdValue(`position-${tileId}`, v); eventFire(`#position-${tileId}`, 'input'); },
       towStatus: (v)=>{ setIdValue(`tow-status-${tileId}`, v); eventFire(`#tow-status-${tileId}`, 'change'); },
-      status: (v)=>{ setIdValue(`status-${tileId}`, v); eventFire(`#status-${tileId}`, 'change'); },
+      status: (v)=>{ 
+        setIdValue(`status-${tileId}`, v); 
+        eventFire(`#status-${tileId}`, 'change');
+        // Update status light in table view
+        const statusLight = document.querySelector(`#stat-${tileId}`)?.parentNode?.querySelector('.status-light');
+        if (statusLight) {
+          statusLight.setAttribute('data-status', v);
+          statusLight.setAttribute('aria-label', `Status: ${v}`);
+        }
+      },
       notes: (v)=>{ setIdValue(`notes-${tileId}`, v); eventFire(`#notes-${tileId}`, 'input'); }
     };
     if (readOnly) return; // no wiring when read-only
 
-    tr.querySelectorAll('input.planner-input, select.planner-select').forEach(el => {
+    tr.querySelectorAll('input.planner-input, select.planner-select, select.tow-status-selector').forEach(el => {
       el.addEventListener('change', async function(){ await applyEditorChange(this, handlers); });
       el.addEventListener('blur', async function(){ await applyEditorChange(this, handlers); });
       if (el.tagName === 'INPUT') el.addEventListener('input', deb(function(){ applyEditorChange(el, handlers); }, 400));
@@ -258,6 +301,61 @@
     });
   }
 
+  // Sync changelog between tile view and table view
+  function syncChangelog(){
+    try {
+      const tileChangeLogList = document.getElementById('changeLogList');
+      const tableChangeLogList = document.getElementById('tableChangeLogList');
+      
+      if (tileChangeLogList && tableChangeLogList) {
+        // Copy content from tile view changelog to table view
+        tableChangeLogList.innerHTML = tileChangeLogList.innerHTML;
+      }
+    } catch(e){}
+  }
+  
+  // Setup changelog handlers for table view
+  function setupTableChangelog(){
+    try {
+      // Clear button for table view
+      const clearBtn = document.getElementById('tableChangeLogClearBtn');
+      if (clearBtn && !clearBtn.__wired) {
+        clearBtn.addEventListener('click', function(){
+          try {
+            // Clear both tile and table changelogs
+            const tileList = document.getElementById('changeLogList');
+            const tableList = document.getElementById('tableChangeLogList');
+            if (tileList) tileList.innerHTML = '';
+            if (tableList) tableList.innerHTML = '';
+            
+            // Also call the main ChangeLog clear function if available
+            if (window.ChangeLog && typeof window.ChangeLog.clear === 'function') {
+              window.ChangeLog.clear();
+            }
+          } catch(e){}
+        });
+        clearBtn.__wired = true;
+      }
+      
+      // Toggle button for table view  
+      const toggleBtn = document.getElementById('tableChangelogToggle');
+      if (toggleBtn && !toggleBtn.__wired) {
+        toggleBtn.addEventListener('click', function(){
+          try {
+            const panel = document.getElementById('panel-planner-table');
+            if (panel) {
+              panel.classList.toggle('changelog-collapsed');
+              const expanded = !panel.classList.contains('changelog-collapsed');
+              toggleBtn.setAttribute('aria-expanded', expanded.toString());
+              toggleBtn.title = expanded ? 'Hide side panel' : 'Show side panel';
+            }
+          } catch(e){}
+        });
+        toggleBtn.__wired = true;
+      }
+    } catch(e){}
+  }
+
   // Toggle interaction with Display toggle
   function applyViewVisibility(){
     try {
@@ -266,7 +364,11 @@
       const plannerPanel = document.getElementById('panel-planner');
       if (tablePanel) tablePanel.classList.toggle('hidden', !isTable);
       if (plannerPanel) plannerPanel.classList.toggle('hidden', !!isTable);
-      if (isTable) refresh();
+      if (isTable) {
+        refresh();
+        syncChangelog();
+        setupTableChangelog();
+      }
     } catch(_){}
   }
 
@@ -287,6 +389,99 @@
     try { const viewToggle = document.getElementById('viewModeToggle'); if (viewToggle) viewToggle.addEventListener('change', deb(applyViewVisibility, 10)); } catch(_){}
     // BFCache/page show
     window.addEventListener('pageshow', deb(()=>{ applyViewVisibility(); }, 0));
+    
+    // Continuous changelog synchronization 
+    setInterval(() => {
+      if (document.body.classList.contains('table-view')) {
+        syncChangelog();
+      }
+    }, 1000); // Sync every second when in table view
+    
+    // Listen for changelog updates
+    const observer = new MutationObserver(function(mutations) {
+      if (document.body.classList.contains('table-view')) {
+        deb(syncChangelog, 100)();
+      }
+    });
+    
+    // Observe the main changelog for changes
+    const mainChangelog = document.getElementById('changeLogList');
+    if (mainChangelog) {
+      observer.observe(mainChangelog, { childList: true, subtree: true });
+    }
+    
+    // Add resize functionality to table view changelog
+    setupTableChangelogResize();
+  }
+  
+  function setupTableChangelogResize(){
+    try {
+      const infobox = document.getElementById('infobox-table');
+      const panel = document.getElementById('panel-planner-table');
+      
+      if (!infobox || !panel) return;
+      
+      let isResizing = false;
+      let startX, startWidth;
+      const minWidth = 280;
+      const maxWidth = 800;
+      const STORAGE_KEY = 'planner.infobox.width';
+      
+      // Restore saved width
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const width = Math.max(minWidth, Math.min(maxWidth, parseInt(saved, 10)));
+          panel.style.setProperty('--infobox-width', width + 'px');
+        }
+      } catch(e) {}
+      
+      function onLeftEdge(ev){
+        const rect = infobox.getBoundingClientRect();
+        const x = (ev.touches ? ev.touches[0].clientX : ev.clientX);
+        return Math.abs(x - rect.left) <= 6;
+      }
+      
+      function startResize(e) {
+        if (!onLeftEdge(e)) return;
+        isResizing = true;
+        startX = (e.touches ? e.touches[0].clientX : e.clientX);
+        startWidth = infobox.offsetWidth;
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+      }
+      
+      function doResize(e) {
+        if (!isResizing) return;
+        const x = (e.touches ? e.touches[0].clientX : e.clientX);
+        const diff = startX - x;
+        const newWidth = Math.max(minWidth, Math.min(maxWidth, startWidth + diff));
+        panel.style.setProperty('--infobox-width', newWidth + 'px');
+      }
+      
+      function stopResize() {
+        if (!isResizing) return;
+        isResizing = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        try {
+          const currentWidth = infobox.offsetWidth;
+          localStorage.setItem(STORAGE_KEY, currentWidth.toString());
+        } catch(e) {}
+      }
+      
+      // Mouse events
+      infobox.addEventListener('mousedown', startResize);
+      document.addEventListener('mousemove', doResize);
+      document.addEventListener('mouseup', stopResize);
+      
+      // Touch events
+      infobox.addEventListener('touchstart', startResize, { passive: false });
+      document.addEventListener('touchmove', function(e){ if(isResizing){ e.preventDefault(); doResize(e); } }, { passive: false });
+      document.addEventListener('touchend', stopResize);
+      
+    } catch(e) {}
   }
 
   function init(){

@@ -4256,6 +4256,161 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 .dark-mode #submenu-update .modern-toggle-slider { background-color: var(--border-color); border-color: var(--border-color); }
 .dark-mode #submenu-update .modern-toggle-switch input:checked + .modern-toggle-slider { background-color: var(--menu-accent); border-color: var(--menu-accent); }
 
+/* Table view enhancements */
+.status-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Status light in table view */
+.planner-td .status-light {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+  opacity: 1;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: none;
+  flex-shrink: 0;
+  /* Inherit status colors from main status-light styles */
+}
+
+/* Tow status selector styling in table view */
+.planner-select.tow-status-selector {
+  min-width: 120px;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background-color: #f3f4f6;
+  border: 1px solid #d1d5db;
+  color: #4b5563;
+}
+
+/* Specific styling for tow status options */
+.planner-select.tow-status-selector option[value="initiated"] {
+  background-color: #fff1e6;
+  color: #b45309;
+}
+
+.planner-select.tow-status-selector option[value="ongoing"] {
+  background-color: #e0f2fe;
+  color: #0369a1;
+}
+
+.planner-select.tow-status-selector option[value="on-position"] {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+/* Table view layout - ensure changelog is visible */
+body.table-view .planner-infobox {
+  display: block;
+}
+
+body.table-view #panel-planner-table {
+  position: relative;
+}
+
+/* Adjust table panel layout to accommodate changelog */
+#panel-planner-table {
+  --infobox-width: 360px;
+  padding-right: var(--infobox-width);
+}
+
+/* Table view infobox positioning and resizing */
+#panel-planner-table #infobox-table {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: var(--infobox-width);
+  height: 100%;
+  z-index: 10;
+}
+
+/* Resize handle for table view */
+#infobox-table::before {
+  content: '';
+  position: absolute;
+  left: -3px;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  background: transparent;
+  cursor: col-resize;
+  z-index: 10;
+  transition: background-color 0.2s ease;
+}
+
+#infobox-table:hover::before {
+  background: rgba(99, 102, 241, 0.3);
+}
+
+/* Visual grab handle on hover */
+#infobox-table::after {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 30px;
+  background: rgba(99, 102, 241, 0);
+  border-radius: 2px;
+  transition: background-color 0.2s ease;
+  pointer-events: none;
+}
+
+#infobox-table:hover::after {
+  background: rgba(99, 102, 241, 0.6);
+}
+
+/* Dark mode support for table view */
+.dark-mode .planner-td .status-light {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.dark-mode .planner-select.tow-status-selector {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.dark-mode .planner-select.tow-status-selector option[value="initiated"] {
+  background-color: rgba(181, 67, 9, 0.2);
+  color: #fbbf24;
+}
+
+.dark-mode .planner-select.tow-status-selector option[value="ongoing"] {
+  background-color: rgba(3, 105, 161, 0.2);
+  color: #60a5fa;
+}
+
+.dark-mode .planner-select.tow-status-selector option[value="on-position"] {
+  background-color: rgba(22, 101, 52, 0.2);
+  color: #4ade80;
+}
+
+/* Responsive layout for table view */
+@media (max-width: 1200px) {
+  #panel-planner-table {
+    padding-right: 0;
+  }
+  
+  body.table-view .planner-infobox {
+    position: static;
+    width: auto;
+    height: auto;
+    border-left: 0;
+    border-top: 1px solid var(--menu-border);
+  }
+  
+  .dark-mode body.table-view .planner-infobox {
+    border-top-color: var(--border-color);
+  }
+}
+
 /* Consistent widths for Update submenu inputs */
 #submenu-update { --update-input-width: 280px; }
 /* Allow the right input column to shrink so content never touches the panel border */

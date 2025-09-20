@@ -2991,6 +2991,21 @@ type="datetime-local"
 
 					<!-- Planner Table Panel (inline, replaces former iframe approach) -->
 					<div id="panel-planner-table" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-planner">
+						<!-- Right-side Info Box Container (same as tile view) -->
+						<div id="infobox-table" class="planner-infobox" aria-label="Info Box">
+							<!-- Change Log Column for table view -->
+							<aside id="tableChangeLogColumn" class="planner-changelog" aria-label="Change Log">
+								<div class="changelog-header">
+									<button id="tableChangelogToggle" class="changelog-toggle" aria-controls="tableChangeLogColumn" aria-expanded="true" title="Hide side panel" aria-label="Hide side panel" type="button">
+										<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+									</button>
+									<span class="changelog-title">Change Log</span>
+									<button id="tableChangeLogClearBtn" class="sidebar-btn sidebar-btn-secondary" title="Clear the change log">Clear</button>
+								</div>
+								<div id="tableChangeLogList" class="changelog-list" aria-live="polite"></div>
+							</aside>
+						</div>
+
 						<div id="plannerTableView" class="p-3">
 							<div class="fleet-table-container">
 								<table id="plannerTable" class="fleet-table" style="width: 100%; border-collapse: collapse; table-layout: fixed;">

@@ -528,41 +528,46 @@ html:not(.dark-mode) .status-selector:focus { outline: none; border-color: #94a3
 	-webkit-appearance: none;
 	-moz-appearance: none;
 	appearance: none;
-	border-left-width: 3px;
+	border-left-width: 0 !important;
+	border: none !important;
 	border-radius: 2px;
+	background: var(--card-header-bg) !important; /* match tile header */
+	color: var(--text-secondary) !important;
 }
 
+/* Dark mode: neutral and any unspecified value -> same as tile background, no borders */
 .dark-mode .status-selector[value="neutral"],
 .dark-mode .status-selector.status-neutral,
 .dark-mode .status-selector:not(.status-ready):not(.status-maintenance):not(.status-aog) {
-	background: var(--input-bg) !important;
+	background: var(--card-header-bg) !important;
 	color: var(--text-secondary) !important;
-	border: 1px solid transparent !important;
-	border-left-color: #64748b !important;
+	border: none !important;
+	border-left: 0 !important;
 }
 
+/* Dark mode: explicit states use the same background and no borders (no accent) */
 .dark-mode .status-selector[value="ready"],
 .dark-mode .status-selector.status-ready {
-	background: rgba(16, 185, 129, 0.15) !important; /* emerald */
-	border-color: #065f46 !important;
-	color: #a7f3d0 !important; /* emerald-200 */
-	border-left-color: #10b981 !important;
+	background: var(--card-header-bg) !important;
+	border: none !important;
+	color: var(--text-secondary) !important;
+	border-left: 0 !important;
 }
 
 .dark-mode .status-selector[value="maintenance"],
 .dark-mode .status-selector.status-maintenance {
-	background: rgba(245, 158, 11, 0.15) !important; /* orange */
-	border-color: #b45309 !important;
-	color: #fdba74 !important; /* orange-300 */
-	border-left-color: #f59e0b !important;
+	background: var(--card-header-bg) !important;
+	border: none !important;
+	color: var(--text-secondary) !important;
+	border-left: 0 !important;
 }
 
 .dark-mode .status-selector[value="aog"],
 .dark-mode .status-selector.status-aog {
-	background: rgba(220, 38, 38, 0.15) !important; /* red */
-	border-color: #991b1b !important;
-	color: #fca5a5 !important; /* red-300 */
-	border-left-color: #dc2626 !important;
+	background: var(--card-header-bg) !important;
+	border: none !important;
+	color: var(--text-secondary) !important;
+	border-left: 0 !important;
 }
 
 .tow-status {

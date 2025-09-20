@@ -3862,10 +3862,12 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
 							if (!select.hasAttribute("data-status-listener-added")) {
 								// Initial Status setzen
 								updateStatusLight(select);
+								try { if (typeof updateStatusSelectorStyles === 'function') updateStatusSelectorStyles(select); } catch(_) {}
 
 								// Event-Listener für Änderungen
 								select.addEventListener("change", function () {
 									updateStatusLight(this);
+									try { if (typeof updateStatusSelectorStyles === 'function') updateStatusSelectorStyles(this); } catch(_) {}
 								});
 
 								// Markiere als verarbeitet
@@ -3912,9 +3914,9 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
 						}
 					});
 
-					// Status-Dropdowns Hintergrundfarbe forcieren
+					// Apply class-based styling for status selectors (no inline background)
 					document.querySelectorAll(".status-selector").forEach((select) => {
-						select.style.backgroundColor = "#e6eaef";
+						try { if (typeof updateStatusSelectorStyles === 'function') updateStatusSelectorStyles(select); } catch(_) {}
 					});
 				});
 			</script>
@@ -3933,19 +3935,19 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
 						}
 					});
 
-					// Status-Dropdowns Hintergrundfarbe forcieren
+					// Apply class-based styling for status selectors and wire listeners (no inline bg)
 					document.querySelectorAll(".status-selector").forEach((select) => {
-						select.style.backgroundColor = "#e6eaef";
-
 						// Event-Listener für neue Status-Selektoren hinzufügen, falls noch nicht vorhanden
 						if (!select.hasAttribute("data-listener-added")) {
 							select.addEventListener("change", function () {
 								updateStatusLight(this);
+								try { if (typeof updateStatusSelectorStyles === 'function') updateStatusSelectorStyles(this); } catch(_) {}
 							});
 							select.setAttribute("data-listener-added", "true");
-							// Initial Status setzen
-							updateStatusLight(select);
 						}
+						// Initial Status setzen
+						updateStatusLight(select);
+						try { if (typeof updateStatusSelectorStyles === 'function') updateStatusSelectorStyles(select); } catch(_) {}
 					});
 				}
 

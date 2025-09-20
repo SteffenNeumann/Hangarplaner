@@ -479,7 +479,7 @@ const uiSettings = {
 
 			// Status setzen
 			const statusSelect = document.getElementById(`status-${cellId}`);
-			if (statusSelect && tileValue.status) {
+if (statusSelect && tileValue.status) {
 				statusSelect.value = tileValue.status;
 				// Status-Licht aktualisieren - verwende die globale updateStatusLight Funktion
 				if (typeof updateStatusLight === "function") {
@@ -487,6 +487,8 @@ const uiSettings = {
 				} else if (typeof updateStatusLightByCellId === "function") {
 					updateStatusLightByCellId(cellId);
 				}
+				// Apply class-based styling for the selector itself
+				try { if (typeof updateStatusSelectorStyles === 'function') updateStatusSelectorStyles(statusSelect); } catch(_) {}
 			}
 
 			// Notizen setzen

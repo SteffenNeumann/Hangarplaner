@@ -1543,6 +1543,7 @@ function resetAllTilesToNeutral() {
 		select.value = "neutral";
 		const cellId = parseInt(select.id.split("-")[1]);
 		updateStatusLights(cellId);
+		try { if (typeof updateStatusSelectorStyles === 'function') updateStatusSelectorStyles(select); } catch(_) {}
 	});
 
 	// Towing-Status-Selektoren auf neutral setzen und aktualisieren

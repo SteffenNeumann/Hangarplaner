@@ -488,35 +488,35 @@ html:not(.dark-mode) .status-selector {
 /* Light mode: neutral should be invisible (match tow design) */
 html:not(.dark-mode) .status-selector[value="neutral"],
 html:not(.dark-mode) .status-selector.status-neutral {
-	background: transparent !important;
-	color: #475569 !important;
-	border-color: transparent !important;
-	border-left: 0 !important;
+	background: #ffffff !important;           /* match tile background */
+	color: #6b7280 !important;                /* main grey */
+	border-color: #e5e7eb !important;         /* subtle border */
+	border-left: 0 !important;                /* no accent for neutral */
 	box-shadow: none !important;
 }
 
 html:not(.dark-mode) .status-selector[value="ready"],
 html:not(.dark-mode) .status-selector.status-ready {
-	background: #ecfdf5 !important;           /* emerald-50 */
-	color: #065f46 !important;                /* emerald-800 */
-	border-color: #a7f3d0 !important;         /* emerald-200 */
-	border-left-color: #10b981 !important;    /* emerald-500 */
+	background: #ffffff !important;           /* white chip */
+	color: #6b7280 !important;                /* main grey text */
+	border-color: #e5e7eb !important;         /* subtle border */
+	border-left-color: #10b981 !important;    /* emerald accent only */
 }
 
 html:not(.dark-mode) .status-selector[value="maintenance"],
 html:not(.dark-mode) .status-selector.status-maintenance {
-	background: #fff7ed !important;           /* orange-50 */
-	color: #9a3412 !important;                /* orange-800 */
-	border-color: #fed7aa !important;         /* orange-200 */
-	border-left-color: #f59e0b !important;    /* orange-500 */
+	background: #ffffff !important;           /* white chip */
+	color: #6b7280 !important;                /* main grey text */
+	border-color: #e5e7eb !important;         /* subtle border */
+	border-left-color: #f59e0b !important;    /* orange accent only */
 }
 
 html:not(.dark-mode) .status-selector[value="aog"],
 html:not(.dark-mode) .status-selector.status-aog {
-	background: #fef2f2 !important;           /* red-50 */
-	color: #991b1b !important;                /* red-800 */
-	border-color: #fecaca !important;         /* red-200 */
-	border-left-color: #dc2626 !important;    /* red-500 */
+	background: #ffffff !important;           /* white chip */
+	color: #6b7280 !important;                /* main grey text */
+	border-color: #e5e7eb !important;         /* subtle border */
+	border-left-color: #dc2626 !important;    /* red accent only */
 }
 
 /* Light mode hover/focus */
@@ -4457,7 +4457,20 @@ table .planner-select.tow-status-selector[data-value="neutral"],
   border-radius: 2px;
   font-weight: 600;
   text-align: center;
-  /* Use theme defaults for background, color, and borders */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-color: transparent !important; /* match underlying theme background */
+  border: 1px solid transparent !important;
+  color: inherit;
+}
+
+/* Dark mode: ensure no UA white background; still match theme */
+.dark-mode #plannerTable .status-plain,
+.dark-mode .planner-td select.status-plain {
+  background-color: transparent !important; /* let table cell/background show through */
+  color: var(--text-primary) !important;
+  border-color: transparent !important;
 }
 
 /* Ensure neutral shows no text (handled via empty option text) */

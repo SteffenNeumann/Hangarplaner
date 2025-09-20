@@ -386,28 +386,72 @@
     } catch(_){}
   }
 
+  function refreshTowStatusStyling(){
+    try {
+      // Refresh all tow status selectors with their current values
+      document.querySelectorAll('.tow-status-selector').forEach(select => {
+        const currentValue = select.value;
+        select.setAttribute('data-value', currentValue);
+      });
+    } catch(e){}
+  }
+
   function refresh(){
     STATE.rows = getVisibleTileRows();
     applyFilters();
     render();
+    // Refresh tow status styling after render
+    setTimeout(refreshTowStatusStyling, 50);
   }
 
   function wireGlobal(){
-    // Re-render on tile changes
+    // Re-render on tile changes and server updates
     document.addEventListener('primaryTilesUpdated', deb(refresh, 50));
     document.addEventListener('secondaryTilesCreated', deb(refresh, 50));
     document.addEventListener('dataLoaded', deb(refresh, 50));
     document.addEventListener('serverDataLoaded', deb(refresh, 50));
     document.addEventListener('syncModeChanged', deb(()=>{ refresh(); }, 50));
+    
+    // Additional listeners for server data updates that might affect tow status styling
+    document.addEventListener('serverDataApplied', deb(refreshTowStatusStyling, 100));
+    document.addEventListener('tileDataUpdated', deb(refreshTowStatusStyling, 100));
+    
+    // Mutation observer for tow status changes in the DOM
+    const towStatusObserver = new MutationObserver(function(mutations) {
+      let needsRefresh = false;
+      mutations.forEach(mutation => {
+        if (mutation.type === 'childList' || mutation.type === 'attributes') {
+          const target = mutation.target;
+          if (target.classList && target.classList.contains('tow-status-selector')) {
+            needsRefresh = true;
+          }
+        }
+      });
+      if (needsRefresh) {
+        deb(refreshTowStatusStyling, 50)();
+      }
+    });
+    
+    // Observe the table body for changes
+    const tableBody = document.getElementById('plannerTableBody');
+    if (tableBody) {
+      towStatusObserver.observe(tableBody, { 
+        childList: true, 
+        subtree: true, 
+        attributes: true,
+        attributeFilter: ['value', 'data-value']
+      });
+    }
     // Also monitor Display toggle effects
     try { const viewToggle = document.getElementById('viewModeToggle'); if (viewToggle) viewToggle.addEventListener('change', deb(applyViewVisibility, 10)); } catch(_){}
     // BFCache/page show
     window.addEventListener('pageshow', deb(()=>{ applyViewVisibility(); }, 0));
     
-    // Continuous changelog synchronization 
+    // Continuous changelog synchronization and tow status styling refresh
     setInterval(() => {
       if (document.body.classList.contains('table-view')) {
         syncChangelog();
+        refreshTowStatusStyling(); // Ensure tow status styling persists
       }
     }, 1000); // Sync every second when in table view
     
@@ -510,4 +554,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', function(){ setTimeout(init, 0); });
+  
+  // Expose refresh function globally for external calls
+  window.tableViewRefreshTowStatus = refreshTowStatusStyling;
 })();

@@ -4291,26 +4291,34 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* Dynamic styling based on selected value */
-.planner-select.tow-status-selector[data-value="initiated"] {
+/* Dynamic styling based on selected value - Multiple selector approaches */
+table .planner-select.tow-status-selector[data-value="initiated"],
+#plannerTable .planner-select.tow-status-selector[data-value="initiated"],
+.planner-td select.tow-status-selector[data-value="initiated"] {
   background-color: #fff1e6 !important;
   color: #b45309 !important;
   border-color: #f59e0b !important;
 }
 
-.planner-select.tow-status-selector[data-value="ongoing"] {
+table .planner-select.tow-status-selector[data-value="ongoing"],
+#plannerTable .planner-select.tow-status-selector[data-value="ongoing"],
+.planner-td select.tow-status-selector[data-value="ongoing"] {
   background-color: #e0f2fe !important;
   color: #0369a1 !important;
   border-color: #0ea5e9 !important;
 }
 
-.planner-select.tow-status-selector[data-value="on-position"] {
+table .planner-select.tow-status-selector[data-value="on-position"],
+#plannerTable .planner-select.tow-status-selector[data-value="on-position"],
+.planner-td select.tow-status-selector[data-value="on-position"] {
   background-color: #dcfce7 !important;
   color: #166534 !important;
   border-color: #10b981 !important;
 }
 
-.planner-select.tow-status-selector[data-value="neutral"] {
+table .planner-select.tow-status-selector[data-value="neutral"],
+#plannerTable .planner-select.tow-status-selector[data-value="neutral"],
+.planner-td select.tow-status-selector[data-value="neutral"] {
   background-color: #f3f4f6 !important;
   color: #4b5563 !important;
   border-color: #d1d5db !important;
@@ -4345,15 +4353,21 @@ body.table-view #panel-planner-table {
 #panel-planner-table {
   --infobox-width: 360px;
   padding-right: var(--infobox-width);
+  height: calc(100vh - 120px); /* Account for header and tabs */
+  overflow: hidden;
 }
 
 /* Table view infobox positioning and resizing */
+#panel-planner-table {
+  position: relative;
+}
+
 #panel-planner-table #infobox-table {
-  position: fixed;
+  position: absolute;
   top: 0;
   right: 0;
   width: var(--infobox-width);
-  height: 100vh;
+  height: 100%;
   z-index: 10;
   background: var(--bg-primary, #ffffff);
   border-left: 1px solid var(--menu-border, #e6e6e6);

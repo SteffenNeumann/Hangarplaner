@@ -1945,7 +1945,7 @@ input:checked + .toggle-slider:before {
 	/* Keep in DOM for smooth fade instead of display: none */
 }
 .submenu-title {
-	color: #334155; /* Dark slate for better contrast in light mode */
+	color: #1f2937 !important; /* Dark gray for excellent contrast in light mode */
 	font-weight: 700;
 	margin-bottom: 12px;
 	padding-bottom: 6px;
@@ -1953,6 +1953,15 @@ input:checked + .toggle-slider:before {
 	letter-spacing: 0.04em;
 	text-transform: uppercase;
 	font-size: 12px;
+}
+
+/* Additional specific rules to ensure all submenu titles are visible */
+#submenu-update .submenu-title,
+#submenu-sync .submenu-title,
+#submenu-display .submenu-title,
+#submenu-export .submenu-title,
+#submenu-project .submenu-title {
+	color: #1f2937 !important; /* Force dark text in light mode for all submenus */
 }
 
 /* Dark mode variants for left rail and submenu */

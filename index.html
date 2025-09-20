@@ -4596,21 +4596,23 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
                 try {
                   const myName = getUserName();
                   const lastCleared = getLastClearedAt();
+                  let merged = [];
                   if (canReadFromServer() && !serverSuppressed()){
                     const data = await fetchServerJson();
                     if (data){
-                      const serverEntries = buildServerEntries(data, myName).filter(e => (e?.ts||0) > lastCleared);
-                      if (serverEntries && serverEntries.length){ renderEntries(serverEntries); return; }
+                      const serverEntries = (buildServerEntries(data, myName) || []).filter(e => (e?.ts||0) > lastCleared);
+                      if (serverEntries && serverEntries.length) merged = merged.concat(serverEntries);
                     }
                   }
-                  // Fallback: local-only entries from this device (others-only)
+                  // Include local entries from this device (others only) newer than lastCleared
                   const entries = load();
                   const onlyOthers = entries
                     .filter(e => (e && typeof e.user === 'string') ? (e.user.trim() !== myName) : true)
                     .filter(e => (e?.ts||0) > lastCleared);
-                  // keep newest first
-                  onlyOthers.sort((a,b)=> (b.ts||0) - (a.ts||0));
-                  renderEntries(onlyOthers);
+                  merged = merged.concat(onlyOthers);
+                  // keep newest first and render union
+                  merged.sort((a,b)=> (b.ts||0) - (a.ts||0));
+                  renderEntries(merged);
                 } catch(_){}
               }
 

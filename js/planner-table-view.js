@@ -219,11 +219,13 @@
       towStatus: (v)=>{ 
         setIdValue(`tow-status-${tileId}`, v); 
         eventFire(`#tow-status-${tileId}`, 'change');
-        // Update tow status styling in table view
-        const towSelect = document.querySelector(`#tow-${tileId}`);
-        if (towSelect) {
-          towSelect.setAttribute('data-value', v);
-        }
+        // Update tow status styling in table view with delay to avoid flicker
+        setTimeout(() => {
+          const towSelect = document.querySelector(`#tow-${tileId}`);
+          if (towSelect) {
+            towSelect.setAttribute('data-value', v);
+          }
+        }, 100);
       },
       status: (v)=>{ 
         setIdValue(`status-${tileId}`, v); 
@@ -416,30 +418,26 @@
     document.addEventListener('serverDataApplied', deb(refreshTowStatusStyling, 100));
     document.addEventListener('tileDataUpdated', deb(refreshTowStatusStyling, 100));
     
-    // Mutation observer for tow status changes in the DOM
+    // Simplified mutation observer - only for major DOM changes, not attributes
     const towStatusObserver = new MutationObserver(function(mutations) {
       let needsRefresh = false;
       mutations.forEach(mutation => {
-        if (mutation.type === 'childList' || mutation.type === 'attributes') {
-          const target = mutation.target;
-          if (target.classList && target.classList.contains('tow-status-selector')) {
-            needsRefresh = true;
-          }
+        if (mutation.type === 'childList') {
+          // Only refresh on major DOM structure changes, not attribute changes
+          needsRefresh = true;
         }
       });
       if (needsRefresh) {
-        deb(refreshTowStatusStyling, 50)();
+        deb(refreshTowStatusStyling, 200)();
       }
     });
     
-    // Observe the table body for changes
+    // Observe the table body for changes - only childList to avoid flickering
     const tableBody = document.getElementById('plannerTableBody');
     if (tableBody) {
       towStatusObserver.observe(tableBody, { 
         childList: true, 
-        subtree: true, 
-        attributes: true,
-        attributeFilter: ['value', 'data-value']
+        subtree: true
       });
     }
     // Also monitor Display toggle effects
@@ -447,13 +445,23 @@
     // BFCache/page show
     window.addEventListener('pageshow', deb(()=>{ applyViewVisibility(); }, 0));
     
-    // Continuous changelog synchronization and tow status styling refresh
+    // Continuous changelog synchronization and less frequent tow status styling refresh
     setInterval(() => {
       if (document.body.classList.contains('table-view')) {
         syncChangelog();
-        refreshTowStatusStyling(); // Ensure tow status styling persists
       }
     }, 1000); // Sync every second when in table view
+    
+    // Less frequent tow status refresh to avoid dropdown interference
+    setInterval(() => {
+      if (document.body.classList.contains('table-view')) {
+        // Only refresh if no dropdown is currently open
+        const openDropdowns = document.querySelectorAll('.tow-status-selector:focus');
+        if (openDropdowns.length === 0) {
+          refreshTowStatusStyling();
+        }
+      }
+    }, 5000); // Refresh every 5 seconds and only if no dropdown is active
     
     // Listen for changelog updates
     const observer = new MutationObserver(function(mutations) {

@@ -4283,7 +4283,7 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   font-size: 12px;
   padding: 4px 8px;
   border-radius: 4px;
-  background-color: #f3f4f6 !important;
+  background-color: transparent !important;
   border: 1px solid #d1d5db !important;
   color: #4b5563 !important;
   font-weight: 500;
@@ -4319,7 +4319,7 @@ table .planner-select.tow-status-selector[data-value="on-position"],
 table .planner-select.tow-status-selector[data-value="neutral"],
 #plannerTable .planner-select.tow-status-selector[data-value="neutral"],
 .planner-td select.tow-status-selector[data-value="neutral"] {
-  background-color: #f3f4f6 !important;
+  background-color: transparent !important;
   color: #4b5563 !important;
   border-color: #d1d5db !important;
 }
@@ -4475,7 +4475,7 @@ body.table-view #panel-planner-table {
 
 /* Dark mode styling for tow status selectors with data attributes */
 .dark-mode .planner-select.tow-status-selector {
-  background-color: var(--bg-secondary) !important;
+  background-color: transparent !important;
   border-color: var(--border-color) !important;
   color: var(--text-primary) !important;
 }
@@ -4499,7 +4499,7 @@ body.table-view #panel-planner-table {
 }
 
 .dark-mode .planner-select.tow-status-selector[data-value="neutral"] {
-  background-color: var(--bg-secondary) !important;
+  background-color: transparent !important;
   color: var(--text-primary) !important;
   border-color: var(--border-color) !important;
 }
@@ -4508,6 +4508,31 @@ body.table-view #panel-planner-table {
 .dark-mode #panel-planner-table #infobox-table {
   background: var(--bg-primary);
   border-left-color: var(--border-color);
+}
+
+/* Prevent dropdown flickering and ensure stable dropdown behavior */
+.tow-status-selector:focus {
+  outline: 2px solid #3b82f6 !important;
+  outline-offset: 1px !important;
+  z-index: 1000 !important;
+}
+
+.tow-status-selector option {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  padding: 4px 8px !important;
+}
+
+.dark-mode .tow-status-selector option {
+  background-color: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Ensure dropdown doesn't interfere with styling updates */
+.tow-status-selector[aria-expanded="true"],
+.tow-status-selector:focus {
+  position: relative;
+  z-index: 100;
 }
 
 /* Responsive layout for table view */

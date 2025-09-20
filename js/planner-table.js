@@ -126,7 +126,7 @@
           tdInput(`dep-${row.tileId}`, row.departureTime, ro, 'departureTime'),
           tdInput(`pinfo-${row.tileId}`, row.positionInfo, ro, 'positionInfo'),
           tdSelect(`tow-${row.tileId}`, row.towStatus, ro, ['neutral','initiated','ongoing','on-position'], 'towStatus'),
-          tdSelect(`stat-${row.tileId}`, row.status, ro, ['neutral','ready','maintenance','aog'], 'status'),
+          tdSelect(`stat-${row.tileId}`, row.status, ro, [{val: 'neutral', text: ''}, {val: 'ready', text: 'Ready'}, {val: 'maintenance', text: 'MX'}, {val: 'aog', text: 'AOG'}], 'status'),
           tdInput(`notes-${row.tileId}`, row.notes, ro, 'notes')
         ].join('');
         wireEditors(tr, row.tileId, ro);
@@ -142,7 +142,18 @@
 
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;' }[c])); }
   function tdInput(id, val, ro, col){ return `<td><input id="${esc(id)}" data-col="${col}" class="planner-input" ${ro?'disabled':''} value="${esc(val)}"></td>`; }
-  function tdSelect(id, val, ro, opts, col){ const o = opts.map(v=>`<option value="${esc(v)}" ${String(val)===v?'selected':''}>${esc(v)}</option>`).join(''); return `<td><select id="${esc(id)}" data-col="${col}" class="planner-select" ${ro?'disabled':''}>${o}</select></td>`; }
+  function tdSelect(id, val, ro, opts, col){
+    const o = opts.map(opt => {
+      if (typeof opt === 'object' && opt !== null && opt.val !== undefined) {
+        const text = (opt.text !== undefined) ? opt.text : opt.val;
+        return `<option value="${esc(opt.val)}" ${String(val)===opt.val?'selected':''}>${esc(text)}</option>`;
+      } else {
+        const v = String(opt);
+        return `<option value="${esc(v)}" ${String(val)===v?'selected':''}>${esc(v)}</option>`;
+      }
+    }).join('');
+    return `<td><select id="${esc(id)}" data-col="${col}" class="planner-select" ${ro?'disabled':''}>${o}</select></td>`;
+  }
 
   function updateSortIndicators(){
     $all('thead .sortable').forEach(th => {

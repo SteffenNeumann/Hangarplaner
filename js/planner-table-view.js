@@ -135,13 +135,20 @@
         tr.innerHTML = [
           cellInput(`hangar-pos-${row.tileId}`, row.hangarPosition, 'text', ro, 'hangarPosition'),
           cellInput(`ac-${row.tileId}`, row.aircraftId, 'text', ro, 'aircraftId'),
-          cellInput(`arr-${row.tileId}`, displayTime(row.arrivalTime), 'text', ro, 'arrivalTime'),
-          cellInput(`dep-${row.tileId}`, displayTime(row.departureTime), 'text', ro, 'departureTime'),
+          cellDateInput(row.tileId, displayTime(row.arrivalTime), ro, 'arrivalTime'),
+          cellDateInput(row.tileId, displayTime(row.departureTime), ro, 'departureTime'),
           cellInput(`pos-${row.tileId}`, row.positionInfo, 'text', ro, 'positionInfo'),
           cellTowStatus(`tow-${row.tileId}`, row.towStatus, ro, 'towStatus'),
           cellSelectWithAmpel(`stat-${row.tileId}`, row.status, ro, [{val: 'neutral', text: ''}, {val: 'ready', text: 'Ready'}, {val: 'maintenance', text: 'MX'}, {val: 'aog', text: 'AOG'}], 'status'),
           cellInput(`notes-${row.tileId}`, row.notes, 'text', ro, 'notes')
         ].join('');
+        
+        // Attach compact date-time picker behavior to this row's Arr/Dep inputs
+        try {
+          if (window.helpers && typeof window.helpers.attachCompactDateTimeInputs === 'function') {
+            window.helpers.attachCompactDateTimeInputs(tr);
+          }
+        } catch(_){}
         // Attach change handlers for editing
         wireRowEditors(tr, row.tileId, ro);
         tbody.appendChild(tr);
@@ -195,6 +202,12 @@
     }).join('');
     const statusLight = `<span class=\"status-light\" data-status=\"${esc(val)}\" aria-label=\"Status: ${esc(val)}\"></span>`;
     return `<td class=\"planner-td\"><div class=\"status-cell\">${statusLight}<select data-col=\"${col}\" id=\"${esc(id)}\" class=\"planner-select status-plain\" ${ro?'disabled':''}>${opts}</select></div></td>`;
+  }
+
+  // Specialized date-time cell that uses IDs compatible with the compact picker
+  function cellDateInput(tileId, val, ro, col){
+    const id = col === 'arrivalTime' ? `arrival-time-table-${tileId}` : `departure-time-table-${tileId}`;
+    return `<td class="planner-td"><input data-col="${col}" id="${esc(id)}" type="text" class="planner-input" ${ro?'disabled':''} value="${esc(val)}" placeholder="1230 or dd.mm.yy,HH:MM"></td>`;
   }
   function cellTowStatus(id, val, ro, col){
     const towOptions = {

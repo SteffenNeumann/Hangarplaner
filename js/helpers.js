@@ -2221,7 +2221,18 @@ if (window.helpers) {
                 const depEl = document.getElementById(`departure-time-${idx}`);
                 if (arrEl){ arrEl.value = startCompact; arrEl.dataset.iso = startIso; arrEl.dispatchEvent(new Event('input',{bubbles:true})); arrEl.dispatchEvent(new Event('change',{bubbles:true})); }
                 if (depEl){ depEl.value = endCompact; depEl.dataset.iso = endIso; depEl.dispatchEvent(new Event('input',{bubbles:true})); depEl.dispatchEvent(new Event('change',{bubbles:true})); }
-                if (arrEl || depEl) applied = true;
+                // Also update Planner Table inputs if present
+                const arrTable = document.getElementById(`arrival-time-table-${idx}`);
+                const depTable = document.getElementById(`departure-time-table-${idx}`);
+                if (arrTable){ arrTable.value = startCompact; arrTable.dataset.iso = startIso; arrTable.dispatchEvent(new Event('input',{bubbles:true})); arrTable.dispatchEvent(new Event('change',{bubbles:true})); }
+                if (depTable){ depTable.value = endCompact; depTable.dataset.iso = endIso; depTable.dispatchEvent(new Event('input',{bubbles:true})); depTable.dispatchEvent(new Event('change',{bubbles:true})); }
+                // Ensure the clicked field reflects the appropriate value
+                try {
+                  const tid = id.toLowerCase();
+                  if (tid.includes('arrival')) pickerTarget.value = startCompact;
+                  else if (tid.includes('departure')) pickerTarget.value = endCompact;
+                } catch(_){ }
+                if (arrEl || depEl || arrTable || depTable) applied = true;
               }
               if (!applied){
                 // Fallback: write summary into the clicked field and attach datasets

@@ -4362,6 +4362,123 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 .dark-mode #submenu-update .modern-toggle-switch input:checked + .modern-toggle-slider { background-color: var(--menu-accent); border-color: var(--menu-accent); }
 
 /* Table view enhancements */
+/* Inline Planner Table View (panel-planner-table > #plannerTableView > #plannerTable) */
+/* Base visuals limited in scope so other tables remain unaffected */
+#panel-planner-table #plannerTableView #plannerTable.fleet-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+#panel-planner-table #plannerTableView #plannerTable.fleet-table thead th {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #64748b;
+  padding: 10px 12px;
+  border-bottom: 2px solid #e2e8f0;
+  z-index: 1;
+  letter-spacing: 0.05em;
+}
+#panel-planner-table #plannerTableView #plannerTable.fleet-table tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+#panel-planner-table #plannerTableView #plannerTable.fleet-table tbody tr:hover {
+  background-color: #f8fafc; /* subtle hover in light mode */
+}
+/* Dark mode adjustments */
+.dark-mode #panel-planner-table #plannerTableView #plannerTable.fleet-table thead th {
+  background: var(--card-header-bg);
+  color: var(--text-secondary);
+  border-bottom-color: var(--border-color); /* Border: A */
+}
+.dark-mode #panel-planner-table #plannerTableView #plannerTable.fleet-table tbody td {
+  border-bottom-color: var(--border-color); /* Border: A */
+}
+.dark-mode #panel-planner-table #plannerTableView #plannerTable.fleet-table tbody tr:hover {
+  background-color: rgba(255,255,255,0.03); /* very subtle hover in dark mode */
+}
+
+/* Inputs and selects within planner table */
+#panel-planner-table #plannerTableView #plannerTable .planner-input,
+#panel-planner-table #plannerTableView #plannerTable .planner-select {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+  background: #fff;
+  color: #0f172a;
+  transition: border-color .15s ease, background-color .15s ease, color .15s ease;
+}
+#panel-planner-table #plannerTableView #plannerTable .planner-input:hover,
+#panel-planner-table #plannerTableView #plannerTable .planner-select:hover {
+  border-color: #e5e7eb;
+}
+#panel-planner-table #plannerTableView #plannerTable .planner-input:focus,
+#panel-planner-table #plannerTableView #plannerTable .planner-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+}
+
+/* Dark mode inputs baseline (do not affect selects styling differently here) */
+.dark-mode #panel-planner-table #plannerTableView #plannerTable .planner-input,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable .planner-select {
+  background: var(--input-bg);
+  color: var(--text-primary);
+  border-color: transparent;
+}
+.dark-mode #panel-planner-table #plannerTableView #plannerTable .planner-input:hover,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable .planner-select:hover {
+  border-color: rgba(255,255,255,0.12);
+}
+
+/* Column-specific input background: only text inputs (Tow/Status selects stay as-is) */
+/* Hangar Pos, AC-ID, Arr, Dep, Position, Notes text inputs get body bg in dark mode */
+.dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="hangarPosition"],
+.dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="aircraftId"],
+.dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="arrivalTime"],
+.dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="departureTime"],
+.dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="positionInfo"],
+.dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="notes"] {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* Arr/Dep placeholders: invisible by default, visible on hover/focus */
+#panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="arrivalTime"]::placeholder,
+#panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="departureTime"]::placeholder {
+  color: transparent;
+}
+#panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="arrivalTime"]:hover::placeholder,
+#panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="arrivalTime"]:focus::placeholder,
+#panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="departureTime"]:hover::placeholder,
+#panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="departureTime"]:focus::placeholder {
+  color: #94a3b8; /* subtle gray in light mode */
+}
+.dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="arrivalTime"]:hover::placeholder,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="arrivalTime"]:focus::placeholder,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="departureTime"]:hover::placeholder,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="departureTime"]:focus::placeholder {
+  color: var(--text-muted, #718096);
+}
+/* Make Arr/Dep inputs compact and robust for format switching */
+#panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="arrivalTime"],
+#panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="departureTime"] {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  letter-spacing: 0.01em;
+  padding: 4px 6px;
+}
+
+/* AC-ID emphasis for easier scanning */
+#panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="aircraftId"] {
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .status-cell {
   display: flex;
   align-items: center;

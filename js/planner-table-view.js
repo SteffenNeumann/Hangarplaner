@@ -100,8 +100,18 @@
   function sortRows(){
     const { col, dir } = STATE.sort;
     const sign = dir === 'asc' ? 1 : -1;
+    function isEmpty(v){
+      return v == null || (typeof v === 'string' && v.trim() === '');
+    }
     STATE.filtered.sort((a,b)=>{
       let va = a[col], vb = b[col];
+      const aEmpty = isEmpty(va);
+      const bEmpty = isEmpty(vb);
+      // Empties always at the bottom regardless of direction
+      if (aEmpty && !bEmpty) return 1;
+      if (!aEmpty && bEmpty) return -1;
+      if (aEmpty && bEmpty) return 0;
+
       // try numeric compare for tileId, fallback string
       if (col === 'tileId') { va = +va || 0; vb = +vb || 0; }
       // Custom sorting for status and tow status to group by status type
@@ -115,7 +125,10 @@
         va = towOrder[va] !== undefined ? towOrder[va] : 999;
         vb = towOrder[vb] !== undefined ? towOrder[vb] : 999;
       }
-      else { va = String(va||'').toLowerCase(); vb = String(vb||'').toLowerCase(); }
+      else {
+        va = String(va||'').toLowerCase();
+        vb = String(vb||'').toLowerCase();
+      }
       if (va < vb) return -1*sign; if (va > vb) return 1*sign; return 0;
     });
   }

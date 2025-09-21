@@ -2309,3 +2309,41 @@ function findFirstEmptyTile() {
 		if (document.visibilityState === "visible") runOnceWhenReady();
 	});
 })();
+
+/**
+ * Parent-side receiver for timetable/fleet inserts via postMessage
+ */
+(function(){
+	if (window.__plannerInsertReceiverInstalled) return;
+	window.__plannerInsertReceiverInstalled = true;
+
+	function tryPlannerHandoff(data){
+		try {
+			const reg = (data && data.registration || '').trim();
+			if (!reg) return false;
+			localStorage.setItem('selectedAircraft', reg);
+			if (data && data.prompt) localStorage.setItem('selectedAircraftPrompt', 'true');
+			const arr = (data && data.arr || '');
+			const dep = (data && data.dep || '');
+			if (arr && String(arr).trim()) localStorage.setItem('selectedArrivalTime', String(arr).trim()); else localStorage.removeItem('selectedArrivalTime');
+			if (dep && String(dep).trim()) localStorage.setItem('selectedDepartureTime', String(dep).trim()); else localStorage.removeItem('selectedDepartureTime');
+
+			try { document.getElementById('tab-planner')?.click(); } catch(_) {}
+
+			if (typeof window.checkForSelectedAircraft === 'function') {
+				setTimeout(() => window.checkForSelectedAircraft(), 50);
+				return true;
+			}
+		} catch(_) {}
+		return false;
+	}
+
+	window.addEventListener('message', function(ev){
+		try {
+			const d = ev && ev.data;
+			if (d && d.type === 'planner.insertAircraft') {
+				tryPlannerHandoff(d);
+			}
+		} catch(_) {}
+	});
+})();

@@ -885,7 +885,7 @@ const AirportFlights = (() => {
 			alert("Registration not available for this flight");
 			return;
 		}
-		// Mark that we should prompt for a target tile on the Hangar page
+		// Persist selection for the parent’s modal logic
 		localStorage.setItem("selectedAircraft", reg);
 		localStorage.setItem("selectedAircraftPrompt", "true");
 		// Persist provided times (HH:MM) for pickup on index.html
@@ -899,6 +899,39 @@ const AirportFlights = (() => {
 		} else {
 			localStorage.removeItem("selectedDepartureTime");
 		}
+
+		// 1) Fast path: same-origin parent DOM + direct call
+		try {
+			if (window.top && window.top !== window && window.top.document) {
+				// Activate Planner tab
+				try { window.top.document.getElementById('tab-planner')?.click(); } catch(_) {}
+				// Call parent handler if available
+				if (typeof window.top.checkForSelectedAircraft === 'function') {
+					window.top.checkForSelectedAircraft();
+					return;
+				}
+			}
+		} catch(_) {
+			// ignore and try postMessage
+		}
+
+		// 2) Fallback: postMessage to parent
+		try {
+			if (window.top && window.top !== window && typeof window.top.postMessage === 'function') {
+				window.top.postMessage({
+					type: 'planner.insertAircraft',
+					registration: reg,
+					arr: arrTime || '',
+					dep: depTime || '',
+					prompt: true
+				}, '*');
+				return;
+			}
+		} catch(_) {
+			// ignore and fallback to redirect
+		}
+
+		// 3) Last-resort fallback: keep existing redirect behavior
 		try {
 			const params = new URLSearchParams();
 			params.set("selectedAircraft", reg);

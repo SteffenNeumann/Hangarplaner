@@ -4497,6 +4497,14 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 #panel-planner-table.read-only #plannerTableView #plannerTable td .planner-input[data-col="departureTime"]::placeholder {
   color: transparent !important;
 }
+/* Vendor-prefixed placeholder hiding */
+.read-only #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="arrivalTime"]::-webkit-input-placeholder,
+.read-only #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="departureTime"]::-webkit-input-placeholder,
+#panel-planner-table.read-only #plannerTableView #plannerTable td .planner-input[data-col="arrivalTime"]::-webkit-input-placeholder,
+#panel-planner-table.read-only #plannerTableView #plannerTable td .planner-input[data-col="departureTime"]::-webkit-input-placeholder {
+  color: transparent !important;
+}
+/* Also hide when hovering/focusing (some engines repaint placeholder) */
 .read-only #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="arrivalTime"]:hover::placeholder,
 .read-only #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="arrivalTime"]:focus::placeholder,
 .read-only #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="departureTime"]:hover::placeholder,
@@ -4506,6 +4514,14 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 #panel-planner-table.read-only #plannerTableView #plannerTable td .planner-input[data-col="departureTime"]:hover::placeholder,
 #panel-planner-table.read-only #plannerTableView #plannerTable td .planner-input[data-col="departureTime"]:focus::placeholder {
   color: transparent !important;
+}
+/* Fallback for engines honoring placeholder-shown on disabled fields */
+.read-only #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="arrivalTime"]:placeholder-shown,
+.read-only #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="departureTime"]:placeholder-shown,
+#panel-planner-table.read-only #plannerTableView #plannerTable td .planner-input[data-col="arrivalTime"]:placeholder-shown,
+#panel-planner-table.read-only #plannerTableView #plannerTable td .planner-input[data-col="departureTime"]:placeholder-shown {
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important; /* Safari */
 }
 
 /* Disabled inputs/selects appearance in Sync-only mode */
@@ -4882,19 +4898,19 @@ body.table-view #panel-planner-table {
 
 .dark-mode .planner-select.tow-status-selector[data-value="initiated"] {
   background-color: rgba(245, 158, 11, 0.15) !important; /* match board */
-  color: #fdba74 !important;
+  color: #f59e0b !important; /* darker for readability */
   border-color: #b45309 !important;
 }
 
 .dark-mode .planner-select.tow-status-selector[data-value="ongoing"] {
   background-color: rgba(59, 130, 246, 0.15) !important; /* match board */
-  color: #93c5fd !important;
+  color: #3b82f6 !important; /* darker for readability */
   border-color: #1d4ed8 !important;
 }
 
 .dark-mode .planner-select.tow-status-selector[data-value="on-position"] {
   background-color: rgba(16, 185, 129, 0.15) !important; /* match board */
-  color: #a7f3d0 !important;
+  color: #10b981 !important; /* darker for readability */
   border-color: #065f46 !important;
 }
 

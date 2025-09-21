@@ -5535,7 +5535,6 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
                 var msg = { type: 'theme', dark: !!computeDark() };
                 try { var f = document.getElementById('timetableFrame'); if (f && f.contentWindow) f.contentWindow.postMessage(msg, '*'); } catch(e){}
                 try { var g = document.getElementById('databaseFrame'); if (g && g.contentWindow) g.contentWindow.postMessage(msg, '*'); } catch(e){}
-                try { var p = document.getElementById('plannerTableFrame'); if (p && p.contentWindow) p.contentWindow.postMessage(msg, '*'); } catch(e){}
               }
               document.addEventListener('DOMContentLoaded', function(){
                 try { var t = document.getElementById('darkModeToggle'); if (t) t.addEventListener('change', send); } catch(e){}
@@ -5550,10 +5549,7 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
             <script>
             (function(){
               function sendRefresh(){
-                try {
-                  var p = document.getElementById('plannerTableFrame');
-                  if (p && p.contentWindow) p.contentWindow.postMessage({ type: 'planner-table-refresh' }, '*');
-                } catch(e){}
+                // legacy plannerTableFrame removed; no-op retained for compatibility
               }
               document.addEventListener('primaryTilesUpdated', sendRefresh);
               document.addEventListener('secondaryTilesCreated', sendRefresh);

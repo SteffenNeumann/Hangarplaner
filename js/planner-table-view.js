@@ -182,10 +182,15 @@
       updateSortIndicators();
     } catch(e){}
   }
-  function displayTime(isoOrHHmm){
-    if (!isoOrHHmm) return '';
-    // Keep as stored; helpers may transform on write; filters accept free text
-    return isoOrHHmm;
+  function displayTime(v){
+    if (!v) return '';
+    try {
+      if (window.helpers && typeof window.helpers.isISODateTimeLocal === 'function' && typeof window.helpers.formatISOToCompactUTC === 'function'){
+        if (window.helpers.isISODateTimeLocal(v)) return window.helpers.formatISOToCompactUTC(v);
+      }
+    } catch(_){}
+    // Already compact or HH:mm or free text: show as-is
+    return v;
   }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
   function cellInput(id, val, type, ro, col){

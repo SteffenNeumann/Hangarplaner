@@ -142,6 +142,9 @@
       tbody.innerHTML = '';
       const ro = canReadOnly();
 
+      // Toggle read-only class on the planner table panel for styling parity with main view
+      try { const panel = document.getElementById('panel-planner-table'); if (panel) panel.classList.toggle('read-only', ro); } catch(_){}
+
       STATE.filtered.forEach(row => {
         const tr = document.createElement('tr');
         tr.className = 'planner-row';

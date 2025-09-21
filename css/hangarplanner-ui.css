@@ -4479,6 +4479,50 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   font-weight: 600;
 }
 
+/* Read-only (Sync) mode styling to match main view */
+/* Keep placeholders hidden in Arr/Dep at all times in read-only */
+.read-only #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="arrivalTime"]::placeholder,
+.read-only #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="departureTime"]::placeholder,
+#panel-planner-table.read-only #plannerTableView #plannerTable td .planner-input[data-col="arrivalTime"]::placeholder,
+#panel-planner-table.read-only #plannerTableView #plannerTable td .planner-input[data-col="departureTime"]::placeholder {
+  color: transparent !important;
+}
+.read-only #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="arrivalTime"]:hover::placeholder,
+.read-only #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="arrivalTime"]:focus::placeholder,
+.read-only #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="departureTime"]:hover::placeholder,
+.read-only #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="departureTime"]:focus::placeholder,
+#panel-planner-table.read-only #plannerTableView #plannerTable td .planner-input[data-col="arrivalTime"]:hover::placeholder,
+#panel-planner-table.read-only #plannerTableView #plannerTable td .planner-input[data-col="arrivalTime"]:focus::placeholder,
+#panel-planner-table.read-only #plannerTableView #plannerTable td .planner-input[data-col="departureTime"]:hover::placeholder,
+#panel-planner-table.read-only #plannerTableView #plannerTable td .planner-input[data-col="departureTime"]:focus::placeholder {
+  color: transparent !important;
+}
+
+/* Disabled inputs/selects appearance in Sync-only mode */
+.read-only #panel-planner-table #plannerTableView #plannerTable .planner-input[disabled],
+#panel-planner-table.read-only #plannerTableView #plannerTable .planner-input[disabled] {
+  cursor: not-allowed;
+  border-color: transparent !important;
+}
+.read-only #panel-planner-table #plannerTableView #plannerTable .planner-select[disabled],
+#panel-planner-table.read-only #plannerTableView #plannerTable .planner-select[disabled] {
+  cursor: not-allowed;
+  border-color: transparent !important;
+  background-color: transparent !important;
+}
+/* Light mode read-only colors */
+html:not(.dark-mode).read-only #panel-planner-table #plannerTableView #plannerTable .planner-input[disabled],
+html:not(.dark-mode) #panel-planner-table.read-only #plannerTableView #plannerTable .planner-input[disabled] {
+  background: #f8fafc !important;
+  color: #64748b !important;
+}
+/* Dark mode read-only colors */
+.dark-mode.read-only #panel-planner-table #plannerTableView #plannerTable .planner-input[disabled],
+.dark-mode #panel-planner-table.read-only #plannerTableView #plannerTable .planner-input[disabled] {
+  background: var(--input-bg) !important;
+  color: var(--text-secondary) !important;
+}
+
 .status-cell {
   display: flex;
   align-items: center;

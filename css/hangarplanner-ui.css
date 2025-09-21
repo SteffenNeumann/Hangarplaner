@@ -4444,8 +4444,18 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 .dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="departureTime"],
 .dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="positionInfo"],
 .dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="notes"] {
-  background: var(--bg-primary);
-  color: var(--text-primary);
+  background: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+}
+/* Ensure body background even when disabled (Sync read-only) */
+.dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="hangarPosition"]:disabled,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="aircraftId"]:disabled,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="arrivalTime"]:disabled,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="departureTime"]:disabled,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="positionInfo"]:disabled,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="notes"]:disabled {
+  background: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
 }
 
 /* Arr/Dep placeholders: invisible by default, visible on hover/focus */
@@ -4871,21 +4881,21 @@ body.table-view #panel-planner-table {
 }
 
 .dark-mode .planner-select.tow-status-selector[data-value="initiated"] {
-  background-color: rgba(181, 67, 9, 0.2) !important;
-  color: #fbbf24 !important;
-  border-color: #f59e0b !important;
+  background-color: rgba(245, 158, 11, 0.15) !important; /* match board */
+  color: #fdba74 !important;
+  border-color: #b45309 !important;
 }
 
 .dark-mode .planner-select.tow-status-selector[data-value="ongoing"] {
-  background-color: rgba(3, 105, 161, 0.2) !important;
-  color: #60a5fa !important;
-  border-color: #0ea5e9 !important;
+  background-color: rgba(59, 130, 246, 0.15) !important; /* match board */
+  color: #93c5fd !important;
+  border-color: #1d4ed8 !important;
 }
 
 .dark-mode .planner-select.tow-status-selector[data-value="on-position"] {
-  background-color: rgba(22, 101, 52, 0.2) !important;
-  color: #4ade80 !important;
-  border-color: #10b981 !important;
+  background-color: rgba(16, 185, 129, 0.15) !important; /* match board */
+  color: #a7f3d0 !important;
+  border-color: #065f46 !important;
 }
 
 .dark-mode .planner-select.tow-status-selector[data-value="neutral"] {

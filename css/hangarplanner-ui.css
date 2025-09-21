@@ -4504,11 +4504,17 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   cursor: not-allowed;
   border-color: transparent !important;
 }
-.read-only #panel-planner-table #plannerTableView #plannerTable .planner-select[disabled],
-#panel-planner-table.read-only #plannerTableView #plannerTable .planner-select[disabled] {
+.read-only #panel-planner-table #plannerTableView #plannerTable .planner-select[disabled]:not(.tow-status-selector),
+#panel-planner-table.read-only #plannerTableView #plannerTable .planner-select[disabled]:not(.tow-status-selector) {
   cursor: not-allowed;
   border-color: transparent !important;
-  background-color: transparent !important;
+  background-color: transparent !important; /* keep other selects subdued */
+}
+/* Keep tow status chips visible even when disabled */
+.read-only #panel-planner-table #plannerTableView #plannerTable .planner-select.tow-status-selector[disabled],
+#panel-planner-table.read-only #plannerTableView #plannerTable .planner-select.tow-status-selector[disabled] {
+  cursor: default;
+  /* no background override here so data-value based colors remain visible */
 }
 /* Light mode read-only colors */
 html:not(.dark-mode).read-only #panel-planner-table #plannerTableView #plannerTable .planner-input[disabled],

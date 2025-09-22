@@ -70,6 +70,7 @@ $body = json_decode($raw, true);
 if (!is_array($body)) respond([ 'success'=>false, 'error'=>'Invalid JSON' ], 400);
 
 $recipients = isset($body['recipients']) && is_array($body['recipients']) ? $body['recipients'] : [];
+$cc         = isset($body['cc']) && is_array($body['cc']) ? $body['cc'] : [];
 $subject    = isset($body['subject']) ? trim((string)$body['subject']) : '';
 $msgText    = isset($body['body']) ? (string)$body['body'] : '';
 $pdfName    = isset($body['pdfFilename']) ? trim((string)$body['pdfFilename']) : 'hangar_plan.pdf';
@@ -78,6 +79,8 @@ $pdfBase64  = isset($body['pdfBase64']) ? (string)$body['pdfBase64'] : '';
 if (!$recipients) respond([ 'success'=>false, 'error'=>'No recipients' ], 400);
 $validRecipients = [];
 foreach ($recipients as $r){ $r = trim((string)$r); if ($r !== '' && filter_var($r, FILTER_VALIDATE_EMAIL)) $validRecipients[] = $r; }
+$validCc = [];
+foreach ($cc as $r){ $r = trim((string)$r); if ($r !== '' && filter_var($r, FILTER_VALIDATE_EMAIL)) $validCc[] = $r; }
 if (count($validRecipients) === 0) respond([ 'success'=>false, 'error'=>'Invalid recipients' ], 400);
 if ($subject === '') $subject = 'Hangar Plan';
 
@@ -94,6 +97,7 @@ $boundary = 'np_' . bin2hex(random_bytes(8));
 $headers = '';
 $headers .= 'From: ' . $from . "\r\n";
 $headers .= 'Reply-To: ' . $from . "\r\n"; // non-reply mailbox
+if (!empty($validCc)) { $headers .= 'Cc: ' . implode(', ', $validCc) . "\r\n"; }
 $headers .= "MIME-Version: 1.0\r\n";
 $headers .= 'X-Auto-Response-Suppress: All' . "\r\n";
 $headers .= 'Auto-Submitted: auto-generated' . "\r\n";
@@ -116,7 +120,7 @@ $payload = $textPart . $attachment . $closing;
 $ok = @mail($to, $subject, $payload, $headers);
 if (!$ok){
   $ts = date('c');
-  @file_put_contents($OUTBOX_FILE, "[$ts]\nTO: $to\nSUBJECT: $subject\nFROM: $from\n\n(Failed to send via mail())\n\n---\n", FILE_APPEND);
+  @file_put_contents($OUTBOX_FILE, "[$ts]\nTO: $to\nCC: " . (implode(', ', $validCc)) . "\nSUBJECT: $subject\nFROM: $from\n\n(Failed to send via mail())\n\n---\n", FILE_APPEND);
   @chmod($OUTBOX_FILE, 0664);
 }
 
@@ -126,6 +130,7 @@ $log[] = [
   'timestamp' => date('c'),
   'userEmail' => $userEmail,
   'recipients' => $validRecipients,
+  'cc' => $validCc,
   'subject' => $subject,
   'from' => $from,
   'ok' => (bool)$ok,

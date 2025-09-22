@@ -603,6 +603,10 @@
 					<input type="text" id="mailRecipients" class="sidebar-form-control" placeholder="e.g. ops@example.com, chief@example.com" title="Comma/semicolon-separated list of emails" />
 				</div>
 				<div class="sidebar-form-group">
+					<label for="mailCC">CC</label>
+					<input type="text" id="mailCC" class="sidebar-form-control" placeholder="Optional CC addresses" title="Comma/semicolon-separated list of emails for CC" />
+				</div>
+				<div class="sidebar-form-group">
 					<label for="mailSubject">Subject</label>
 					<input type="text" id="mailSubject" class="sidebar-form-control" placeholder="Subject" />
 				</div>
@@ -5131,6 +5135,7 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		  const MAIL_FROM = 'info@hangarplaner.de'; // non-reply sender (configured on server as well)
 		  const SETTINGS_KEYS = {
 		    recipients: 'emailRecipients',
+		    cc: 'emailCc',
 		    subject: 'emailSubject',
 		    body: 'emailBody',
 		  };
@@ -5166,6 +5171,7 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		      const data = await res.json();
 		      const s = (data && data.settings) ? data.settings : {};
 		      setField('mailRecipients', s[SETTINGS_KEYS.recipients] || '');
+		      setField('mailCC', s[SETTINGS_KEYS.cc] || '');
 		      setField('mailSubject', s[SETTINGS_KEYS.subject] || '');
 		      setField('mailBody', s[SETTINGS_KEYS.body] || '');
 		    } catch(e) { /* ignore */ }
@@ -5180,10 +5186,12 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		        return false;
 		      }
 		      const recipients = getField('mailRecipients');
+		      const cc         = getField('mailCC');
 		      const subject    = getField('mailSubject');
 		      const body       = getField('mailBody');
 		      const payload = { metadata: { timestamp: Date.now() }, settings: {} };
 		      payload.settings[SETTINGS_KEYS.recipients] = recipients;
+		      payload.settings[SETTINGS_KEYS.cc]         = cc;
 		      payload.settings[SETTINGS_KEYS.subject]    = subject;
 		      payload.settings[SETTINGS_KEYS.body]       = body;
 		      let url = (window.serverSync && typeof window.serverSync.getServerUrl==='function' && window.serverSync.getServerUrl()) || (window.location.origin + '/sync/data.php');
@@ -5234,8 +5242,10 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		    try {
 		      const recipientsRaw = getField('mailRecipients');
 		      const recipients = splitEmails(recipientsRaw);
+		      const ccRaw = getField('mailCC');
+		      const cc = splitEmails(ccRaw);
 		      if (!recipients.length){ showModalAlert('Please enter at least one recipient.'); return; }
-		      const invalid = recipients.filter(e => !isValidEmail(e));
+		      const invalid = [...recipients, ...cc].filter(e => !isValidEmail(e));
 		      if (invalid.length){ showModalAlert('Invalid email(s): ' + invalid.join(', ')); return; }
 		      const subject = getField('mailSubject') || 'Hangar Plan';
 		      const msg = getField('mailBody') || '';
@@ -5270,6 +5280,7 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		      });
 		      const payload = {
 		        recipients,
+		        cc,
 		        subject,
 		        body: (msg ? (msg + '\n\n') : '') + 'Sent by: ' + sentBy + '\n' + 'Please do not reply to this email.',
 		        pdfFilename: pdfName,
@@ -5289,10 +5300,12 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 
 		  function wire(){
 		    const r = document.getElementById('mailRecipients');
+		    const c = document.getElementById('mailCC');
 		    const s = document.getElementById('mailSubject');
 		    const b = document.getElementById('mailBody');
 		    const send = document.getElementById('sendMailBtn');
 		    if (r && !r.__wired){ r.addEventListener('change', saveServerEmailSettings); r.addEventListener('blur', saveServerEmailSettings); r.__wired=true; }
+		    if (c && !c.__wired){ c.addEventListener('change', saveServerEmailSettings); c.addEventListener('blur', saveServerEmailSettings); c.__wired=true; }
 		    if (s && !s.__wired){ s.addEventListener('change', saveServerEmailSettings); s.addEventListener('blur', saveServerEmailSettings); s.__wired=true; }
 		    if (b && !b.__wired){ b.addEventListener('change', saveServerEmailSettings); b.addEventListener('blur', saveServerEmailSettings); b.__wired=true; }
 		    if (send && !send.__wired){ send.addEventListener('click', function(e){ e.preventDefault(); sendMailWithPdf(); }); send.__wired=true; }

@@ -5045,6 +5045,12 @@ body.table-view #panel-planner-table {
 .dark-mode #presenceNameInput { border: none !important; }
 .dark-mode #presenceNameInput:focus { border: none !important; outline: none !important; }
 
+/* Mail log readability (light theme) */
+body:not(.dark-mode) #mailLogList,
+body:not(.dark-mode) #mailLogList li {
+  color: #374151 !important; /* slate-700 for good contrast */
+}
+
 /* Users list truncation and layout */
 #presenceNames { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 

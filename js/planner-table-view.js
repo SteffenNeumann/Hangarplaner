@@ -100,13 +100,28 @@
   function sortRows(){
     const { col, dir } = STATE.sort;
     const sign = dir === 'asc' ? 1 : -1;
-    function isEmpty(v){
-      return v == null || (typeof v === 'string' && v.trim() === '');
+
+    // Configurable placeholder set to treat as empty for sorting
+    // Add any additional tokens you consider placeholders here (e.g., '-', 'N/A')
+    const PLACEHOLDER_EMPTY_SET = new Set();
+
+    function isSortEmpty(column, v){
+      // Base empty checks
+      if (v == null) return true;
+      if (typeof v === 'string') {
+        const t = v.trim();
+        if (t === '') return true;
+        if (PLACEHOLDER_EMPTY_SET.has(t)) return true;
+        // Treat 'neutral' as empty for status/towStatus
+        if ((column === 'status' || column === 'towStatus') && t.toLowerCase() === 'neutral') return true;
+      }
+      return false;
     }
+
     STATE.filtered.sort((a,b)=>{
       let va = a[col], vb = b[col];
-      const aEmpty = isEmpty(va);
-      const bEmpty = isEmpty(vb);
+      const aEmpty = isSortEmpty(col, va);
+      const bEmpty = isSortEmpty(col, vb);
       // Empties always at the bottom regardless of direction
       if (aEmpty && !bEmpty) return 1;
       if (!aEmpty && bEmpty) return -1;
@@ -116,12 +131,12 @@
       if (col === 'tileId') { va = +va || 0; vb = +vb || 0; }
       // Custom sorting for status and tow status to group by status type
       else if (col === 'status') {
-        const statusOrder = { 'neutral': 0, 'ready': 1, 'maintenance': 2, 'aog': 3 };
+        const statusOrder = { 'ready': 1, 'maintenance': 2, 'aog': 3 };
         va = statusOrder[va] !== undefined ? statusOrder[va] : 999;
         vb = statusOrder[vb] !== undefined ? statusOrder[vb] : 999;
       }
       else if (col === 'towStatus') {
-        const towOrder = { 'neutral': 0, 'initiated': 1, 'ongoing': 2, 'on-position': 3 };
+        const towOrder = { 'initiated': 1, 'ongoing': 2, 'on-position': 3 };
         va = towOrder[va] !== undefined ? towOrder[va] : 999;
         vb = towOrder[vb] !== undefined ? towOrder[vb] : 999;
       }

@@ -5226,8 +5226,9 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		    const ul = document.getElementById('mailLogList');
 		    if (!ul) return;
 		    ul.innerHTML = '';
-		    if (!items.length){ ul.innerHTML = '<li class="text-gray-400">No mails sent yet</li>'; return; }
-		    items.forEach(it => {
+		    const list = Array.isArray(items) ? items.slice().reverse() : [];
+		    if (!list.length){ ul.innerHTML = '<li class="text-gray-400">No mails sent yet</li>'; return; }
+		    list.forEach(it => {
 		      const li = document.createElement('li');
 		      const ts = it && it.timestamp ? it.timestamp : '';
 		      const user = it && it.userEmail ? it.userEmail : '';

@@ -301,38 +301,59 @@ function searchAircraft() {
 
 	const raw = searchInput.value.trim();
 	const normalize = (s) => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-	const searchTerm = normalize(raw);
-	console.log(`Suche nach Flugzeug (normalisiert): ${searchTerm}`);
+	const term = normalize(raw);
+	const isTableView = !!(document && document.body && document.body.classList.contains('table-view'));
+	console.log(`Suche nach Flugzeug (normalisiert): ${term} • View=${isTableView ? 'table' : 'tiles'}`);
 
-	// Suche in allen Kacheln (primär + sekundär)
-	const aircraftInputs = document.querySelectorAll('input[id^="aircraft-"]');
-	let found = false;
+	// Sammle Inputs aus beiden Ansichten
+	const tileSelector = '#hangarGrid .hangar-cell input[id^="aircraft-"], #secondaryHangarGrid .hangar-cell input[id^="aircraft-"]';
+	const tableSelector = '#plannerTableBody input[id^="ac-"]';
+	const tileInputs = Array.from(document.querySelectorAll(tileSelector));
+	const tableInputs = Array.from(document.querySelectorAll(tableSelector));
 
-	aircraftInputs.forEach((input) => {
-		const valNorm = normalize(input.value);
-		if (valNorm.includes(searchTerm)) {
-			// Gefunden - highlighten
-			input.style.backgroundColor = "#ffeb3b";
-			try { input.scrollIntoView({ behavior: "smooth", block: "center" }); } catch(_){}
-			found = true;
+	// Matches sammeln
+	const tileMatches = [];
+	const tableMatches = [];
+	const highlight = (list) => {
+		list.forEach((input) => {
+			try {
+				input.style.backgroundColor = '#ffeb3b';
+				setTimeout(() => { try { input.style.backgroundColor = ''; } catch(_){} }, 3000);
+			} catch(_){}
+		});
+	};
 
-			// Highlight nach 3 Sekunden entfernen
-			setTimeout(() => {
-				try { input.style.backgroundColor = ""; } catch(_){}
-			}, 3000);
-		}
-	});
+	tileInputs.forEach((inp) => { try { if (normalize(inp.value).includes(term)) tileMatches.push(inp); } catch(_){} });
+	tableInputs.forEach((inp) => { try { if (normalize(inp.value).includes(term)) tableMatches.push(inp); } catch(_){} });
 
-	if (!found) {
-		console.log(`Flugzeug "${raw}" nicht gefunden`);
-		// Optional: Notification anzeigen
-		if (window.showNotification) {
-			window.showNotification(
-				`Flugzeug "${raw}" nicht gefunden`,
-				"warning"
-			);
-		}
-	} else {
+	// Hervorheben in beiden, scroll bevorzugt aktive Ansicht
+	highlight(tileMatches);
+	highlight(tableMatches);
+
+	let scrolled = false;
+	if (isTableView && tableMatches.length > 0) {
+		try { tableMatches[0].scrollIntoView({ behavior: 'smooth', block: 'center' }); scrolled = true; } catch(_){}
+	} else if (!isTableView && tileMatches.length > 0) {
+		try { tileMatches[0].scrollIntoView({ behavior: 'smooth', block: 'center' }); scrolled = true; } catch(_){}
+	}
+
+	if (tileMatches.length === 0 && tableMatches.length === 0) {
+		if (window.showNotification) { try { window.showNotification(`Flugzeug "${raw}" nicht gefunden`, 'warning'); } catch(_){} }
+		else { console.log(`Flugzeug "${raw}" nicht gefunden`); }
+		return;
+	}
+
+	// Falls nur in der jeweils anderen Ansicht gefunden wurde, Hinweis anzeigen
+	if (!isTableView && tileMatches.length === 0 && tableMatches.length > 0) {
+		if (window.showNotification) { try { window.showNotification(`In Tabelle gefunden: "${raw}" – aktivieren Sie Table View, um die Markierung zu sehen`, 'info'); } catch(_){} }
+		return;
+	}
+	if (isTableView && tableMatches.length === 0 && tileMatches.length > 0) {
+		if (window.showNotification) { try { window.showNotification(`In Kacheln gefunden: "${raw}" – deaktivieren Sie Table View, um die Markierung zu sehen`, 'info'); } catch(_){} }
+		return;
+	}
+
+	if (scrolled) {
 		console.log(`Flugzeug "${raw}" gefunden und hervorgehoben`);
 	}
 }

@@ -2370,23 +2370,52 @@ function findFirstEmptyTile() {
           if (!raw) { console.warn('Keine Suchbegriff eingegeben'); return; }
           const normalize = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
           const term = normalize(raw);
-          const inputs = document.querySelectorAll('input[id^="aircraft-"]');
-          let found = false;
-          inputs.forEach((inp) => {
-            try {
-              const valNorm = normalize(inp.value);
-              if (valNorm.includes(term)) {
+          const isTableView = !!(document && document.body && document.body.classList.contains('table-view'));
+          
+          const tileSelector = '#hangarGrid .hangar-cell input[id^="aircraft-"], #secondaryHangarGrid .hangar-cell input[id^="aircraft-"]';
+          const tableSelector = '#plannerTableBody input[id^="ac-"]';
+          const tileInputs = Array.from(document.querySelectorAll(tileSelector));
+          const tableInputs = Array.from(document.querySelectorAll(tableSelector));
+          
+          const tileMatches = [];
+          const tableMatches = [];
+          const highlight = (list) => {
+            list.forEach((inp) => {
+              try {
                 inp.style.backgroundColor = '#ffeb3b';
-                try { inp.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(_){}
                 setTimeout(() => { try { inp.style.backgroundColor = ''; } catch(_){} }, 3000);
-                found = true;
-              }
-            } catch(_){}
-          });
-          if (!found) {
+              } catch(_){}
+            });
+          };
+          
+          tileInputs.forEach((inp) => { try { if (normalize(inp.value).includes(term)) tileMatches.push(inp); } catch(_){} });
+          tableInputs.forEach((inp) => { try { if (normalize(inp.value).includes(term)) tableMatches.push(inp); } catch(_){} });
+          
+          highlight(tileMatches);
+          highlight(tableMatches);
+          
+          let scrolled = false;
+          if (isTableView && tableMatches.length > 0) {
+            try { tableMatches[0].scrollIntoView({ behavior: 'smooth', block: 'center' }); scrolled = true; } catch(_){}
+          } else if (!isTableView && tileMatches.length > 0) {
+            try { tileMatches[0].scrollIntoView({ behavior: 'smooth', block: 'center' }); scrolled = true; } catch(_){}
+          }
+          
+          if (tileMatches.length === 0 && tableMatches.length === 0) {
             if (window.showNotification) { try { window.showNotification(`Flugzeug \"${raw}\" nicht gefunden`, 'warning'); } catch(_){} }
             else { console.log(`Flugzeug \"${raw}\" nicht gefunden`); }
-          } else {
+            return;
+          }
+          if (!isTableView && tileMatches.length === 0 && tableMatches.length > 0) {
+            if (window.showNotification) { try { window.showNotification(`In Tabelle gefunden: \"${raw}\" – aktivieren Sie Table View`, 'info'); } catch(_){} }
+            return;
+          }
+          if (isTableView && tableMatches.length === 0 && tileMatches.length > 0) {
+            if (window.showNotification) { try { window.showNotification(`In Kacheln gefunden: \"${raw}\" – deaktivieren Sie Table View`, 'info'); } catch(_){} }
+            return;
+          }
+          
+          if (scrolled) {
             console.log(`Flugzeug \"${raw}\" gefunden und hervorgehoben`);
           }
         } catch (e) { console.warn('Fallback search failed:', e); }

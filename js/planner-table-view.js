@@ -408,6 +408,69 @@
     } catch(e){}
   }
   
+  // Map ChangeLog field prefixes to table-view input/select IDs
+  function mapPrefixToTableId(prefix, tileId){
+    try {
+      const id = parseInt(tileId, 10);
+      if (!isFinite(id)) return '';
+      switch (String(prefix)){
+        case 'aircraft': return `ac-${id}`;
+        case 'hangar-position': return `hangar-pos-${id}`;
+        case 'arrival-time': return `arrival-time-table-${id}`;
+        case 'departure-time': return `departure-time-table-${id}`;
+        case 'position': return `pos-${id}`;
+        case 'status': return `stat-${id}`;
+        case 'tow-status': return `tow-${id}`;
+        case 'notes': return `notes-${id}`;
+        default: return '';
+      }
+    } catch(_) { return ''; }
+  }
+  
+  function focusAndHighlight(el){
+    try {
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      try { el.focus({ preventScroll: true }); } catch(_){ try { el.focus(); } catch(__){} }
+      const prev = el.style.outline;
+      el.style.outline = '2px solid #ff7043';
+      setTimeout(()=>{ try { el.style.outline = prev || ''; } catch(__){} }, 1500);
+    } catch(_){}
+  }
+  
+  function wireTableChangeLogLinkDelegation(){
+    try {
+      const container = document.getElementById('tableChangeLogList');
+      if (!container || container.__linksWired) return;
+      container.addEventListener('click', function(e){
+        try {
+          const a = e.target && (e.target.closest ? e.target.closest('a') : null);
+          if (!a) return;
+          const id = a.id || '';
+          if (!/^goTo_/.test(id)) return; // not a changelog link we know
+          e.preventDefault();
+          // Only act when in table-view; tile view has its own wiring
+          if (!document.body.classList.contains('table-view')) return;
+          // goTo_[...optional...]_<cellId>_<prefix>
+          const parts = id.split('_');
+          if (parts.length < 3) return;
+          const prefix = parts.pop();
+          const cellId = parseInt(parts.pop(), 10);
+          if (!isFinite(cellId)) return;
+          const tableId = mapPrefixToTableId(prefix, cellId);
+          if (!tableId) return;
+          const target = document.getElementById(tableId);
+          if (target) {
+            focusAndHighlight(target);
+          } else {
+            // If filtered out or not rendered, do nothing (stay on view)
+          }
+        } catch(_){}
+      });
+      container.__linksWired = true;
+    } catch(_){}
+  }
+  
   // Setup changelog handlers for table view
   function setupTableChangelog(){
     try {
@@ -447,6 +510,9 @@
         });
         toggleBtn.__wired = true;
       }
+
+      // Delegated link handling for copied Change Log items (robust to innerHTML resets)
+      wireTableChangeLogLinkDelegation();
     } catch(e){}
   }
 

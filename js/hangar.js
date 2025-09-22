@@ -2358,3 +2358,37 @@ function findFirstEmptyTile() {
     }
   } catch(_e){}
 })();
+
+// Fallback: define a minimal global searchAircraft only if missing
+(function(){
+  try {
+    if (typeof window.searchAircraft !== 'function') {
+      window.searchAircraft = function(){
+        try {
+          const searchInput = document.getElementById('searchAircraft');
+          const raw = (searchInput && typeof searchInput.value === 'string') ? searchInput.value.trim() : '';
+          if (!raw) { console.warn('Keine Suchbegriff eingegeben'); return; }
+          const term = raw.toUpperCase();
+          const inputs = document.querySelectorAll('input[id^="aircraft-"]');
+          let found = false;
+          inputs.forEach((inp) => {
+            try {
+              if (((inp.value||'').toUpperCase()).includes(term)) {
+                inp.style.backgroundColor = '#ffeb3b';
+                try { inp.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(_){}
+                setTimeout(() => { try { inp.style.backgroundColor = ''; } catch(_){} }, 3000);
+                found = true;
+              }
+            } catch(_){}
+          });
+          if (!found) {
+            if (window.showNotification) { try { window.showNotification(`Flugzeug "${term}" nicht gefunden`, 'warning'); } catch(_){} }
+            else { console.log(`Flugzeug "${term}" nicht gefunden`); }
+          } else {
+            console.log(`Flugzeug "${term}" gefunden und hervorgehoben`);
+          }
+        } catch (e) { console.warn('Fallback search failed:', e); }
+      };
+    }
+  } catch(_e){}
+})();

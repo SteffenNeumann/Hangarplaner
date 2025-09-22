@@ -2368,12 +2368,14 @@ function findFirstEmptyTile() {
           const searchInput = document.getElementById('searchAircraft');
           const raw = (searchInput && typeof searchInput.value === 'string') ? searchInput.value.trim() : '';
           if (!raw) { console.warn('Keine Suchbegriff eingegeben'); return; }
-          const term = raw.toUpperCase();
+          const normalize = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+          const term = normalize(raw);
           const inputs = document.querySelectorAll('input[id^="aircraft-"]');
           let found = false;
           inputs.forEach((inp) => {
             try {
-              if (((inp.value||'').toUpperCase()).includes(term)) {
+              const valNorm = normalize(inp.value);
+              if (valNorm.includes(term)) {
                 inp.style.backgroundColor = '#ffeb3b';
                 try { inp.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(_){}
                 setTimeout(() => { try { inp.style.backgroundColor = ''; } catch(_){} }, 3000);
@@ -2382,10 +2384,10 @@ function findFirstEmptyTile() {
             } catch(_){}
           });
           if (!found) {
-            if (window.showNotification) { try { window.showNotification(`Flugzeug "${term}" nicht gefunden`, 'warning'); } catch(_){} }
-            else { console.log(`Flugzeug "${term}" nicht gefunden`); }
+            if (window.showNotification) { try { window.showNotification(`Flugzeug \"${raw}\" nicht gefunden`, 'warning'); } catch(_){} }
+            else { console.log(`Flugzeug \"${raw}\" nicht gefunden`); }
           } else {
-            console.log(`Flugzeug "${term}" gefunden und hervorgehoben`);
+            console.log(`Flugzeug \"${raw}\" gefunden und hervorgehoben`);
           }
         } catch (e) { console.warn('Fallback search failed:', e); }
       };

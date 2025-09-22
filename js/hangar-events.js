@@ -299,38 +299,41 @@ function searchAircraft() {
 		return;
 	}
 
-	const searchTerm = searchInput.value.trim().toUpperCase();
-	console.log(`Suche nach Flugzeug: ${searchTerm}`);
+	const raw = searchInput.value.trim();
+	const normalize = (s) => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+	const searchTerm = normalize(raw);
+	console.log(`Suche nach Flugzeug (normalisiert): ${searchTerm}`);
 
-	// Suche in allen Kacheln
+	// Suche in allen Kacheln (primär + sekundär)
 	const aircraftInputs = document.querySelectorAll('input[id^="aircraft-"]');
 	let found = false;
 
 	aircraftInputs.forEach((input) => {
-		if (input.value.toUpperCase().includes(searchTerm)) {
+		const valNorm = normalize(input.value);
+		if (valNorm.includes(searchTerm)) {
 			// Gefunden - highlighten
 			input.style.backgroundColor = "#ffeb3b";
-			input.scrollIntoView({ behavior: "smooth", block: "center" });
+			try { input.scrollIntoView({ behavior: "smooth", block: "center" }); } catch(_){}
 			found = true;
 
 			// Highlight nach 3 Sekunden entfernen
 			setTimeout(() => {
-				input.style.backgroundColor = "";
+				try { input.style.backgroundColor = ""; } catch(_){}
 			}, 3000);
 		}
 	});
 
 	if (!found) {
-		console.log(`Flugzeug "${searchTerm}" nicht gefunden`);
+		console.log(`Flugzeug "${raw}" nicht gefunden`);
 		// Optional: Notification anzeigen
 		if (window.showNotification) {
 			window.showNotification(
-				`Flugzeug "${searchTerm}" nicht gefunden`,
+				`Flugzeug "${raw}" nicht gefunden`,
 				"warning"
 			);
 		}
 	} else {
-		console.log(`Flugzeug "${searchTerm}" gefunden und hervorgehoben`);
+		console.log(`Flugzeug "${raw}" gefunden und hervorgehoben`);
 	}
 }
 

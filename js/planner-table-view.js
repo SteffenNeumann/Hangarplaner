@@ -448,7 +448,10 @@
           if (!a) return;
           const id = a.id || '';
           if (!/^goTo_/.test(id)) return; // not a changelog link we know
-          e.preventDefault();
+          // Intercept fully so no other handlers can toggle views
+          try { e.preventDefault(); } catch(_){}
+          try { e.stopPropagation(); } catch(_){}
+          try { if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation(); } catch(_){}
           // Only act when in table-view; tile view has its own wiring
           if (!document.body.classList.contains('table-view')) return;
           // goTo_[...optional...]_<cellId>_<prefix>

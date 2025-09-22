@@ -288,6 +288,22 @@
     };
     if (readOnly) return; // no wiring when read-only
 
+    // Live normalization for AC-ID while typing (mirror tile behavior)
+    try {
+      const acInput = tr.querySelector(`#ac-${tileId}`);
+      if (acInput && !acInput.__normWired) {
+        acInput.addEventListener('input', function(){
+          try {
+            const raw = this.value || '';
+            const clean = raw.replace(/-/g, '').toUpperCase();
+            const out = clean.length > 1 ? (clean.charAt(0) + '-' + clean.slice(1)) : clean;
+            if (out !== this.value) this.value = out;
+          } catch(_){}
+        });
+        acInput.__normWired = true;
+      }
+    } catch(_){}
+
     tr.querySelectorAll('input.planner-input, select.planner-select, select.tow-status-selector, select.status-selector').forEach(el => {
       el.addEventListener('change', async function(){ await applyEditorChange(this, handlers); });
       el.addEventListener('blur', async function(){ await applyEditorChange(this, handlers); });

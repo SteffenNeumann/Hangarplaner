@@ -5315,24 +5315,20 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		      return `${y}_${m}_${da}`;
 		    } catch(_) { return ''; }
 		  }
-		  function updateProjectNameDate(){
-		    try {
-		      const input = document.getElementById('projectName');
-		      if (!input) return;
-		      const v = (input.value||'').trim();
-		      let base = '';
-		      if (v){
-		        base = v.replace(/^(\d{4})[_.-]?(\d{2})[_.-]?(\d{2})[ _-]*/,'').trim();
-		      }
-		      if (!base) base = 'Hangarplan';
-		      const todaySlug = formatDateSlug(new Date());
-		      input.value = `${todaySlug}_${base}`;
-		    } catch(_e){}
-		  }
-		  document.addEventListener('DOMContentLoaded', updateProjectNameDate);
-		  window.addEventListener('pageshow', updateProjectNameDate);
-		  document.addEventListener('serverDataLoaded', updateProjectNameDate);
-		})();
+  function updateProjectNameDate(){
+    try {
+      const input = document.getElementById('projectName');
+      const pdfName = document.getElementById('pdfFilename');
+      const todaySlug = formatDateSlug(new Date());
+      const standardBase = 'Hangarplan';
+      if (input) input.value = `${todaySlug}_${standardBase}`;
+      if (pdfName) pdfName.value = `${todaySlug}_${standardBase}`;
+    } catch(_e){}
+  }
+  document.addEventListener('DOMContentLoaded', updateProjectNameDate);
+  window.addEventListener('pageshow', updateProjectNameDate);
+  document.addEventListener('serverDataLoaded', updateProjectNameDate);
+})();
 		</script>
 
 		<script src="js/flight-data-status.js"></script>

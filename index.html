@@ -580,6 +580,27 @@
 					</div>
 				</div>
 				<button id="exportPdfBtn" class="sidebar-btn sidebar-btn-primary w-full">Export PDF</button>
+
+				<div class="panel-divider" style="margin-top:12px"></div>
+				<div class="submenu-title">Send as Mail</div>
+				<div class="sidebar-form-group">
+					<label for="mailRecipients">Recipients</label>
+					<input type="text" id="mailRecipients" class="sidebar-form-control" placeholder="e.g. ops@example.com, chief@example.com" title="Comma/semicolon-separated list of emails" />
+				</div>
+				<div class="sidebar-form-group">
+					<label for="mailSubject">Subject</label>
+					<input type="text" id="mailSubject" class="sidebar-form-control" placeholder="Subject" />
+				</div>
+				<div class="sidebar-form-group">
+					<label for="mailBody">Message</label>
+					<textarea id="mailBody" class="sidebar-form-control" rows="4" placeholder="Message to include in email body"></textarea>
+				</div>
+				<button id="sendMailBtn" class="sidebar-btn sidebar-btn-primary w-full">Send Mail</button>
+
+				<div class="sidebar-form-group" style="margin-top:12px">
+					<label class="sidebar-section-subtitle">Last 10 sent emails</label>
+					<ul id="mailLogList" class="text-sm" style="max-height: 160px; overflow:auto; padding-left:18px; list-style: disc;"></ul>
+				</div>
 			</div>
 
 			<div id="submenu-project" class="submenu-panel hidden" data-for="project">
@@ -5087,6 +5108,177 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 					apply: applySettings,
 				};
 			})();
+		</script>
+
+		<!-- Email Send (Export) -->
+		<script>
+		(function(){
+		  const MAIL_FROM = 'info@hangarplaner.de'; // non-reply sender (configured on server as well)
+		  const SETTINGS_KEYS = {
+		    recipients: 'emailRecipients',
+		    subject: 'emailSubject',
+		    body: 'emailBody',
+		  };
+
+		  function splitEmails(raw){
+		    if (!raw) return [];
+		    return raw.split(/[;,\s]+/).map(s=>s.trim()).filter(Boolean);
+		  }
+		  function isValidEmail(e){
+		    // simple robust validator
+		    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+		  }
+		  function showModalAlert(msg){
+		    try { alert(msg); } catch(_) { try { window.showNotification && window.showNotification(msg, 'error'); } catch(__){} }
+		  }
+		  async function getSessionUserEmail(){
+		    try {
+		      const res = await fetch('sync/auth.php?action=session', { headers: { 'Accept':'application/json' } });
+		      if (!res.ok) return '';
+		      const data = await res.json();
+		      return (data && data.user && data.user.email) ? String(data.user.email) : '';
+		    } catch(_) { return ''; }
+		  }
+		  function setField(id, v){ const el = document.getElementById(id); if (el) el.value = v || ''; }
+		  function getField(id){ const el = document.getElementById(id); return el ? (el.value||'').trim() : ''; }
+
+		  async function loadServerEmailSettings(){
+		    try {
+		      // Prefer central server URL if available
+		      let url = (window.serverSync && typeof window.serverSync.getServerUrl==='function' && window.serverSync.getServerUrl()) || (window.location.origin + '/sync/data.php');
+		      const res = await fetch(url + (url.includes('?')?'&':'?') + 'action=load', { headers: { 'Accept':'application/json' } });
+		      if (!res.ok) return;
+		      const data = await res.json();
+		      const s = (data && data.settings) ? data.settings : {};
+		      setField('mailRecipients', s[SETTINGS_KEYS.recipients] || '');
+		      setField('mailSubject', s[SETTINGS_KEYS.subject] || '');
+		      setField('mailBody', s[SETTINGS_KEYS.body] || '');
+		    } catch(e) { /* ignore */ }
+		  }
+
+		  async function saveServerEmailSettings(){
+		    try {
+		      // Only allow save in Master
+		      const isMaster = !!(window.serverSync && (window.serverSync.isMaster || (window.sharingManager && window.sharingManager.syncMode==='master')));
+		      if (!isMaster) {
+		        showModalAlert('Switch to Master mode to save global mail settings.');
+		        return false;
+		      }
+		      const recipients = getField('mailRecipients');
+		      const subject    = getField('mailSubject');
+		      const body       = getField('mailBody');
+		      const payload = { metadata: { timestamp: Date.now() }, settings: {} };
+		      payload.settings[SETTINGS_KEYS.recipients] = recipients;
+		      payload.settings[SETTINGS_KEYS.subject]    = subject;
+		      payload.settings[SETTINGS_KEYS.body]       = body;
+		      let url = (window.serverSync && typeof window.serverSync.getServerUrl==='function' && window.serverSync.getServerUrl()) || (window.location.origin + '/sync/data.php');
+		      const headers = { 'Content-Type':'application/json', 'X-Sync-Role':'master' };
+		      try {
+		        const sid = window.serverSync && typeof window.serverSync.getSessionId==='function' ? window.serverSync.getSessionId() : (localStorage.getItem('serverSync.sessionId')||'');
+		        if (sid) headers['X-Sync-Session'] = sid;
+		        let dname = '';
+		        try { dname = (localStorage.getItem('presence.displayName')||'').trim(); } catch(_e){}
+		        if (!dname) dname = 'User';
+		        headers['X-Display-Name'] = dname;
+		      } catch(_e){}
+		      const res = await fetch(url, { method:'POST', headers, body: JSON.stringify(payload) });
+		      if (!res.ok) {
+		        try { const t = await res.text(); console.warn('Save settings failed', res.status, t); } catch(_e){}
+		        return false;
+		      }
+		      return true;
+		    } catch(e) { console.warn('saveServerEmailSettings error', e); return false; }
+		  }
+
+		  async function fetchMailLog(limit=10){
+		    try {
+		      const res = await fetch('sync/send-mail.php?action=log&limit=' + encodeURIComponent(limit), { headers: { 'Accept':'application/json' } });
+		      if (!res.ok) return [];
+		      const data = await res.json();
+		      const items = Array.isArray(data && data.logs) ? data.logs : [];
+		      return items;
+		    } catch(_) { return []; }
+		  }
+		  function renderMailLog(items){
+		    const ul = document.getElementById('mailLogList');
+		    if (!ul) return;
+		    ul.innerHTML = '';
+		    if (!items.length){ ul.innerHTML = '<li class="text-gray-400">No mails sent yet</li>'; return; }
+		    items.forEach(it => {
+		      const li = document.createElement('li');
+		      const ts = it && it.timestamp ? it.timestamp : '';
+		      const user = it && it.userEmail ? it.userEmail : '';
+		      const subj = it && it.subject ? it.subject : '';
+		      const rec  = it && it.recipients ? (Array.isArray(it.recipients) ? it.recipients.join(', ') : String(it.recipients)) : '';
+		      li.textContent = `${ts} — ${user} — ${subj} — ${rec}`;
+		      ul.appendChild(li);
+		    });
+		  }
+
+		  async function sendMailWithPdf(){
+		    try {
+		      const recipientsRaw = getField('mailRecipients');
+		      const recipients = splitEmails(recipientsRaw);
+		      if (!recipients.length){ showModalAlert('Please enter at least one recipient.'); return; }
+		      const invalid = recipients.filter(e => !isValidEmail(e));
+		      if (invalid.length){ showModalAlert('Invalid email(s): ' + invalid.join(', ')); return; }
+		      const subject = getField('mailSubject') || 'Hangar Plan';
+		      const msg = getField('mailBody') || '';
+		      const userEmail = await getSessionUserEmail();
+		      const pdfName = (document.getElementById('pdfFilename')?.value || 'Hangar_Plan') + '.pdf';
+		      // Build PDF from same export content
+		      if (!window.hangarPDF || typeof window.hangarPDF.generatePdfBlob !== 'function'){
+		        showModalAlert('PDF generator not ready.');
+		        return;
+		      }
+		      const blob = await window.hangarPDF.generatePdfBlob();
+		      const base64 = await new Promise((resolve, reject)=>{
+		        try {
+		          const fr = new FileReader();
+		          fr.onload = () => {
+		            const res = String(fr.result||'');
+		            // Strip data URL prefix if present
+		            const m = res.match(/^data:.*;base64,(.*)$/);
+		            resolve(m? m[1] : res);
+		          };
+		          fr.onerror = reject;
+		          fr.readAsDataURL(blob);
+		        } catch(e){ reject(e); }
+		      });
+		      const payload = {
+		        recipients,
+		        subject,
+		        body: (msg ? (msg + '\n\n') : '') + (userEmail ? ('Sent by: ' + userEmail) : 'Sent by: (unknown user)') + '\n' + 'Please do not reply to this email.',
+		        pdfFilename: pdfName,
+		        pdfBase64: base64
+		      };
+		      const res = await fetch('sync/send-mail.php', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(payload) });
+		      const data = await res.json().catch(()=>({}));
+		      if (!res.ok || !data.success){
+		        showModalAlert('Sending failed' + (data && data.error ? (': ' + data.error) : ''));
+		        return;
+		      }
+		      try { window.showNotification && window.showNotification('Mail sent', 'success'); } catch(_e){}
+		      // refresh log
+		      renderMailLog(await fetchMailLog(10));
+		    } catch(e){ showModalAlert('Unexpected error while sending: ' + (e && e.message ? e.message : e)); }
+		  }
+
+		  function wire(){
+		    const r = document.getElementById('mailRecipients');
+		    const s = document.getElementById('mailSubject');
+		    const b = document.getElementById('mailBody');
+		    const send = document.getElementById('sendMailBtn');
+		    if (r && !r.__wired){ r.addEventListener('change', saveServerEmailSettings); r.addEventListener('blur', saveServerEmailSettings); r.__wired=true; }
+		    if (s && !s.__wired){ s.addEventListener('change', saveServerEmailSettings); s.addEventListener('blur', saveServerEmailSettings); s.__wired=true; }
+		    if (b && !b.__wired){ b.addEventListener('change', saveServerEmailSettings); b.addEventListener('blur', saveServerEmailSettings); b.__wired=true; }
+		    if (send && !send.__wired){ send.addEventListener('click', function(e){ e.preventDefault(); sendMailWithPdf(); }); send.__wired=true; }
+		  }
+
+		  // On initial load and after server data loaded
+		  document.addEventListener('DOMContentLoaded', async ()=>{ try { wire(); await loadServerEmailSettings(); renderMailLog(await fetchMailLog(10)); } catch(_){} });
+		  document.addEventListener('serverDataLoaded', async ()=>{ try { await loadServerEmailSettings(); renderMailLog(await fetchMailLog(10)); } catch(_){} });
+		})();
 		</script>
 
 		<script src="js/flight-data-status.js"></script>

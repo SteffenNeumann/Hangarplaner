@@ -486,9 +486,145 @@ function exportToPDF() {
 		});
 }
 
+// Helper to build the export DOM (shared by save and blob flows)
+function __buildExportContainerForPdf(landscapeMode, exportFields){
+	const includeNotes = !!exportFields.notes;
+	const allData = collectAllHangarData();
+	const exportContainer = document.createElement("div");
+	exportContainer.className = "pdf-content pdf-force-light";
+	exportContainer.style.cssText = `
+        padding: 20px;
+        background-color: white !important;
+        color: #111827 !important;
+        font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+        width: 100%;
+        margin: 0 auto;
+        max-width: ${landscapeMode ? "1100px" : "900px"};
+        color-scheme: light !important;
+        filter: none !important;
+    `;
+	const lightStyle = document.createElement('style');
+	lightStyle.textContent = `
+      .pdf-force-light, .pdf-force-light * { 
+        color-scheme: light !important; 
+        -webkit-print-color-adjust: exact !important; 
+        print-color-adjust: exact !important; 
+        background: #ffffff !important; 
+        color: #111827 !important; 
+        filter: none !important; 
+        text-shadow: none !important; 
+      }
+      .pdf-force-light h1, .pdf-force-light h2, .pdf-force-light p { color: #111827 !important; }
+      .pdf-force-light table { border-collapse: collapse; width: 100%; }
+      .pdf-force-light th { color: #ffffff !important; background-color: #4CAF50 !important; }
+      .pdf-force-light td { color: #111827 !important; border-color: #dddddd !important; }
+      .pdf-force-light tbody tr:nth-child(even) { background-color: #f9f9f9 !important; }
+    `;
+	exportContainer.appendChild(lightStyle);
+	const title = document.createElement("h1");
+	title.textContent = document.getElementById("projectName").value || "Hangar Plan";
+	title.style.cssText = `
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 15px;
+        text-align: center;
+        color: #2D3142;
+    `;
+	exportContainer.appendChild(title);
+	const dateElement = document.createElement("p");
+	dateElement.textContent = "Date: " + new Date().toLocaleDateString();
+	dateElement.style.cssText = `
+        font-size: 14px;
+        margin-bottom: 20px;
+        text-align: center;
+        color: #4F5D75;
+    `;
+	exportContainer.appendChild(dateElement);
+	if (allData.primary.length > 0) {
+		const primaryTable = createDataTable(allData.primary, "Primary Section", { includeNotes, exportFields });
+		if (primaryTable) exportContainer.appendChild(primaryTable);
+	}
+	if (allData.secondary.length > 0) {
+		const secondaryTable = createDataTable(allData.secondary, "Secondary Section", { includeNotes, exportFields });
+		if (secondaryTable) exportContainer.appendChild(secondaryTable);
+	}
+	if (allData.primary.length === 0 && allData.secondary.length === 0) {
+		const noDataMessage = document.createElement("p");
+		noDataMessage.textContent = "No aircraft data available for export.";
+		noDataMessage.style.cssText = `
+            font-size: 16px;
+            text-align: center;
+            color: #666;
+            margin: 40px 0;
+        `;
+		exportContainer.appendChild(noDataMessage);
+	}
+	const footerElement = document.createElement("div");
+	footerElement.style.cssText = `
+        margin-top: 30px;
+        text-align: center;
+        font-size: 10px;
+        color: #4F5D75;
+    `;
+	footerElement.textContent = `© ${new Date().getFullYear()} HangarPlanner`;
+	exportContainer.appendChild(footerElement);
+	return exportContainer;
+}
+
+async function generatePdfOptions(){
+	const landscapeMode = !!document.getElementById("landscapeMode")?.checked;
+	const exportFields = {
+		aircraft: !!document.getElementById("exportAircraft")?.checked,
+		arrival: !!document.getElementById("exportArrival")?.checked,
+		departure: !!document.getElementById("exportDeparture")?.checked,
+		position: !!document.getElementById("exportPosition")?.checked,
+		hangarPosition: !!document.getElementById("exportHangarPosition")?.checked,
+		status: !!document.getElementById("exportStatus")?.checked,
+		towStatus: !!document.getElementById("exportTowStatus")?.checked,
+		notes: !!document.getElementById("exportNotes")?.checked,
+	};
+	const options = {
+		margin: [10, 10],
+		image: { type: "jpeg", quality: 0.98 },
+		html2canvas: {
+			scale: 2,
+			logging: false,
+			letterRendering: true,
+			useCORS: true,
+			allowTaint: true,
+			width: landscapeMode ? 1100 : 900,
+		},
+		jsPDF: {
+			unit: "mm",
+			format: "a4",
+			orientation: landscapeMode ? "landscape" : "portrait",
+			compress: true,
+			precision: 2,
+		},
+	};
+	return { landscapeMode, exportFields, options };
+}
+
+async function generatePdfBlob(){
+	// Protect from dark mode side-effects
+	const htmlEl = document.documentElement;
+	const bodyEl = document.body || document.querySelector('body');
+	const hadDarkHtml = htmlEl && htmlEl.classList.contains('dark-mode');
+	const hadDarkBody = bodyEl && bodyEl.classList.contains('dark-mode');
+	try { if (hadDarkHtml) htmlEl.classList.remove('dark-mode'); if (hadDarkBody) bodyEl.classList.remove('dark-mode'); } catch(_e){}
+	try {
+		const { landscapeMode, exportFields, options } = await generatePdfOptions();
+		const exportContainer = __buildExportContainerForPdf(landscapeMode, exportFields);
+		return await html2pdf().from(exportContainer).set(options).toPdf().get('pdf').then(pdf => pdf.output('blob'));
+	} finally {
+		try { if (hadDarkHtml) htmlEl.classList.add('dark-mode'); if (hadDarkBody) bodyEl.classList.add('dark-mode'); } catch(_e){}
+	}
+}
+
 // Exportiere die Funktion als globales Objekt
 window.hangarPDF = {
 	exportToPDF,
 	collectAllHangarData,
 	createDataTable,
+	generatePdfBlob,
 };

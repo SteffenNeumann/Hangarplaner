@@ -5240,6 +5240,14 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		      const subject = getField('mailSubject') || 'Hangar Plan';
 		      const msg = getField('mailBody') || '';
 		      const userEmail = await getSessionUserEmail();
+		      // Prefer presence display name for "Sent by"
+		      let sentBy = '';
+		      try {
+		        const el = document.getElementById('presenceNameInput');
+		        if (el && el.value && el.value.trim()) sentBy = el.value.trim();
+		        if (!sentBy) { try { sentBy = (localStorage.getItem('presence.displayName')||'').trim(); } catch(_e){} }
+		      } catch(_e){}
+		      if (!sentBy) sentBy = userEmail || 'unknown user';
 		      const pdfName = (document.getElementById('pdfFilename')?.value || 'Hangar_Plan') + '.pdf';
 		      // Build PDF from same export content
 		      if (!window.hangarPDF || typeof window.hangarPDF.generatePdfBlob !== 'function'){
@@ -5263,7 +5271,7 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		      const payload = {
 		        recipients,
 		        subject,
-		        body: (msg ? (msg + '\n\n') : '') + (userEmail ? ('Sent by: ' + userEmail) : 'Sent by: (unknown user)') + '\n' + 'Please do not reply to this email.',
+		        body: (msg ? (msg + '\n\n') : '') + 'Sent by: ' + sentBy + '\n' + 'Please do not reply to this email.',
 		        pdfFilename: pdfName,
 		        pdfBase64: base64
 		      };

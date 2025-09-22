@@ -361,18 +361,29 @@ function exportToPDF() {
     `;
 	exportContainer.appendChild(lightStyle);
 
-	// Titel
-	const title = document.createElement("h1");
-	title.textContent =
-		document.getElementById("projectName").value || "Hangar Plan";
-	title.style.cssText = `
+// Titel
+const title = document.createElement("h1");
+try {
+    const t = (function(){
+        const raw = (document.getElementById('projectName')?.value || '').trim();
+        // Extract base name after optional date prefix
+        let base = raw.replace(/^(\d{4})[_.-]?(\d{2})[_.-]?(\d{2})[ _-]*/,'').trim();
+        if (!base) base = 'Hangarplan';
+        const today = new Date().toLocaleDateString();
+        return `${today} ${base}`;
+    })();
+    title.textContent = t;
+} catch(_e){
+    title.textContent = (document.getElementById("projectName")?.value || "Hangar Plan");
+}
+title.style.cssText = `
         font-size: 24px;
         font-weight: bold;
         margin-bottom: 15px;
         text-align: center;
         color: #2D3142;
     `;
-	exportContainer.appendChild(title);
+exportContainer.appendChild(title);
 
 	// Datum
 	const dateElement = document.createElement("p");
@@ -521,8 +532,19 @@ function __buildExportContainerForPdf(landscapeMode, exportFields){
       .pdf-force-light tbody tr:nth-child(even) { background-color: #f9f9f9 !important; }
     `;
 	exportContainer.appendChild(lightStyle);
-	const title = document.createElement("h1");
-	title.textContent = document.getElementById("projectName").value || "Hangar Plan";
+const title = document.createElement("h1");
+	try {
+		const t = (function(){
+			const raw = (document.getElementById('projectName')?.value || '').trim();
+			let base = raw.replace(/^(\d{4})[_.-]?(\d{2})[_.-]?(\d{2})[ _-]*/,'').trim();
+			if (!base) base = 'Hangarplan';
+			const today = new Date().toLocaleDateString();
+			return `${today} ${base}`;
+		})();
+		title.textContent = t;
+	} catch(_e){
+		title.textContent = document.getElementById("projectName").value || "Hangar Plan";
+	}
 	title.style.cssText = `
         font-size: 24px;
         font-weight: bold;

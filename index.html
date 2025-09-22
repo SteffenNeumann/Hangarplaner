@@ -5302,6 +5302,37 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		  document.addEventListener('DOMContentLoaded', async ()=>{ try { wire(); await loadServerEmailSettings(); renderMailLog(await fetchMailLog(10)); } catch(_){} });
 		  document.addEventListener('serverDataLoaded', async ()=>{ try { await loadServerEmailSettings(); renderMailLog(await fetchMailLog(10)); } catch(_){} });
 		})();
+</script>
+
+		<!-- Update projectName to today's date on load -->
+		<script>
+		(function(){
+		  function formatDateSlug(d){
+		    try {
+		      const y = d.getFullYear();
+		      const m = String(d.getMonth()+1).padStart(2,'0');
+		      const da = String(d.getDate()).padStart(2,'0');
+		      return `${y}_${m}_${da}`;
+		    } catch(_) { return ''; }
+		  }
+		  function updateProjectNameDate(){
+		    try {
+		      const input = document.getElementById('projectName');
+		      if (!input) return;
+		      const v = (input.value||'').trim();
+		      let base = '';
+		      if (v){
+		        base = v.replace(/^(\d{4})[_.-]?(\d{2})[_.-]?(\d{2})[ _-]*/,'').trim();
+		      }
+		      if (!base) base = 'Hangarplan';
+		      const todaySlug = formatDateSlug(new Date());
+		      input.value = `${todaySlug}_${base}`;
+		    } catch(_e){}
+		  }
+		  document.addEventListener('DOMContentLoaded', updateProjectNameDate);
+		  window.addEventListener('pageshow', updateProjectNameDate);
+		  document.addEventListener('serverDataLoaded', updateProjectNameDate);
+		})();
 		</script>
 
 		<script src="js/flight-data-status.js"></script>

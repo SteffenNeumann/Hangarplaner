@@ -2347,3 +2347,14 @@ function findFirstEmptyTile() {
 		} catch(_) {}
 	});
 })();
+
+// Safe shim: map global searchAircraft to hangarEvents if events object exists but method missing
+(function(){
+  try {
+    if (window.hangarEvents &&
+        typeof window.hangarEvents.searchAircraft !== 'function' &&
+        typeof window.searchAircraft === 'function') {
+      window.hangarEvents.searchAircraft = window.searchAircraft;
+    }
+  } catch(_e){}
+})();

@@ -608,20 +608,36 @@
     }, 5000); // Refresh every 5 seconds and only if no dropdown is active
     
     // Listen for changelog updates
-    const observer = new MutationObserver(function(mutations) {
-      if (document.body.classList.contains('table-view')) {
-        deb(syncChangelog, 100)();
-      }
-    });
-    
-    // Observe the main changelog for changes
-    const mainChangelog = document.getElementById('changeLogList');
-    if (mainChangelog) {
-      observer.observe(mainChangelog, { childList: true, subtree: true });
-    }
-    
-    // Add resize functionality to table view changelog
+    let mainLogObserver = null;
+    const ensureMainLogObserver = () => {
+      try {
+        const mainChangelogNow = document.getElementById('changeLogList');
+        if (mainChangelogNow && !mainLogObserver) {
+          mainLogObserver = new MutationObserver(function(){
+            if (document.body.classList.contains('table-view')) {
+              deb(syncChangelog, 100)();
+            }
+          });
+          mainLogObserver.observe(mainChangelogNow, { childList: true, subtree: true });
+          // Immediate sync on attach
+          deb(syncChangelog, 0)();
+        }
+      } catch(_){}
+    };
+
+    // Try now and again shortly after load in case elements are created late
+    ensureMainLogObserver();
+    setTimeout(ensureMainLogObserver, 300);
+    setTimeout(ensureMainLogObserver, 1200);
+
+    // Boot-time syncs to cover race conditions (run regardless of current view)
+    setTimeout(syncChangelog, 0);
+    setTimeout(syncChangelog, 400);
+    setTimeout(syncChangelog, 1500);
+
+    // Ensure table changelog UI is wired even if we started in board view
     setupTableChangelogResize();
+    setupTableChangelog();
   }
   
   function setupTableChangelogResize(){

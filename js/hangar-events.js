@@ -314,11 +314,11 @@ function searchAircraft() {
 	// Matches sammeln
 	const tileMatches = [];
 	const tableMatches = [];
-	const highlight = (list) => {
+const highlight = (list) => {
 		list.forEach((input) => {
 			try {
-				input.style.backgroundColor = '#ffeb3b';
-				setTimeout(() => { try { input.style.backgroundColor = ''; } catch(_){} }, 3000);
+				input.classList.add('search-highlight');
+				setTimeout(() => { try { input.classList.remove('search-highlight'); } catch(_){} }, 3000);
 			} catch(_){}
 		});
 	};

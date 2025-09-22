@@ -2379,11 +2379,11 @@ function findFirstEmptyTile() {
           
           const tileMatches = [];
           const tableMatches = [];
-          const highlight = (list) => {
+const highlight = (list) => {
             list.forEach((inp) => {
               try {
-                inp.style.backgroundColor = '#ffeb3b';
-                setTimeout(() => { try { inp.style.backgroundColor = ''; } catch(_){} }, 3000);
+                inp.classList.add('search-highlight');
+                setTimeout(() => { try { inp.classList.remove('search-highlight'); } catch(_){} }, 3000);
               } catch(_){}
             });
           };

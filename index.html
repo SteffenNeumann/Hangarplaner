@@ -177,7 +177,22 @@
 			.dark-mode #towing-reminder-widget .status-label { color: var(--text-secondary); }
 			.dark-mode #towing-reminder-widget .status-label-value { color: #cbd5e1; }
 			.dark-mode #towingReminderList { color: #ef4444 !important; }
-		</style>
+</style>
+
+<!-- Search highlight styles for both themes -->
+<style>
+  .search-highlight {
+    background-color: #ffeb3b !important; /* bright amber in light mode */
+    outline: 2px solid #f59e0b;
+    border-radius: 4px;
+  }
+  .dark-mode .search-highlight {
+    background-color: rgba(234, 179, 8, 0.20) !important; /* subtle amber wash in dark mode */
+    outline: 2px solid #fbbf24; /* lighter amber outline for contrast */
+    box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.35) inset;
+  }
+</style>
+
 <!-- Early auth guard removed; rely on server-side protection or async client checks to avoid sync XHR stall -->
 
 <script>

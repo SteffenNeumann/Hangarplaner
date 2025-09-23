@@ -271,7 +271,7 @@ const uiSettings = {
 			const hangarGrid = document.getElementById("hangarGrid");
 			if (hangarGrid) {
 				hangarGrid.className = `grid gap-[var(--grid-gap)]`;
-				hangarGrid.style.gridTemplateColumns = `repeat(${this.layout}, minmax(var(--card-min-width), 1fr))`;
+				hangarGrid.style.gridTemplateColumns = `repeat(${this.layout}, var(--board-tile-size))`;
 			} else {
 				console.error("Element 'hangarGrid' nicht gefunden!");
 			}
@@ -566,6 +566,8 @@ function updateSecondaryTiles(count, layout, preserveData = true) {
 	// Layout aktualisieren
 	if (layout) {
 		secondaryGrid.className = `grid grid-cols-${layout} gap-4`;
+		// Fix column width to a constant tile size
+		secondaryGrid.style.gridTemplateColumns = `repeat(${layout}, var(--board-tile-size))`;
 	}
 
 	// Sichtbarkeit der sekundären Sektion
@@ -740,9 +742,9 @@ function adjustScaling() {
 	const baseWidth = 1920; // Basis-Breite für 100% Skalierung
 
 	let scaleFactor = screenWidth / baseWidth;
-
-	// Begrenze die Skalierung
-	scaleFactor = Math.max(0.7, Math.min(1.2, scaleFactor));
+	
+		// Begrenze die Skalierung (no upscaling above 1)
+	scaleFactor = Math.max(0.7, Math.min(1, scaleFactor));
 
 	container.style.transform = `scale(${scaleFactor})`;
 	container.style.transformOrigin = "top left";

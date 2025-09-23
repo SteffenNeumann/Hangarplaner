@@ -4074,6 +4074,16 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 /* Collapsed state sets narrow width variable */
 #panel-planner.changelog-collapsed { --infobox-width: 18px; }
 
+/* Table panel mirrors the planner panel behavior */
+#panel-planner-table {
+  position: relative;
+  --infobox-width: 340px;
+  padding-right: var(--infobox-width);
+  min-height: calc(100vh - var(--planner-sticky-offset, 0px));
+  transition: padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+#panel-planner-table.changelog-collapsed { --infobox-width: 18px; }
+
 /* Animation for changelog content visibility */
 .changelog-header .changelog-title,
 .changelog-header .sidebar-btn,
@@ -4084,6 +4094,13 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 #panel-planner.changelog-collapsed .changelog-header .changelog-title,
 #panel-planner.changelog-collapsed .changelog-header .sidebar-btn,
 #panel-planner.changelog-collapsed .changelog-list {
+  opacity: 0;
+  transform: translateX(-10px);
+}
+/* Table panel collapse mirrors */
+#panel-planner-table.changelog-collapsed .changelog-header .changelog-title,
+#panel-planner-table.changelog-collapsed .changelog-header .sidebar-btn,
+#panel-planner-table.changelog-collapsed .changelog-list {
   opacity: 0;
   transform: translateX(-10px);
 }
@@ -4190,6 +4207,22 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 
 /* Header with subtle toggle handle */
 .changelog-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px 0; position: static; overflow: visible; }
+
+/* Small numeric badges for multi-sort rank */
+#plannerTable thead .planner-table-header th.sortable .sort-rank {
+  display: none;
+  margin-left: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #475569;
+  background: #e5e7eb;
+  border-radius: 8px;
+  padding: 0 5px;
+}
+.dark-mode #plannerTable thead .planner-table-header th.sortable .sort-rank {
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+}
 .changelog-title { font-weight: 600; color: #334155; }
 .dark-mode .changelog-title { color: var(--text-primary); }
 
@@ -4438,8 +4471,8 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   width: 100%;
   border: 1px solid transparent;
   border-radius: 6px;
-  padding: 6px 8px;
-  font-size: 12px;
+  padding: 11px 10px; /* +~10px vertical overall */
+  font-size: 13px;
   background: #fff;
   color: #0f172a;
   transition: border-color .15s ease, background-color .15s ease, color .15s ease;
@@ -4461,6 +4494,11 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   background: var(--input-bg);
   color: var(--text-primary);
   border-color: transparent;
+}
+/* Ensure tow chip palette parity with Board: rely on tow- classes */
+.dark-mode #plannerTable .tow-status-selector {
+  background-color: transparent !important;
+  border: none !important;
 }
 .dark-mode #panel-planner-table #plannerTableView #plannerTable .planner-input:hover,
 .dark-mode #panel-planner-table #plannerTableView #plannerTable .planner-select:hover {
@@ -4621,13 +4659,13 @@ html:not(.dark-mode) #panel-planner-table.read-only #plannerTableView #plannerTa
 /* Tow status selector styling in table view - improved consistency */
 .planner-select.tow-status-selector {
   min-width: 120px;
-  font-size: 12px;
-  padding: 4px 8px;
+  font-size: 13px;
+  padding: 8px 10px; /* taller */
   border-radius: 4px;
   background-color: transparent !important;
   border: none !important;
   color: #4b5563 !important;
-  font-weight: 500;
+  font-weight: 600;
   text-align: center;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
@@ -4692,10 +4730,10 @@ table .planner-select.tow-status-selector[data-value="neutral"],
 #plannerTable .status-plain,
 .planner-td select.status-plain {
   min-width: 90px;
-  font-size: 12px;
-  height: 26px;
-  padding: 2px 8px;
-  border-radius: 2px;
+  font-size: 13px;
+  height: 36px; /* increased ~10px */
+  padding: 6px 10px;
+  border-radius: 4px;
   font-weight: 600;
   text-align: center;
   -webkit-appearance: none;

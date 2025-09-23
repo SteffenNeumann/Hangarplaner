@@ -12,7 +12,8 @@
   const STATE = {
     rows: [],      // full set (visible tiles only)
     filtered: [],  // after filtering and sorting
-    sort: { col: 'hangarPosition', dir: 'asc' },
+    // Multi-level sorting (ranked). Each item: { col, dir: 'asc'|'desc' }
+    sorts: [{ col: 'hangarPosition', dir: 'asc' }],
     filters: {
       hangarPosition: '',
       aircraftId: '',
@@ -67,7 +68,7 @@
   function deb(fn, ms){ let t=null; return function(){ clearTimeout(t); const args=arguments, self=this; t=setTimeout(()=>fn.apply(self,args), ms||250); } }
   function persist(){
     try {
-      const payload = { sort: STATE.sort, filters: STATE.filters };
+      const payload = { sorts: STATE.sorts, filters: STATE.filters };
       localStorage.setItem(STATE.persistKey, JSON.stringify(payload));
     } catch(_){}
   }
@@ -76,8 +77,15 @@
       const raw = localStorage.getItem(STATE.persistKey);
       if (!raw) return;
       const obj = JSON.parse(raw);
-      if (obj && obj.sort) STATE.sort = obj.sort;
-      if (obj && obj.filters) STATE.filters = { ...STATE.filters, ...obj.filters };
+      if (obj) {
+        // Backward compatibility: migrate single sort -> sorts
+        if (obj.sorts && Array.isArray(obj.sorts) && obj.sorts.length) {
+          STATE.sorts = obj.sorts;
+        } else if (obj.sort && obj.sort.col) {
+          STATE.sorts = [{ col: obj.sort.col, dir: obj.sort.dir || 'asc' }];
+        }
+        if (obj.filters) STATE.filters = { ...STATE.filters, ...obj.filters };
+      }
     } catch(_){}
   }
 
@@ -98,53 +106,51 @@
     sortRows();
   }
   function sortRows(){
-    const { col, dir } = STATE.sort;
-    const sign = dir === 'asc' ? 1 : -1;
+    const sorts = Array.isArray(STATE.sorts) && STATE.sorts.length ? STATE.sorts : [{ col: 'hangarPosition', dir: 'asc' }];
 
     // Configurable placeholder set to treat as empty for sorting
-    // Add any additional tokens you consider placeholders here (e.g., '-', 'N/A')
     const PLACEHOLDER_EMPTY_SET = new Set();
 
     function isSortEmpty(column, v){
-      // Base empty checks
       if (v == null) return true;
       if (typeof v === 'string') {
         const t = v.trim();
         if (t === '') return true;
         if (PLACEHOLDER_EMPTY_SET.has(t)) return true;
-        // Treat 'neutral' as empty for status/towStatus
         if ((column === 'status' || column === 'towStatus') && t.toLowerCase() === 'neutral') return true;
       }
       return false;
     }
 
-    STATE.filtered.sort((a,b)=>{
-      let va = a[col], vb = b[col];
-      const aEmpty = isSortEmpty(col, va);
-      const bEmpty = isSortEmpty(col, vb);
-      // Empties always at the bottom regardless of direction
-      if (aEmpty && !bEmpty) return 1;
-      if (!aEmpty && bEmpty) return -1;
-      if (aEmpty && bEmpty) return 0;
+    function projectValue(column, v){
+      // Normalize per-column for comparison
+      if (column === 'tileId') return +v || 0;
+      if (column === 'status') {
+        const order = { 'ready': 1, 'maintenance': 2, 'aog': 3 };
+        return order[v] !== undefined ? order[v] : 999;
+      }
+      if (column === 'towStatus') {
+        const order = { 'initiated': 1, 'ongoing': 2, 'on-position': 3 };
+        return order[v] !== undefined ? order[v] : 999;
+      }
+      return String(v||'').toLowerCase();
+    }
 
-      // try numeric compare for tileId, fallback string
-      if (col === 'tileId') { va = +va || 0; vb = +vb || 0; }
-      // Custom sorting for status and tow status to group by status type
-      else if (col === 'status') {
-        const statusOrder = { 'ready': 1, 'maintenance': 2, 'aog': 3 };
-        va = statusOrder[va] !== undefined ? statusOrder[va] : 999;
-        vb = statusOrder[vb] !== undefined ? statusOrder[vb] : 999;
+    STATE.filtered.sort((a,b)=>{
+      for (let i=0;i<sorts.length;i++){
+        const { col, dir } = sorts[i];
+        const sign = dir === 'asc' ? 1 : -1;
+        const vaRaw = a[col], vbRaw = b[col];
+        const aEmpty = isSortEmpty(col, vaRaw);
+        const bEmpty = isSortEmpty(col, vbRaw);
+        if (aEmpty !== bEmpty) return aEmpty ? 1 : -1; // empties bottom
+        if (aEmpty && bEmpty) continue; // equal for this key
+        const va = projectValue(col, vaRaw);
+        const vb = projectValue(col, vbRaw);
+        if (va < vb) return -1*sign;
+        if (va > vb) return 1*sign;
       }
-      else if (col === 'towStatus') {
-        const towOrder = { 'initiated': 1, 'ongoing': 2, 'on-position': 3 };
-        va = towOrder[va] !== undefined ? towOrder[va] : 999;
-        vb = towOrder[vb] !== undefined ? towOrder[vb] : 999;
-      }
-      else {
-        va = String(va||'').toLowerCase();
-        vb = String(vb||'').toLowerCase();
-      }
-      if (va < vb) return -1*sign; if (va > vb) return 1*sign; return 0;
+      return 0;
     });
   }
 
@@ -255,17 +261,37 @@
     const opts = Object.entries(towOptions).map(([value, text]) => 
       `<option value="${esc(value)}" ${String(val)===value?'selected':''}>${esc(text)}</option>`
     ).join('');
-    return `<td class="planner-td"><select data-col="${col}" id="${esc(id)}" class="planner-select tow-status-selector" data-value="${esc(val)}" ${ro?'disabled':''}>${opts}</select></td>`;
+    const cls = `planner-select tow-status-selector tow-${esc(val || 'neutral')}`;
+    return `<td class="planner-td"><select data-col="${col}" id="${esc(id)}" class="${cls}" data-value="${esc(val)}" ${ro?'disabled':''}>${opts}</select></td>`;
   }
 
   function updateSortIndicators(){
     const headers = $all('#plannerTable thead .planner-table-header th.sortable');
     headers.forEach(h => {
       const col = h.getAttribute('data-col');
-      const indicator = h.querySelector('.sort-indicator');
+      let indicator = h.querySelector('.sort-indicator');
       if (!indicator) return;
-      if (col === STATE.sort.col){ indicator.textContent = STATE.sort.dir === 'asc' ? '↑' : '↓'; h.classList.add('sorted'); }
-      else { indicator.textContent = '↕'; h.classList.remove('sorted'); }
+      // Ensure a small numeric badge exists
+      let rankBadge = h.querySelector('.sort-rank');
+      if (!rankBadge) {
+        rankBadge = document.createElement('span');
+        rankBadge.className = 'sort-rank';
+        h.appendChild(rankBadge);
+      }
+      const idx = (STATE.sorts || []).findIndex(s => s.col === col);
+      if (idx >= 0) {
+        const s = STATE.sorts[idx];
+        // Arrow only for primary (rank 1), neutral for others
+        indicator.textContent = idx === 0 ? (s.dir === 'asc' ? '↑' : '↓') : '↕';
+        h.classList.add('sorted');
+        rankBadge.textContent = String(idx+1);
+        rankBadge.style.display = 'inline-block';
+      } else {
+        indicator.textContent = '↕';
+        h.classList.remove('sorted');
+        rankBadge.textContent = '';
+        rankBadge.style.display = 'none';
+      }
     });
   }
 
@@ -325,12 +351,40 @@
       if (el.tagName === 'INPUT') el.addEventListener('input', deb(function(){ applyEditorChange(el, handlers); }, 400));
     });
   }
+
+  function parseTileIdFromControlId(id){
+    if (!id) return NaN;
+    // ids like: hangar-pos-12, ac-12, arrival-time-table-12, departure-time-table-12, pos-12, tow-12, stat-12, notes-12
+    const m = String(id).match(/(.*?)(\d+)$/);
+    return m ? parseInt(m[2], 10) : NaN;
+  }
+
+  function updateTowSelectChipClasses(selectEl, val){
+    if (!selectEl) return;
+    const v = (val||'').trim() || 'neutral';
+    selectEl.classList.remove('tow-neutral','tow-initiated','tow-ongoing','tow-on-position');
+    selectEl.classList.add(`tow-${v}`);
+    try { selectEl.setAttribute('data-value', v); } catch(_){ }
+  }
+
+  function updateRowCache(tileId, col, val){
+    if (!isFinite(tileId)) return;
+    const applyTo = (row)=>{ if (!row) return; if (col in row) row[col] = val; };
+    const r1 = STATE.rows.find(r => +r.tileId === +tileId);
+    const r2 = STATE.filtered.find(r => +r.tileId === +tileId);
+    applyTo(r1); applyTo(r2);
+  }
+
   async function applyEditorChange(el, handlers){
     try {
       const col = el.getAttribute('data-col');
       if (!col || !handlers[col]) return;
       const val = el.value;
+      const tileId = parseTileIdFromControlId(el.id);
       handlers[col](val);
+      // keep table model in sync so sort/render after click doesn’t drop edits
+      if (isFinite(tileId)) updateRowCache(tileId, col, val);
+      if (col === 'towStatus') updateTowSelectChipClasses(el, val);
       // Master mode: persist via centralized server sync if available
       if (isMaster() && window.serverSync && typeof window.serverSync.syncWithServer === 'function'){
         try { await window.serverSync.syncWithServer(); } catch(_){}
@@ -360,11 +414,28 @@
   function wireSorting(){
     const headers = $all('#plannerTable thead .planner-table-header th.sortable');
     headers.forEach(h => {
-      h.addEventListener('click', () => {
+      h.addEventListener('click', (ev) => {
         const col = h.getAttribute('data-col');
         if (!col) return;
-        if (STATE.sort.col === col){ STATE.sort.dir = (STATE.sort.dir === 'asc') ? 'desc' : 'asc'; }
-        else { STATE.sort.col = col; STATE.sort.dir = 'asc'; }
+        let sorts = Array.isArray(STATE.sorts) ? [...STATE.sorts] : [];
+        const idx = sorts.findIndex(s => s.col === col);
+        if (ev && ev.shiftKey) {
+          // Multi-sort: toggle or add, cap at 3
+          if (idx >= 0) {
+            sorts[idx] = { col, dir: (sorts[idx].dir === 'asc') ? 'desc' : 'asc' };
+          } else {
+            if (sorts.length >= 3) sorts.pop();
+            sorts.push({ col, dir: 'asc' });
+          }
+        } else {
+          // Single sort
+          if (idx === 0 && sorts.length === 1) {
+            sorts = [{ col, dir: (sorts[0].dir === 'asc') ? 'desc' : 'asc' }];
+          } else {
+            sorts = [{ col, dir: 'asc' }];
+          }
+        }
+        STATE.sorts = sorts;
         persist();
         applyFilters();
         render();
@@ -531,16 +602,19 @@
         refresh();
         syncChangelog();
         setupTableChangelog();
+        // also refresh tow alert dots when entering table view
+        setTimeout(updateTowAlertDots, 0);
       }
     } catch(_){}
   }
 
   function refreshTowStatusStyling(){
     try {
-      // Refresh all tow status selectors with their current values
+      // Refresh all tow status selectors with their current values and chip classes
       document.querySelectorAll('.tow-status-selector').forEach(select => {
         const currentValue = select.value;
         select.setAttribute('data-value', currentValue);
+        updateTowSelectChipClasses(select, currentValue);
       });
     } catch(e){}
   }
@@ -609,6 +683,13 @@
         }
       }
     }, 5000); // Refresh every 5 seconds and only if no dropdown is active
+
+    // Update Tow alert dots roughly every minute when in table view
+    setInterval(() => {
+      if (document.body.classList.contains('table-view')) {
+        updateTowAlertDots();
+      }
+    }, 60000);
     
     // Listen for changelog updates
     let mainLogObserver = null;
@@ -722,6 +803,74 @@
     wireGlobal();
     // Initial visibility
     applyViewVisibility();
+  }
+
+  // Tow alert indicator logic (pulsing dot) — parity with Board
+  function readTowingReminderConfig(){
+    try {
+      const raw = localStorage.getItem('towingReminder');
+      if (!raw) return { minutes: 15, active: false };
+      const obj = JSON.parse(raw);
+      const minutes = Math.max(1, parseInt(obj.minutes||15,10)||15);
+      const active = !!obj.active;
+      return { minutes, active };
+    } catch(_) { return { minutes: 15, active: false }; }
+  }
+  function getDepartureIso(tileId){
+    try {
+      const el = document.getElementById(`departure-time-${tileId}`);
+      if (!el) return '';
+      const raw = (el.dataset && el.dataset.iso) ? el.dataset.iso : (el.value || '').trim();
+      if (raw && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(raw)) return raw;
+      if (window.helpers && typeof window.helpers.canonicalizeDateTimeFieldValue === 'function'){
+        const iso = window.helpers.canonicalizeDateTimeFieldValue(`departure-time-${tileId}`, raw);
+        if (iso && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(iso)) return iso;
+      }
+      return '';
+    } catch(_) { return ''; }
+  }
+  function isoToMs(iso){
+    if (!iso) return NaN;
+    try {
+      const [d,t] = iso.split('T');
+      const [y,m,dd] = d.split('-').map(Number);
+      const [hh,mm] = t.split(':').map(Number);
+      return Date.UTC(y, (m||1)-1, dd||1, hh||0, mm||0, 0, 0);
+    } catch(_) { return NaN; }
+  }
+  function ensureTowDotAfter(selectEl, present){
+    if (!selectEl) return;
+    const sib = selectEl.nextElementSibling;
+    const isDot = sib && sib.classList && sib.classList.contains('tow-dot');
+    if (present) {
+      if (isDot) return;
+      const dot = document.createElement('span');
+      dot.className = 'tow-dot';
+      dot.title = 'Tow reminder';
+      selectEl.insertAdjacentElement('afterend', dot);
+    } else {
+      if (isDot) sib.remove();
+    }
+  }
+  function updateTowAlertDots(){
+    try {
+      const cfg = readTowingReminderConfig();
+      if (!cfg.active) {
+        // Remove all dots if inactive
+        document.querySelectorAll('#plannerTable .tow-dot').forEach(el=>el.remove());
+        return;
+      }
+      const cutoffMs = Date.now() + cfg.minutes*60000;
+      document.querySelectorAll('#plannerTable select.tow-status-selector').forEach(select => {
+        const tileId = parseTileIdFromControlId(select.id);
+        const towVal = (select.value||'').trim();
+        if (!isFinite(tileId)) return;
+        const iso = getDepartureIso(tileId);
+        const depMs = isoToMs(iso);
+        const eligible = (towVal === 'on-position') && isFinite(depMs) && depMs <= cutoffMs;
+        ensureTowDotAfter(select, eligible);
+      });
+    } catch(_){}
   }
 
   document.addEventListener('DOMContentLoaded', function(){ setTimeout(init, 0); });

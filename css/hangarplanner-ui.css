@@ -4714,7 +4714,7 @@ html:not(.dark-mode) #panel-planner-table.read-only #plannerTableView #plannerTa
 }
 /* Center the Tow select horizontally within the cell */
 /* Tow cell: center dot + select as a group */
-#plannerTable td .tow-cell { display: flex; align-items: center; justify-content: flex-start; gap: 8px; }
+#plannerTable td .tow-cell { display: flex; align-items: center; justify-content: center; gap: 8px; }
 #plannerTable td .tow-cell .tow-dot { margin-right: 6px; margin-left: 0; }
 #plannerTable td .tow-status-selector {
   position: static; /* no absolute centering */

@@ -901,6 +901,11 @@
         const iso = getDepartureIso(tileId);
         const depMs = isoToMs(iso);
         const eligible = (towVal === 'on-position') && isFinite(depMs) && depMs <= cutoffMs;
+        // Remove any stray dot placed after the select from older logic
+        try {
+          const sib = select.nextElementSibling;
+          if (sib && sib.classList && sib.classList.contains('tow-dot')) sib.remove();
+        } catch(_){ }
         ensureTowDotInContainer(select, eligible);
       });
     } catch(_){}

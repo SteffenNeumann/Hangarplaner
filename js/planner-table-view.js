@@ -579,14 +579,37 @@
       // Toggle button for table view  
       const toggleBtn = document.getElementById('tableChangelogToggle');
       if (toggleBtn && !toggleBtn.__wired) {
+        const STORAGE_KEY = 'planner.infobox.width';
         toggleBtn.addEventListener('click', function(){
           try {
             const panel = document.getElementById('panel-planner-table');
-            if (panel) {
-              panel.classList.toggle('changelog-collapsed');
-              const expanded = !panel.classList.contains('changelog-collapsed');
-              toggleBtn.setAttribute('aria-expanded', expanded.toString());
-              toggleBtn.title = expanded ? 'Hide side panel' : 'Show side panel';
+            const infobox = document.getElementById('infobox-table');
+            if (!panel || !infobox) return;
+            const willCollapse = !panel.classList.contains('changelog-collapsed');
+            if (willCollapse) {
+              // Save current width, then collapse by overriding inline var to ensure priority over saved width
+              try {
+                const currentWidth = infobox.offsetWidth;
+                panel.__prevInfoboxWidth = currentWidth;
+                localStorage.setItem(STORAGE_KEY, String(currentWidth));
+              } catch(_){}
+              panel.classList.add('changelog-collapsed');
+              panel.style.setProperty('--infobox-width', '18px');
+              toggleBtn.setAttribute('aria-expanded', 'false');
+              toggleBtn.title = 'Show side panel';
+            } else {
+              panel.classList.remove('changelog-collapsed');
+              let restoreWidth = panel.__prevInfoboxWidth;
+              if (!restoreWidth || !isFinite(restoreWidth)) {
+                try {
+                  const saved = parseInt(localStorage.getItem(STORAGE_KEY)||'', 10);
+                  if (isFinite(saved)) restoreWidth = saved;
+                } catch(_){}
+              }
+              if (!restoreWidth || !isFinite(restoreWidth)) restoreWidth = 340;
+              panel.style.setProperty('--infobox-width', restoreWidth + 'px');
+              toggleBtn.setAttribute('aria-expanded', 'true');
+              toggleBtn.title = 'Hide side panel';
             }
           } catch(e){}
         });

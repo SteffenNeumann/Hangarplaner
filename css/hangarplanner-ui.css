@@ -4254,32 +4254,35 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 .changelog-title { font-weight: 600; color: #334155; }
 .dark-mode .changelog-title { color: var(--text-primary); }
 
-/* Toggle button: right edge handle, appears on hover of infobox */
+/* Toggle button: right edge handle */
 .planner-infobox { position: absolute; }
-.planner-infobox:hover .changelog-toggle { opacity: 1; pointer-events: auto; }
+/* Always visible in table view for better discoverability */
+body.table-view #panel-planner-table .changelog-toggle { opacity: 1; pointer-events: auto; }
 
+/* Larger, more visible toggle button */
 .changelog-toggle {
   position: absolute;
-  right: -18px; /* sit outside right edge */
+  right: -22px; /* sit a touch farther outside */
   top: 50%;
   transform: translateY(-50%);
-  width: 28px; /* +10px */
-  height: 38px; /* +10px */
+  width: 34px;
+  height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--menu-border);
   border-left: none;
-  border-radius: 0 6px 6px 0;
+  border-radius: 0 8px 8px 0;
   background: #fff;
   color: #64748b;
   cursor: pointer;
-  z-index: 100; /* ensure visibility above tiles and infobox */
-  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
-  opacity: 0;
+  z-index: 200; /* above everything nearby */
+  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+  opacity: 0; /* default when not table-view */
   pointer-events: none;
   transition: opacity 120ms ease;
 }
+.dark-mode .changelog-toggle { background: var(--bg-primary); border-color: var(--border-color); color: var(--text-secondary); box-shadow: 0 2px 6px rgba(0,0,0,0.4); }
 
 /* Ensure infobox establishes a positioning context for centering */
 #infobox { position: absolute; }

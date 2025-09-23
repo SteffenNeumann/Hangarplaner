@@ -204,6 +204,8 @@
       }
 
       updateSortIndicators();
+      // Ensure tow alert dots are updated for new rows
+      try { setTimeout(updateTowAlertDots, 0); } catch(_){ }
     } catch(e){}
   }
   function displayTime(v){
@@ -393,7 +395,7 @@
       handlers[col](val);
       // keep table model in sync so sort/render after click doesn’t drop edits
       if (isFinite(tileId)) updateRowCache(tileId, col, val);
-      if (col === 'towStatus') updateTowSelectChipClasses(el, val);
+      if (col === 'towStatus') { updateTowSelectChipClasses(el, val); try { updateTowAlertDots(); } catch(_){} }
       // Master mode: persist via centralized server sync if available
       if (isMaster() && window.serverSync && typeof window.serverSync.syncWithServer === 'function'){
         try { await window.serverSync.syncWithServer(); } catch(_){}

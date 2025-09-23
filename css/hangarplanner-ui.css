@@ -4236,19 +4236,20 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
   color: var(--text-secondary) !important;
 }
 .dark-mode #plannerTable .tow-status-selector.tow-initiated {
-  background: rgba(245, 158, 11, 0.15) !important;
-  border: 1px solid #b45309 !important;
+  background: rgba(245, 158, 11, 0.15) !important; /* opacity 0.15 */
+  border: 1px solid #10b98100; /* keep border subtle via palette override if needed */
+  border-color: #b45309 !important; /* explicit */
   color: #fbbf24 !important;
 }
 .dark-mode #plannerTable .tow-status-selector.tow-ongoing {
-  background: rgba(59, 130, 246, 0.15) !important;
+  background: rgba(59, 130, 246, 0.15) !important; /* opacity 0.15 */
   border: 1px solid #1d4ed8 !important;
   color: #60a5fa !important;
 }
 .dark-mode #plannerTable .tow-status-selector.tow-on-position {
-  background: rgba(16, 185, 129, 0.15) !important;
-  border: 1px solid #065f46 !important;
-  color: #4ade80 !important;
+  background: rgba(16, 185, 129, 0.15) !important; /* opacity 0.15 */
+  border: 1px solid #10b981 !important;
+  color: #34d399 !important;
 }
 .changelog-title { font-weight: 600; color: #334155; }
 .dark-mode .changelog-title { color: var(--text-primary); }
@@ -4687,14 +4688,25 @@ html:not(.dark-mode) #panel-planner-table.read-only #plannerTableView #plannerTa
 .planner-select.tow-status-selector {
   min-width: 120px;
   font-size: 12px; /* legacy */
-  padding: 4px 8px; /* legacy */
+  padding: 4px 12px; /* balanced left/right */
   border-radius: 4px;
   background-color: transparent !important;
   border: none !important;
   color: #4b5563 !important;
   font-weight: 500; /* legacy */
   text-align: center;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: auto !important; /* avoid full-width chip */
+  display: inline-block;
   transition: background-color 0.2s ease, color 0.2s ease;
+}
+/* Center the Tow select horizontally within the cell */
+#plannerTable td .tow-status-selector {
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 /* Add border back for non-neutral values */

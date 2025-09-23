@@ -4262,25 +4262,25 @@ body.table-view #panel-planner-table .changelog-toggle { opacity: 1; pointer-eve
 /* Larger, more visible toggle button */
 .changelog-toggle {
   position: absolute;
-  right: -22px; /* sit a touch farther outside */
+  right: -16px; /* visible even when collapsed */
   top: 50%;
   transform: translateY(-50%);
-  width: 34px;
-  height: 44px;
+  width: 36px;
+  height: 48px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--menu-border);
   border-left: none;
-  border-radius: 0 8px 8px 0;
+  border-radius: 0 10px 10px 0;
   background: #fff;
   color: #64748b;
   cursor: pointer;
-  z-index: 200; /* above everything nearby */
+  z-index: 500; /* ensure always on top */
   box-shadow: 0 2px 6px rgba(0,0,0,0.18);
-  opacity: 0; /* default when not table-view */
-  pointer-events: none;
-  transition: opacity 120ms ease;
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity 120ms ease, transform 120ms ease;
 }
 .dark-mode .changelog-toggle { background: var(--bg-primary); border-color: var(--border-color); color: var(--text-secondary); box-shadow: 0 2px 6px rgba(0,0,0,0.4); }
 

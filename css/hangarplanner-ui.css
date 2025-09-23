@@ -3003,13 +3003,32 @@ body.dark-mode {
  .dark-mode .info-input,
  .dark-mode .position-input,
  .dark-mode .notes-textarea,
- .dark-mode .status-selector,
- .dark-mode select.status-selector,
  .dark-mode .tow-status-selector {
  	/* Inputs/selects default to main colour in dark mode */
  	background-color: var(--input-bg) !important;
  	color: var(--text-primary);
  	border: 1px solid transparent !important; /* remove default borders inside tiles */
+ }
+
+ /* Board view Status selector: borderless in dark mode (even when disabled) */
+ .dark-mode #hangarGrid .hangar-cell .status-selector,
+ .dark-mode #secondaryHangarGrid .hangar-cell .status-selector {
+ 	background-color: var(--card-header-bg) !important; /* match tile header */
+ 	color: var(--text-secondary) !important;
+ 	border: none !important;
+ 	box-shadow: none !important;
+ }
+ .dark-mode #hangarGrid .hangar-cell .status-selector:disabled,
+ .dark-mode #secondaryHangarGrid .hangar-cell .status-selector:disabled {
+ 	background-color: var(--input-bg) !important; /* keep dark bg in RO mode */
+ 	border: none !important;
+ 	box-shadow: none !important;
+ }
+ /* Subtle hover like other inputs */
+ .dark-mode #hangarGrid .hangar-cell .status-selector:hover,
+ .dark-mode #secondaryHangarGrid .hangar-cell .status-selector:hover {
+ 	background-color: rgba(255, 255, 255, 0.03) !important;
+ 	border: none !important;
  }
 
 /* Subtle hover/focus to keep usability without strong borders */

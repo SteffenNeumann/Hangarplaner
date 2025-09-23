@@ -31,7 +31,7 @@
 	--tile-inner-padding: 24px;
 
 	/* Fixed board tile size (square). Adjust as needed. */
-	--board-tile-size: 250px;
+	--board-tile-size: 270px;
 
 	/* Sync chip palette (adjust here to tune colors/weights) */
 	--sync-chip-fw: 600;

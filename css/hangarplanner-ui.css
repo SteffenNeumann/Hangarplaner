@@ -4716,6 +4716,28 @@ html:not(.dark-mode) #panel-planner-table.read-only #plannerTableView #plannerTa
 /* Tow cell: center dot + select as a group */
 #plannerTable td .tow-cell { display: flex; align-items: center; justify-content: center; gap: 8px; }
 #plannerTable td .tow-cell .tow-dot { margin-right: 6px; margin-left: 0; }
+/* Table view tow reminder dot: always visible to keep inline alignment */
+#plannerTable td .tow-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+#plannerTable td .tow-dot.alert {
+  background: #ef4444; /* red */
+  animation: tow-pulse-2s 2s ease-in-out infinite;
+}
+#plannerTable td .tow-dot.neutral {
+  background: #cbd5e1; /* slate-300 */
+  opacity: 0.7;
+  animation: none;
+}
+.dark-mode #plannerTable td .tow-dot.neutral {
+  background: #475569; /* slate-600 */
+  opacity: 0.6;
+}
 #plannerTable td .tow-status-selector {
   position: static; /* no absolute centering */
   left: auto;

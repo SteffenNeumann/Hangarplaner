@@ -264,8 +264,8 @@
       `<option value="${esc(value)}" ${String(val)===value?'selected':''}>${esc(text)}</option>`
     ).join('');
     const cls = `planner-select tow-status-selector tow-${esc(val || 'neutral')}`;
-    // Wrap dot + select in a flex container centered as a group
-    return `<td class="planner-td"><div class="tow-cell"><span class="tow-dot" aria-hidden="true" style="display:none"></span><select data-col="${col}" id="${esc(id)}" class="${cls}" data-value="${esc(val)}" ${ro?'disabled':''}>${opts}</select></div></td>`;
+    // Wrap dot + select in a flex container centered as a group. Dot is always visible for alignment; alert state is styled via classes.
+    return `<td class="planner-td"><div class="tow-cell"><span class="tow-dot neutral" aria-hidden="true" style="display:inline-block"></span><select data-col="${col}" id="${esc(id)}" class="${cls}" data-value="${esc(val)}" ${ro?'disabled':''}>${opts}</select></div></td>`;
   }
 
   function updateSortIndicators(){
@@ -872,28 +872,27 @@
       return Date.UTC(y, (m||1)-1, dd||1, hh||0, mm||0, 0, 0);
     } catch(_) { return NaN; }
   }
-  function ensureTowDotInContainer(selectEl, present){
+  function ensureTowDotInContainer(selectEl, isAlert){
     if (!selectEl) return;
     const container = selectEl.closest('.tow-cell');
     if (!container) return;
     let dot = container.querySelector('.tow-dot');
     if (!dot) {
       dot = document.createElement('span');
-      dot.className = 'tow-dot';
+      dot.className = 'tow-dot neutral';
       dot.title = 'Tow reminder';
+      dot.setAttribute('aria-hidden', 'true');
       container.insertBefore(dot, container.firstChild);
     }
-    dot.style.display = present ? 'inline-block' : 'none';
+    // Always keep dot visible for alignment; toggle alert styling via class
+    dot.style.display = 'inline-block';
+    dot.classList.remove('alert','neutral');
+    dot.classList.add(isAlert ? 'alert' : 'neutral');
   }
   function updateTowAlertDots(){
     try {
       const cfg = readTowingReminderConfig();
-      if (!cfg.active) {
-        // Remove all dots if inactive
-        document.querySelectorAll('#plannerTable .tow-dot').forEach(el=>el.remove());
-        return;
-      }
-      const cutoffMs = Date.now() + cfg.minutes*60000;
+      const cutoffMs = Date.now() + (cfg.minutes||15)*60000;
       document.querySelectorAll('#plannerTable select.tow-status-selector').forEach(select => {
         const tileId = parseTileIdFromControlId(select.id);
         const towVal = (select.value||'').trim();
@@ -906,9 +905,10 @@
           const sib = select.nextElementSibling;
           if (sib && sib.classList && sib.classList.contains('tow-dot')) sib.remove();
         } catch(_){ }
-        ensureTowDotInContainer(select, eligible);
+        const showAlert = !!cfg.active && !!eligible;
+        ensureTowDotInContainer(select, showAlert);
       });
-    } catch(_){}
+    } catch(_){}}
   }
 
   document.addEventListener('DOMContentLoaded', function(){ setTimeout(init, 0); });

@@ -267,6 +267,7 @@
 
   function updateSortIndicators(){
     const headers = $all('#plannerTable thead .planner-table-header th.sortable');
+    const tip = 'Click to sort; Shift+Click to add as secondary/tertiary level. Click without Shift to reset.';
     headers.forEach(h => {
       const col = h.getAttribute('data-col');
       let indicator = h.querySelector('.sort-indicator');
@@ -279,18 +280,25 @@
         h.appendChild(rankBadge);
       }
       const idx = (STATE.sorts || []).findIndex(s => s.col === col);
+      // Tooltip on header
+      if (!h.getAttribute('title')) h.setAttribute('title', tip);
       if (idx >= 0) {
         const s = STATE.sorts[idx];
         // Arrow only for primary (rank 1), neutral for others
         indicator.textContent = idx === 0 ? (s.dir === 'asc' ? '↑' : '↓') : '↕';
         h.classList.add('sorted');
-        rankBadge.textContent = String(idx+1);
+        const rankText = String(idx+1);
+        rankBadge.textContent = rankText;
         rankBadge.style.display = 'inline-block';
+        rankBadge.setAttribute('title', `Sort level ${rankText}. ${tip}`);
+        rankBadge.setAttribute('aria-label', `Sort level ${rankText}`);
       } else {
         indicator.textContent = '↕';
         h.classList.remove('sorted');
         rankBadge.textContent = '';
         rankBadge.style.display = 'none';
+        rankBadge.removeAttribute('title');
+        rankBadge.removeAttribute('aria-label');
       }
     });
   }

@@ -4730,13 +4730,15 @@ html:not(.dark-mode) #panel-planner-table.read-only #plannerTableView #plannerTa
   animation: tow-pulse-2s 2s ease-in-out infinite;
 }
 #plannerTable td .tow-dot.neutral {
-  background: #cbd5e1; /* slate-300 */
-  opacity: 0.7;
+  /* Match theme background in light mode to reduce visual weight but keep layout */
+  background: var(--bg-color-light, #f8fafc);
+  opacity: 1;
   animation: none;
 }
 .dark-mode #plannerTable td .tow-dot.neutral {
-  background: #475569; /* slate-600 */
-  opacity: 0.6;
+  /* Match dark theme main background */
+  background: var(--bg-primary);
+  opacity: 1;
 }
 #plannerTable td .tow-status-selector {
   position: static; /* no absolute centering */

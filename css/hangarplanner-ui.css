@@ -4693,6 +4693,17 @@ html:not(.dark-mode) #panel-planner-table.read-only #plannerTableView #plannerTa
   flex-shrink: 0;
   /* Inherit status colors from main status-light styles */
 }
+/* Table view: neutral status dot should blend with theme background (keep spacing) */
+#plannerTable td .status-light[data-status="neutral"] {
+  background: var(--bg-color-light, #f8fafc);
+  border-color: var(--bg-color-light, #f8fafc);
+  box-shadow: none;
+}
+.dark-mode #plannerTable td .status-light[data-status="neutral"] {
+  background: var(--bg-primary);
+  border-color: var(--bg-primary);
+  box-shadow: none;
+}
 
 /* Tow status selector styling in table view - improved consistency */
 .planner-select.tow-status-selector {

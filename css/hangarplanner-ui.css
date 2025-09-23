@@ -79,6 +79,10 @@ html, body, button, input, select, textarea {
 	border: 1px solid var(--border-light);
 	border-radius: 12px;
 	background-color: #ffffff !important; /* Zurück auf weiß */
+	/* Make tiles square in board view */
+	aspect-ratio: 1 / 1;
+	overflow: hidden; /* clip inner content as requested */
+	min-height: 0; /* allow inner flex children to size properly */
 }
 
 /* MAXIMALE PRIORITÄT: Überschreibe alle möglichen Status-basierten Hintergründe */

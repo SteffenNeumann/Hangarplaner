@@ -2122,21 +2122,6 @@ input:checked + .toggle-slider:before {
 	padding-left: 8px;
 	margin: 10px 0 8px;
 }
-/* Dark theme color for submenu section labels */
-.dark-mode .submenu-panel .section-label { color: var(--text-secondary); }
-
-/* Subtitle variant used in Export panel; keep both class names */
-.sidebar-section-subtitle {
-	display: block;
-	margin: 10px 0 8px;
-	font-weight: 700;
-	font-size: 10px;
-	color: var(--menu-text);
-	border-left: 3px solid var(--menu-accent);
-	padding-left: 8px;
-}
-.dark-mode .sidebar-section-subtitle { color: var(--text-secondary); }
-
 .submenu-panel .sidebar-form-group { margin-bottom: 16px; }
 .submenu-panel .sidebar-input-group {
 	display: grid;

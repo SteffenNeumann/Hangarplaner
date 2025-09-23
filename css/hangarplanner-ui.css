@@ -4720,7 +4720,7 @@ html:not(.dark-mode) #panel-planner-table.read-only #plannerTableView #plannerTa
 table .planner-select.tow-status-selector[data-value="initiated"],
 #plannerTable .planner-select.tow-status-selector[data-value="initiated"],
 .planner-td select.tow-status-selector[data-value="initiated"] {
-  background-color: #fff1e6 !important;
+  background-color: rgba(245, 158, 11, 0.15) !important; /* 0.15 opacity */
   color: #b45309 !important;
   border-color: #f59e0b !important;
 }
@@ -4728,7 +4728,7 @@ table .planner-select.tow-status-selector[data-value="initiated"],
 table .planner-select.tow-status-selector[data-value="ongoing"],
 #plannerTable .planner-select.tow-status-selector[data-value="ongoing"],
 .planner-td select.tow-status-selector[data-value="ongoing"] {
-  background-color: #e0f2fe !important;
+  background-color: rgba(59, 130, 246, 0.15) !important; /* 0.15 opacity */
   color: #0369a1 !important;
   border-color: #0ea5e9 !important;
 }
@@ -4736,7 +4736,7 @@ table .planner-select.tow-status-selector[data-value="ongoing"],
 table .planner-select.tow-status-selector[data-value="on-position"],
 #plannerTable .planner-select.tow-status-selector[data-value="on-position"],
 .planner-td select.tow-status-selector[data-value="on-position"] {
-  background-color: #dcfce7 !important;
+  background-color: rgba(16, 185, 129, 0.15) !important; /* 0.15 opacity */
   color: #166534 !important;
   border-color: #10b981 !important;
 }

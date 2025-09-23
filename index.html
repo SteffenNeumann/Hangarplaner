@@ -382,6 +382,7 @@
 			<div id="submenu-update" class="submenu-panel hidden" data-for="update">
 				<div class="submenu-title">Update</div>
 				<div class="update-description">For scheduled update set time interval and activate</div>
+				<div class="section-label">Airport</div>
 				<div class="sidebar-form-group">
 					<div class="sidebar-form-row">
 						<label for="airportCodeInput">Airport IATA Code</label>
@@ -390,6 +391,7 @@
 						</div>
 					</div>
 				</div>
+				<div class="section-label">Date</div>
 				<div class="sidebar-form-group">
 					<div class="sidebar-form-row">
 						<label for="currentDateInput">Arrival Date</label>
@@ -398,6 +400,7 @@
 						</div>
 					</div>
 				</div>
+				<div class="section-label">Schedule</div>
 				<div class="sidebar-form-group">
 					<div class="sidebar-form-row">
 						<label for="updateIntervalInput">Time interval</label>
@@ -429,6 +432,7 @@
 				<div id="submenu-sync" class="submenu-panel hidden" data-for="sync">
 					<div class="submenu-title">Sync Settings</div>
 					<div class="sync-mode-description">Configure how your data syncs with the server</div>
+					<div class="section-label">Mode</div>
 					<div class="sync-toggle-row">
 						<div class="sync-toggle-info">
 							<div class="sync-toggle-title">Mode</div>
@@ -443,6 +447,7 @@
 						</div>
 					</div>
 					<div class="panel-divider"></div>
+					<div class="section-label">Manual actions</div>
 <button id="manualSyncBtn" class="sidebar-btn sidebar-btn-primary w-full" title="Trigger a one-time sync now">Manual Sync</button>
 					<div class="text-sm text-center" style="margin-top: 6px; color: #64748b;">Trigger a one-time sync now</div>
 <div id="syncPollingInfo" class="text-sm text-center" style="margin-top: 4px; color: #94a3b8;">Receiving updates every 3s</div>
@@ -451,6 +456,7 @@
 
 			<div id="submenu-display" class="submenu-panel hidden" data-for="display">
 				<div class="submenu-title">Display Settings</div>
+				<div class="section-label">Theme</div>
 				<div class="sidebar-form-group">
 					<div class="sidebar-form-row">
 						<label for="darkModeToggle">Darkmode</label>
@@ -464,6 +470,7 @@
 						</div>
 					</div>
 				</div>
+				<div class="section-label">View</div>
 				<div class="sidebar-form-group">
 					<div class="sidebar-form-row">
 						<label for="viewModeToggle">Board/Table</label>
@@ -477,6 +484,7 @@
 						</div>
 					</div>
 				</div>
+					<div class="section-label">Widgets</div>
 					<!-- New toggles: Weather & Time widgets -->
 					<div class="sidebar-form-group">
 						<div class="sidebar-form-row">
@@ -504,6 +512,7 @@
 							</div>
 						</div>
 					</div>
+					<div class="section-label">Layout</div>
 					<div class="sidebar-form-group">
 						<div class="sidebar-form-row">
 							<label for="tilesCount">Primary Tiles</label>
@@ -533,8 +542,9 @@
 							</div>
 						</div>
 					</div>
-
+					
 					<!-- Reset Screen control -->
+					<div class="section-label">Utilities</div>
 					<div class="sidebar-form-group">
 						<div class="sidebar-form-row">
 							<label>Utilities</label>
@@ -598,6 +608,7 @@
 
 				<div class="panel-divider" style="margin-top:12px"></div>
 				<div class="submenu-title">Send as Mail</div>
+				<div class="section-label">Mail</div>
 				<div class="sidebar-form-group">
 					<label for="mailRecipients">Recipients</label>
 					<input type="text" id="mailRecipients" class="sidebar-form-control" placeholder="e.g. ops@example.com, chief@example.com" title="Comma/semicolon-separated list of emails" />
@@ -624,6 +635,7 @@
 
 			<div id="submenu-project" class="submenu-panel hidden" data-for="project">
 				<div class="submenu-title">Projekt Settings</div>
+				<div class="section-label">Edit Mode</div>
 				<div class="sidebar-form-group">
 					<div class="sidebar-form-row">
 						<label for="modeToggle">View/Edit Mode:</label>
@@ -639,6 +651,7 @@
 						</div>
 					</div>
 				</div>
+				<div class="section-label">Project</div>
 				<div class="sidebar-form-group">
 					<label for="projectName">Project Name:</label>
 					<input id="projectName" type="text" placeholder="Project Name" class="sidebar-form-control" />
@@ -652,6 +665,7 @@
 				<div class="sync-mode-description">Configure how you want to be reminded for towing</div>
 
 				<!-- Towing Reminder Settings -->
+				<div class="section-label">Towing Reminder</div>
 				<div class="sidebar-form-group">
 					<div class="sidebar-form-row">
 						<label for="towingReminderMinutesInput">Set Time to Reminder</label>

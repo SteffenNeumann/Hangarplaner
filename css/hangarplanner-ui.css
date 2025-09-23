@@ -2074,11 +2074,11 @@ input:checked + .toggle-slider:before {
 	background: var(--bg-tertiary);
 	border-right-color: var(--border-color);
 }
-.dark-mode .left-menu .menu-item { color: var(--text-secondary); }
+.dark-mode .left-menu .menu-item { color: var(--text-primary); }
 .dark-mode .left-menu .menu-item:hover,
 .dark-mode .left-menu .menu-item.active { background: var(--bg-secondary); border-color: var(--border-color); }
 .dark-mode .left-menu .menu-icon,
-.dark-mode .left-menu .menu-label { color: var(--text-secondary); }
+.dark-mode .left-menu .menu-label { color: var(--text-primary); }
 
 .dark-mode .submenu-panel {
 	background: var(--bg-primary); /* submenu uses main colour */
@@ -2091,7 +2091,12 @@ input:checked + .toggle-slider:before {
 	color: var(--text-primary) !important;
 	border-color: var(--border-color) !important;
 }
-.dark-mode .submenu-title { color: var(--text-secondary); border-bottom-color: var(--border-color); }
+.dark-mode .submenu-title { color: var(--text-primary); border-bottom-color: var(--border-color); }
+.dark-mode #submenu-update .submenu-title,
+.dark-mode #submenu-sync .submenu-title,
+.dark-mode #submenu-display .submenu-title,
+.dark-mode #submenu-export .submenu-title,
+.dark-mode #submenu-project .submenu-title { color: var(--text-primary) !important; }
 .dark-mode .submenu-panel label { color: var(--text-secondary); }
 
 /* Buttons in submenu to match palette */

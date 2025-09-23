@@ -4284,6 +4284,13 @@ body.table-view #panel-planner-table .changelog-toggle { opacity: 1; pointer-eve
 }
 .dark-mode .changelog-toggle { background: var(--bg-primary); border-color: var(--border-color); color: var(--text-secondary); box-shadow: 0 2px 6px rgba(0,0,0,0.4); }
 
+/* Rotate chevron direction based on collapsed state */
+.changelog-toggle svg { transition: transform 120ms ease; }
+#panel-planner-table.changelog-collapsed .changelog-toggle svg,
+#panel-planner.changelog-collapsed .changelog-toggle svg {
+  transform: rotate(180deg);
+}
+
 /* Ensure infobox establishes a positioning context for centering */
 #infobox { position: absolute; }
 

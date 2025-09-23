@@ -4707,6 +4707,13 @@ html:not(.dark-mode) #panel-planner-table.read-only #plannerTableView #plannerTa
   position: relative;
   left: 50%;
   transform: translateX(-50%);
+  height: 26px; /* unify chip height */
+  line-height: 26px; /* center text vertically within height */
+  padding-top: 0 !important; /* remove vertical padding to avoid optical offset */
+  padding-bottom: 0 !important;
+  text-align: center;
+  text-align-last: center; /* center selected text in Chrome */
+  -moz-text-align-last: center; /* center selected text in Firefox */
 }
 
 /* Add border back for non-neutral values */

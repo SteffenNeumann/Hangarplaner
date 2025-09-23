@@ -4713,10 +4713,12 @@ html:not(.dark-mode) #panel-planner-table.read-only #plannerTableView #plannerTa
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 /* Center the Tow select horizontally within the cell */
+/* Tow cell: center dot + select as a group */
+#plannerTable td .tow-cell { display: flex; align-items: center; justify-content: center; gap: 8px; }
 #plannerTable td .tow-status-selector {
-  position: relative;
-  left: 50%;
-  transform: translateX(-50%);
+  position: static; /* no absolute centering */
+  left: auto;
+  transform: none;
   height: 26px; /* unify chip height */
   line-height: 26px; /* center text vertically within height */
   padding-top: 0 !important; /* remove vertical padding to avoid optical offset */

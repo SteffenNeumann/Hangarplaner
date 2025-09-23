@@ -262,7 +262,8 @@
       `<option value="${esc(value)}" ${String(val)===value?'selected':''}>${esc(text)}</option>`
     ).join('');
     const cls = `planner-select tow-status-selector tow-${esc(val || 'neutral')}`;
-    return `<td class="planner-td"><select data-col="${col}" id="${esc(id)}" class="${cls}" data-value="${esc(val)}" ${ro?'disabled':''}>${opts}</select></td>`;
+    // Wrap dot + select in a flex container centered as a group
+    return `<td class="planner-td"><div class="tow-cell"><span class="tow-dot" aria-hidden="true" style="display:none"></span><select data-col="${col}" id="${esc(id)}" class="${cls}" data-value="${esc(val)}" ${ro?'disabled':''}>${opts}</select></div></td>`;
   }
 
   function updateSortIndicators(){
@@ -869,19 +870,18 @@
       return Date.UTC(y, (m||1)-1, dd||1, hh||0, mm||0, 0, 0);
     } catch(_) { return NaN; }
   }
-  function ensureTowDotAfter(selectEl, present){
+  function ensureTowDotInContainer(selectEl, present){
     if (!selectEl) return;
-    const sib = selectEl.nextElementSibling;
-    const isDot = sib && sib.classList && sib.classList.contains('tow-dot');
-    if (present) {
-      if (isDot) return;
-      const dot = document.createElement('span');
+    const container = selectEl.closest('.tow-cell');
+    if (!container) return;
+    let dot = container.querySelector('.tow-dot');
+    if (!dot) {
+      dot = document.createElement('span');
       dot.className = 'tow-dot';
       dot.title = 'Tow reminder';
-      selectEl.insertAdjacentElement('afterend', dot);
-    } else {
-      if (isDot) sib.remove();
+      container.insertBefore(dot, container.firstChild);
     }
+    dot.style.display = present ? 'inline-block' : 'none';
   }
   function updateTowAlertDots(){
     try {
@@ -899,7 +899,7 @@
         const iso = getDepartureIso(tileId);
         const depMs = isoToMs(iso);
         const eligible = (towVal === 'on-position') && isFinite(depMs) && depMs <= cutoffMs;
-        ensureTowDotAfter(select, eligible);
+        ensureTowDotInContainer(select, eligible);
       });
     } catch(_){}
   }

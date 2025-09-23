@@ -908,7 +908,7 @@
         const showAlert = !!cfg.active && !!eligible;
         ensureTowDotInContainer(select, showAlert);
       });
-    } catch(_){}}
+    } catch(_){}
   }
 
   document.addEventListener('DOMContentLoaded', function(){ setTimeout(init, 0); });

@@ -1482,6 +1482,85 @@ window.moveTileContent = window.moveTileContent || async function(sourceId, dest
   } catch(e) { console.warn('moveTileContent failed:', e); try { window.showNotification && window.showNotification('Move failed: ' + e.message, 'error'); } catch(_){} return false; }
 };
 
+// Standalone selection overlay opener (Board/Table right-click)
+window.openTileSelectionOverlay = window.openTileSelectionOverlay || function(options){
+  try {
+    const tiles = Array.isArray(options?.tiles) ? options.tiles : (window.getFreeTilesWithLabels ? window.getFreeTilesWithLabels() : []);
+    const onSelect = typeof options?.onSelect === 'function' ? options.onSelect : null;
+    const normalized = (tiles||[]).map(item => (typeof item === 'number' ? { id:item, label: getPositionLabelForTileId(item) } : { id:item.id, label:item.label||getPositionLabelForTileId(item.id) }));
+
+    const overlay = document.createElement('div');
+    overlay.id = 'tileSelectionOverlay';
+    overlay.className = 'fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50';
+
+    const modal = document.createElement('div');
+    modal.className = 'bg-white rounded-lg p-5 w-full max-w-md border';
+    modal.style.border = '1px solid var(--menu-border)';
+    modal.style.color = 'var(--menu-text)';
+
+    const title = document.createElement('div');
+    title.className = 'submenu-title';
+    title.textContent = 'Select Space';
+    const subtitle = document.createElement('div');
+    subtitle.className = 'text-xs mb-4';
+    subtitle.style.color = '#6b6b6b';
+    subtitle.textContent = '';
+
+    const sectionLabel = document.createElement('h3');
+    sectionLabel.style.marginBottom = '8px';
+    sectionLabel.textContent = normalized.length > 0 ? 'Free Spaces' : 'No free spaces available';
+
+    const grid = document.createElement('div');
+    grid.className = 'grid grid-cols-4 gap-2 mb-4';
+    if (normalized.length > 0) {
+      normalized.forEach(({id,label}) => {
+        const btn = document.createElement('button');
+        btn.className = 'sidebar-btn sidebar-btn-primary';
+        btn.style.minHeight = '32px';
+        btn.style.padding = '0 10px';
+        btn.style.fontSize = '12px';
+        btn.dataset.tileId = String(id);
+        btn.textContent = label || `#${id}`;
+        btn.title = `Kachel #${id}${label ? ` • Position: ${label}` : ''}`;
+        btn.addEventListener('click', () => {
+          try { if (onSelect) onSelect(id); } finally { try { document.body.removeChild(overlay); } catch(_){} }
+        });
+        grid.appendChild(btn);
+      });
+    } else {
+      const hint = document.createElement('div');
+      hint.className = 'text-xs';
+      hint.style.color = '#6b6b6b';
+      hint.textContent = 'No free spaces available.';
+      grid.appendChild(hint);
+    }
+
+    const footer = document.createElement('div');
+    footer.className = 'flex justify-end gap-2';
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'sidebar-btn sidebar-btn-secondary';
+    cancelBtn.style.minHeight = '32px';
+    cancelBtn.style.fontSize = '12px';
+    cancelBtn.textContent = 'Abbrechen';
+    cancelBtn.addEventListener('click', () => { try { document.body.removeChild(overlay); } catch(_){} });
+    footer.appendChild(cancelBtn);
+
+    modal.appendChild(title);
+    modal.appendChild(subtitle);
+    modal.appendChild(sectionLabel);
+    modal.appendChild(grid);
+    modal.appendChild(footer);
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    overlay.addEventListener('click', (e)=>{ if (e.target === overlay) { try { document.body.removeChild(overlay); } catch(_){} } });
+    const escListener = (ev)=>{ if (ev.key === 'Escape') { try { document.body.removeChild(overlay); } catch(_){} document.removeEventListener('keydown', escListener); } };
+    document.addEventListener('keydown', escListener);
+    return overlay;
+  } catch(e){ try { window.showNotification && window.showNotification('Open selection overlay failed: ' + e.message, 'error'); } catch(_){} return null; }
+};
+
 // Wire Display submenu: Reset screen (confirm and clear all tile inputs except Hangar Position)
 const resetScreenBtn = document.getElementById('resetScreenBtn');
 if (resetScreenBtn) {
@@ -2214,36 +2293,6 @@ async function checkForSelectedAircraft() {
 
 			overlay.appendChild(modal);
 			document.body.appendChild(overlay);
-			// Expose a generic opener that accepts custom onSelect callbacks
-			try {
-				window.openTileSelectionOverlay = function(options){
-					const tiles = Array.isArray(options?.tiles) ? options.tiles : getFreeTilesWithLabels();
-					const onSelect = typeof options?.onSelect === 'function' ? options.onSelect : null;
-					const overlay2 = overlay.cloneNode(true);
-					// Rebuild grid with provided tiles
-					const panel = overlay2.querySelector('div');
-					const gridNew = panel.querySelector('.grid');
-					gridNew.innerHTML='';
-					const normalized = (tiles||[]).map(item => (typeof item === 'number' ? { id:item, label: getPositionLabelForTileId(item) } : { id:item.id, label:item.label||getPositionLabelForTileId(item.id) }));
-					normalized.forEach(({id,label})=>{
-						const btn = document.createElement('button');
-						btn.className = 'sidebar-btn sidebar-btn-primary';
-						btn.style.minHeight = '32px';
-						btn.style.padding = '0 10px';
-						btn.style.fontSize = '12px';
-						btn.dataset.tileId = String(id);
-						btn.textContent = label || `#${id}`;
-						btn.addEventListener('click', (e)=>{
-							const tid = parseInt(e.currentTarget.dataset.tileId,10);
-							try { if (onSelect) onSelect(tid); } finally { try { document.body.removeChild(overlay2); } catch(_){} }
-						});
-						gridNew.appendChild(btn);
-					});
-					document.body.appendChild(overlay2);
-					overlay2.addEventListener('click', (e)=>{ if (e.target === overlay2) { try { document.body.removeChild(overlay2); } catch(_){} } });
-					return overlay2;
-				};
-			} catch(_){}
 
 			// Close behaviors
 			overlay.addEventListener('click', (e) => {

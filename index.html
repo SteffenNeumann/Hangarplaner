@@ -623,7 +623,7 @@
 			</div>
 
 			<div id="submenu-project" class="submenu-panel hidden" data-for="project">
-				<div class="submenu-title">Projekt Settings</div>
+				<div class="submenu-title">Project Settings</div>
 				<div class="sidebar-form-group">
 					<div class="sidebar-form-row">
 						<label for="modeToggle">View/Edit Mode:</label>
@@ -653,6 +653,7 @@
 
 				<!-- Towing Reminder Settings -->
 				<div class="sidebar-form-group">
+				<div class="submenu-title">Tow Alert</div>
 					<div class="sidebar-form-row">
 						<label for="towingReminderMinutesInput">Set Time to Reminder</label>
 						<div class="input-container input-with-suffix">
@@ -3231,6 +3232,22 @@ This guide explains how to use the HangarPlaner Date & Time picker for setting a
   - Single date/time
   - Range (start + end date, each with its own time)
 - Works in both light and dark mode.
+
+---
+
+## Moving content to another hangar position (right-click)
+
+- You can move the content of a tile (or table row) to a different hangar position.
+- This copies Aircraft ID, Arr/Dep, Position (info grid), Notes, Status and Tow status to the target tile and clears the source. The header Hangar Position is not changed.
+- Only empty destinations (no Aircraft ID) are offered.
+
+How to use
+
+- Board view (tiles): Right‑click the Aircraft ID field → Select Space → click the destination.
+- Table view: Right‑click the AC‑ID field → Select Space → click the destination.
+- In read‑only sync mode the move is inhibited (no changes are written).
+
+Tip: Hover the Aircraft/AC‑ID field to see a tooltip: “Right‑click to move content to another hangar position”.
 
 ---
 

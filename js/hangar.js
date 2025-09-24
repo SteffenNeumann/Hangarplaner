@@ -1366,8 +1366,120 @@ window.clearSingleTile = window.clearSingleTile || function(cellId){
       }
     } catch(_e){}
 
-    return true;
+return true;
   } catch(e) { console.warn('clearSingleTile failed:', e); return false; }
+};
+
+// Move content from one tile to another (keeps destination hangar-position; clears source)
+window.moveTileContent = window.moveTileContent || async function(sourceId, destId){
+  try {
+    const s = parseInt(sourceId,10), d = parseInt(destId,10);
+    if (!isFinite(s) || !isFinite(d) || s === d) return false;
+
+    // Read-only guard: rely on existing inhibition, but add user feedback
+    try {
+      const readOnly = !!(window.sharingManager && window.sharingManager.syncMode === 'sync') || (!!window.serverSync && window.serverSync.isMaster === false && window.serverSync.canReadFromServer && window.serverSync.canReadFromServer());
+      if (readOnly) { try { window.showNotification && window.showNotification('Read-only mode: cannot move content', 'warning'); } catch(_){} return false; }
+    } catch(_){}
+
+    // Destination must be empty (Aircraft ID)
+    const destAc = document.getElementById(`aircraft-${d}`);
+    if (!destAc || (destAc.value||'').trim()) { try { window.showNotification && window.showNotification('Destination is not empty', 'warning'); } catch(_){} return false; }
+
+    // Collect source values
+    const fields = ['aircraft','arrival-time','departure-time','position','notes','status','tow-status'];
+    const src = {};
+    fields.forEach(prefix => {
+      const el = document.getElementById(`${prefix}-${s}`);
+      if (!el) return;
+      if (prefix === 'arrival-time' || prefix === 'departure-time') {
+        const val = el.dataset?.iso || el.value || '';
+        src[prefix] = val;
+      } else {
+        src[prefix] = el.value || '';
+      }
+    });
+
+    // Write into destination (preserving dataset.iso for times)
+    const writeTime = (pref, val) => {
+      const el = document.getElementById(`${pref}-${d}`);
+      if (!el) return;
+      const h = window.helpers || {};
+      let iso = '';
+      if (val && h.isISODateTimeLocal && h.isISODateTimeLocal(val)) iso = val;
+      else if (val && h.isCompactDateTime && h.isCompactDateTime(val) && h.parseCompactToISOUTC) iso = h.parseCompactToISOUTC(val);
+      // display compact if we have iso
+      if (iso && h.formatISOToCompactUTC) el.value = h.formatISOToCompactUTC(iso); else el.value = val || '';
+      if (iso) { try { el.dataset.iso = iso; } catch(_){} } else { try { delete el.dataset.iso; } catch(_){} }
+      // Persist and fire events
+      try {
+        if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage === 'function') {
+          window.hangarEventManager.updateFieldInStorage(`${pref}-${d}`, iso || el.value || '', { flushDelayMs: 0, source: 'move' });
+        }
+      } catch(_){ }
+      try { el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); el.dispatchEvent(new Event('blur', { bubbles: true })); } catch(_){ }
+    };
+
+    // Aircraft first (so downstream handlers can auto-fetch if configured)
+    const destAcEl = document.getElementById(`aircraft-${d}`);
+    if (destAcEl) {
+      destAcEl.value = src['aircraft'] || '';
+      try {
+        if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage === 'function') {
+          window.hangarEventManager.updateFieldInStorage(`aircraft-${d}`, destAcEl.value, { flushDelayMs: 0, source: 'move' });
+        }
+      } catch(_){ }
+      try { destAcEl.dispatchEvent(new Event('input', { bubbles: true })); destAcEl.dispatchEvent(new Event('change', { bubbles: true })); destAcEl.dispatchEvent(new Event('blur', { bubbles: true })); } catch(_){ }
+    }
+
+    writeTime('arrival-time', src['arrival-time'] || '');
+    writeTime('departure-time', src['departure-time'] || '');
+
+    // Position (info grid)
+    const posEl = document.getElementById(`position-${d}`);
+    if (posEl) {
+      posEl.value = src['position'] || '';
+      try { if (window.hangarEventManager) window.hangarEventManager.updateFieldInStorage(`position-${d}`, posEl.value, { flushDelayMs: 0, source: 'move' }); } catch(_){}
+      try { posEl.dispatchEvent(new Event('input', { bubbles: true })); posEl.dispatchEvent(new Event('change', { bubbles: true })); } catch(_){ }
+    }
+
+    // Notes
+    const notesEl = document.getElementById(`notes-${d}`);
+    if (notesEl) {
+      notesEl.value = src['notes'] || '';
+      try { if (window.hangarEventManager) window.hangarEventManager.updateFieldInStorage(`notes-${d}`, notesEl.value, { flushDelayMs: 0, source: 'move' }); } catch(_){}
+      try { notesEl.dispatchEvent(new Event('input', { bubbles: true })); notesEl.dispatchEvent(new Event('change', { bubbles: true })); } catch(_){ }
+    }
+
+    // Status
+    const statusEl = document.getElementById(`status-${d}`);
+    if (statusEl) {
+      statusEl.value = src['status'] || 'neutral';
+      try { if (window.hangarEventManager) window.hangarEventManager.updateFieldInStorage(`status-${d}`, statusEl.value, { flushDelayMs: 0, source: 'move' }); } catch(_){}
+      try { statusEl.dispatchEvent(new Event('change', { bubbles: true })); } catch(_){ }
+      try { if (window.updateStatusLights) window.updateStatusLights(d); } catch(_){ }
+    }
+
+    // Tow
+    const towEl = document.getElementById(`tow-status-${d}`);
+    if (towEl) {
+      towEl.value = src['tow-status'] || 'neutral';
+      try { if (window.hangarEventManager) window.hangarEventManager.updateFieldInStorage(`tow-status-${d}`, towEl.value, { flushDelayMs: 0, source: 'move' }); } catch(_){}
+      try { towEl.dispatchEvent(new Event('change', { bubbles: true })); } catch(_){ }
+    }
+
+    // Create/update last-update badge on destination
+    try { if (window.createOrUpdateLastUpdateBadge) window.createOrUpdateLastUpdateBadge(d, 'move'); } catch(_){ }
+
+    // Clear source (keeps hangar-position)
+    try { window.clearSingleTile && window.clearSingleTile(s); } catch(_){ }
+
+    // Notify and refresh interested views
+    try { document.dispatchEvent(new CustomEvent('tileDataUpdated', { detail: { movedFrom: s, movedTo: d } })); } catch(_){ }
+    try { window.tableViewRefreshTowStatus && window.tableViewRefreshTowStatus(); } catch(_){ }
+    try { window.showNotification && window.showNotification(`Moved to ${getPositionLabelForTileId(d)} (from ${getPositionLabelForTileId(s)})`, 'success'); } catch(_){ }
+    return true;
+  } catch(e) { console.warn('moveTileContent failed:', e); try { window.showNotification && window.showNotification('Move failed: ' + e.message, 'error'); } catch(_){} return false; }
 };
 
 // Wire Display submenu: Reset screen (confirm and clear all tile inputs except Hangar Position)
@@ -1831,6 +1943,8 @@ async function checkForSelectedAircraft() {
 			// For secondary or missing labels, fall back to the numeric tile id
 			return `#${id}`;
 		}
+		// Expose globally for reuse in other modules
+		try { window.getPositionLabelForTileId = getPositionLabelForTileId; } catch(_){}
 
 		// Hilfsfunktion: alle freien (leeren) sichtbaren Kacheln sammeln (nur primär)
 		function getFreeTilesWithLabels() {
@@ -1861,6 +1975,8 @@ async function checkForSelectedAircraft() {
 				return a.id - b.id;
 			});
 		}
+		// Expose globally
+		try { window.getFreeTilesWithLabels = getFreeTilesWithLabels; } catch(_){}
 
 		// Hilfsfunktion: ermittelt die Kachel-ID anhand des Positionslabels (z. B. "1B")
 		function resolveTileIdByLabel(label){
@@ -2098,6 +2214,36 @@ async function checkForSelectedAircraft() {
 
 			overlay.appendChild(modal);
 			document.body.appendChild(overlay);
+			// Expose a generic opener that accepts custom onSelect callbacks
+			try {
+				window.openTileSelectionOverlay = function(options){
+					const tiles = Array.isArray(options?.tiles) ? options.tiles : getFreeTilesWithLabels();
+					const onSelect = typeof options?.onSelect === 'function' ? options.onSelect : null;
+					const overlay2 = overlay.cloneNode(true);
+					// Rebuild grid with provided tiles
+					const panel = overlay2.querySelector('div');
+					const gridNew = panel.querySelector('.grid');
+					gridNew.innerHTML='';
+					const normalized = (tiles||[]).map(item => (typeof item === 'number' ? { id:item, label: getPositionLabelForTileId(item) } : { id:item.id, label:item.label||getPositionLabelForTileId(item.id) }));
+					normalized.forEach(({id,label})=>{
+						const btn = document.createElement('button');
+						btn.className = 'sidebar-btn sidebar-btn-primary';
+						btn.style.minHeight = '32px';
+						btn.style.padding = '0 10px';
+						btn.style.fontSize = '12px';
+						btn.dataset.tileId = String(id);
+						btn.textContent = label || `#${id}`;
+						btn.addEventListener('click', (e)=>{
+							const tid = parseInt(e.currentTarget.dataset.tileId,10);
+							try { if (onSelect) onSelect(tid); } finally { try { document.body.removeChild(overlay2); } catch(_){} }
+						});
+						gridNew.appendChild(btn);
+					});
+					document.body.appendChild(overlay2);
+					overlay2.addEventListener('click', (e)=>{ if (e.target === overlay2) { try { document.body.removeChild(overlay2); } catch(_){} } });
+					return overlay2;
+				};
+			} catch(_){}
 
 			// Close behaviors
 			overlay.addEventListener('click', (e) => {

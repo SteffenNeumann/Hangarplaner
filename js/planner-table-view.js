@@ -308,6 +308,34 @@
 
   // Wiring edits back to tiles
   function wireRowEditors(tr, tileId, readOnly){
+    // Tooltip + right-click move for AC input
+    try {
+      const acInput = tr.querySelector(`#ac-${tileId}`);
+      if (acInput) {
+        if (!acInput.getAttribute('title')) acInput.setAttribute('title', 'Right-click to move content to another hangar position');
+        if (!acInput.__ctxWired) {
+          acInput.addEventListener('contextmenu', function(e){
+            e.preventDefault();
+            const val = (acInput.value||'').trim();
+            if (!val) { try { window.showNotification && window.showNotification('No Aircraft ID in this row', 'warning'); } catch(_){} return; }
+            // Only allow when write-enabled; read-only inhibition already exists but show hint
+            try {
+              const ro = canReadOnly();
+              if (ro) { try { window.showNotification && window.showNotification('Read-only mode: cannot move content', 'warning'); } catch(_){} }
+            } catch(_){}
+            const sourceId = tileId;
+            const free = (window.getFreeTilesWithLabels ? window.getFreeTilesWithLabels() : []).filter(t => t && t.id !== sourceId);
+            if (!free.length) { try { window.showNotification && window.showNotification('No free tiles available', 'info'); } catch(_){} return; }
+            if (typeof window.openTileSelectionOverlay === 'function') {
+              window.openTileSelectionOverlay({ tiles: free, onSelect: (destId)=> { try { window.moveTileContent && window.moveTileContent(sourceId, destId); } catch(_){} } });
+            } else {
+              try { window.showNotification && window.showNotification('Selection overlay not available', 'error'); } catch(_){}
+            }
+          });
+          acInput.__ctxWired = true;
+        }
+      }
+    } catch(_){}
     const handlers = {
       // Fire 'input' for live UI feedback and 'change' so ChangeLog (which listens for 'change') records edits
       hangarPosition: (v)=>{ 

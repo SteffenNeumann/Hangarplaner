@@ -813,6 +813,23 @@ async slaveCheckForUpdates() {
 							const res2 = await fetch(url2, { method: 'POST', headers: headers2, body: JSON.stringify(body2), signal: sig2 });
 							cancel2 && cancel2();
 							if (res2.ok) {
+								// Try to advance timestamp and update local baselines optimistically for kept fields
+								try {
+									let _resp2 = null; try { _resp2 = await res2.json(); } catch(_e){}
+									try { const ts2 = parseInt(_resp2?.timestamp || 0, 10); if (ts2) { this.lastServerTimestamp = Math.max(this.lastServerTimestamp||0, ts2); } } catch(_e){}
+									// Apply keepUpdates to baseline so we don't re-post the same deltas
+									Object.entries(keepUpdates).forEach(([fid, val]) => {
+										const m = fid.match(/^(aircraft|arrival-time|departure-time|hangar-position|position|status|tow-status|notes)-(\d+)$/);
+										if (!m) return;
+										const field = m[1];
+										const id = parseInt(m[2], 10);
+										const keyMap = { 'aircraft':'aircraftId','arrival-time':'arrivalTime','departure-time':'departureTime','hangar-position':'hangarPosition','position':'position','status':'status','tow-status':'towStatus','notes':'notes' };
+										const key = keyMap[field]; if (!key) return;
+										const tgt = (id>=100 ? this._baselineSecondary : this._baselinePrimary);
+										tgt[id] = tgt[id] || { tileId: id };
+										tgt[id][key] = val;
+									});
+								} catch(_e){}
 								// Optional read-back if not typing
 								try {
 									const typingWin = Math.min(15000, (this._writeFenceMs || 7000));

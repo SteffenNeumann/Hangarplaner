@@ -52,12 +52,14 @@ Core synchronization engine:
   - Write fences: `_pendingWrites` + `_writeFenceMs` (currently 20s) prevent server-echo while typing.
   - Self-echo skip: ignore snapshots authored by this session (metadata.lastWriterSession).
   - Apply guards: do not apply server values to focused/recently edited fields; support a short hard-lock window per field (see below).
-  - Read/write throttling while typing: skip periodic writes and delay read-back when `isUserTypingRecently()` is true.
+  - Read/write throttling while typing: skip periodic writes and delay read-back when `isUserTypingRecently()` is true (applies to slave polling as well).
   - Optional presence gating: `requireOtherMastersForRead = false` by default (can be enabled to read/apply only if other Masters are online).
 - Conflict handling (409)
   - On 409, if the user edited the conflicting field recently, we re-post a targeted `fieldUpdates` with server-supplied `serverValue` as the precondition (keep local); otherwise accept server and read-back. This applies to both periodic writes and targeted writes.
+  - After a successful keep‑local targeted retry, local baselines are updated for the exact fields kept to prevent repeated 409s for the same delta (no re‑post loop).
 - No full-payload fallback in multi-master
   - We no longer post full payloads when there are no deltas; we skip the POST to avoid overwriting unrelated fields.
+  - Manual full‑payload fallbacks are disabled; manual sync also uses delta‑only writes with preconditions.
 
 ### 2.3 Improved Event Manager (js/improved-event-manager.js)
 - Centralizes input/change handlers for tile fields.
@@ -167,14 +169,15 @@ Client-side
      - A write fence is active, or
      - The field was edited recently, or
      - A 15s hard-lock is active (set on local change).
-3) Write throttling while typing
+3) Typing-aware throttling
    - Aggregated writes wait for typing to settle and skip periodic writes if typing continues.
-   - Read-back is delayed while typing is ongoing.
+   - Read-back polling also defers while typing is ongoing to avoid flip-backs.
 4) Delta-only writes
-   - We do not send full payloads when there are no deltas (prevents trample).
+   - We do not send full payloads when there are no deltas (prevents trample). Manual sync also uses delta-only.
 5) 409 handling
    - If the user edited a conflicting field recently, we retry a targeted write for just that field using the server’s current value as the new precondition (keep local).
    - Otherwise we accept the server value and read-back.
+   - After a successful keep-local retry, baselines are updated for those fields to prevent repeated 409s for the same delta.
 
 Outcome
 - Recent user edits are preserved locally and then re‑asserted on the server without “flip-backs”.
@@ -223,7 +226,8 @@ Adjusting these controls the tradeoff between responsiveness and anti-oscillatio
 - “Changes from others don’t show up”
   - Ensure `applyServerData` guards aren’t permanently locking fields (locks auto-clear after window).
 - “409 conflicts appear often”
-  - This is expected under heavy multi‑master churn; the client should auto-resolve by keeping recent local edits and retrying.
+  - This is expected under heavy multi‑master churn; the client auto-resolves by keeping recent local edits and retrying.
+  - If the same 409 repeats, verify baselines update after keep‑local retries (the client now updates baselines automatically to avoid re-post loops).
 
 
 ## 10) Future Enhancements

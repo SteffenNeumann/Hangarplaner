@@ -4707,9 +4707,9 @@ html:not(.dark-mode) #panel-planner-table.read-only #plannerTableView #plannerTa
 
 /* Tow status selector styling in table view - improved consistency */
 .planner-select.tow-status-selector {
-  min-width: 120px;
+  min-width: 0; /* shrink to fit content */
   font-size: 12px; /* legacy */
-  padding: 4px 12px; /* balanced left/right */
+  padding: 2px 6px; /* tighter horizontal padding */
   border-radius: 4px;
   background-color: transparent !important;
   border: none !important;

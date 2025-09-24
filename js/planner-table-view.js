@@ -954,7 +954,62 @@ if (!acInput.getAttribute('title')) acInput.setAttribute('title', 'Shift+Click t
     } catch(_){}
   }
 
-  document.addEventListener('DOMContentLoaded', function(){ setTimeout(init, 0); });
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(init, 0); });
+
+  // Delegated capture-phase Shift+Click and Shift+Enter to open selection overlay in table view (theme-independent)
+  try {
+    const delegatedTablePointer = (e) => {
+      try {
+        if (!e || !e.shiftKey) return;
+        // Block in read-only (Sync) mode
+        try { if (window.sharingManager && window.sharingManager.syncMode === 'sync') { return; } } catch(_){ }
+        let ac = (e.target && e.target.closest) ? e.target.closest('#plannerTable input[id^="ac-"]') : null;
+        if (!ac && e.target && e.target.closest) {
+          const row = e.target.closest('#plannerTable tbody tr');
+          if (row) ac = row.querySelector('input[id^="ac-"]');
+        }
+        if (!ac) return;
+        // Ensure tooltip label for clarity
+        try { if (!ac.getAttribute('title')) ac.setAttribute('title', 'Shift+Click to move content to another hangar position'); } catch(_){ }
+        e.preventDefault();
+        e.stopPropagation();
+        const m = (ac.id||'').match(/ac-(\d+)$/);
+        const sourceId = m ? parseInt(m[1], 10) : NaN;
+        if (!isFinite(sourceId)) return;
+        const val = (ac.value||'').trim();
+        if (!val) { try { window.showNotification && window.showNotification('No Aircraft ID in this row', 'warning'); } catch(_){} return; }
+        const free = (window.getFreeTilesWithLabels ? window.getFreeTilesWithLabels() : []).filter(t => t && t.id !== sourceId);
+        if (!free.length) { try { window.showNotification && window.showNotification('No free tiles available', 'info'); } catch(_){} return; }
+        if (typeof window.openTileSelectionOverlay === 'function') {
+          window.openTileSelectionOverlay({ tiles: free, onSelect: (destId)=> { try { window.moveTileContent && window.moveTileContent(sourceId, destId); } catch(_){} } });
+        }
+      } catch(_){ }
+    };
+    document.addEventListener('pointerdown', delegatedTablePointer, true);
+
+    const delegatedTableShiftEnter = (e) => {
+      try {
+        if (!e || !e.shiftKey || e.key !== 'Enter') return;
+        // Block in read-only (Sync) mode
+        try { if (window.sharingManager && window.sharingManager.syncMode === 'sync') { return; } } catch(_){ }
+        const ac = (e.target && e.target.matches) ? (e.target.matches('#plannerTable input[id^="ac-"]') ? e.target : null) : null;
+        if (!ac) return;
+        try { if (!ac.getAttribute('title')) ac.setAttribute('title', 'Shift+Click to move content to another hangar position'); } catch(_){ }
+        e.preventDefault();
+        const m = (ac.id||'').match(/ac-(\d+)$/);
+        const sourceId = m ? parseInt(m[1], 10) : NaN;
+        if (!isFinite(sourceId)) return;
+        const val = (ac.value||'').trim();
+        if (!val) { try { window.showNotification && window.showNotification('No Aircraft ID in this row', 'warning'); } catch(_){} return; }
+        const free = (window.getFreeTilesWithLabels ? window.getFreeTilesWithLabels() : []).filter(t => t && t.id !== sourceId);
+        if (!free.length) { try { window.showNotification && window.showNotification('No free tiles available', 'info'); } catch(_){} return; }
+        if (typeof window.openTileSelectionOverlay === 'function') {
+          window.openTileSelectionOverlay({ tiles: free, onSelect: (destId)=> { try { window.moveTileContent && window.moveTileContent(sourceId, destId); } catch(_){} } });
+        }
+      } catch(_){ }
+    };
+    document.addEventListener('keydown', delegatedTableShiftEnter, true);
+  } catch(_){ }
   
   // Expose refresh function globally for external calls
   window.tableViewRefreshTowStatus = refreshTowStatusStyling;

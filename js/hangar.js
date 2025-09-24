@@ -1370,6 +1370,53 @@ return true;
   } catch(e) { console.warn('clearSingleTile failed:', e); return false; }
 };
 
+// Global helpers: position label and free tile list (independent of planner selection flow)
+(function(){
+  try {
+    if (typeof window.getPositionLabelForTileId !== 'function'){
+      window.getPositionLabelForTileId = function(id){
+        try {
+          const posElPrimary = document.getElementById(`hangar-position-${id}`);
+          const posElAlt     = document.getElementById(`position-${id}`);
+          const primaryVal   = (posElPrimary?.value || '').trim();
+          const altVal       = (posElAlt?.value || '').trim();
+          const primaryPh    = (posElPrimary?.getAttribute?.('placeholder') || '').trim();
+          const altPh        = (posElAlt?.getAttribute?.('placeholder') || '').trim();
+          const isPrimary    = Number.isFinite(id) && id >= 1 && id <= 12;
+          if (primaryVal) return primaryVal;
+          if (altVal) return altVal;
+          if (isPrimary){ if (primaryPh) return primaryPh; if (altPh && altPh !== '--') return altPh; }
+          return `#${id}`;
+        } catch(_) { return `#${id}`; }
+      };
+    }
+    if (typeof window.getFreeTilesWithLabels !== 'function'){
+      window.getFreeTilesWithLabels = function(){
+        try {
+          const list = [];
+          const inputs = document.querySelectorAll('#hangarGrid .hangar-cell input[id^="aircraft-"], #secondaryHangarGrid .hangar-cell input[id^="aircraft-"]');
+          inputs.forEach(inp => {
+            const m = (inp.id||'').match(/aircraft-(\d+)/);
+            if (!m) return;
+            const cellId = parseInt(m[1],10);
+            const cell = inp.closest('.hangar-cell');
+            if (!cell) return;
+            const style = window.getComputedStyle ? window.getComputedStyle(cell) : cell.style;
+            let isHidden = cell.classList.contains('hidden') || style.display === 'none' || style.visibility === 'hidden' || cell.getClientRects().length === 0;
+            // In table-view, treat board cells as eligible even if visually hidden
+            if (document && document.body && document.body.classList && document.body.classList.contains('table-view')) isHidden = false;
+            const isEmpty = !inp.value || inp.value.trim() === '';
+            if (!isHidden && isEmpty){ list.push({ id: cellId, label: window.getPositionLabelForTileId(cellId) }); }
+          });
+          const byId = new Map();
+          list.forEach(it => { if (!byId.has(it.id)) byId.set(it.id, it); });
+          return Array.from(byId.values()).sort((a,b)=>{ const ap = a.id >= 101 ? 1 : 0; const bp = b.id >= 101 ? 1 : 0; if (ap!==bp) return ap-bp; return a.id-b.id; });
+        } catch(_) { return []; }
+      };
+    }
+  } catch(_){}
+})();
+
 // Move content from one tile to another (keeps destination hangar-position; clears source)
 window.moveTileContent = window.moveTileContent || async function(sourceId, destId){
   try {

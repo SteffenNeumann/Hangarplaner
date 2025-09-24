@@ -512,7 +512,8 @@ class HangarEventManager {
 					if (!t || !t.matches) return;
 					if (!t.matches('#hangarGrid input[id^="aircraft-"], #secondaryHangarGrid input[id^="aircraft-"]')) return;
 					// Ensure tooltip
-					try { if (!t.getAttribute('title')) t.setAttribute('title', 'Right-click to move content to another hangar position'); } catch(_){ }
+try { if (!t.getAttribute('title')) t.setAttribute('title', 'Shift+Click to move content to another hangar position'); } catch(_){ }
+					if (!e.shiftKey) return; // activate on Shift+Click
 					e.preventDefault();
 					const m = (t.id||'').match(/aircraft-(\d+)/);
 					const sourceId = m ? parseInt(m[1],10) : null;
@@ -610,12 +611,14 @@ class HangarEventManager {
 
 		// Zusätzlich: Tooltip + contextmenu (right-click move) for Aircraft ID inputs in Board view
 		try {
-			const setBoardAircraftTooltips = () => {
+const setBoardAircraftTooltips = () => {
 				document.querySelectorAll('#hangarGrid input[id^="aircraft-"], #secondaryHangarGrid input[id^="aircraft-"]').forEach(inp => {
-					try { if (!inp.getAttribute('title')) inp.setAttribute('title', 'Right-click to move content to another hangar position'); } catch(_){ }
-					// context menu
+					try { if (!inp.getAttribute('title')) inp.setAttribute('title', 'Shift+Click to move content to another hangar position'); } catch(_){ }
+					// Shift+Click
 					const handlerName = `board_ctx_${inp.id}`;
-					this.safeAddEventListener(inp, 'contextmenu', (e)=>{
+					this.safeAddEventListener(inp, 'click', (e)=>{
+						if (!e.shiftKey) return;
+						e.preventDefault();
 						e.preventDefault();
 						const idMatch = (e.currentTarget.id||'').match(/aircraft-(\d+)/);
 						const sourceId = idMatch ? parseInt(idMatch[1],10) : null;
@@ -926,11 +929,12 @@ class HangarEventManager {
 		} else {
 			if (element.id && element.id.startsWith('aircraft-')) {
 				// Tooltip + contextmenu on dynamically added aircraft inputs
-				try { if (!element.getAttribute('title')) element.setAttribute('title', 'Right-click to move content to another hangar position'); } catch(_){ }
+try { if (!element.getAttribute('title')) element.setAttribute('title', 'Shift+Click to move content to another hangar position'); } catch(_){ }
 				this.safeAddEventListener(
 					element,
-					'contextmenu',
+					'click',
 					(e) => {
+						if (!e.shiftKey) return; // Shift+Click only
 						e.preventDefault();
 						const idMatch = (e.currentTarget.id||'').match(/aircraft-(\d+)/);
 						const sourceId = idMatch ? parseInt(idMatch[1],10) : null;

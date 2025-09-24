@@ -2037,7 +2037,11 @@ async function checkForSelectedAircraft() {
 				if (!cell) return;
 				const style = window.getComputedStyle ? window.getComputedStyle(cell) : cell.style;
 				// Robust visibility: hidden class, display/visibility, or no client rects
-				const isHidden = cell.classList.contains('hidden') || style.display === 'none' || style.visibility === 'hidden' || cell.getClientRects().length === 0;
+				let isHidden = cell.classList.contains('hidden') || style.display === 'none' || style.visibility === 'hidden' || cell.getClientRects().length === 0;
+				// In table-view the tile panel is hidden, but we still want to offer free positions
+				if (document && document.body && document.body.classList && document.body.classList.contains('table-view')) {
+					isHidden = false;
+				}
 				const isEmpty = !inp.value || inp.value.trim() === '';
 				if (!isHidden && isEmpty) {
 					list.push({ id: cellId, label: getPositionLabelForTileId(cellId) });

@@ -528,6 +528,28 @@ try { if (!t.getAttribute('title')) t.setAttribute('title', 'Shift+Click to move
 				} catch(_){ }
 			};
 			document.addEventListener('contextmenu', delegatedCtx, true);
+			// Also support delegated Shift+Click (more natural than right-click on some systems)
+			const delegatedShiftClick = (e) => {
+				try {
+					if (!e || !e.shiftKey) return;
+					const t = e.target;
+					if (!t || !t.matches) return;
+					if (!t.matches('#hangarGrid input[id^="aircraft-"], #secondaryHangarGrid input[id^="aircraft-"]')) return;
+					try { if (!t.getAttribute('title')) t.setAttribute('title', 'Shift+Click to move content to another hangar position'); } catch(_){ }
+					e.preventDefault();
+					const m = (t.id||'').match(/aircraft-(\d+)/);
+					const sourceId = m ? parseInt(m[1],10) : null;
+					if (!isFinite(sourceId)) return;
+					const val = (t.value||'').trim();
+					if (!val) { try { window.showNotification && window.showNotification('No Aircraft ID in this tile', 'warning'); } catch(_){} return; }
+					const free = (window.getFreeTilesWithLabels ? window.getFreeTilesWithLabels() : []).filter(x => x && x.id !== sourceId);
+					if (!free.length) { try { window.showNotification && window.showNotification('No free tiles available', 'info'); } catch(_){} return; }
+					if (typeof window.openTileSelectionOverlay === 'function') {
+						window.openTileSelectionOverlay({ tiles: free, onSelect: (destId)=> { try { window.moveTileContent && window.moveTileContent(sourceId, destId); } catch(_){} } });
+					}
+				} catch(_){ }
+			};
+			document.addEventListener('click', delegatedShiftClick, true);
 		} catch(_){ }
 
 		this.initialized = true;

@@ -713,7 +713,8 @@ if (!acInput.getAttribute('title')) acInput.setAttribute('title', 'Shift+Click t
     
     // Additional listeners for server data updates that might affect tow status styling
     document.addEventListener('serverDataApplied', deb(refreshTowStatusStyling, 100));
-    document.addEventListener('tileDataUpdated', deb(refreshTowStatusStyling, 100));
+    // A move triggers tileDataUpdated; refresh table rows and styling immediately
+    document.addEventListener('tileDataUpdated', deb(()=>{ refresh(); refreshTowStatusStyling(); syncChangelog(); }, 25));
     
     // Simplified mutation observer - only for major DOM changes, not attributes
     const towStatusObserver = new MutationObserver(function(mutations) {

@@ -309,11 +309,25 @@
   // Wiring edits back to tiles
   function wireRowEditors(tr, tileId, readOnly){
     const handlers = {
-      hangarPosition: (v)=>{ setIdValue(`hangar-position-${tileId}`, v); eventFire(`#hangar-position-${tileId}`, 'input'); },
-      aircraftId: (v)=>{ setIdValue(`aircraft-${tileId}`, v); blurThenSync(`#aircraft-${tileId}`); },
+      // Fire 'input' for live UI feedback and 'change' so ChangeLog (which listens for 'change') records edits
+      hangarPosition: (v)=>{ 
+        setIdValue(`hangar-position-${tileId}`, v); 
+        eventFire(`#hangar-position-${tileId}`, 'input'); 
+        eventFire(`#hangar-position-${tileId}`, 'change'); 
+      },
+      aircraftId: (v)=>{ 
+        setIdValue(`aircraft-${tileId}`, v); 
+        // Ensure ChangeLog picks this up even if the main view input is hidden
+        eventFire(`#aircraft-${tileId}`, 'change');
+        blurThenSync(`#aircraft-${tileId}`); 
+      },
       arrivalTime: (v)=>{ writeTimeTo(`#arrival-time-${tileId}`, v); },
       departureTime: (v)=>{ writeTimeTo(`#departure-time-${tileId}`, v); },
-      positionInfo: (v)=>{ setIdValue(`position-${tileId}`, v); eventFire(`#position-${tileId}`, 'input'); },
+      positionInfo: (v)=>{ 
+        setIdValue(`position-${tileId}`, v); 
+        eventFire(`#position-${tileId}`, 'input'); 
+        eventFire(`#position-${tileId}`, 'change'); 
+      },
       towStatus: (v)=>{ 
         setIdValue(`tow-status-${tileId}`, v); 
         eventFire(`#tow-status-${tileId}`, 'change');
@@ -336,7 +350,11 @@
         }
         // Table view keeps status select plain; no chip styling applied
       },
-      notes: (v)=>{ setIdValue(`notes-${tileId}`, v); eventFire(`#notes-${tileId}`, 'input'); }
+      notes: (v)=>{ 
+        setIdValue(`notes-${tileId}`, v); 
+        eventFire(`#notes-${tileId}`, 'input'); 
+        eventFire(`#notes-${tileId}`, 'change'); 
+      }
     };
     if (readOnly) return; // no wiring when read-only
 

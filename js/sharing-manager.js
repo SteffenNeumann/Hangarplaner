@@ -845,12 +845,9 @@ syncModeElement.classList.remove("master", "slave", "standalone");
 			success = false;
 		}
 
-		// Fallback: direct POST using DOM-collected tiles
+		// Fallback disabled in multi-master to avoid full-payload overwrites
 		if (!success) {
-			try {
-				console.warn('Manual sync falling back to direct POST');
-				success = await this._directPostFallback();
-			} catch(e){ console.warn('Direct POST fallback failed', e); success = false; }
+			console.warn('Manual sync failed; delta-only mode prevents full-payload fallback.');
 		}
 
 		if (success) {

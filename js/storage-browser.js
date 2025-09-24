@@ -465,8 +465,8 @@ class ServerSync {
 		// Zusätzlich Updates empfangen (15 Sekunden Intervall)
 		this.slaveCheckInterval = setInterval(async () => {
 			await this.slaveCheckForUpdates();
-		}, 5000); // 5 Sekunden für Master-Update-Check
-		console.log("👑 Master-Modus: Empfange zusätzlich Updates (5s, Read forced ON)");
+		}, 15000); // 15 Sekunden für Master-Update-Check
+		console.log("👑 Master-Modus: Empfange zusätzlich Updates (15s, Read forced ON)");
 
 		// Sofort einen ersten Update-Check und Schreibversuch starten
 		try {
@@ -570,7 +570,16 @@ async slaveCheckForUpdates() {
         this._isCheckingUpdates = true;
 
         try {
-            console.log("🔍 Slave: Prüfe auf Server-Updates...");
+			console.log("🔍 Slave: Prüfe auf Server-Updates...");
+			// Skip read-back while user is actively typing to prevent flip-backs
+			try {
+				const typingWin = Math.min(15000, (this._writeFenceMs || 7000));
+				if (window.hangarEventManager && typeof window.hangarEventManager.isUserTypingRecently === 'function') {
+					if (window.hangarEventManager.isUserTypingRecently(typingWin)) {
+						return; // finally will clear _isCheckingUpdates
+					}
+				}
+			} catch(_e) {}
 			const currentServerTimestamp = await this.getServerTimestamp();
 			console.log(
 				`📊 Server-Timestamp: ${currentServerTimestamp}, Letzter: ${this.lastServerTimestamp}`
@@ -766,9 +775,67 @@ async slaveCheckForUpdates() {
 					} catch(_e){}
 					return true;
 				} else if (response.status === 409) {
-					// Last-write-wins: accept server state, perform read-back, and continue
-					try { await this.slaveCheckForUpdates(); } catch(_e){}
-					return true;
+					// Conflict detected: keep-local retry for recently edited fields, else accept server
+					try {
+						let payload = null; try { payload = await response.json(); } catch(_e){}
+						const conflicts = (payload && Array.isArray(payload.conflicts)) ? payload.conflicts : [];
+						const keepUpdates = {};
+						const pre = {};
+						const KEEP_WIN = Math.min(15000, (this._writeFenceMs || 7000) + 3000);
+						const getLE = (typeof window.getLastLocalEdit === 'function') ? window.getLastLocalEdit : null;
+						if (conflicts.length && getLE) {
+							conflicts.forEach(c => {
+								const fid = (c && c.fieldId) ? String(c.fieldId) : '';
+								if (!fid) return;
+								const le = getLE(fid);
+								if (le && le.editedAt && ((Date.now() - le.editedAt) < KEEP_WIN)) {
+									// Prefer current delta value if present, else last local edit value
+									let v = (delta && Object.prototype.hasOwnProperty.call(delta, fid)) ? delta[fid] : (le.value || '');
+									keepUpdates[fid] = v;
+									if (c && Object.prototype.hasOwnProperty.call(c, 'serverValue')) pre[fid] = (c.serverValue ?? '');
+								}
+							});
+						}
+						if (Object.keys(keepUpdates).length > 0) {
+							// Retry targeted write to keep local edits
+							const body2 = { metadata: { timestamp: Date.now() }, fieldUpdates: keepUpdates, preconditions: pre, settings: {} };
+							const headers2 = { "Content-Type": "application/json" };
+							if (this.isMaster) headers2["X-Sync-Role"] = "master";
+							try {
+								const sid = this.getSessionId(); if (sid) headers2["X-Sync-Session"] = sid;
+								let dname = '';
+								try { dname = (localStorage.getItem('presence.displayName') || '').trim(); } catch(_e){}
+								if (!dname) { try { dname = 'User-' + String(sid||'').slice(-4); } catch(_e) { dname = 'User'; } }
+								headers2["X-Display-Name"] = dname;
+							} catch(_e){}
+							const { signal: sig2, cancel: cancel2 } = this._createTimeoutSignal(10000);
+							const url2 = this.getServerUrl();
+							const res2 = await fetch(url2, { method: 'POST', headers: headers2, body: JSON.stringify(body2), signal: sig2 });
+							cancel2 && cancel2();
+							if (res2.ok) {
+								// Optional read-back if not typing
+								try {
+									const typingWin = Math.min(15000, (this._writeFenceMs || 7000));
+									const typingActive = !!(window.hangarEventManager && typeof window.hangarEventManager.isUserTypingRecently === 'function' && window.hangarEventManager.isUserTypingRecently(typingWin));
+									if (!typingActive && this.canReadFromServer && this.canReadFromServer()) {
+										const d = await this.loadFromServer(); if (d && !d.error) await this.applyServerData(d);
+									}
+								} catch(_e){}
+								return true;
+							} else {
+								// Retry failed: accept server state now
+								try { const d = await this.loadFromServer(); if (d && !d.error) await this.applyServerData(d); } catch(_e){}
+								return true;
+							}
+						}
+						// No recent local edit to protect: accept server
+						const d = await this.loadFromServer();
+						if (d && !d.error) await this.applyServerData(d);
+						return true;
+					} catch(_err) {
+						try { const d = await this.loadFromServer(); if (d && !d.error) await this.applyServerData(d); } catch(_e){}
+						return true;
+					}
 				} else if (response.status === 423) {
 					let payload = null;
 					try { payload = await response.json(); } catch(_e) {}

@@ -39,13 +39,14 @@ Core synchronization engine:
 - Initialization & roles
   - `initSync()` configures server URL and performs initial read only if reading is enabled.
   - `startSlaveMode()` polling reads (~3s default).
-  - `startMasterMode()` periodic writes (~5s default) plus read-back polling.
+  - `startMasterMode()` periodic writes (~5s default) plus read-back polling (~15s).
 - Data operations
   - `collectCurrentData()` gathers current tiles/settings.
   - Baseline maps `_baselinePrimary`, `_baselineSecondary` updated via `_updateBaselineFromServerData()`.
   - Delta computation `_computeFieldUpdates(currentData)` derives per-field changes vs. baselines.
   - `syncWithServer()` posts either `fieldUpdates` (preferred) or (now) skips when no deltas are present (multi-master safe).
   - `syncFieldUpdates(fieldUpdates)` posts per-field deltas immediately, with preconditions derived from baselines.
+  - Manual sync uses the same delta-only path; full‑payload fallback is removed in multi‑master.
   - `loadFromServer()` retrieves current data; `applyServerData()` applies changes to the UI safely.
 - Multi-master protections
   - Write fences: `_pendingWrites` + `_writeFenceMs` (currently 20s) prevent server-echo while typing.
@@ -54,7 +55,7 @@ Core synchronization engine:
   - Read/write throttling while typing: skip periodic writes and delay read-back when `isUserTypingRecently()` is true.
   - Optional presence gating: `requireOtherMastersForRead = false` by default (can be enabled to read/apply only if other Masters are online).
 - Conflict handling (409)
-  - On 409, if the user edited the conflicting field recently, we re-post a targeted `fieldUpdates` with server-supplied `serverValue` as the precondition (keep local); otherwise accept server and read-back.
+  - On 409, if the user edited the conflicting field recently, we re-post a targeted `fieldUpdates` with server-supplied `serverValue` as the precondition (keep local); otherwise accept server and read-back. This applies to both periodic writes and targeted writes.
 - No full-payload fallback in multi-master
   - We no longer post full payloads when there are no deltas; we skip the POST to avoid overwriting unrelated fields.
 
@@ -193,7 +194,7 @@ Outcome
 - `_writeFenceMs`: 20000 (20s) — write fence TTL per field.
 - Hard-lock per-field apply window: 15000 (15s) after local `change`.
 - Typing debounce: 5000 (5s) for free text fields.
-- Periodic read (Slave): ~3s; write (Master): ~5s (subject to skip/delay while typing).
+- Periodic read (Slave): ~3s; write (Master): ~5s; read-back (Master): ~15s (subject to skip/delay while typing).
 - `requireOtherMastersForRead`: default false. If set true, Master applies tile updates only when another Master is online (presence‑gated).
 
 Adjusting these controls the tradeoff between responsiveness and anti-oscillation.

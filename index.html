@@ -3636,17 +3636,7 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
 								all.forEach(function(id){ var t = toTile(id); if (!t) return; if (id>=100) secondary.push(t); else primary.push(t); });
 								return { primary: primary, secondary: secondary };
 							}
-							async function fallbackSyncWrite(){
-								try {
-									var url = (window.serverSync && (window.serverSync.getServerUrl?.() || window.serverSync.serverSyncUrl)) || (window.storageBrowser && window.storageBrowser.serverSyncUrl) || (window.location.origin + '/sync/data.php');
-									var dom = collectTilesFromDom();
-									var body = { metadata: { timestamp: Date.now() }, settings: {}, primaryTiles: dom.primary, secondaryTiles: dom.secondary };
-									var sid = (window.serverSync && typeof window.serverSync.getSessionId==='function') ? window.serverSync.getSessionId() : (localStorage.getItem('serverSync.sessionId') || '');
-									var dname = (localStorage.getItem('presence.displayName') || '').trim();
-									var res = await fetch(url, { method:'POST', headers: { 'Content-Type': 'application/json', 'X-Sync-Role':'master', 'X-Sync-Session': sid, 'X-Display-Name': dname }, body: JSON.stringify(body) });
-									return res.ok;
-								} catch(e){ console.warn('fallbackSyncWrite failed', e); return false; }
-							}
+async function fallbackSyncWrite(){ try { console.warn('fallbackSyncWrite disabled to prevent full-payload overwrites in multi-master'); } catch(_e){} return false; }
 							// Polyfill: applyTileData for older clients
 							function polyfillApplyTileData(){ try {
 								if (!window.serverSync || typeof window.serverSync.applyTileData==='function') return;

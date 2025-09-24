@@ -281,7 +281,7 @@ html, body, button, input, select, textarea {
 	font-weight: 600;
 	color: #1f2937;
 	text-align: center;
-	min-width: 3rem;
+	min-width: 4rem;
 }
 
 /* Timetable Notes */
@@ -2448,9 +2448,9 @@ input:checked + .toggle-slider:before {
 	-moz-appearance: none;
 	appearance: none;
 	width: auto;
-	min-width: 90px;
+	min-width: 0;
 	height: 26px; /* same as status selector */
-	padding: 2px 10px;
+	padding: 2px 6px;
 	border-radius: 2px;
 	font-size: 12px;
 	font-weight: 600;

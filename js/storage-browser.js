@@ -1361,6 +1361,8 @@ class ServerSync {
 		} catch(_e){}
 		// Normalize legacy schemas to { primaryTiles, secondaryTiles } if needed
 		try {
+			// Always refresh local baseline with incoming server snapshot for correct preconditions, even if UI changes are minimal/none
+			try { this._updateBaselineFromServerData(serverData); } catch(_e){}
 			if (!serverData.primaryTiles && (Array.isArray(serverData.primary) || Array.isArray(serverData.secondary))) {
 				const mapTile = (row, idx) => ({
 					ileId: parseInt(row?.tileId || row?.id || (idx + 1), 10),
@@ -1616,8 +1618,10 @@ class ServerSync {
 					return true;
 				} else {
 					console.warn("⚠️ Keine Server-Daten konnten angewendet werden");
-					console.warn("⚠️ Keine Server-Daten konnten angewendet werden");
-					return false;
+					// Even if no DOM changes were applied (e.g., empty dataset), update baseline and timestamp
+					try { this._updateBaselineFromServerData(serverData); } catch(_e){}
+					try { this.lastLoadedAt = Date.now(); document.dispatchEvent(new CustomEvent('serverDataLoaded', { detail: { loadedAt: this.lastLoadedAt } })); } catch(e){}
+					return true; // treat as success for convergence
 				}
 		} catch (error) {
 			console.error("❌ Fehler beim Anwenden der Server-Daten:", error);

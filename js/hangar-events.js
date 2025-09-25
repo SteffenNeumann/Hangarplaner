@@ -615,12 +615,22 @@ function handleAircraftIdChange(aircraftInputId, newValue) {
 				}
 			} catch (e) { /* noop */ }
 		} else {
-		// KORREKTUR: Bei gültiger Aircraft ID automatisch Flugdaten abrufen
+		// Nur noch durch den Update-Data-Button erlauben
+		const allowFetch = !!window.__updateDataButtonActive;
+		if (!allowFetch) {
+			console.log(`⏸️ Auto-Fetch auf Blur deaktiviert für Kachel ${cellId}`);
+			// Speichere dennoch die Aircraft ID
+			if (typeof saveFlightTimeValueToLocalStorage === "function") {
+				saveFlightTimeValueToLocalStorage(cellId, "aircraftId", newValue.trim());
+			}
+			return;
+		}
+
 		console.log(
-			`✈️ Gültige Aircraft ID für Kachel ${cellId}: "${newValue.trim()}" - starte Datenabfrage`
+			`✈️ (Manual) Gültige Aircraft ID für Kachel ${cellId}: "${newValue.trim()}" - starte Datenabfrage`
 		);
 
-		// Automatisch Flugdaten abrufen wenn Aircraft ID eingegeben wird
+		// Manuelle Datenabfrage (über Button) – unverändert
 		if (
 			window.FlightDataAPI &&
 			typeof window.FlightDataAPI.updateAircraftData === "function"
@@ -666,7 +676,7 @@ function handleAircraftIdChange(aircraftInputId, newValue) {
 								flightData
 							);
 
-							// ✅ KORREKTUR: UI-Update nach erfolgreichem API-Aufruf
+							// UI-Update nach erfolgreichem API-Aufruf
 							if (
 								flightData &&
 								window.HangarData &&
@@ -681,8 +691,6 @@ function handleAircraftIdChange(aircraftInputId, newValue) {
 									console.log(
 										`✅ UI-Kacheln für ${newValue.trim()} erfolgreich aktualisiert`
 									);
-
-									// ✅ NEUE FUNKTION: Update-Badge für manuelle Eingabe setzen
 									if (window.refreshAllUpdateBadges) {
 										setTimeout(window.refreshAllUpdateBadges, 100);
 									}
@@ -704,18 +712,18 @@ function handleAircraftIdChange(aircraftInputId, newValue) {
 								error
 							);
 						});
-			}, 500); // 500ms Verzögerung um Tippgeschwindigkeit abzuwarten
-		} else {
-			console.warn(
-				"⚠️ FlightDataAPI nicht verfügbar für automatische Datenabfrage"
-			);
-		}
+				}, 500);
+			} else {
+				console.warn(
+					"⚠️ FlightDataAPI nicht verfügbar für Datenabfrage"
+				);
+			}
 
-		// Speichere Aircraft ID in localStorage
-		if (typeof saveFlightTimeValueToLocalStorage === "function") {
-			saveFlightTimeValueToLocalStorage(cellId, "aircraftId", newValue.trim());
+			// Speichere Aircraft ID in localStorage
+			if (typeof saveFlightTimeValueToLocalStorage === "function") {
+				saveFlightTimeValueToLocalStorage(cellId, "aircraftId", newValue.trim());
+			}
 		}
-	}
 }
 
 /**

@@ -560,16 +560,12 @@ function setupFlightDataEventHandlers() {
 		const newFetchFlightBtn = document.getElementById("fetchFlightData");
 
 		// Direkten Event-Handler setzen, der explizit die API-Fassade nutzt
-		newFetchFlightBtn.onclick = async function (event) {
+newFetchFlightBtn.onclick = async function (event) {
 			// Standardverhalten verhindern
 			event.preventDefault();
 
 			// Debug-Log
 			console.log("*** UPDATE DATA BUTTON WURDE GEKLICKT ***");
-
-			// Rebuilt: Use the same per-tile pipeline as the Aircraft ID blur handler
-			// Rationale: The overnight airport-first path rarely yields results for the planner tiles.
-			// We now iterate tiles with a non-empty Aircraft ID and invoke the blur-path logic that is known to work.
 
 			// Collect all aircraft ID inputs (primary and secondary)
 			const inputs = document.querySelectorAll('#hangarGrid .hangar-cell input[id^="aircraft-"], #secondaryHangarGrid .hangar-cell input[id^="aircraft-"]');
@@ -583,28 +579,34 @@ function setupFlightDataEventHandlers() {
 				return;
 			}
 
-			console.log(`🔁 Running per-tile update for ${filled.length} Aircraft IDs via blur-handler...`);
+			console.log(`🔁 Running per-tile update for ${filled.length} Aircraft IDs via handler...`);
 			if (window.showNotification) {
 				try { window.showNotification(`Updating ${filled.length} aircraft via per-tile update...`, 'info'); } catch(e){}
 			}
 
-			// Process sequentially to avoid API rate limits; reuse the same logic as blur handler
-			for (let i = 0; i < filled.length; i++) {
-				const { id: fieldId, value, cellId } = filled[i];
-				console.log(`→ [${i+1}/${filled.length}] Trigger update for ${value} (cell ${cellId})`);
-				try {
-					if (window.hangarEvents && typeof window.hangarEvents.handleAircraftIdChange === 'function') {
-						window.hangarEvents.handleAircraftIdChange(fieldId, value);
-					} else {
-						// Fallback: dispatch blur event to trigger any attached handler on the input itself
-						const el = document.getElementById(fieldId);
-						if (el) el.dispatchEvent(new Event('blur', { bubbles: true }));
+			// Temporär: Button-gestützte Updates erlauben (und Auto-Blur-Fetch gesperrt lassen)
+			window.__updateDataButtonActive = true;
+			try {
+				// Process sequentially to avoid API rate limits
+				for (let i = 0; i < filled.length; i++) {
+					const { id: fieldId, value, cellId } = filled[i];
+					console.log(`→ [${i+1}/${filled.length}] Trigger update for ${value} (cell ${cellId})`);
+					try {
+						if (window.hangarEvents && typeof window.hangarEvents.handleAircraftIdChange === 'function') {
+							window.hangarEvents.handleAircraftIdChange(fieldId, value);
+						} else {
+							// Fallback: dispatch blur event to trigger any attached handler on the input itself
+							const el = document.getElementById(fieldId);
+							if (el) el.dispatchEvent(new Event('blur', { bubbles: true }));
+						}
+					} catch (err) {
+						console.warn(`⚠️ Failed to trigger update for ${value} (cell ${cellId})`, err);
 					}
-				} catch (err) {
-					console.warn(`⚠️ Failed to trigger update for ${value} (cell ${cellId})`, err);
+					// Throttle between tiles so the underlying API calls don't spike
+					await new Promise(r => setTimeout(r, 700));
 				}
-				// Throttle between tiles so the underlying API calls don't spike
-				await new Promise(r => setTimeout(r, 700));
+			} finally {
+				window.__updateDataButtonActive = false;
 			}
 
 			if (window.showNotification) {

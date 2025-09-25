@@ -1978,8 +1978,8 @@ window.hangarData.updateAircraftFromFlightData = async function (
 			// 	}
 			// }
 
-			// ✅ NEUE FUNKTION: Last Update Badge hinzufügen
-			if (typeof window.createOrUpdateLastUpdateBadge === 'function') {
+			// ✅ NEUE FUNKTION: Last Update Badge hinzufügen (API-Updates: unterdrückt)
+			if (!window.SUPPRESS_API_UPDATE_BADGES && typeof window.createOrUpdateLastUpdateBadge === 'function') {
 				window.createOrUpdateLastUpdateBadge(cellId, 'api');
 			}
 
@@ -2782,6 +2782,10 @@ console.log("🔧 HangarPlanner Aircraft ID Koordinationssystem initialisiert");
 
 // Alias für Kompatibilität: Globale Verfügbarkeit unter beiden Namen
 window.HangarData = window.hangarData;
+
+// Globaler Schalter: Unterdrücke Zeitstempel-Badges für API-gestützte Updates
+// (wir lassen Move/Subpage-Badges unangetastet)
+try { if (typeof window.SUPPRESS_API_UPDATE_BADGES === 'undefined') window.SUPPRESS_API_UPDATE_BADGES = true; } catch(_){}
 
 // ✅ NEUE FUNKTION: Badge-Status basierend auf Alter automatisch aktualisieren
 function refreshAllUpdateBadges() {

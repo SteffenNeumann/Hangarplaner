@@ -65,6 +65,33 @@
 				configureTailwind();
 			}
 		</script>
+		<!-- Debug: instrument fetch to log unexpected POSTs to sync/data.php in non-Master modes -->
+		<script>
+		(function(){
+		  try {
+		    if (typeof window.fetch === 'function' && !window.__hpFetchWrapped) {
+		      const origFetch = window.fetch.bind(window);
+		      window.fetch = function(input, init){
+		        try {
+		          const url = (typeof input === 'string') ? input : (input && input.url) || '';
+		          const method = ((init && init.method) || (input && input.method) || 'GET').toUpperCase();
+		          const isDataPost = /\/sync\/data\.php(?:$|\?)/.test(url) && method === 'POST';
+		          if (isDataPost) {
+		            const mode = (window.sharingManager && window.sharingManager.syncMode) || 'unknown';
+		            const isMaster = !!(window.serverSync && window.serverSync.isMaster);
+		            if (mode !== 'master' && !isMaster) {
+		              console.warn('🔎 Debug: POST to sync/data.php while not in Master', { url, method, mode, isMaster, stack: (new Error()).stack });
+		            }
+		          }
+		        } catch(e){}
+		        return origFetch(input, init);
+		      };
+		      window.__hpFetchWrapped = true;
+		      console.log('🔧 Debug fetch wrapper installed');
+		    }
+		  } catch(e) { /* ignore */ }
+		})();
+		</script>
 		<link rel="stylesheet" href="css/hangarplanner-ui.css" />
 		<link rel="stylesheet" href="css/dark-mode-zoom.css" />
 		<link rel="stylesheet" href="css/weather-widget.css" />

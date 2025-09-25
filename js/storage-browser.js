@@ -564,7 +564,30 @@ class ServerSync {
 	/**
 	 * NEUE METHODE: Slave prüft auf Server-Updates
 	 */
-async slaveCheckForUpdates() {
+
+	/**
+	 * Debug: force a baseline refresh from server snapshot (safe, no logic change)
+	 */
+	async forceBaselineRefresh(immediateReadBack = false) {
+		try {
+			const fresh = await this.loadFromServer();
+			if (fresh && !fresh.error) {
+				await this.applyServerData(fresh);
+				if (immediateReadBack && this.canReadFromServer && this.canReadFromServer()) {
+					try { await this.slaveCheckForUpdates(); } catch(_e){}
+				}
+				console.log('🔧 Baseline refreshed from server snapshot');
+				return true;
+			}
+			console.warn('⚠️ Baseline refresh: no server data');
+			return false;
+		} catch(e) {
+			console.warn('forceBaselineRefresh failed', e);
+			return false;
+		}
+	}
+
+	async slaveCheckForUpdates() {
         if (!this.isSlaveActive) return;
         if (this._isCheckingUpdates) return;
         this._isCheckingUpdates = true;
@@ -666,6 +689,7 @@ async slaveCheckForUpdates() {
 			// Pre-flight: if server changed since our last read, pull updates first to avoid overwriting newer data
 			try {
 				const srvTs = await this.getServerTimestamp();
+				try { console.log('⏳ Preflight ts', { srvTs, last: (this.lastServerTimestamp||0) }); } catch(_e2){}
 				if (srvTs > (this.lastServerTimestamp || 0)) {
 					await this.slaveCheckForUpdates();
 				}
@@ -1325,6 +1349,8 @@ async slaveCheckForUpdates() {
 		}
 		// Skip echo of our own write in multi-master scenario
 		try { const sid = (typeof this.getSessionId==='function') ? this.getSessionId() : (this.sessionId || ''); const lastWriter = (serverData?.metadata?.lastWriterSession || '').trim(); if (sid && lastWriter && lastWriter === sid) { return false; } } catch(_e){}
+		// Reset detection log
+		try { const lw = (serverData?.metadata?.lastWriter||''); const lws = (serverData?.metadata?.lastWriterSession||''); if (lw==='reset' || lws==='system') { console.log('🧹 Reset snapshot detected', { lastWriter: lw, lastWriterSession: lws }); } } catch(_e){}
 		// Stale snapshot gating by server timestamp to prevent oscillation
 		try {
 			const incTs = parseInt(serverData?.metadata?.timestamp || 0, 10);

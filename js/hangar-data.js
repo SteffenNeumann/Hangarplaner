@@ -1583,6 +1583,11 @@ window.generateDefaultProjectName = generateDefaultProjectName;
 	}
 
 	function createOrUpdateLastUpdateBadge(cellId, source = 'api', timestampMs = null, options = {}){
+		// Global kill-switch: disable per-tile timestamp badges entirely
+		if (window.DISABLE_TILE_UPDATE_TIMESTAMPS) {
+			try { if (window.LastUpdateBadges && typeof window.LastUpdateBadges.remove === 'function') window.LastUpdateBadges.remove(cellId); } catch(e){}
+			return;
+		}
 		try {
 			const persist = options.persist !== false; // default true
 
@@ -1769,6 +1774,8 @@ window.generateDefaultProjectName = generateDefaultProjectName;
 		},
 		reatachAll(){ this.reattachAll(); }, // backward-compat typo guard
 		reattachAll(){
+			// Honor global kill-switch: clear any existing badges and skip re-attach
+			if (window.DISABLE_TILE_UPDATE_TIMESTAMPS) { try { this.clearAll(); } catch(e){} return; }
 			const store = loadStore();
 			let changed = false;
 			Object.keys(store).forEach(k => {
@@ -2786,6 +2793,8 @@ window.HangarData = window.hangarData;
 // Globaler Schalter: Unterdrücke Zeitstempel-Badges für API-gestützte Updates
 // (wir lassen Move/Subpage-Badges unangetastet)
 try { if (typeof window.SUPPRESS_API_UPDATE_BADGES === 'undefined') window.SUPPRESS_API_UPDATE_BADGES = true; } catch(_){}
+// New global: disable all per-tile timestamp badges (tile header time pills)
+try { if (typeof window.DISABLE_TILE_UPDATE_TIMESTAMPS === 'undefined') window.DISABLE_TILE_UPDATE_TIMESTAMPS = true; } catch(_){}
 
 // ✅ NEUE FUNKTION: Badge-Status basierend auf Alter automatisch aktualisieren
 function refreshAllUpdateBadges() {

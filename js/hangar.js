@@ -1768,8 +1768,12 @@ try { doneModal.addEventListener('click', (ev)=>{ if (ev.target === doneModal) c
 
 // Rehydrate badges from localStorage on load
 	try {
-		if (window.LastUpdateBadges && typeof window.LastUpdateBadges.reattachAll === 'function') {
-			window.LastUpdateBadges.reattachAll();
+		if (window.LastUpdateBadges) {
+			if (window.DISABLE_TILE_UPDATE_TIMESTAMPS && typeof window.LastUpdateBadges.clearAll === 'function') {
+				window.LastUpdateBadges.clearAll();
+			} else if (typeof window.LastUpdateBadges.reattachAll === 'function') {
+				window.LastUpdateBadges.reattachAll();
+			}
 		}
 	} catch (e) { console.warn('Badge rehydrate failed:', e); }
 }

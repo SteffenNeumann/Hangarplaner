@@ -1314,6 +1314,7 @@ window.clearSingleTile = window.clearSingleTile || function(cellId){
     if (!cellId && cellId !== 0) return false;
 
     const clearedUpdates = {};
+    const suppress = !!window.__suppressFieldSync;
 
     const ac = document.getElementById(`aircraft-${cellId}`);
     if (ac) { ac.value = ''; clearedUpdates[`aircraft-${cellId}`] = ''; }
@@ -1346,7 +1347,7 @@ window.clearSingleTile = window.clearSingleTile || function(cellId){
     try {
       if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage === 'function'){
         Object.entries(clearedUpdates).forEach(([fid, val]) => {
-          try { window.hangarEventManager.updateFieldInStorage(fid, val, { flushDelayMs: 0, source: 'clear' }); } catch(_){}
+          try { window.hangarEventManager.updateFieldInStorage(fid, val, { flushDelayMs: (suppress ? 600 : 0), source: 'clear' }); } catch(_){}
           const el = document.getElementById(fid);
           if (el){
             const isSelect = el.tagName === 'SELECT';
@@ -1359,7 +1360,7 @@ window.clearSingleTile = window.clearSingleTile || function(cellId){
 
     // If master, post a targeted fieldUpdates payload immediately for fast cross-client convergence
     try {
-      if (window.serverSync && window.serverSync.isMaster && typeof window.serverSync.syncFieldUpdates === 'function'){
+      if (!suppress && window.serverSync && window.serverSync.isMaster && typeof window.serverSync.syncFieldUpdates === 'function'){
         // Build updates map with field ids -> values
         const updates = { ...clearedUpdates };
         // Note: syncFieldUpdates handles headers and read-back; our read-back is already gated when typing
@@ -1449,6 +1450,19 @@ window.moveTileContent = window.moveTileContent || async function(sourceId, dest
       }
     });
 
+    // Apply locks and suppress per-field immediate sync while we perform an atomic move
+    try {
+      const lockMs = 3000;
+      window.__fieldApplyLockUntil = window.__fieldApplyLockUntil || {};
+      const fidsDest = [`aircraft-${d}`, `arrival-time-${d}`, `departure-time-${d}`, `position-${d}`, `notes-${d}`, `status-${d}`, `tow-status-${d}`];
+      const fidsSrc  = [`aircraft-${s}`, `arrival-time-${s}`, `departure-time-${s}`, `position-${s}`, `notes-${s}`, `status-${s}`, `tow-status-${s}`];
+      const now = Date.now();
+      [...fidsDest, ...fidsSrc].forEach(fid => { window.__fieldApplyLockUntil[fid] = now + lockMs; });
+      try { if (window.serverSync && typeof window.serverSync._markPendingWrite === 'function'){ [...fidsDest, ...fidsSrc].forEach(fid => window.serverSync._markPendingWrite(fid)); } } catch(_){ }
+    } catch(_){ }
+
+    const __prevSuppress = !!window.__suppressFieldSync; window.__suppressFieldSync = true;
+
     // Write into destination (preserving dataset.iso for times)
     const writeTime = (pref, val) => {
       const el = document.getElementById(`${pref}-${d}`);
@@ -1463,7 +1477,7 @@ window.moveTileContent = window.moveTileContent || async function(sourceId, dest
       // Persist and fire events
       try {
         if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage === 'function') {
-          window.hangarEventManager.updateFieldInStorage(`${pref}-${d}`, iso || el.value || '', { flushDelayMs: 0, source: 'move' });
+          window.hangarEventManager.updateFieldInStorage(`${pref}-${d}`, iso || el.value || '', { flushDelayMs: 600, source: 'move' });
         }
       } catch(_){ }
       try { el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); el.dispatchEvent(new Event('blur', { bubbles: true })); } catch(_){ }
@@ -1475,7 +1489,7 @@ window.moveTileContent = window.moveTileContent || async function(sourceId, dest
       destAcEl.value = src['aircraft'] || '';
       try {
         if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage === 'function') {
-          window.hangarEventManager.updateFieldInStorage(`aircraft-${d}`, destAcEl.value, { flushDelayMs: 0, source: 'move' });
+          window.hangarEventManager.updateFieldInStorage(`aircraft-${d}`, destAcEl.value, { flushDelayMs: 600, source: 'move' });
         }
       } catch(_){ }
       try { destAcEl.dispatchEvent(new Event('input', { bubbles: true })); destAcEl.dispatchEvent(new Event('change', { bubbles: true })); destAcEl.dispatchEvent(new Event('blur', { bubbles: true })); } catch(_){ }
@@ -1488,7 +1502,7 @@ window.moveTileContent = window.moveTileContent || async function(sourceId, dest
     const posEl = document.getElementById(`position-${d}`);
     if (posEl) {
       posEl.value = src['position'] || '';
-      try { if (window.hangarEventManager) window.hangarEventManager.updateFieldInStorage(`position-${d}`, posEl.value, { flushDelayMs: 0, source: 'move' }); } catch(_){}
+      try { if (window.hangarEventManager) window.hangarEventManager.updateFieldInStorage(`position-${d}`, posEl.value, { flushDelayMs: 600, source: 'move' }); } catch(_){}
       try { posEl.dispatchEvent(new Event('input', { bubbles: true })); posEl.dispatchEvent(new Event('change', { bubbles: true })); } catch(_){ }
     }
 
@@ -1496,7 +1510,7 @@ window.moveTileContent = window.moveTileContent || async function(sourceId, dest
     const notesEl = document.getElementById(`notes-${d}`);
     if (notesEl) {
       notesEl.value = src['notes'] || '';
-      try { if (window.hangarEventManager) window.hangarEventManager.updateFieldInStorage(`notes-${d}`, notesEl.value, { flushDelayMs: 0, source: 'move' }); } catch(_){}
+      try { if (window.hangarEventManager) window.hangarEventManager.updateFieldInStorage(`notes-${d}`, notesEl.value, { flushDelayMs: 600, source: 'move' }); } catch(_){}
       try { notesEl.dispatchEvent(new Event('input', { bubbles: true })); notesEl.dispatchEvent(new Event('change', { bubbles: true })); } catch(_){ }
     }
 
@@ -1504,7 +1518,7 @@ window.moveTileContent = window.moveTileContent || async function(sourceId, dest
     const statusEl = document.getElementById(`status-${d}`);
     if (statusEl) {
       statusEl.value = src['status'] || 'neutral';
-      try { if (window.hangarEventManager) window.hangarEventManager.updateFieldInStorage(`status-${d}`, statusEl.value, { flushDelayMs: 0, source: 'move' }); } catch(_){}
+      try { if (window.hangarEventManager) window.hangarEventManager.updateFieldInStorage(`status-${d}`, statusEl.value, { flushDelayMs: 600, source: 'move' }); } catch(_){}
       try { statusEl.dispatchEvent(new Event('change', { bubbles: true })); } catch(_){ }
       try { if (window.updateStatusLights) window.updateStatusLights(d); } catch(_){ }
     }
@@ -1513,7 +1527,7 @@ window.moveTileContent = window.moveTileContent || async function(sourceId, dest
     const towEl = document.getElementById(`tow-status-${d}`);
     if (towEl) {
       towEl.value = src['tow-status'] || 'neutral';
-      try { if (window.hangarEventManager) window.hangarEventManager.updateFieldInStorage(`tow-status-${d}`, towEl.value, { flushDelayMs: 0, source: 'move' }); } catch(_){}
+      try { if (window.hangarEventManager) window.hangarEventManager.updateFieldInStorage(`tow-status-${d}`, towEl.value, { flushDelayMs: 600, source: 'move' }); } catch(_){}
       try { towEl.dispatchEvent(new Event('change', { bubbles: true })); } catch(_){ }
     }
 
@@ -1522,6 +1536,46 @@ window.moveTileContent = window.moveTileContent || async function(sourceId, dest
 
     // Clear source (keeps hangar-position)
     try { window.clearSingleTile && window.clearSingleTile(s); } catch(_){ }
+
+    // Atomic server sync for move (single payload)
+    try {
+      if (window.serverSync && window.serverSync.isMaster && typeof window.serverSync.syncFieldUpdates === 'function'){
+        const updates = {};
+        const acD = document.getElementById(`aircraft-${d}`);
+        const arrD = document.getElementById(`arrival-time-${d}`);
+        const depD = document.getElementById(`departure-time-${d}`);
+        const posD = document.getElementById(`position-${d}`);
+        const notesD = document.getElementById(`notes-${d}`);
+        const statusD = document.getElementById(`status-${d}`);
+        const towD = document.getElementById(`tow-status-${d}`);
+        updates[`aircraft-${d}`] = acD ? (acD.value || '') : '';
+        updates[`arrival-time-${d}`] = arrD ? ((arrD.dataset && arrD.dataset.iso) || arrD.value || '') : '';
+        updates[`departure-time-${d}`] = depD ? ((depD.dataset && depD.dataset.iso) || depD.value || '') : '';
+        updates[`position-${d}`] = posD ? (posD.value || '') : '';
+        updates[`notes-${d}`] = notesD ? (notesD.value || '') : '';
+        updates[`status-${d}`] = statusD ? (statusD.value || 'neutral') : 'neutral';
+        updates[`tow-status-${d}`] = towD ? (towD.value || 'neutral') : 'neutral';
+        updates[`aircraft-${s}`] = '';
+        updates[`arrival-time-${s}`] = '';
+        updates[`departure-time-${s}`] = '';
+        updates[`position-${s}`] = '';
+        updates[`notes-${s}`] = '';
+        updates[`status-${s}`] = 'neutral';
+        updates[`tow-status-${s}`] = 'neutral';
+
+        await window.serverSync.syncFieldUpdates(updates, { aggregated: true, source: 'move' });
+
+        // Cancel any pending aggregated flush from the event manager to avoid duplicate posts
+        try {
+          const hem = window.hangarEventManager;
+          if (hem) {
+            if (hem._pendingFlushTimer) { clearTimeout(hem._pendingFlushTimer); hem._pendingFlushTimer = null; }
+            hem._pendingFieldUpdates = {};
+          }
+        } catch(_){ }
+      }
+    } catch(err){ console.warn('moveTileContent: atomic sync failed', err); }
+    finally { window.__suppressFieldSync = __prevSuppress; }
 
     // Notify and refresh interested views
     try { document.dispatchEvent(new CustomEvent('tileDataUpdated', { detail: { movedFrom: s, movedTo: d } })); } catch(_){ }

@@ -203,6 +203,7 @@ class ServerSync {
 	_markPendingWrite(fieldId){ try { if (!fieldId) return; this._pendingWrites[fieldId] = this._now(); } catch(_e){} }
 	_isWriteFenceActive(fieldId){ try { if (!fieldId) return false; const ts = this._pendingWrites[fieldId] || 0; return ts && (this._now() - ts) < this._writeFenceMs; } catch(_e){ return false; } }
 	_hasActiveFences(){ try { const now = this._now(); const win = this._writeFenceMs; return Object.values(this._pendingWrites||{}).some(ts => (now - ts) < win); } catch(_e){ return false; } }
+	_pruneStaleFences(){ try { const now = this._now(); const win = this._writeFenceMs; Object.keys(this._pendingWrites||{}).forEach(k=>{ const ts = this._pendingWrites[k]||0; if (!ts || (now - ts) >= win) delete this._pendingWrites[k]; }); } catch(_e){} }
 	// ===== Presence helpers (online Masters) =====
 	_getPresenceUrl(){
 		try {
@@ -1551,13 +1552,18 @@ class ServerSync {
 					let toApply = serverData;
 			// NEUE LOGIK: Verwende zentralen Datenkoordinator wenn keine aktiven Write-Fences bestehen,
 			// andernfalls wende nur nicht-gefenzte Felder direkt an, um Oscillation zu vermeiden
-			const hasFences = this._hasActiveFences();
+			try { if (typeof this._pruneStaleFences === 'function') this._pruneStaleFences(); } catch(_e){}
+			const isFirstApply = !this._firstApplyDone;
+			const hasFences = isFirstApply ? false : this._hasActiveFences();
+			this._bypassFencesOnce = !!isFirstApply;
 			if (window.dataCoordinator && !hasFences) {
 				console.log("🔄 Verwende dataCoordinator für Server-Daten...");
 				window.dataCoordinator.loadProject(toApply, "server");
 				console.log("✅ Server-Daten über Datenkoordinator angewendet");
 				try { this._updateBaselineFromServerData(toApply); } catch(_e){}
 				try { this.lastLoadedAt = Date.now(); document.dispatchEvent(new CustomEvent('serverDataLoaded', { detail: { loadedAt: this.lastLoadedAt } })); } catch(e){}
+				this._firstApplyDone = true;
+				this._bypassFencesOnce = false;
 				return true;
 			}
 
@@ -1572,6 +1578,8 @@ class ServerSync {
 					console.log("📄 Ergebnis hangarData.applyLoadedHangarPlan:", result);
 					if (result) {
 						try { this.lastLoadedAt = Date.now(); document.dispatchEvent(new CustomEvent('serverDataLoaded', { detail: { loadedAt: this.lastLoadedAt } })); } catch(e){}
+						this._firstApplyDone = true;
+						this._bypassFencesOnce = false;
 						return true;
 					}
 				} catch(e) {
@@ -1619,6 +1627,8 @@ class ServerSync {
 				console.log("✅ Server-Daten über direkten Fallback angewendet");
 				try { this._updateBaselineFromServerData(serverData); } catch(_e){}
 				try { this.lastLoadedAt = Date.now(); document.dispatchEvent(new CustomEvent('serverDataLoaded', { detail: { loadedAt: this.lastLoadedAt } })); } catch(e){}
+				this._firstApplyDone = true;
+				this._bypassFencesOnce = false;
 					return true;
 				} else {
 					console.warn("⚠️ Keine Server-Daten konnten angewendet werden");
@@ -1635,6 +1645,7 @@ class ServerSync {
 			setTimeout(() => {
 				this.isApplyingServerData = false;
 				window.isApplyingServerData = false;
+				this._bypassFencesOnce = false;
 				console.log("🏁 Server-Sync abgeschlossen, Flag zurückgesetzt");
 
 				// Event-Handler nach Server-Load reaktivieren
@@ -1688,6 +1699,12 @@ class ServerSync {
 		const canApplyField = (fid, el) => {
 			try {
 				if (!fid) return true;
+				// For the first DOM application after startup, bypass fences/recent edit checks to ensure UI mirrors server
+				if (this._bypassFencesOnce) {
+					// Still avoid overwriting the actively focused element to prevent caret jumps
+					if (el && document.activeElement === el) return false;
+					return true;
+				}
 				// Hard lock: if field is locked from local change, do not apply server value
 				try {
 					if (window.__fieldApplyLockUntil && window.__fieldApplyLockUntil[fid]){

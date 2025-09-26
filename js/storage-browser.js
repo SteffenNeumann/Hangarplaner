@@ -1804,51 +1804,36 @@ class ServerSync {
 				if (arrivalInput) {
 					const fid = `arrival-time-${tileId}`;
 					if (canApplyField(fid, arrivalInput)){
-						const h = window.helpers || {};
-						const raw = (typeof tileData.arrivalTime === 'string') ? tileData.arrivalTime : '';
-						let iso = '';
-						let display = '';
-						// Derive ISO value for storage/sync
-						if (raw) {
-							if (h.isISODateTimeLocal && h.isISODateTimeLocal(raw)) {
-								iso = raw;
-							} else if (h.isHHmm && h.isHHmm(raw) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
-								const bases = h.getBaseDates();
-								iso = h.coerceHHmmToDateTimeLocalUtc(raw, bases.arrivalBase || '') || '';
-							} else if (h.isCompactDateTime && h.isCompactDateTime(raw) && h.parseCompactToISOUTC) {
-								iso = h.parseCompactToISOUTC(raw) || '';
-							} else {
-								iso = raw;
+						let toSet = tileData.arrivalTime || '';
+						// Convert ISO format to compact display format for all input types
+					if (toSet && window.helpers) {
+						const h = window.helpers;
+						if (h.isISODateTimeLocal && h.isISODateTimeLocal(toSet)) {
+							// Convert ISO to compact format for display
+							toSet = h.formatISOToCompactUTC ? h.formatISOToCompactUTC(toSet) : toSet;
+							// Store original ISO in dataset for later use
+							if (arrivalInput.dataset) arrivalInput.dataset.iso = tileData.arrivalTime;
+						} else if (h.isHHmm && h.isHHmm(toSet) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
+							const bases = h.getBaseDates();
+							const isoTime = h.coerceHHmmToDateTimeLocalUtc(toSet, bases.arrivalBase || '');
+							if (isoTime && h.formatISOToCompactUTC) {
+								toSet = h.formatISOToCompactUTC(isoTime);
+								if (arrivalInput.dataset) arrivalInput.dataset.iso = isoTime;
+							}
+						} else if (h.isCompactDateTime && h.isCompactDateTime(toSet)) {
+							// Already in compact format, store corresponding ISO
+							if (h.parseCompactToISOUTC) {
+								const iso = h.parseCompactToISOUTC(toSet);
+								if (iso && arrivalInput.dataset) arrivalInput.dataset.iso = iso;
 							}
 						}
-						// Normalize to the format expected by <input type="datetime-local"> (YYYY-MM-DDTHH:mm)
-						const normalize = (s) => {
-							try {
-								let v = String(s || '').trim();
-								if (!v) return '';
-								if (v.length >= 16 && v[10] === 'T') return v.slice(0, 16);
-								return v;
-							} catch(_) { return String(s || ''); }
-						};
-						const isoForInput = normalize(iso);
-						// For non datetime-local, fall back to compact display
-						if (h.formatISOToCompactUTC && iso) {
-							display = h.formatISOToCompactUTC(iso);
-						} else {
-							display = raw || '';
-						}
-						if ((arrivalInput.type || '').toLowerCase() === 'datetime-local') {
-							arrivalInput.value = isoForInput || '';
-						} else {
-							arrivalInput.value = display || '';
-						}
-						if (arrivalInput.dataset) {
-							if (iso) arrivalInput.dataset.iso = iso; else try { delete arrivalInput.dataset.iso; } catch(_e){}
-						}
-						console.log(`🛬 Ankunftszeit gesetzt: ${tileId} = ${arrivalInput.value || ''}`);
-						}
+					}
+						arrivalInput.value = toSet || '';
+						try { if (!toSet && arrivalInput.dataset) delete arrivalInput.dataset.iso; } catch(_e){}
+						console.log(`🛬 Ankunftszeit gesetzt: ${tileId} = ${toSet || ''}`);
 					}
 				}
+			}
 
 			// Departure Time (apply even when empty string)
 			if (Object.prototype.hasOwnProperty.call(tileData, 'departureTime')) {
@@ -1856,51 +1841,36 @@ class ServerSync {
 				if (departureInput) {
 					const fid = `departure-time-${tileId}`;
 					if (canApplyField(fid, departureInput)){
-						const h = window.helpers || {};
-						const raw = (typeof tileData.departureTime === 'string') ? tileData.departureTime : '';
-						let iso = '';
-						let display = '';
-						// Derive ISO value for storage/sync
-						if (raw) {
-							if (h.isISODateTimeLocal && h.isISODateTimeLocal(raw)) {
-								iso = raw;
-							} else if (h.isHHmm && h.isHHmm(raw) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
-								const bases = h.getBaseDates();
-								iso = h.coerceHHmmToDateTimeLocalUtc(raw, bases.departureBase || '') || '';
-							} else if (h.isCompactDateTime && h.isCompactDateTime(raw) && h.parseCompactToISOUTC) {
-								iso = h.parseCompactToISOUTC(raw) || '';
-							} else {
-								iso = raw;
+						let toSet = tileData.departureTime || '';
+						// Convert ISO format to compact display format for all input types
+					if (toSet && window.helpers) {
+						const h = window.helpers;
+						if (h.isISODateTimeLocal && h.isISODateTimeLocal(toSet)) {
+							// Convert ISO to compact format for display
+							toSet = h.formatISOToCompactUTC ? h.formatISOToCompactUTC(toSet) : toSet;
+							// Store original ISO in dataset for later use
+							if (departureInput.dataset) departureInput.dataset.iso = tileData.departureTime;
+						} else if (h.isHHmm && h.isHHmm(toSet) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
+							const bases = h.getBaseDates();
+							const isoTime = h.coerceHHmmToDateTimeLocalUtc(toSet, bases.departureBase || '');
+							if (isoTime && h.formatISOToCompactUTC) {
+								toSet = h.formatISOToCompactUTC(isoTime);
+								if (departureInput.dataset) departureInput.dataset.iso = isoTime;
+							}
+						} else if (h.isCompactDateTime && h.isCompactDateTime(toSet)) {
+							// Already in compact format, store corresponding ISO
+							if (h.parseCompactToISOUTC) {
+								const iso = h.parseCompactToISOUTC(toSet);
+								if (iso && departureInput.dataset) departureInput.dataset.iso = iso;
 							}
 						}
-						// Normalize to the format expected by <input type="datetime-local"> (YYYY-MM-DDTHH:mm)
-						const normalize = (s) => {
-							try {
-								let v = String(s || '').trim();
-								if (!v) return '';
-								if (v.length >= 16 && v[10] === 'T') return v.slice(0, 16);
-								return v;
-							} catch(_) { return String(s || ''); }
-						};
-						const isoForInput = normalize(iso);
-						// For non datetime-local, fall back to compact display
-						if (h.formatISOToCompactUTC && iso) {
-							display = h.formatISOToCompactUTC(iso);
-						} else {
-							display = raw || '';
-						}
-						if ((departureInput.type || '').toLowerCase() === 'datetime-local') {
-							departureInput.value = isoForInput || '';
-						} else {
-							departureInput.value = display || '';
-						}
-						if (departureInput.dataset) {
-							if (iso) departureInput.dataset.iso = iso; else try { delete departureInput.dataset.iso; } catch(_e){}
-						}
-						console.log(`🛫 Abflugzeit gesetzt: ${tileId} = ${departureInput.value || ''}`);
-						}
+					}
+						departureInput.value = toSet || '';
+						try { if (!toSet && departureInput.dataset) delete departureInput.dataset.iso; } catch(_e){}
+						console.log(`🛫 Abflugzeit gesetzt: ${tileId} = ${toSet || ''}`);
 					}
 				}
+			}
 
 			// Status (apply on key presence)
 			if (Object.prototype.hasOwnProperty.call(tileData, 'status')) {

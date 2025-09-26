@@ -809,26 +809,27 @@ function applySingleTileData(tileData, isSecondary = false) {
 			const arrivalElement = document.getElementById(`arrival-time-${tileData.tileId}`);
 			if (arrivalElement && containerElement.contains(arrivalElement)) {
 				const h = window.helpers || {};
-				const raw = tileData.arrivalTime;
-				let iso = '';
 				let display = '';
-				if (h.isISODateTimeLocal && h.isISODateTimeLocal(raw)) {
-					iso = raw;
-				} else if (h.isHHmm && h.isHHmm(raw) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
-					const bases = h.getBaseDates();
-					iso = h.coerceHHmmToDateTimeLocalUtc(raw, bases.arrivalBase || '') || '';
-				} else if (h.isCompactDateTime && h.isCompactDateTime(raw) && h.parseCompactToISOUTC) {
-					iso = h.parseCompactToISOUTC(raw) || '';
-				} else {
-					iso = raw || '';
+			if (h.isISODateTimeLocal && h.isISODateTimeLocal(tileData.arrivalTime)) {
+				display = h.formatISOToCompactUTC(tileData.arrivalTime);
+				// Store original ISO in dataset for consistency
+				if (arrivalElement.dataset) arrivalElement.dataset.iso = tileData.arrivalTime;
+			} else if (h.isHHmm && h.isHHmm(tileData.arrivalTime) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
+				const bases = h.getBaseDates();
+				const iso = h.coerceHHmmToDateTimeLocalUtc(tileData.arrivalTime, bases.arrivalBase || '');
+				display = iso ? h.formatISOToCompactUTC(iso) : '';
+				if (iso && arrivalElement.dataset) arrivalElement.dataset.iso = iso;
+			} else if (h.isCompactDateTime && h.isCompactDateTime(tileData.arrivalTime)) {
+				display = tileData.arrivalTime;
+				// Store corresponding ISO in dataset
+				if (h.parseCompactToISOUTC && arrivalElement.dataset) {
+					const iso = h.parseCompactToISOUTC(tileData.arrivalTime);
+					if (iso) arrivalElement.dataset.iso = iso;
 				}
-				const normalize = (s) => { try { let v = String(s||'').trim(); if (!v) return ''; if (v.length>=16 && v[10]==='T') return v.slice(0,16); return v; } catch(_) { return String(s||''); } };
-				const isoForInput = normalize(iso);
-				if (h.formatISOToCompactUTC && iso) display = h.formatISOToCompactUTC(iso); else display = raw || '';
-				if ((arrivalElement.type || '').toLowerCase() === 'datetime-local') { arrivalElement.value = isoForInput || ''; } else { arrivalElement.value = display || ''; }
-				if (arrivalElement.dataset) { if (iso) arrivalElement.dataset.iso = iso; else try { delete arrivalElement.dataset.iso; } catch(_e){} }
+			}
+			arrivalElement.value = display || '';
 				console.log(
-					`✅ Arrival Time für Tile ${tileData.tileId} (${isSecondary ? "sekundär" : "primär"}) gesetzt: ${arrivalElement.value || ''}`
+					`✅ Arrival Time für Tile ${tileData.tileId} (${isSecondary ? "sekundär" : "primär"}) gesetzt: ${display || ''}`
 				);
 			} else {
 				console.warn(
@@ -844,26 +845,27 @@ function applySingleTileData(tileData, isSecondary = false) {
 			);
 			if (departureElement && containerElement.contains(departureElement)) {
 				const h = window.helpers || {};
-				const raw = tileData.departureTime;
-				let iso = '';
 				let display = '';
-				if (h.isISODateTimeLocal && h.isISODateTimeLocal(raw)) {
-					iso = raw;
-				} else if (h.isHHmm && h.isHHmm(raw) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
-					const bases = h.getBaseDates();
-					iso = h.coerceHHmmToDateTimeLocalUtc(raw, bases.departureBase || '') || '';
-				} else if (h.isCompactDateTime && h.isCompactDateTime(raw) && h.parseCompactToISOUTC) {
-					iso = h.parseCompactToISOUTC(raw) || '';
-				} else {
-					iso = raw || '';
+			if (h.isISODateTimeLocal && h.isISODateTimeLocal(tileData.departureTime)) {
+				display = h.formatISOToCompactUTC(tileData.departureTime);
+				// Store original ISO in dataset for consistency
+				if (departureElement.dataset) departureElement.dataset.iso = tileData.departureTime;
+			} else if (h.isHHmm && h.isHHmm(tileData.departureTime) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
+				const bases = h.getBaseDates();
+				const iso = h.coerceHHmmToDateTimeLocalUtc(tileData.departureTime, bases.departureBase || '');
+				display = iso ? h.formatISOToCompactUTC(iso) : '';
+				if (iso && departureElement.dataset) departureElement.dataset.iso = iso;
+			} else if (h.isCompactDateTime && h.isCompactDateTime(tileData.departureTime)) {
+				display = tileData.departureTime;
+				// Store corresponding ISO in dataset
+				if (h.parseCompactToISOUTC && departureElement.dataset) {
+					const iso = h.parseCompactToISOUTC(tileData.departureTime);
+					if (iso) departureElement.dataset.iso = iso;
 				}
-				const normalize = (s) => { try { let v = String(s||'').trim(); if (!v) return ''; if (v.length>=16 && v[10]==='T') return v.slice(0,16); return v; } catch(_) { return String(s||''); } };
-				const isoForInput = normalize(iso);
-				if (h.formatISOToCompactUTC && iso) display = h.formatISOToCompactUTC(iso); else display = raw || '';
-				if ((departureElement.type || '').toLowerCase() === 'datetime-local') { departureElement.value = isoForInput || ''; } else { departureElement.value = display || ''; }
-				if (departureElement.dataset) { if (iso) departureElement.dataset.iso = iso; else try { delete departureElement.dataset.iso; } catch(_e){} }
+			}
+			departureElement.value = display || '';
 				console.log(
-					`✅ Departure Time für Tile ${tileData.tileId} (${isSecondary ? "sekundär" : "primär"}) gesetzt: ${departureElement.value || ''}`
+					`✅ Departure Time für Tile ${tileData.tileId} (${isSecondary ? "sekundär" : "primär"}) gesetzt: ${display || ''}`
 				);
 			} else {
 				console.warn(

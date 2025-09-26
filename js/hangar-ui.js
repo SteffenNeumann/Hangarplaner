@@ -450,21 +450,15 @@ const uiSettings = {
 			);
 			if (arrivalTimeInput && tileValue.arrivalTime) {
 				const h = window.helpers || {};
-				const raw = tileValue.arrivalTime;
-				let iso = '';
-				let display = raw;
-				if (h.isISODateTimeLocal && h.isISODateTimeLocal(raw)) {
-					iso = raw;
-				} else if (h.isHHmm && h.isHHmm(raw) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
+				let display = tileValue.arrivalTime;
+				if (h.isISODateTimeLocal && h.isISODateTimeLocal(tileValue.arrivalTime)) {
+					display = h.formatISOToCompactUTC(tileValue.arrivalTime);
+				} else if (h.isHHmm && h.isHHmm(tileValue.arrivalTime) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
 					const bases = h.getBaseDates();
-					iso = h.coerceHHmmToDateTimeLocalUtc(raw, bases.arrivalBase || '') || '';
-				} else if (h.isCompactDateTime && h.isCompactDateTime(raw) && h.parseCompactToISOUTC) {
-					iso = h.parseCompactToISOUTC(raw) || '';
+					const iso = h.coerceHHmmToDateTimeLocalUtc(tileValue.arrivalTime, bases.arrivalBase || '');
+					display = iso ? h.formatISOToCompactUTC(iso) : '';
 				}
-				const normalize = (s) => { try { let v = String(s||'').trim(); if (!v) return ''; if (v.length>=16 && v[10]==='T') return v.slice(0,16); return v; } catch(_) { return String(s||''); } };
-				const isoForInput = normalize(iso);
-				if (h.formatISOToCompactUTC && iso) display = h.formatISOToCompactUTC(iso);
-				if ((arrivalTimeInput.type || '').toLowerCase() === 'datetime-local') { arrivalTimeInput.value = isoForInput || ''; } else { arrivalTimeInput.value = display || ''; }
+				arrivalTimeInput.value = display || '';
 			}
 
 			const departureTimeInput = document.getElementById(
@@ -472,21 +466,15 @@ const uiSettings = {
 			);
 			if (departureTimeInput && tileValue.departureTime) {
 				const h = window.helpers || {};
-				const raw = tileValue.departureTime;
-				let iso = '';
-				let display = raw;
-				if (h.isISODateTimeLocal && h.isISODateTimeLocal(raw)) {
-					iso = raw;
-				} else if (h.isHHmm && h.isHHmm(raw) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
+				let display = tileValue.departureTime;
+				if (h.isISODateTimeLocal && h.isISODateTimeLocal(tileValue.departureTime)) {
+					display = h.formatISOToCompactUTC(tileValue.departureTime);
+				} else if (h.isHHmm && h.isHHmm(tileValue.departureTime) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
 					const bases = h.getBaseDates();
-					iso = h.coerceHHmmToDateTimeLocalUtc(raw, bases.departureBase || '') || '';
-				} else if (h.isCompactDateTime && h.isCompactDateTime(raw) && h.parseCompactToISOUTC) {
-					iso = h.parseCompactToISOUTC(raw) || '';
+					const iso = h.coerceHHmmToDateTimeLocalUtc(tileValue.departureTime, bases.departureBase || '');
+					display = iso ? h.formatISOToCompactUTC(iso) : '';
 				}
-				const normalize = (s) => { try { let v = String(s||'').trim(); if (!v) return ''; if (v.length>=16 && v[10]==='T') return v.slice(0,16); return v; } catch(_) { return String(s||''); } };
-				const isoForInput = normalize(iso);
-				if (h.formatISOToCompactUTC && iso) display = h.formatISOToCompactUTC(iso);
-				if ((departureTimeInput.type || '').toLowerCase() === 'datetime-local') { departureTimeInput.value = isoForInput || ''; } else { departureTimeInput.value = display || ''; }
+				departureTimeInput.value = display || '';
 			}
 
 			// Status setzen

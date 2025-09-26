@@ -241,6 +241,18 @@ class ServerSync {
 			}
 		} catch(_e){ return null; }
 	}
+	_isRelevantFieldId(fid){
+		try {
+			return (typeof fid === 'string') && /^(aircraft|arrival-time|departure-time|hangar-position|position|status|tow-status|notes)-(\d+)$/.test(fid);
+		} catch(_e){ return false; }
+	}
+	_activeRelevantFieldId(){
+		try {
+			const el = (typeof document !== 'undefined' && document.activeElement) ? document.activeElement : null;
+			const id = (el && el.id) ? el.id : '';
+			return (this._isRelevantFieldId && this._isRelevantFieldId(id)) ? id : '';
+		} catch(_e){ return ''; }
+	}
 	_cloneFilteredServerData(serverData){
 		try {
 			const copyTile = (t)=>{
@@ -602,6 +614,13 @@ class ServerSync {
 					if (window.hangarEventManager.isUserTypingRecently(typingWin)) {
 						return; // finally will clear _isCheckingUpdates
 					}
+				}
+			} catch(_e) {}
+			// Also skip if a relevant field is currently focused (prevents caret jumps/flip-backs)
+			try {
+				const activeId = (typeof document !== 'undefined' && document.activeElement && document.activeElement.id) ? document.activeElement.id : '';
+				if (this._isRelevantFieldId && this._isRelevantFieldId(activeId)) {
+					return; // finally will clear _isCheckingUpdates
 				}
 			} catch(_e) {}
 			const currentServerTimestamp = await this.getServerTimestamp();
@@ -1552,8 +1571,20 @@ class ServerSync {
 			const isFirstApply = !this._firstApplyDone;
 			const hasFences = isFirstApply ? false : this._hasActiveFences();
 			this._bypassFencesOnce = !!isFirstApply;
-			if (window.dataCoordinator && !hasFences) {
-				console.log("🔄 Verwende dataCoordinator für Server-Daten...");
+			// Determine whether bulk apply is safe (no typing, no focused relevant field, no fences)
+			let typingActive = false;
+			try {
+				const typingWin = Math.min(15000, (this._writeFenceMs || 7000));
+				typingActive = !!(window.hangarEventManager && typeof window.hangarEventManager.isUserTypingRecently==='function' && window.hangarEventManager.isUserTypingRecently(typingWin));
+			} catch(_e){}
+			let activeRelevant = false;
+			try {
+				const aid = (typeof document !== 'undefined' && document.activeElement && document.activeElement.id) ? document.activeElement.id : '';
+				activeRelevant = !!(this._isRelevantFieldId && this._isRelevantFieldId(aid));
+			} catch(_e){}
+			const mayBulkApply = !!(window.dataCoordinator && !hasFences && !typingActive && !activeRelevant);
+			if (mayBulkApply) {
+				console.log("🔄 Verwende dataCoordinator für Server-Daten (safe bulk apply)...");
 				window.dataCoordinator.loadProject(toApply, "server");
 				console.log("✅ Server-Daten über Datenkoordinator angewendet");
 				try { this._updateBaselineFromServerData(toApply); } catch(_e){}
@@ -1590,8 +1621,9 @@ class ServerSync {
 					: "⚠️ Keine Standard-Datenhandler verfügbar, verwende direkten Fallback..."
 			);
 			let applied = false;
-			// Recompute conflict stripping for fallback path as well
-			let dataForApply = hasFences ? this._cloneFilteredServerData(serverData) : toApply;
+			// Recompute conflict stripping for fallback path as well (also filter when typing or focused)
+			const needFilter = hasFences || typingActive || activeRelevant;
+			let dataForApply = needFilter ? this._cloneFilteredServerData(serverData) : toApply;
 			if (dataForApply.primaryTiles && dataForApply.primaryTiles.length > 0) {
 				console.log("🔄 Wende primäre Kachel-Daten direkt an...");
 				const a = this.applyTileData(dataForApply.primaryTiles, false);

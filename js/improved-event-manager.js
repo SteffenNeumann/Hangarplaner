@@ -764,8 +764,9 @@ const setBoardAircraftTooltips = () => {
 				const fid = event.target.id || '';
 				// Mark field as locally edited and mark a write fence immediately to avoid server echo overriding while typing
 				try { if (window.serverSync && typeof window.serverSync._markPendingWrite === 'function') { window.serverSync._markPendingWrite(fid); } } catch(_e){}
+				// Treat any relevant input as recent typing to gate read-backs
+				this._lastTypingAt = Date.now();
 				if (this.isFreeTextFieldId(fid)) {
-					this._lastTypingAt = Date.now();
 					// Local save after 500ms, server flush after typing idle window
 					this.debouncedFieldUpdate(fid, event.target.value, 500, { flushDelayMs: this.TYPING_DEBOUNCE_MS, source: 'input' });
 				} else {
@@ -825,6 +826,8 @@ const setBoardAircraftTooltips = () => {
 
 				const fid = event.target.id || '';
 				const isFree = this.isFreeTextFieldId(fid);
+				// Blur also counts as recent typing end; update timestamp to still gate immediate read-back
+				this._lastTypingAt = Date.now();
 				// On blur, flush free-text immediately; others keep normal quick debounce
 				this.debouncedFieldUpdate(fid, storeVal, this.BLUR_SAVE_DELAY_MS, { flushDelayMs: isFree ? 0 : 150, source: 'blur' });
 			},
@@ -846,6 +849,8 @@ const setBoardAircraftTooltips = () => {
 				const fid = event.target.id || '';
 				// Mark fence on change for non-free-text fields too
 				try { if (window.serverSync && typeof window.serverSync._markPendingWrite === 'function') { window.serverSync._markPendingWrite(fid); } } catch(_e){}
+				// Treat any change as recent typing to gate read-backs (covers selects/date-time)
+				this._lastTypingAt = Date.now();
 				const isFree = this.isFreeTextFieldId(fid);
 				// Hard lock this field from server applies for a short window after local change
 				try { window.__fieldApplyLockUntil = window.__fieldApplyLockUntil || {}; window.__fieldApplyLockUntil[fid] = Date.now() + 15000; } catch(_e){}
@@ -999,8 +1004,9 @@ const setBoardAircraftTooltips = () => {
 				const fid = event.target.id || '';
 				// Mark fence early on input to prevent echo overwrite
 				try { if (window.serverSync && typeof window.serverSync._markPendingWrite === 'function') { window.serverSync._markPendingWrite(fid); } } catch(_e){}
+				// Treat any relevant input as recent typing
+				this._lastTypingAt = Date.now();
 				if (this.isFreeTextFieldId(fid)) {
-					this._lastTypingAt = Date.now();
 					this.debouncedFieldUpdate(fid, event.target.value, 500, { flushDelayMs: this.TYPING_DEBOUNCE_MS, source: 'input' });
 				} else {
 					this.debouncedFieldUpdate(fid, event.target.value);
@@ -1113,12 +1119,14 @@ try { if (!element.getAttribute('title')) element.setAttribute('title', 'Shift+C
 				}
 
 				const fid = event.target.id || '';
+				// Mark fence for any change
 				try { if (window.serverSync && typeof window.serverSync._markPendingWrite === 'function') { window.serverSync._markPendingWrite(fid); } } catch(_e){}
+				// Consider select changes as typing for gating
+				this._lastTypingAt = Date.now();
 				const isFree = this.isFreeTextFieldId(fid);
 				// Hard lock this field from server applies for a short window after local change
 				try { window.__fieldApplyLockUntil = window.__fieldApplyLockUntil || {}; window.__fieldApplyLockUntil[fid] = Date.now() + 15000; } catch(_e){}
 				this.debouncedFieldUpdate(fid, event.target.value, 150, { flushDelayMs: isFree ? this.TYPING_DEBOUNCE_MS : 150, source: 'change' });
-			},
 			`${handlerPrefix}_change`
 		);
 	}

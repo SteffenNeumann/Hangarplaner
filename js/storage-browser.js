@@ -2041,15 +2041,13 @@ class ServerSync {
 		return hash.toString();
 	}
 
-	// Provide a per-tab stable session id for server write coordination (avoid cross-tab collisions)
+	// Provide stable session id for lock coordination with server
 	getSessionId() {
 		try {
-			// Prefer sessionStorage to ensure each browser tab has a unique id
-			let sid = null;
-			try { sid = sessionStorage.getItem('serverSync.sessionId'); } catch(_e) { sid = null; }
+			let sid = localStorage.getItem('presence.sessionId') || localStorage.getItem('serverSync.sessionId');
 			if (!sid || typeof sid !== 'string' || !sid.length) {
 				sid = Math.random().toString(36).slice(2) + Date.now().toString(36);
-				try { sessionStorage.setItem('serverSync.sessionId', sid); } catch(_e) {}
+				try { localStorage.setItem('serverSync.sessionId', sid); } catch(_e) {}
 			}
 			this.sessionId = sid;
 			return sid;

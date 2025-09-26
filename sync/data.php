@@ -297,9 +297,13 @@ else if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $serverSecondaryMap = $tiles_to_map($merged['secondaryTiles']);
                 $tileKeys = ['aircraftId','arrivalTime','departureTime','position','hangarPosition','status','towStatus','notes'];
                 // Normalization helper for conflict-safe comparisons
+                // Treat null and empty as "neutral" for status/towStatus to avoid spurious conflicts
                 $normalize = function($field, $val){
-                    if ($val === null) return '';
-                    $s = is_string($val) ? trim($val) : (is_numeric($val) ? (string)$val : '');
+                    // Build a string representation first (null → '')
+                    $s = '';
+                    if ($val !== null) {
+                        $s = is_string($val) ? trim($val) : (is_numeric($val) ? (string)$val : '');
+                    }
                     if ($field === 'status' || $field === 'towStatus') {
                         $l = strtolower($s);
                         if ($l === '' || $l === 'neutral') return 'neutral';

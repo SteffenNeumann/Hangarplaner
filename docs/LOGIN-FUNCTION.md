@@ -88,6 +88,23 @@ This document explains the login flow implemented in `login.html`.
    - Failure: red error message shows with backend-provided reason.
 4. With an active session, refresh `login.html` and confirm immediate redirect to `/index.html`.
 
+## Account approval notifications
+- When an admin approves a user via the approval link, the backend now sends the user a confirmation email with a direct link to `/login.html`.
+- If email cannot be sent, the message is logged to `sync/mail_outbox.txt`.
+
+## Admin unapprove (revoke approval)
+- Endpoint: `sync/auth.php`
+- Method: `POST`
+- Body:
+```json path=null start=null
+{
+  "action": "admin_unapprove",
+  "email": "user@example.com"
+}
+```
+- Requires `admin_login` (secret in `sync/config.php`).
+- Sets `approved` to false, clears `approvedAt`, and regenerates a new `approvalToken` so the user can be approved again later.
+
 ## File Snippet (handleLogin)
 ```html
 <script>

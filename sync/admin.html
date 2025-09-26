@@ -91,7 +91,8 @@ await fetch('auth.php', { method:'POST', headers:{'Content-Type':'application/js
           <td class="py-2 pr-4 space-x-2">
             <button class="bg-white/10 hover:bg-white/20 px-2 py-1 rounded" onclick="blockUser('${u.email}')">Block</button>
             <button class="bg-white/10 hover:bg-white/20 px-2 py-1 rounded" onclick="unblockUser('${u.email}')">Unblock</button>
-          </td>`;
+            <button class="bg-white/10 hover:bg-white/20 px-2 py-1 rounded" onclick="unapproveUser('${u.email}')" ${u.approved?'':'disabled'}>Unapprove</button>
+          </td>
         tbody.appendChild(tr);
       });
     }
@@ -124,6 +125,17 @@ const res = await fetch('auth.php', { method:'POST', headers:{'Content-Type':'ap
         const data = await res.json();
         if(data.success){ loadUsers(); }
         else setMsg(msg, data.error||'Failed to unblock', false);
+      }catch(e){ setMsg(msg, 'Network error', false); }
+    }
+
+    async function unapproveUser(email){
+      const msg = document.getElementById('usersMsg');
+      setMsg(msg, 'Revoking approval...', true);
+      try{
+        const res = await fetch('auth.php', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'admin_unapprove', email}) });
+        const data = await res.json();
+        if(data.success){ setMsg(msg, 'Approval revoked', true); loadUsers(); }
+        else setMsg(msg, data.error||'Failed to unapprove', false);
       }catch(e){ setMsg(msg, 'Network error', false); }
     }
   </script>

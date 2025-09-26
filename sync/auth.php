@@ -1,6 +1,6 @@
 <?php
 // sync/auth.php - File-based authentication with admin approval and blocking
-// Actions: register, login, logout, session, approve (via email link), admin_login, admin_logout, admin_list, admin_block, admin_unblock
+// Actions: register, login, logout, session, approve (via email link), admin_login, admin_logout, admin_list, admin_block, admin_unblock, admin_unapprove
 
 // CORS and JSON headers to mirror other endpoints
 header("Access-Control-Allow-Origin: *");
@@ -156,21 +156,43 @@ switch ($action) {
         if ($token === '') respond(['success'=>false,'error'=>'Missing token'],400);
         $db = read_users($USERS_FILE);
         $changed = false;
+        $approvedUserEmail = null;
+        $approvedUserDisplayName = '';
         foreach ($db['users'] as &$u) {
             if (isset($u['approvalToken']) && hash_equals($u['approvalToken'], $token)) {
                 $u['approved'] = true;
                 $u['approvedAt'] = date('c');
                 $u['approvalToken'] = null; // invalidate token
+                $approvedUserEmail = $u['email'] ?? null;
+                $approvedUserDisplayName = $u['displayName'] ?? (isset($u['email']) ? strstr($u['email'], '@', true) : '');
                 $changed = true;
                 break;
             }
         }
         if (!$changed) respond(['success'=>false,'error'=>'Invalid token'],400);
         if (!write_users_atomic($USERS_FILE, $db)) respond(['success'=>false,'error'=>'Failed to update user'],500);
-        // Render a minimal HTML confirmation so admin can click easily from email
+
+        // Notify the approved user via email (or outbox fallback)
+        try {
+            if ($approvedUserEmail) {
+                $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+                $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                $base = $scheme . '://' . $host;
+                // Prefer login page for guidance
+                $loginUrl = $base . '/login.html';
+                $subjectUser = 'Your Hangar Planner account has been approved';
+                $bodyUser = "Hello " . ($approvedUserDisplayName ?: 'there') . ",\n\n" .
+                            "Your account has been approved by the administrator. You can now log in here:\n" .
+                            $loginUrl . "\n\n" .
+                            "If you didn’t request this, please contact support.";
+                send_admin_approval_mail($approvedUserEmail, $subjectUser, $bodyUser, $MAIL_OUTBOX, $config['mailFrom'] ?? 'no-reply@hangarplanner.local');
+            }
+        } catch (Throwable $t) { /* ignore mail errors */ }
+
+        // Render a minimal HTML confirmation for the approver
         header('Content-Type: text/html; charset=UTF-8');
         echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>User approved</title></head><body style="font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"; padding: 24px;">';
-        echo '<h2>✅ User approved</h2><p>The user has been approved. They can now log in.</p></body></html>';
+        echo '<h2>✅ User approved</h2><p>The user has been approved.' . ($approvedUserEmail ? ' A confirmation email was sent to the user.' : '') . '</p></body></html>';
         exit;
     }
     case 'login': {
@@ -255,6 +277,27 @@ switch ($action) {
         foreach ($db['users'] as &$u) {
             if (strtolower($u['email']) === $email) {
                 $u['blocked'] = false; $changed = true; break;
+            }
+        }
+        if (!$changed) respond(['success'=>false,'error'=>'User not found'],404);
+        if (!write_users_atomic($USERS_FILE, $db)) respond(['success'=>false,'error'=>'Failed to update user'],500);
+        respond(['success'=>true]);
+    }
+    case 'admin_unapprove': {
+        if ($method !== 'POST') respond(['success'=>false,'error'=>'Method not allowed'],405);
+        if (empty($_SESSION['admin'])) respond(['success'=>false,'error'=>'Not authorized'],403);
+        $email = strtolower(trim($body['email'] ?? ''));
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) respond(['success'=>false,'error'=>'Invalid email'],400);
+        $db = read_users($USERS_FILE);
+        $changed = false;
+        foreach ($db['users'] as &$u) {
+            if (isset($u['email']) && strtolower($u['email']) === $email) {
+                $u['approved'] = false;
+                $u['approvedAt'] = null;
+                // generate a new token so they can be approved again later
+                try { $u['approvalToken'] = bin2hex(random_bytes(16)); } catch (Throwable $t) { $u['approvalToken'] = null; }
+                $changed = true;
+                break;
             }
         }
         if (!$changed) respond(['success'=>false,'error'=>'User not found'],404);

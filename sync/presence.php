@@ -163,10 +163,20 @@ if ($method === 'POST') {
         $role = isset($body['role']) ? strtolower(trim($body['role'])) : 'standalone'; // master|sync|standalone
         if (!in_array($role, ['master','sync','standalone'])) $role = 'standalone';
         $page = isset($body['page']) ? substr(trim($body['page']), 0, 120) : '';
+        // Optional per-field locks: { fieldId: untilTsMs }
+        $locks = [];
+        if (isset($body['locks']) && is_array($body['locks'])) {
+            foreach ($body['locks'] as $k => $v) {
+                $fid = is_string($k) ? trim($k) : '';
+                if ($fid === '') continue;
+                $until = is_numeric($v) ? intval($v) : 0;
+                if ($until > 0) { $locks[$fid] = $until; }
+            }
+        }
 
         // Atomic update to avoid overwrite races
         $now = time();
-        $users = update_presence_atomic($presenceFile, $TTL_SECONDS, function (&$map) use ($action, $sessionId, $displayName, $role, $page, $now, $reqId) {
+        $users = update_presence_atomic($presenceFile, $TTL_SECONDS, function (&$map) use ($action, $sessionId, $displayName, $role, $page, $locks, $now, $reqId) {
             if ($action === 'leave') {
                 if (isset($map[$sessionId])) unset($map[$sessionId]);
                 presence_log("$reqId LEAVE sessionId=$sessionId");
@@ -174,6 +184,12 @@ if ($method === 'POST') {
                 // Preserve first login time (loginAt) across heartbeats; set on first sighting
                 $existing = isset($map[$sessionId]) && is_array($map[$sessionId]) ? $map[$sessionId] : null;
                 $loginAt = isset($existing['loginAt']) ? intval($existing['loginAt']) : $now;
+                $prevLocks = isset($existing['locks']) && is_array($existing['locks']) ? $existing['locks'] : [];
+                // Merge locks (latest until wins)
+                foreach ($locks as $fid => $until) {
+                    $prev = isset($prevLocks[$fid]) ? intval($prevLocks[$fid]) : 0;
+                    if ($until > $prev) $prevLocks[$fid] = $until;
+                }
                 $map[$sessionId] = [
                     'sessionId' => $sessionId,
                     'displayName' => $displayName,
@@ -181,8 +197,9 @@ if ($method === 'POST') {
                     'page' => $page,
                     'loginAt' => $loginAt,
                     'lastSeen' => $now,
+                    'locks' => $prevLocks,
                 ];
-                presence_log("$reqId HEARTBEAT sessionId=$sessionId role=$role page=$page loginAt=$loginAt");
+                presence_log("$reqId HEARTBEAT sessionId=$sessionId role=$role page=$page locks=" . count($locks) . " loginAt=$loginAt");
             }
         }, $reqId);
 

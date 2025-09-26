@@ -35,6 +35,10 @@ class ServerSync {
 		// Baseline of last server-applied data to compute precise deltas (fieldUpdates)
 		this._baselinePrimary = {};
 		this._baselineSecondary = {};
+		// Remote locks advertised via presence (fieldId -> { until, sessionId, displayName })
+		this._remoteLocks = {};
+		this._presenceHeartbeatTimer = null;
+		this._lastPresenceRefreshAt = 0;
 
 		// Global verfügbar machen für Kompatibilität und Race Condition Prevention
 		window.isApplyingServerData = false;
@@ -225,7 +229,99 @@ class ServerSync {
 			return !!users.find(u => ((u?.role || '').toLowerCase() === 'master') && u.sessionId && u.sessionId !== mySession);
 		} catch(e){ return false; }
 	}
-	_fieldIdFor(tileId, key){
+	_collectLocalLocks(){
+		try {
+			const out = {};
+			const now = Date.now();
+			if (typeof window.__fieldApplyLockUntil === 'object' && window.__fieldApplyLockUntil) {
+				Object.entries(window.__fieldApplyLockUntil).forEach(([fid, until]) => {
+					try { const u = parseInt(until, 10) || 0; if (u > now && this._isRelevantFieldId && this._isRelevantFieldId(fid)) { out[fid] = u; } } catch(_e){}
+				});
+			}
+			return out;
+		} catch(_e){ return {}; }
+	}
+	async _sendPresenceHeartbeat(){
+		try {
+			const url = this._getPresenceUrl();
+			const sid = this.getSessionId ? this.getSessionId() : (localStorage.getItem('presence.sessionId') || localStorage.getItem('serverSync.sessionId') || '');
+			let dname = '';
+			try { dname = (localStorage.getItem('presence.displayName') || '').trim(); } catch(_e){}
+			if (!dname) { try { dname = 'User-' + String(sid||'').slice(-4); } catch(_e) { dname = 'User'; } }
+			const role = this._isMasterMode && this._isMasterMode() ? 'master' : (this.canReadFromServer && this.canReadFromServer() ? 'sync' : 'standalone');
+			const locks = this._collectLocalLocks();
+			await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ action:'heartbeat', sessionId: sid, displayName: dname, role, page: 'planner', locks }) });
+		} catch(_e){}
+	}
+	_startPresenceHeartbeat(){
+		try {
+			if (this._presenceHeartbeatTimer) { clearInterval(this._presenceHeartbeatTimer); this._presenceHeartbeatTimer = null; }
+			// Send immediately, then every 20s
+			this._sendPresenceHeartbeat();
+			this._presenceHeartbeatTimer = setInterval(() => { try { this._sendPresenceHeartbeat(); } catch(_e){} }, 20000);
+		} catch(_e){}
+	}
+	_stopPresenceHeartbeat(){ try { if (this._presenceHeartbeatTimer) { clearInterval(this._presenceHeartbeatTimer); this._presenceHeartbeatTimer = null; } } catch(_e){}
+	async _refreshRemoteLocksFromPresence(force=false){
+		try {
+			const now = Date.now();
+			if (!force && (now - (this._lastPresenceRefreshAt||0)) < 15000) return; // 15s throttle
+			this._lastPresenceRefreshAt = now;
+			const url = this._getPresenceUrl() + '?action=list';
+			const res = await fetch(url, { headers: { 'Accept':'application/json' } });
+			if (!res.ok) return;
+			const data = await res.json();
+			const users = Array.isArray(data?.users) ? data.users : [];
+			let mySession = '';
+			try { mySession = this.getSessionId ? (this.getSessionId()||'') : (localStorage.getItem('presence.sessionId')||localStorage.getItem('serverSync.sessionId')||''); } catch(_e){}
+			const locks = {};
+			users.forEach(u => {
+				try {
+					const sid = (u?.sessionId || '').toString().trim(); if (!sid || sid === mySession) return;
+					const name = (u?.displayName || ('User-' + sid.slice(-4))).toString();
+					const map = (u?.locks && typeof u.locks === 'object') ? u.locks : {};
+					Object.entries(map).forEach(([fid, until]) => {
+						const u2 = parseInt(until, 10) || 0; if (u2 > now) {
+							const prev = locks[fid]; if (!prev || (u2 > prev.until)) locks[fid] = { until: u2, sessionId: sid, displayName: name };
+						}
+					});
+				} catch(_e){}
+			});
+			this._remoteLocks = locks;
+			// Render visual pills for active locks
+			try { this._renderEditingLockPills(); } catch(_e){}
+		} catch(_e){}
+	}
+	_renderEditingLockPills(){
+		try {
+			const now = Date.now();
+			const map = this._remoteLocks || {};
+			Object.entries(map).forEach(([fid, info]) => {
+				try { if (!info || (info.until||0) <= now) return; this._createOrUpdateEditingLockPill(fid, info.displayName || 'User', info.until); } catch(_e){}
+			});
+			// Also show our local pill for own locks as subtle hint (optional)
+			const local = this._collectLocalLocks();
+			Object.entries(local).forEach(([fid, until]) => { try { this._createOrUpdateEditingLockPill(fid, 'You', until); } catch(_e){} });
+		} catch(_e){}
+	}
+	_createOrUpdateEditingLockPill(fieldId, label, until){
+		try {
+			const el = document.getElementById(fieldId);
+			if (!el) return;
+			const id = `editing-pill-${fieldId}`;
+			let pill = document.getElementById(id);
+			if (!pill) {
+				pill = document.createElement('span');
+				pill.id = id;
+				pill.className = 'editing-pill';
+				pill.style.cssText = 'margin-left:6px; padding:2px 6px; border-radius:10px; font-size:11px; line-height:14px; background:#fde68a; color:#92400e; border:1px solid #f59e0b; white-space:nowrap;';
+				// Place pill next to input (after it)
+				try { el.insertAdjacentElement('afterend', pill); } catch(_e){ try { el.parentNode && el.parentNode.appendChild(pill); } catch(_){} }
+			}
+			const mins = Math.max(0, Math.ceil((until - Date.now())/60000));
+			pill.textContent = `${label} editing • ${mins}m`;
+		} catch(_e){}
+	}
 		try {
 			const id = parseInt(tileId||0,10); if (!id) return null;
 			switch(key){
@@ -474,6 +570,8 @@ class ServerSync {
 
 		// Starte Master-Synchronisation fürs Senden
 		this.startPeriodicSync(); // Für das Senden von Daten
+		// Start presence heartbeats for locks
+		this._startPresenceHeartbeat();
 
 		// Zusätzlich Updates empfangen (15 Sekunden Intervall)
 		this.slaveCheckInterval = setInterval(async () => {
@@ -512,6 +610,8 @@ class ServerSync {
 
 		// Starte Slave-Polling (nur Laden bei Änderungen)
 		this.slaveCheckInterval = setInterval(async () => {
+			// Refresh remote locks periodically as part of read polling
+			try { await this._refreshRemoteLocksFromPresence(false); } catch(_e){}
 			await this.slaveCheckForUpdates();
 		}, 3000); // 3 Sekunden Polling-Intervall
 
@@ -623,6 +723,8 @@ class ServerSync {
 					return; // finally will clear _isCheckingUpdates
 				}
 			} catch(_e) {}
+			// Also opportunistically refresh remote locks (throttled)
+			try { await this._refreshRemoteLocksFromPresence(false); } catch(_e){}
 			const currentServerTimestamp = await this.getServerTimestamp();
 			console.log(
 				`📊 Server-Timestamp: ${currentServerTimestamp}, Letzter: ${this.lastServerTimestamp}`
@@ -724,7 +826,20 @@ class ServerSync {
 
 			// Delta bevorzugen: Nur geänderte Felder schicken, um Fremdänderungen nicht zu überschreiben
 			let requestBody = null;
-			const delta = this._computeFieldUpdates(currentData);
+			let delta = this._computeFieldUpdates(currentData);
+			// Filter out fields locked by other Masters
+			try {
+				const now = Date.now();
+				if (this._remoteLocks && delta && typeof delta==='object') {
+					Object.keys(delta).forEach(fid => {
+						const info = this._remoteLocks[fid];
+						if (info && (info.until||0) > now) {
+							delete delta[fid];
+							try { if (window.showNotification) window.showNotification(`Field locked by ${info.displayName}`, 'warning'); } catch(_e){}
+						}
+					});
+				}
+			} catch(_e){}
 			try { if (delta && typeof delta === 'object') { Object.keys(delta).forEach(fid => { try { this._markPendingWrite(fid); } catch(_e){} }); } } catch(_e){}
 			if (delta && Object.keys(delta).length > 0) {
 				// Include baseline preconditions for optimistic concurrency
@@ -955,6 +1070,19 @@ class ServerSync {
 			}
 			window.isSavingToServer = true;
 
+			// Filter out fields locked by other Masters
+			try {
+				const now = Date.now();
+				if (this._remoteLocks && fieldUpdates && typeof fieldUpdates==='object') {
+					Object.keys(fieldUpdates).forEach(fid => {
+						const info = this._remoteLocks[fid];
+						if (info && (info.until||0) > now) {
+							delete fieldUpdates[fid];
+							try { if (window.showNotification) window.showNotification(`Field locked by ${info.displayName}`, 'warning'); } catch(_e){}
+						}
+					});
+				}
+			} catch(_e){}
 			const pre = {};
 			try {
 				Object.keys(fieldUpdates).forEach(fid => {
@@ -1746,6 +1874,11 @@ class ServerSync {
 				if (typeof this._isWriteFenceActive === 'function' && this._isWriteFenceActive(fid)) return false;
 				// Skip when the user very recently edited this specific field
 				if (recentlyEdited(fid)) return false;
+				// Skip when another Master has an active lock on this field (advisory lock)
+				try {
+					const info = (this._remoteLocks && fid) ? this._remoteLocks[fid] : null;
+					if (info && (info.until || 0) > Date.now()) return false;
+				} catch(_e){}
 				return true;
 			} catch(_e){ return true; }
 		};
@@ -2332,6 +2465,9 @@ class ServerSync {
 				this._loadWatchdogId = null;
 			}
 		} catch(_) {}
+
+		// Stop presence heartbeats
+		try { this._stopPresenceHeartbeat(); } catch(_) {}
 
 		// Reset transient state and baselines
 		try { this._pendingWrites = {}; } catch(_) {}

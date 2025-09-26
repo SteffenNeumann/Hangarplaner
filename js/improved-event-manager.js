@@ -853,7 +853,7 @@ const setBoardAircraftTooltips = () => {
 				this._lastTypingAt = Date.now();
 				const isFree = this.isFreeTextFieldId(fid);
 				// Hard lock this field from server applies for a short window after local change
-				try { window.__fieldApplyLockUntil = window.__fieldApplyLockUntil || {}; window.__fieldApplyLockUntil[fid] = Date.now() + 15000; } catch(_e){}
+try { window.__fieldApplyLockUntil = window.__fieldApplyLockUntil || {}; window.__fieldApplyLockUntil[fid] = Date.now() + 300000; } catch(_e){}
 				this.debouncedFieldUpdate(fid, event.target.value, 150, { flushDelayMs: isFree ? this.TYPING_DEBOUNCE_MS : 150, source: 'change' });
 			},
 			`${containerType}_change`
@@ -1125,7 +1125,7 @@ try { if (!element.getAttribute('title')) element.setAttribute('title', 'Shift+C
 				this._lastTypingAt = Date.now();
 				const isFree = this.isFreeTextFieldId(fid);
 				// Hard lock this field from server applies for a short window after local change
-				try { window.__fieldApplyLockUntil = window.__fieldApplyLockUntil || {}; window.__fieldApplyLockUntil[fid] = Date.now() + 15000; } catch(_e){}
+try { window.__fieldApplyLockUntil = window.__fieldApplyLockUntil || {}; window.__fieldApplyLockUntil[fid] = Date.now() + 300000; } catch(_e){}
 				this.debouncedFieldUpdate(fid, event.target.value, 150, { flushDelayMs: isFree ? this.TYPING_DEBOUNCE_MS : 150, source: 'change' });
 			`${handlerPrefix}_change`
 		);

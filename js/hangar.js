@@ -1452,7 +1452,7 @@ window.moveTileContent = window.moveTileContent || async function(sourceId, dest
 
     // Apply locks and suppress per-field immediate sync while we perform an atomic move
     try {
-      const lockMs = 3000;
+      const lockMs = 8000;
       window.__fieldApplyLockUntil = window.__fieldApplyLockUntil || {};
       const fidsDest = [`aircraft-${d}`, `arrival-time-${d}`, `departure-time-${d}`, `position-${d}`, `notes-${d}`, `status-${d}`, `tow-status-${d}`];
       const fidsSrc  = [`aircraft-${s}`, `arrival-time-${s}`, `departure-time-${s}`, `position-${s}`, `notes-${s}`, `status-${s}`, `tow-status-${s}`];
@@ -1564,6 +1564,25 @@ window.moveTileContent = window.moveTileContent || async function(sourceId, dest
         updates[`tow-status-${s}`] = 'neutral';
 
         await window.serverSync.syncFieldUpdates(updates, { aggregated: true, source: 'move' });
+
+        // Optimistically update local baselines so periodic delta sync won't repost the move
+        try {
+          const ss = window.serverSync;
+          if (ss) {
+            Object.entries(updates).forEach(([fid, val]) => {
+              const m = String(fid).match(/^(aircraft|arrival-time|departure-time|hangar-position|position|status|tow-status|notes)-(\d+)$/);
+              if (!m) return;
+              const field = m[1];
+              const id = parseInt(m[2], 10);
+              const keyMap = { 'aircraft':'aircraftId','arrival-time':'arrivalTime','departure-time':'departureTime','hangar-position':'hangarPosition','position':'position','status':'status','tow-status':'towStatus','notes':'notes' };
+              const key = keyMap[field]; if (!key) return;
+              const tgt = (id>=100 ? ss._baselineSecondary : ss._baselinePrimary);
+              if (!tgt) return;
+              tgt[id] = tgt[id] || { tileId: id };
+              tgt[id][key] = val;
+            });
+          }
+        } catch(_e){}
 
         // Cancel any pending aggregated flush from the event manager to avoid duplicate posts
         try {

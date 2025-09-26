@@ -4,6 +4,22 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>Hangar Planner - Aircraft Management</title>
+		<script>
+		(function(){
+		  try {
+		    fetch('sync/auth.php?action=session', { headers: { 'Accept':'application/json' }, credentials: 'same-origin' })
+		      .then(r => r.ok ? r.json() : { success:false })
+		      .then(data => {
+		        if (!data || !data.success || !data.user) {
+		          if (!/login\.html$/i.test(location.pathname)) {
+		            window.location.replace('login.html');
+		          }
+		        }
+		      })
+		      .catch(() => { if (!/login\.html$/i.test(location.pathname)) window.location.replace('login.html'); });
+		  } catch(_) {}
+		})();
+		</script>
 		<script src="https://cdn.tailwindcss.com"></script>
 		<!-- Inter font -->
 		<link rel="preconnect" href="https://fonts.googleapis.com">

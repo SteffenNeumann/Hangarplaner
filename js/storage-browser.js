@@ -1874,11 +1874,7 @@ class ServerSync {
 				if (typeof this._isWriteFenceActive === 'function' && this._isWriteFenceActive(fid)) return false;
 				// Skip when the user very recently edited this specific field
 				if (recentlyEdited(fid)) return false;
-				// Skip when another Master has an active lock on this field (advisory lock)
-				try {
-					const info = (this._remoteLocks && fid) ? this._remoteLocks[fid] : null;
-					if (info && (info.until || 0) > Date.now()) return false;
-				} catch(_e){}
+				// Do not block read applies based on remote locks; local hard-locks and fences already protect user edits
 				return true;
 			} catch(_e){ return true; }
 		};

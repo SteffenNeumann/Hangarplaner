@@ -1348,8 +1348,6 @@ class ServerSync {
 			console.warn("⚠️ Keine Server-Daten zum Anwenden");
 			return false;
 		}
-		// Always refresh local baseline with incoming snapshot to keep preconditions correct
-		try { this._updateBaselineFromServerData(serverData); } catch(_e){}
 		// Skip echo of our own write in multi-master scenario
 		try { const sid = (typeof this.getSessionId==='function') ? this.getSessionId() : (this.sessionId || ''); const lastWriter = (serverData?.metadata?.lastWriterSession || '').trim(); if (sid && lastWriter && lastWriter === sid) { return false; } } catch(_e){}
 		// Reset detection log
@@ -1358,10 +1356,8 @@ class ServerSync {
 		try {
 			const incTs = parseInt(serverData?.metadata?.timestamp || 0, 10);
 			if (incTs && (this.lastServerTimestamp || 0) && incTs <= (this.lastServerTimestamp || 0)){
-				console.log('⏭️ Überspringe veralteten Server-Snapshot (baseline refreshed only)', { incTs, last: this.lastServerTimestamp });
-				// Treat as successful baseline refresh without DOM apply
-				try { this.lastLoadedAt = Date.now(); document.dispatchEvent(new CustomEvent('serverDataLoaded', { detail: { loadedAt: this.lastLoadedAt } })); } catch(_e){}
-				return true;
+				console.log('⏭️ Überspringe veralteten Server-Snapshot', { incTs, last: this.lastServerTimestamp });
+				return false;
 			}
 		} catch(_e){}
 		// Normalize legacy schemas to { primaryTiles, secondaryTiles } if needed

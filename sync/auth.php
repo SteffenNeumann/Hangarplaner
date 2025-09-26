@@ -1,6 +1,6 @@
 <?php
 // sync/auth.php - File-based authentication with admin approval and blocking
-// Actions: register, login, logout, session, approve (via email link), admin_login, admin_logout, admin_list, admin_block, admin_unblock, admin_unapprove
+// Actions: register, login, logout, session, approve (via email link), admin_login, admin_logout, admin_list, admin_block, admin_unblock, admin_unapprove, admin_approve, admin_resend_approval
 
 // CORS and JSON headers to mirror other endpoints
 header("Access-Control-Allow-Origin: *");
@@ -302,6 +302,68 @@ switch ($action) {
         }
         if (!$changed) respond(['success'=>false,'error'=>'User not found'],404);
         if (!write_users_atomic($USERS_FILE, $db)) respond(['success'=>false,'error'=>'Failed to update user'],500);
+        respond(['success'=>true]);
+    }
+    case 'admin_approve': {
+        if ($method !== 'POST') respond(['success'=>false,'error'=>'Method not allowed'],405);
+        if (empty($_SESSION['admin'])) respond(['success'=>false,'error'=>'Not authorized'],403);
+        $email = strtolower(trim($body['email'] ?? ''));
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) respond(['success'=>false,'error'=>'Invalid email'],400);
+        $db = read_users($USERS_FILE);
+        $changed = false;
+        $display = '';
+        foreach ($db['users'] as &$u) {
+            if (isset($u['email']) && strtolower($u['email']) === $email) {
+                $u['approved'] = true;
+                $u['approvedAt'] = date('c');
+                $u['approvalToken'] = null; // clear token when approved manually
+                $display = $u['displayName'] ?? strstr($u['email'], '@', true);
+                $changed = true;
+                break;
+            }
+        }
+        if (!$changed) respond(['success'=>false,'error'=>'User not found'],404);
+        if (!write_users_atomic($USERS_FILE, $db)) respond(['success'=>false,'error'=>'Failed to update user'],500);
+        // Notify user
+        try {
+            $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $base = $scheme . '://' . $host;
+            $loginUrl = $base . '/login.html';
+            $subjectUser = 'Your Hangar Planner account has been approved';
+            $bodyUser = "Hello " . ($display ?: 'there') . ",\n\n" .
+                        "Your account has been approved by the administrator. You can now log in here:\n" .
+                        $loginUrl . "\n\n" .
+                        "If you didn’t request this, please contact support.";
+            send_admin_approval_mail($email, $subjectUser, $bodyUser, $MAIL_OUTBOX, $config['mailFrom'] ?? 'no-reply@hangarplanner.local');
+        } catch (Throwable $t) { /* ignore */ }
+        respond(['success'=>true]);
+    }
+    case 'admin_resend_approval': {
+        if ($method !== 'POST') respond(['success'=>false,'error'=>'Method not allowed'],405);
+        if (empty($_SESSION['admin'])) respond(['success'=>false,'error'=>'Not authorized'],403);
+        $email = strtolower(trim($body['email'] ?? ''));
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) respond(['success'=>false,'error'=>'Invalid email'],400);
+        $db = read_users($USERS_FILE);
+        $token = null;
+        $displayName = '';
+        $changed = false;
+        foreach ($db['users'] as &$u) {
+            if (isset($u['email']) && strtolower($u['email']) === $email) {
+                if (!empty($u['approved'])) respond(['success'=>false,'error'=>'User already approved'],400);
+                $displayName = $u['displayName'] ?? strstr($u['email'],'@',true);
+                if (empty($u['approvalToken'])) { try { $u['approvalToken'] = bin2hex(random_bytes(16)); $changed=true; } catch (Throwable $t) { /* ignore */ } }
+                $token = $u['approvalToken'] ?? null;
+                break;
+            }
+        }
+        if ($changed && !write_users_atomic($USERS_FILE, $db)) respond(['success'=>false,'error'=>'Failed to update user'],500);
+        if (!$token) respond(['success'=>false,'error'=>'Approval token not available'],400);
+        // Send approval link email to configured admin
+        $approveUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . dirname($_SERVER['REQUEST_URI'] ?? '/sync/auth.php') . '/auth.php?action=approve&token=' . urlencode($token);
+        $subject = 'Hangar Planner: Approve user (resend)';
+        $bodyMail = "User pending approval (resend):\n\nEmail: $email\nName: $displayName\n\nApprove this user by opening:\n$approveUrl\n";
+        send_admin_approval_mail($config['adminEmail'], $subject, $bodyMail, $MAIL_OUTBOX, $config['mailFrom'] ?? 'no-reply@hangarplanner.local');
         respond(['success'=>true]);
     }
     default:

@@ -105,6 +105,30 @@ This document explains the login flow implemented in `login.html`.
 - Requires `admin_login` (secret in `sync/config.php`).
 - Sets `approved` to false, clears `approvedAt`, and regenerates a new `approvalToken` so the user can be approved again later.
 
+## Admin approve (manual)
+- Endpoint: `sync/auth.php`
+- Method: `POST`
+- Body:
+```json path=null start=null
+{
+  "action": "admin_approve",
+  "email": "user@example.com"
+}
+```
+- Immediately approves the user, clears their token, and emails the user a login link.
+
+## Admin resend approval (pending users)
+- Endpoint: `sync/auth.php`
+- Method: `POST`
+- Body:
+```json path=null start=null
+{
+  "action": "admin_resend_approval",
+  "email": "user@example.com"
+}
+```
+- Re-sends the admin approval link email (uses configured admin address). If no token exists yet, a new one is generated.
+
 ## File Snippet (handleLogin)
 ```html
 <script>

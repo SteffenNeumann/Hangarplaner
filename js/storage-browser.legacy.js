@@ -64,7 +64,37 @@
       try { console.log('legacy applyServerData', data && typeof data === 'object' ? '(ok)' : '(none)'); } catch(_e){}
       return false;
     },
-    syncWithServer: function(){ return Promise.resolve(false); },
+    manualSync: function(){ return this.syncWithServer(); },
+    syncWithServer: function(){
+      var self = this;
+      return new Promise(function(resolve){
+        try {
+          if (!self.isMaster) { resolve(true); return; }
+          var url = self.getServerUrl();
+          if (!url){ resolve(false); return; }
+          var sid = self.getSessionId();
+          var headers = { 'Content-Type':'application/json', 'X-Sync-Role':'master', 'X-Sync-Session': sid };
+          // settings-only payload (safe)
+          var settings = {};
+          try {
+            if (window.displayOptions && window.displayOptions.current){
+              var o = {};
+              try { for (var k in window.displayOptions.current){ if (Object.prototype.hasOwnProperty.call(window.displayOptions.current, k)) o[k] = window.displayOptions.current[k]; } } catch(_e){}
+              delete o.darkMode;
+              settings.displayOptions = o;
+            }
+          } catch(_e){}
+          var body = { metadata:{ timestamp: Date.now() }, settings: settings };
+          var x = new XMLHttpRequest();
+          x.open('POST', url, true);
+          x.setRequestHeader('Content-Type','application/json');
+          x.setRequestHeader('X-Sync-Role','master');
+          x.setRequestHeader('X-Sync-Session', sid);
+          x.onreadystatechange = function(){ if (x.readyState===4){ resolve(x.status>=200 && x.status<300); } };
+          x.send(JSON.stringify(body));
+        } catch(e){ resolve(false); }
+      });
+    },
     startSlaveMode: function(){ this.isSlaveActive = true; return Promise.resolve(); },
     startMasterMode: function(){ this.isMaster = true; this.isSlaveActive = true; return Promise.resolve(); },
     stopPeriodicSync: function(){}

@@ -74,3 +74,5 @@ Thumbs.db
 sync/presence.json
 # Server runtime state (do not commit)
 sync/data.json
+# Local deploy env (never commit credentials)
+.deploy.env

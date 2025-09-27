@@ -1,0 +1,16 @@
+# Files/paths not uploaded and protected on server
+# Excludes (never upload)
+.git/
+.github/
+node_modules/
+debug/
+docs/
+*.md
+.DS_Store
+# Don’t overwrite or delete server runtime data
+# (the P prefix protects these from deletion with --delete)
++P sync/data.json
++P sync/*.json
+# But still upload PHP endpoints
+- sync/*.php
+# Default: include everything else

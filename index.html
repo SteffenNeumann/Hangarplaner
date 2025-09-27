@@ -1094,6 +1094,39 @@ document.addEventListener('syncModeChanged', () => { refreshHeaderModeLabel(); u
 })();
 </script>
 
+<!-- Dynamic gitstamp: fetch gitinfo.json and update stamp -->
+<script>
+(function(){
+  function setGitstamp(iso, sha){
+    try {
+      const el = document.getElementById('gitstamp');
+      if (!el) return;
+      const shortSha = (sha||'').toString().slice(0,7);
+      if (iso && shortSha){
+        el.textContent = `Loaded ${iso} · SHA ${shortSha}`;
+      }
+    } catch(_){}
+  }
+  async function fetchGitinfo(){
+    try {
+      const ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+      if (ctl) setTimeout(()=>{ try { ctl.abort(); } catch(_e){} }, 3000);
+      const res = await fetch('gitinfo.json', { cache: 'no-cache', signal: ctl ? ctl.signal : undefined });
+      if (!res.ok) return;
+      const data = await res.json();
+      const sha = (data && data.commit && data.commit.sha) ? String(data.commit.sha) : '';
+      const iso = (data && data.commit && data.commit.isoDate) ? String(data.commit.isoDate) : '';
+      if (iso && sha){ setGitstamp(iso, sha); }
+    } catch(_){}
+  }
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', fetchGitinfo, { once: true });
+  } else {
+    fetchGitinfo();
+  }
+})();
+</script>
+
 <!-- Presence Client (frontend-only) -->
 <script>
 (function(){

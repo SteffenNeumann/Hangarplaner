@@ -262,7 +262,8 @@ class ServerSync {
 		} catch(_e){}
 	}
 	_stopPresenceHeartbeat(){ try { if (this._presenceHeartbeatTimer) { clearInterval(this._presenceHeartbeatTimer); this._presenceHeartbeatTimer = null; } } catch(_e){}
-	async _refreshRemoteLocksFromPresence(force=false){
+	async _refreshRemoteLocksFromPresence(force){
+		try { force = !!force; } catch(_e){}
 		try {
 			const now = Date.now();
 			if (!force && (now - (this._lastPresenceRefreshAt||0)) < 15000) return; // 15s throttle
@@ -575,10 +576,10 @@ class ServerSync {
 		this._startPresenceHeartbeat();
 
 		// Zusätzlich Updates empfangen (15 Sekunden Intervall)
-		this.slaveCheckInterval = setInterval(async () => {
-			await this.slaveCheckForUpdates();
-		}, 15000); // 15 Sekunden für Master-Update-Check
-		console.log("👑 Master-Modus: Empfange zusätzlich Updates (15s, Read forced ON)");
+			this.slaveCheckInterval = setInterval(async () => {
+				await this.slaveCheckForUpdates();
+			}, 3000); // 3 Sekunden für Master-Update-Check
+			console.log("👑 Master-Modus: Empfange zusätzlich Updates (3s, Read forced ON)");
 
 		// Sofort einen ersten Update-Check und Schreibversuch starten
 		try {

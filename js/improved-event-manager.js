@@ -219,7 +219,7 @@ class HangarEventManager {
 					if (this._flushInFlight) { this._pendingFlushTimer = null; this._pendingFlushDueAt = 0; return; }
 					this._flushInFlight = true;
 					try {
-					const updates = { ...(this._pendingFieldUpdates||{}) };
+						const updates = { ...(this._pendingFieldUpdates||{}) };
 						this._pendingFieldUpdates = {};
 						this._pendingFlushTimer = null;
 						this._pendingFlushDueAt = 0;
@@ -251,7 +251,13 @@ class HangarEventManager {
 			} catch(_e){}
 			// Stop here; legacy immediate single-field path not needed when aggregation is enabled
 			return;
+		} catch (err) {
+			try { console.warn('syncFieldToServer error', err); } catch(_e){}
+			return;
+		} finally {
+			// no-op
 		}
+	}
 
 	/**
 	 * Sammelt Felder aus einem bestimmten Container
@@ -651,6 +657,8 @@ const setBoardAircraftTooltips = () => {
 				const fid = event.target.id || '';
 				// Mark field as locally edited and mark a write fence immediately to avoid server echo overriding while typing
 				try { if (window.serverSync && typeof window.serverSync._markPendingWrite === 'function') { window.serverSync._markPendingWrite(fid); } } catch(_e){}
+				// Extend a 5-minute local lock for this field to advertise active editing via presence
+				try { window.__fieldApplyLockUntil = window.__fieldApplyLockUntil || {}; window.__fieldApplyLockUntil[fid] = Date.now() + 300000; } catch(_e){}
 				// Treat any relevant input as recent typing to gate read-backs
 				this._lastTypingAt = Date.now();
 				if (this.isFreeTextFieldId(fid)) {
@@ -891,6 +899,8 @@ try { window.__fieldApplyLockUntil = window.__fieldApplyLockUntil || {}; window.
 				const fid = event.target.id || '';
 				// Mark fence early on input to prevent echo overwrite
 				try { if (window.serverSync && typeof window.serverSync._markPendingWrite === 'function') { window.serverSync._markPendingWrite(fid); } } catch(_e){}
+				// Extend a 5-minute local lock for this field to advertise active editing via presence
+				try { window.__fieldApplyLockUntil = window.__fieldApplyLockUntil || {}; window.__fieldApplyLockUntil[fid] = Date.now() + 300000; } catch(_e){}
 				// Treat any relevant input as recent typing
 				this._lastTypingAt = Date.now();
 				if (this.isFreeTextFieldId(fid)) {

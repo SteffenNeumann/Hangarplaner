@@ -378,6 +378,12 @@ window.sharingManager &&
 					return;
 				}
 
+				// If Sharing Manager is active, let it handle initial loads to avoid duplicate fetches
+				if (window.sharingManager) {
+					console.log("🔁 SharingManager aktiv – überspringe globale automatische Datenladung");
+					return;
+				}
+
 				// Prüfe ob ServerSync/StorageBrowser verfügbar ist
 				if (!window.serverSync || !window.serverSync.loadFromServer) {
 					console.log(

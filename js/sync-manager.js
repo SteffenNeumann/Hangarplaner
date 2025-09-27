@@ -153,15 +153,8 @@ class SharingManager {
     this.showNotification('Offline-Modus aktiviert - Nur lokale Speicherung','info');
     this._emitModeChanged();
 
-    // Perform a single best-effort initial load from server, then stay offline
-    try {
-      const loaded = await this.loadServerDataImmediately();
-      if (loaded) {
-        console.log('📥 Offline: Einmalige Server-Datenladung abgeschlossen');
-      } else {
-        console.log('ℹ️ Offline: Keine Server-Daten für Initial-Ladung verfügbar');
-      }
-    } catch(_e){ console.warn('⚠️ Offline: Initial-Ladung fehlgeschlagen', _e); }
+    // Skip any server load in Offline mode (per requirements)
+    try { console.log('⏭️ Offline: Initial server load skipped'); } catch(_e){}
 
     console.log('✅ Offline-Modus aktiviert');
   } catch(e){ console.error('❌ Fehler beim Aktivieren des Standalone-Modus:', e); this.showNotification('Fehler beim Wechsel zu Standalone-Modus','error'); } }

@@ -439,7 +439,6 @@ function applyFlightDataToUI(flightData) {
 			// Aircraft ID - MIT KONFLIKTPRÜFUNG
 			const aircraftInput = document.getElementById(`aircraft-${cellId}`);
 			if (aircraftInput && flight.aircraftId) {
-				const currentValue = aircraftInput.value.trim();
 
 				// Warnung bei Überschreibung bestehender Daten
 				// Only override user-entered Aircraft ID if API provides a non-empty value

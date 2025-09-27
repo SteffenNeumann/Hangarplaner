@@ -251,9 +251,7 @@ class HangarEventManager {
 			} catch(_e){}
 			// Stop here; legacy immediate single-field path not needed when aggregation is enabled
 			return;
-
-		} // end aggregated path
-
+		
 		// Legacy single-field fallback path (kept for clarity; normally not executed when aggregation path returns)
 
 		// IMPORTANT: For field-level updates, always send fieldUpdates directly to avoid overwriting unrelated fields in multi-master

@@ -322,21 +322,22 @@ class ServerSync {
 			pill.textContent = `${label} editing • ${mins}m`;
 		} catch(_e){}
 	}
-		try {
-			const id = parseInt(tileId||0,10); if (!id) return null;
-			switch(key){
-				case 'aircraftId': return `aircraft-${id}`;
-				case 'arrivalTime': return `arrival-time-${id}`;
-				case 'departureTime': return `departure-time-${id}`;
-				case 'hangarPosition': return `hangar-position-${id}`;
-				case 'position': return `position-${id}`;
-				case 'status': return `status-${id}`;
-				case 'towStatus': return `tow-status-${id}`;
-				case 'notes': return `notes-${id}`;
-				default: return null;
-			}
-		} catch(_e){ return null; }
-	}
+		_fieldIdFor(tileId, key){
+			try {
+				const id = parseInt(tileId||0,10); if (!id) return null;
+				switch(key){
+					case 'aircraftId': return `aircraft-${id}`;
+					case 'arrivalTime': return `arrival-time-${id}`;
+					case 'departureTime': return `departure-time-${id}`;
+					case 'hangarPosition': return `hangar-position-${id}`;
+					case 'position': return `position-${id}`;
+					case 'status': return `status-${id}`;
+					case 'towStatus': return `tow-status-${id}`;
+					case 'notes': return `notes-${id}`;
+					default: return null;
+				}
+			} catch(_e){ return null; }
+		}
 	_isRelevantFieldId(fid){
 		try {
 			return (typeof fid === 'string') && /^(aircraft|arrival-time|departure-time|hangar-position|position|status|tow-status|notes)-(\d+)$/.test(fid);

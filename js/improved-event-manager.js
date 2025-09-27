@@ -251,118 +251,7 @@ class HangarEventManager {
 			} catch(_e){}
 			// Stop here; legacy immediate single-field path not needed when aggregation is enabled
 			return;
-		
-		// Legacy single-field fallback path (kept for clarity; normally not executed when aggregation path returns)
-
-		// IMPORTANT: For field-level updates, always send fieldUpdates directly to avoid overwriting unrelated fields in multi-master
-
-		// Sammle alle aktuellen Daten für vollständige Server-Synchronisation (Fallback)
-		let allData = null;
-			if (
-				window.hangarData &&
-				typeof window.hangarData.collectAllHangarData === "function"
-			) {
-				allData = window.hangarData.collectAllHangarData();
-			} else {
-				// Fallback: Erweiterte Datensammlung für sekundäre Tiles
-				const primaryFields = this.collectFieldsFromContainer(
-					"hangarGrid",
-					false
-				);
-				const secondaryFields = this.collectFieldsFromContainer(
-					"secondaryHangarGrid",
-					true
-				);
-
-				allData = {
-					metadata: {
-						lastModified: new Date().toISOString(),
-						projectName:
-							document.getElementById("projectName")?.value || "HangarPlan",
-						syncTriggeredBy: fieldId,
-						version: "2.0-enhanced",
-					},
-					settings: {
-						tilesCount:
-							parseInt(document.getElementById("tilesCount")?.value) || 8,
-						secondaryTilesCount:
-							parseInt(document.getElementById("secondaryTilesCount")?.value) ||
-							0,
-						layout: parseInt(document.getElementById("layoutType")?.value) || 4,
-					},
-					primaryTiles: primaryFields,
-					secondaryTiles: secondaryFields,
-					fieldUpdates: {
-						[fieldId]: value,
-					},
-					// Sammle alle aktuell sichtbaren Felder
-					currentFields: this.collectAllVisibleFields(),
-				};
-			}
-
-			// Normalize to server schema if needed
-			try {
-				if (allData && !allData.primaryTiles && (Array.isArray(allData.primary) || Array.isArray(allData.secondary))) {
-					const mapTile = (row) => ({
-						tileId: row.id,
-						aircraftId: row.aircraft || '',
-						arrivalTime: row.arrival || '',
-						departureTime: row.departure || '',
-						position: row.position || '',
-						hangarPosition: row.hangarPosition || '',
-						status: row.status || 'neutral',
-						towStatus: row.tow || 'neutral',
-						notes: row.notes || '',
-					});
-					allData = {
-						metadata: allData.metadata || {},
-						settings: allData.settings || {},
-						primaryTiles: (allData.primary || []).map(mapTile),
-						secondaryTiles: (allData.secondary || []).map(mapTile),
-						fieldUpdates: allData.fieldUpdates || {},
-						currentFields: allData.currentFields || {},
-					};
-				}
-			} catch(e) { /* noop */ }
-
-			// Server-Request with fieldUpdates payload only
-			const postUrl = (window.serverSync?.getServerUrl?.()) || (window.storageBrowser?.serverSyncUrl) || '';
-			console.log('📮 field-update POST', { url: postUrl, fieldId });
-			const response = await fetch(postUrl, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					"X-Sync-Role": "master",
-					"X-Sync-Session": (window.serverSync && typeof window.serverSync.getSessionId === 'function') ? window.serverSync.getSessionId() : (localStorage.getItem('serverSync.sessionId') || ''),
-					"X-Display-Name": (localStorage.getItem('presence.displayName') || ''),
-				},
-				body: JSON.stringify({
-					metadata: { timestamp: Date.now(), lastWriter: (localStorage.getItem('presence.displayName') || '') },
-					settings: {},
-					fieldUpdates: { [fieldId]: value }
-				}),
-			});
-
-			if (response.ok) {
-				try {
-					// Optional read-back to converge if Read is ON
-					const canRead = !!(window.serverSync && typeof window.serverSync.canReadFromServer === 'function' && window.serverSync.canReadFromServer());
-					if (canRead && typeof window.serverSync.loadFromServer === 'function' && typeof window.serverSync.applyServerData === 'function') {
-						const data = await window.serverSync.loadFromServer();
-						if (data && !data.error) await window.serverSync.applyServerData(data);
-					}
-				} catch(_e){}
-			} else {
-				console.warn(
-					`⚠️ Server-Sync fehlgeschlagen für ${fieldId}:`,
-					response.status,
-					await response.text()
-				);
-			}
-		} catch (error) {
-			console.error(`❌ Server-Sync Fehler für ${fieldId}:`, error);
 		}
-	}
 
 	/**
 	 * Sammelt Felder aus einem bestimmten Container
@@ -1125,6 +1014,7 @@ try { if (!element.getAttribute('title')) element.setAttribute('title', 'Shift+C
 				// Hard lock this field from server applies for a short window after local change
 try { window.__fieldApplyLockUntil = window.__fieldApplyLockUntil || {}; window.__fieldApplyLockUntil[fid] = Date.now() + 300000; } catch(_e){}
 				this.debouncedFieldUpdate(fid, event.target.value, 150, { flushDelayMs: isFree ? this.TYPING_DEBOUNCE_MS : 150, source: 'change' });
+			},
 			`${handlerPrefix}_change`
 		);
 	}

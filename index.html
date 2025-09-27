@@ -3596,8 +3596,25 @@ You’ll see the result in the browser console.
 			<script>(function(){ try { if (!('clearedFieldIds' in window)) { window.clearedFieldIds = []; } } catch(_){} })();</script>
 			<script src="js/hangar-pdf.js"></script>
 			<script src="js/hangar.js"></script>
-			<script type="module" src="js/storage-browser.js?v=f3b16ae"></script>
-			<script nomodule src="js/storage-browser.legacy.js?v=1"></script>
+			<script type="module">
+			(function(){
+			  try {
+			    // Feature-detect optional chaining support at runtime
+			    new Function('return ({}?.a), true;')();
+			  } catch(e){
+			    var s = document.createElement('script');
+			    s.src = 'js/storage-browser.legacy.js?v=2';
+			    document.head.appendChild(s);
+			    return;
+			  }
+			  import('./js/storage-browser.js?v=f3b16ae').catch(function(){
+			    var s = document.createElement('script');
+			    s.src = 'js/storage-browser.legacy.js?v=2';
+			    document.head.appendChild(s);
+			  });
+			})();
+			</script>
+			<script nomodule src="js/storage-browser.legacy.js?v=2"></script>
 			<script src="js/sync-manager.js"></script>
 			<script src="js/fleet-database.js"></script>
 						<script>

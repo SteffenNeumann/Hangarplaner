@@ -72,3 +72,5 @@ Thumbs.db
 
 # Presence runtime data
 sync/presence.json
+# Server runtime state (do not commit)
+sync/data.json

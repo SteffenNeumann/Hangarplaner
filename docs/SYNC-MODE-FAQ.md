@@ -195,6 +195,27 @@ curl "http://localhost:8000/sync/presence.php?action=list"
 
 ---
 
+## File roles and Git
+
+- settings.seed.json (repo)
+  - Purpose: seed/default project data checked into the repository.
+  - Safe to commit.
+
+- sync/data.json (server runtime)
+  - Purpose: live, merged multi-user state that sync/data.php reads/writes at runtime.
+  - Creation: file is created on the first successful Master-mode POST (with headers X-Sync-Role: master and X-Sync-Session). Before that, GET may return 404 and timestamp=0, which is expected.
+  - Git: do not commit. It changes frequently, may contain session/user metadata, and will cause noisy diffs and conflicts.
+  - Ignore: add sync/data.json to .gitignore. If already tracked, untrack with:
+    - git rm --cached sync/data.json
+    - git commit -m "chore: stop tracking runtime sync/data.json"
+
+Why ignore sync/data.json?
+- It’s runtime data, not source.
+- Avoids merge conflicts and accidental overwrites of real server state.
+- Keeps the repository clean and reproducible across environments.
+
+---
+
 ## Console Helpers
 
 - window.debugSync() — prints current sync URLs, flags, modes, and last server timestamp.

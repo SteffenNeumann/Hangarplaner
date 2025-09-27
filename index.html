@@ -1061,7 +1061,7 @@ document.addEventListener('syncModeChanged', () => { refreshHeaderModeLabel(); u
   function pad2(n){ return String(n).padStart(2,'0'); }
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   function formatGitstampDate(d){
-    try { return pad2(d.getDate()) + '.' + MONTHS[d.getMonth()] + ' /' + pad2(d.getHours()) + '.' + pad2(d.getMinutes()); } catch(_) { return ''; }
+    try { return pad2(d.getDate()) + '.' + MONTHS[d.getMonth()] + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()); } catch(_) { return ''; }
   }
   function applyGitstampFormat(){
     try {

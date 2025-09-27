@@ -445,6 +445,10 @@ else if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $merged['metadata']['lastWriterSession'] = $sessionId;
 
                 // 5) Write back under the same lock
+                // Ensure empty settings encodes as object {}
+                if (isset($merged['settings']) && (is_array($merged['settings']) && count($merged['settings']) === 0)) {
+                    $merged['settings'] = (object)[];
+                }
                 $payload = json_encode($merged, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
                 if ($payload === false) { throw new Exception('JSON encoding failed'); }
                 @ftruncate($fp, 0);

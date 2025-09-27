@@ -857,11 +857,11 @@ class ServerSync {
 					});
 				} catch(_e){}
 				requestBody = { metadata: { timestamp: Date.now() }, fieldUpdates: delta, preconditions: pre, settings: currentData.settings || {} };
-			} else {
-				// Do not post a full payload in multi-master; skip to avoid overwriting unrelated fields
-				console.log('⏭️ No field delta; skip POST to avoid overwriting unrelated fields (multi-master safe)');
-				return true;
-			}
+            } else {
+                // No field delta: post metadata + settings only (safe; no tiles)
+                requestBody = { metadata: { timestamp: Date.now() }, settings: currentData.settings || {} };
+                console.log('✉️ No field delta; posting settings-only payload (multi-master safe)');
+            }
 
 			// Optimierung: Verwende AbortController für Timeout
 			const { signal, cancel } = this._createTimeoutSignal(10000); // 10s Timeout

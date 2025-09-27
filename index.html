@@ -3607,13 +3607,18 @@ You’ll see the result in the browser console.
 			    document.head.appendChild(s);
 			    return;
 			  }
-			  import('./js/storage-browser.js?v=f3b16ae').catch(function(){
-			    var s = document.createElement('script');
-			    s.src = 'js/storage-browser.legacy.js?v=2';
-			    document.head.appendChild(s);
-			  });
-			})();
-			</script>
+  import('./js/storage-browser.js?v=f3b16ae').catch(function(){
+    var s = document.createElement('script');
+    s.src = 'js/storage-browser.legacy.js?v=2';
+    document.head.appendChild(s);
+  });
+  // Watchdog: if serverSync didn't initialize, load legacy after a short delay
+  setTimeout(function(){ try {
+    var ok = !!(window.serverSync && typeof window.serverSync.syncWithServer==='function' && (typeof window.serverSync.getServerUrl==='function' || window.serverSync.serverSyncUrl));
+    if (!ok){ var s2 = document.createElement('script'); s2.src='js/storage-browser.legacy.js?v=3'; document.head.appendChild(s2); }
+  } catch(_e){} }, 800);
+})();
+</script>
 			<script nomodule src="js/storage-browser.legacy.js?v=2"></script>
 			<script src="js/sync-manager.js"></script>
 			<script src="js/fleet-database.js"></script>
@@ -3634,25 +3639,34 @@ You’ll see the result in the browser console.
 					function ensureSyncGlobals(){
 						try {
 							// Ensure serverSyncUrl and storageBrowser alias exist
-							if (window.serverSync) {
-								if (!window.serverSync.serverSyncUrl) {
-									window.serverSync.serverSyncUrl = (function(){ try { return window.location.origin + '/sync/data.php'; } catch(_e){ return '/sync/data.php'; } })();
+if (window.serverSync) {
+									if (!window.serverSync.serverSyncUrl) {
+										window.serverSync.serverSyncUrl = (function(){ try { return window.location.origin + '/sync/data.php'; } catch(_e){ return '/sync/data.php'; } })();
+									}
+									if (typeof window.serverSync.getServerUrl !== 'function'){
+										window.serverSync.getServerUrl = function(){ try { return this.serverSyncUrl || (window.location.origin + '/sync/data.php'); } catch(_e){ return this.serverSyncUrl || '/sync/data.php'; } };
+									}
+									if (typeof window.serverSync.getSessionId !== 'function'){
+										window.serverSync.getSessionId = function(){ try { var sid = localStorage.getItem('serverSync.sessionId') || ''; if (!sid){ sid = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('serverSync.sessionId', sid); } return sid; } catch(_e){ return Math.random().toString(36).slice(2) + Date.now().toString(36); } };
+									}
+									if (!window.storageBrowser) {
+										window.storageBrowser = window.serverSync;
+									}
+								} else if (!window.storageBrowser) {
+									// Install a minimal alias so improved-event-manager can proceed
+									var _url = (function(){ try { return window.location.origin + '/sync/data.php'; } catch(_e){ return '/sync/data.php'; } })();
+									window.storageBrowser = {
+										serverSyncUrl: _url,
+										getServerUrl: function(){ return this.serverSyncUrl || _url; },
+										getSessionId: function(){ try { var sid = localStorage.getItem('serverSync.sessionId') || ''; if (!sid){ sid = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('serverSync.sessionId', sid); } return sid; } catch(_e){ return Math.random().toString(36).slice(2) + Date.now().toString(36); } },
+										syncWithServer: ()=> Promise.resolve(false)
+									};
 								}
-								if (!window.storageBrowser) {
-									window.storageBrowser = window.serverSync;
+								// Ensure window.serverSync points to the active sync object
+								if (!window.serverSync && window.storageBrowser) {
+									window.serverSync = window.storageBrowser;
 								}
-							} else if (!window.storageBrowser) {
-								// Install a minimal alias so improved-event-manager can proceed
-								window.storageBrowser = {
-									serverSyncUrl: (function(){ try { return window.location.origin + '/sync/data.php'; } catch(_e){ return '/sync/data.php'; } })(),
-									syncWithServer: ()=> Promise.resolve(false)
-								};
 							}
-							// Ensure window.serverSync points to the active sync object
-							if (!window.serverSync && window.storageBrowser) {
-								window.serverSync = window.storageBrowser;
-							}
-						} catch(_e){}
 					}
 					function installFallbackManager(){
 						if (window.sharingManager) return;
@@ -3776,7 +3790,7 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
 								all.forEach(function(id){ var t = toTile(id); if (!t) return; if (id>=100) secondary.push(t); else primary.push(t); });
 								return { primary: primary, secondary: secondary };
 							}
-async function fallbackSyncWrite(){ try { console.warn('fallbackSyncWrite disabled to prevent full-payload overwrites in multi-master'); } catch(_e){} return false; }
+async function fallbackSyncWrite(){ try { var url = getServerUrl(); var sid = ensureSession(); var headers = { 'Content-Type':'application/json', 'X-Sync-Role':'master', 'X-Sync-Session': sid }; var settings = (window.displayOptions && window.displayOptions.current) ? (function(){ var o = Object.assign({}, window.displayOptions.current); delete o.darkMode; return { displayOptions: o }; })() : {}; var body = { metadata:{ timestamp: Date.now() }, settings: settings }; var res = await fetch(url, { method:'POST', headers: headers, body: JSON.stringify(body) }); return res.ok; } catch(_e){ return false; } }
 							// Polyfill: applyTileData for older clients
 							function polyfillApplyTileData(){ try {
 								if (!window.serverSync || typeof window.serverSync.applyTileData==='function') return;

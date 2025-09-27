@@ -795,11 +795,9 @@ class ServerSync {
 			return false;
 		}
 
-		// Performance: Prüfe erst ob sich Daten geändert haben
-		if (!this.hasDataChanged()) {
-			// console.log("⏸️ Server-Sync übersprungen (keine Änderungen)");
-			return true; // Kein Fehler, nur keine Änderungen
-		}
+			// Performance: prüfe erst, ob sich Daten geändert haben.
+			// Wenn keine Änderungen vorliegen, posten wir trotzdem Einstellungen weiter unten (settings-only), um UI-Änderungen zu persistieren.
+			const noChanges = !this.hasDataChanged();
 
 		window.isSavingToServer = true;
 

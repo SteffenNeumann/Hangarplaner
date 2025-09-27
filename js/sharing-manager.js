@@ -7,7 +7,7 @@
 class SharingManager {
 	constructor() {
 		// NEUE MODI-DEFINITIONEN
-		this.syncMode = "standalone"; // "standalone", "sync", "master"
+		this.syncMode = "offline"; // "offline" (aka standalone), "sync", "master"
 		this.isLiveSyncEnabled = false;
 		this.isMasterMode = false;
 		this.initialized = false;
@@ -91,12 +91,14 @@ class SharingManager {
 	// New: centralized mode selection by string
 	async updateSyncModeByString(mode) {
 		try {
-			if (mode === 'standalone') {
+			// Normalize legacy naming
+			const m = (mode === 'standalone') ? 'offline' : mode;
+			if (m === 'offline') {
 				await this.enableStandaloneMode();
-			} else if (mode === 'sync') {
+			} else if (m === 'sync') {
 				await this.enableSyncMode();
 				await this.loadServerDataImmediately();
-			} else if (mode === 'master') {
+			} else if (m === 'master') {
 				const ok = await this.ensureNoActiveMaster();
 				if (!ok) {
 					this.showNotification('Another user is Master. Taking over is disabled.', 'warning');
@@ -214,7 +216,7 @@ class SharingManager {
 			}
 
 			// Lokale Flags setzen
-			this.syncMode = "standalone";
+			this.syncMode = "offline";
 			this.isLiveSyncEnabled = false;
 			this.isMasterMode = false;
 
@@ -1098,15 +1100,16 @@ syncModeElement.classList.remove("master", "slave", "standalone");
 			);
 
 			// Lade gespeicherten Modus
-			this.syncMode = settings.syncMode || "standalone";
+			this.syncMode = settings.syncMode || "offline";
 			this.isLiveSyncEnabled = settings.isLiveSyncEnabled || false;
 			this.isMasterMode = settings.isMasterMode || false;
 
 			// Single control preferred
 			const modeCtl = document.getElementById('syncModeControl');
 			if (modeCtl) {
-				modeCtl.value = this.syncMode;
-				setTimeout(() => this.updateSyncModeByString(this.syncMode), 100);
+				const val = (this.syncMode === 'standalone') ? 'offline' : this.syncMode;
+				modeCtl.value = val;
+				setTimeout(() => this.updateSyncModeByString(val), 100);
 			} else {
 				// Fallback without legacy toggles: just apply mode
 				setTimeout(() => this.updateSyncModeByString(this.syncMode), 100);

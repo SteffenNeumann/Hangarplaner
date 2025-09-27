@@ -797,7 +797,7 @@ const setBoardAircraftTooltips = () => {
 							);
 						} catch (e) { /* noop */ }
 					}
-				}
+				} else if (
 					(event.target.id.startsWith('arrival-time-') || event.target.id.startsWith('departure-time-')) &&
 					typeof window.helpers !== 'undefined'
 				) {

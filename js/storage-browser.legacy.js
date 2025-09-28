@@ -311,14 +311,18 @@
           var id='editing-pill-'+fid; var pill=document.getElementById(id);
           if (!pill){
             pill=document.createElement('span'); pill.id=id; pill.className='editing-pill';
-            pill.style.cssText='position:absolute; right:8px; top:-8px; display:inline-block; padding:2px 6px; border-radius:10px; font-size:11px; line-height:14px; background:#fde68a; color:#92400e; border:1px solid #f59e0b; white-space:nowrap; pointer-events:none; z-index:2;';
+            pill.style.cssText='position:absolute; right:6px; top:-12px; display:inline-block; padding:2px 6px; border-radius:10px; font-size:11px; line-height:14px; background:#fde68a; color:#92400e; border:1px solid #f59e0b; white-space:nowrap; pointer-events:none; z-index:2;';
+            // Inner text container
+            var txt=document.createElement('span'); txt.className='pill-txt'; pill.appendChild(txt);
             // Add a small angled tail (speech bubble)
             var tail=document.createElement('i');
-            tail.style.cssText='position:absolute; left:6px; bottom:-5px; width:0; height:0; border-left:6px solid #f59e0b; border-top:6px solid transparent; border-bottom:0 solid transparent;';
+            tail.style.cssText='position:absolute; left:8px; bottom:-6px; width:0; height:0; border-left:6px solid #f59e0b; border-top:6px solid transparent; border-bottom:0 solid transparent;';
             pill.appendChild(tail);
             try { (container||el.parentNode).appendChild(pill); } catch(_e){ try { el.insertAdjacentElement('afterend', pill);}catch(__){} }
           }
-          var mins=Math.max(0, Math.ceil(((info.until||0)-now)/60000)); pill.textContent=(info.displayName||'User')+' editing • '+mins+'m';
+          var mins=Math.max(0, Math.ceil(((info.until||0)-now)/60000));
+          var tspan = pill.querySelector('.pill-txt');
+          if (tspan) { tspan.textContent=(info.displayName||'User')+' editing • '+mins+'m'; } else { pill.textContent=(info.displayName||'User')+' editing • '+mins+'m'; }
         } catch(_e){}
       });
     } catch(_e){}
@@ -328,6 +332,8 @@
   try {
     document.addEventListener('keydown', function(ev){ try { legacy._lastKeyAt = Date.now(); var t = ev && ev.target; if (!t || !t.id) return; var m = t.id.match(/^(aircraft|hangar-position|position|arrival-time|departure-time|status|tow-status|notes)-(\d+)$/); if (!m) return; window.__lastActiveFieldId = t.id; window.__fieldApplyLockUntil = {}; window.__fieldApplyLockUntil[t.id] = Date.now() + legacy._lockMs; setTimeout(function(){ try { legacy._sendPresenceHeartbeat(); } catch(_e){} }, 0); } catch(_e){} }, true);
     document.addEventListener('input', function(ev){ try { legacy._lastKeyAt = Date.now(); var t = ev && ev.target; if (!t || !t.id) return; var m = t.id.match(/^(aircraft|hangar-position|position|arrival-time|departure-time|status|tow-status|notes)-(\d+)$/); if (!m) return; window.__lastActiveFieldId = t.id; window.__fieldApplyLockUntil = {}; window.__fieldApplyLockUntil[t.id] = Date.now() + legacy._lockMs; setTimeout(function(){ try { legacy._sendPresenceHeartbeat(); } catch(_e){} }, 0); } catch(_e){} }, true);
+    // Immediate write on blur for notes and selects in Master mode
+    document.addEventListener('blur', function(ev){ try { if (!legacy.isMaster) return; var t=ev && ev.target; if (!t || !t.id) return; if (!/^(notes|status|tow-status)-(\d+)$/.test(t.id)) return; var url=legacy.getServerUrl(); var sid=legacy.getSessionId(); legacy._postDomDelta(url, sid, {}); } catch(_e){} }, true);
     // Periodically refresh remote locks
     setInterval(function(){ try { legacy._refreshRemoteLocks(); } catch(_e){} }, 15000);
   } catch(_e){}

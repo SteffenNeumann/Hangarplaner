@@ -1225,7 +1225,10 @@ document.addEventListener('syncModeChanged', () => { refreshHeaderModeLabel(); u
             } catch(_) { return ''; }
           };
           const parts = [];
-          const others = (users || []).filter(u => u && u.sessionId !== me);
+          // Deduplicate by sessionId (choose first seen)
+          const seen = new Set();
+          const others = [];
+          (users || []).forEach(u => { const sid = (u && u.sessionId || '').toString(); if (!sid || sid===me || seen.has(sid)) return; seen.add(sid); others.push(u); });
           others.forEach(u => {
             const name = (u.displayName || '').replace(/[<>]/g, '');
             const r = (u.role || 'standalone').toLowerCase();

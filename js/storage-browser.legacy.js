@@ -207,6 +207,17 @@
                   if (typeof window.updateTowStatusStyles==='function') window.updateTowStatusStyles(el);
                 } catch(_s){}
               }
+              if (/^status-\d+$/.test(id)){
+                try {
+                  // Update status light for this tile if helper exists
+                  if (typeof window.updateStatusLightByCellId==='function'){
+                    var cid = parseInt(id.replace('status-',''),10);
+                    if (isFinite(cid)) window.updateStatusLightByCellId(cid);
+                  } else if (typeof window.updateStatusLight==='function'){
+                    window.updateStatusLight(el);
+                  }
+                } catch(_sx){}
+              }
             } else {
               el.textContent = String(val||'');
             }
@@ -227,6 +238,11 @@
         };
         var a = Array.isArray(data.primaryTiles)?data.primaryTiles:[]; for (var i=0;i<a.length;i++) applyTile(a[i]);
         var b = Array.isArray(data.secondaryTiles)?data.secondaryTiles:[]; for (var j=0;j<b.length;j++) applyTile(b[j]);
+        // After applying, refresh status lights globally if available
+        try {
+          if (typeof window.updateAllStatusLightsForced==='function') setTimeout(function(){ window.updateAllStatusLightsForced(); }, 50);
+          else if (typeof window.updateAllStatusLights==='function') setTimeout(function(){ window.updateAllStatusLights(); }, 50);
+        } catch(_r){}
         return applied>0;
       } catch(_e){ return false; }
     },
@@ -295,7 +311,11 @@
           var id='editing-pill-'+fid; var pill=document.getElementById(id);
           if (!pill){
             pill=document.createElement('span'); pill.id=id; pill.className='editing-pill';
-            pill.style.cssText='position:absolute; right:8px; top:-8px; display:inline-block; padding:2px 6px; border-radius:10px; font-size:11px; line-height:14px; background:#fde68a; color:#92400e; border:1px solid #f59e0b; white-space:nowrap; pointer-events:none;';
+            pill.style.cssText='position:absolute; right:8px; top:-8px; display:inline-block; padding:2px 6px; border-radius:10px; font-size:11px; line-height:14px; background:#fde68a; color:#92400e; border:1px solid #f59e0b; white-space:nowrap; pointer-events:none; z-index:2;';
+            // Add a small angled tail (speech bubble)
+            var tail=document.createElement('i');
+            tail.style.cssText='position:absolute; left:6px; bottom:-5px; width:0; height:0; border-left:6px solid #f59e0b; border-top:6px solid transparent; border-bottom:0 solid transparent;';
+            pill.appendChild(tail);
             try { (container||el.parentNode).appendChild(pill); } catch(_e){ try { el.insertAdjacentElement('afterend', pill);}catch(__){} }
           }
           var mins=Math.max(0, Math.ceil(((info.until||0)-now)/60000)); pill.textContent=(info.displayName||'User')+' editing • '+mins+'m';
@@ -306,8 +326,8 @@
 
   // Typing detection + local lock management (5 min window)
   try {
-    document.addEventListener('keydown', function(ev){ try { legacy._lastKeyAt = Date.now(); var t = ev && ev.target; if (!t || !t.id) return; var m = t.id.match(/^(aircraft|hangar-position|position|arrival-time|departure-time|status|tow-status|notes)-(\d+)$/); if (!m) return; window.__lastActiveFieldId = t.id; window.__fieldApplyLockUntil = {}; window.__fieldApplyLockUntil[t.id] = Date.now() + legacy._lockMs; } catch(_e){} }, true);
-    document.addEventListener('input', function(ev){ try { legacy._lastKeyAt = Date.now(); var t = ev && ev.target; if (!t || !t.id) return; var m = t.id.match(/^(aircraft|hangar-position|position|arrival-time|departure-time|status|tow-status|notes)-(\d+)$/); if (!m) return; window.__lastActiveFieldId = t.id; window.__fieldApplyLockUntil = {}; window.__fieldApplyLockUntil[t.id] = Date.now() + legacy._lockMs; } catch(_e){} }, true);
+    document.addEventListener('keydown', function(ev){ try { legacy._lastKeyAt = Date.now(); var t = ev && ev.target; if (!t || !t.id) return; var m = t.id.match(/^(aircraft|hangar-position|position|arrival-time|departure-time|status|tow-status|notes)-(\d+)$/); if (!m) return; window.__lastActiveFieldId = t.id; window.__fieldApplyLockUntil = {}; window.__fieldApplyLockUntil[t.id] = Date.now() + legacy._lockMs; setTimeout(function(){ try { legacy._sendPresenceHeartbeat(); } catch(_e){} }, 0); } catch(_e){} }, true);
+    document.addEventListener('input', function(ev){ try { legacy._lastKeyAt = Date.now(); var t = ev && ev.target; if (!t || !t.id) return; var m = t.id.match(/^(aircraft|hangar-position|position|arrival-time|departure-time|status|tow-status|notes)-(\d+)$/); if (!m) return; window.__lastActiveFieldId = t.id; window.__fieldApplyLockUntil = {}; window.__fieldApplyLockUntil[t.id] = Date.now() + legacy._lockMs; setTimeout(function(){ try { legacy._sendPresenceHeartbeat(); } catch(_e){} }, 0); } catch(_e){} }, true);
     // Periodically refresh remote locks
     setInterval(function(){ try { legacy._refreshRemoteLocks(); } catch(_e){} }, 15000);
   } catch(_e){}

@@ -1223,10 +1223,12 @@ setupSecondaryTileEventListeners: function () {
 								console.log(
 									`📝 Sekundäres Input Event: ${event.target.id} = "${event.target.value}"`
 								);
-								window.hangarEventManager.debouncedFieldUpdate(
-									event.target.id,
-									event.target.value
-								);
+                            // Do not live-sync notes while typing; handle on blur instead
+                            if (event.target.id && event.target.id.startsWith('notes-')) return;
+                            window.hangarEventManager.debouncedFieldUpdate(
+                                event.target.id,
+                                event.target.value
+                            );
 							},
 							`secondary_input_${cellId}_${element.id}`
 						);

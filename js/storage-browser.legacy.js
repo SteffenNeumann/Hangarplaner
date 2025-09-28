@@ -161,8 +161,13 @@
     },
     _startWritePolling: function(ms){
       try { this._stopWritePolling(); } catch(_e){}
-      var self=this; this._writeTimer = setInterval(function(){ try{
-        if (!self.isMaster) return; var dom = self._collectDomFieldMap(); var chk = self._checksum(JSON.stringify(dom)); if (chk === self._lastDomChecksum) return; self._lastDomChecksum = chk; var url = self.getServerUrl(); if (!url) return; var sid = self.getSessionId(); self._postDomDelta(url, sid, {});
+var self=this; this._writeTimer = setInterval(function(){ try{
+        if (!self.isMaster) return;
+        var now = Date.now();
+        var active = (document && document.activeElement && document.activeElement.id) ? document.activeElement.id : '';
+        var typing = (now - (self._lastKeyAt||0)) < self._typingWinMs;
+        if (typing && /^(aircraft|hangar-position|position|arrival-time|departure-time|status|tow-status|notes)-(\d+)$/.test(active||'')) return;
+        var dom = self._collectDomFieldMap(); var chk = self._checksum(JSON.stringify(dom)); if (chk === self._lastDomChecksum) return; self._lastDomChecksum = chk; var url = self.getServerUrl(); if (!url) return; var sid = self.getSessionId(); self._postDomDelta(url, sid, {});
       }catch(_e){} }, ms || 5000);
     },
     _stopWritePolling: function(){ if (this._writeTimer){ try { clearInterval(this._writeTimer); } catch(_e){} this._writeTimer=null; } },

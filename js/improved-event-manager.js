@@ -654,7 +654,9 @@ const setBoardAircraftTooltips = () => {
 				if (window.isApplyingServerData) {
 					return;
 				}
-				const fid = event.target.id || '';
+				let fid = event.target.id || '';
+				// Normalize miswired Board notes field ids (e.g., textarea with aircraft-<id>)
+				fid = this.normalizeNotesFieldId(event.target, fid);
 				// Mark field as locally edited and mark a write fence immediately to avoid server echo overriding while typing
 				try { if (window.serverSync && typeof window.serverSync._markPendingWrite === 'function') { window.serverSync._markPendingWrite(fid); } } catch(_e){}
 				// Extend a 5-minute local lock for this field to advertise active editing via presence
@@ -719,7 +721,8 @@ const setBoardAircraftTooltips = () => {
 					if (iso) storeVal = iso; else storeVal = '';
 				}
 
-				const fid = event.target.id || '';
+				let fid = event.target.id || '';
+				fid = this.normalizeNotesFieldId(event.target, fid);
 				const isFree = this.isFreeTextFieldId(fid);
 				// Blur also counts as recent typing end; update timestamp to still gate immediate read-back
 				this._lastTypingAt = Date.now();
@@ -741,7 +744,8 @@ const setBoardAircraftTooltips = () => {
 				// KORREKTUR: Aircraft ID Handling entfernt vom change Event
 				// um Doppelaufrufe zu verhindern - wird nur bei blur behandelt
 
-				const fid = event.target.id || '';
+				let fid = event.target.id || '';
+				fid = this.normalizeNotesFieldId(event.target, fid);
 				// Mark fence on change for non-free-text fields too
 				try { if (window.serverSync && typeof window.serverSync._markPendingWrite === 'function') { window.serverSync._markPendingWrite(fid); } } catch(_e){}
 				// Treat any change as recent typing to gate read-backs (covers selects/date-time)
@@ -782,6 +786,22 @@ try { window.__fieldApplyLockUntil = window.__fieldApplyLockUntil || {}; window.
 		}
 
 		return null;
+	}
+
+	// Defensive: normalize a miswired Board notes field id to notes-<id>
+	normalizeNotesFieldId(element, fid) {
+		try {
+			if (
+				element &&
+				element.classList &&
+				element.classList.contains('notes-textarea') &&
+				!/^notes-/.test(fid)
+			) {
+				const cellId = this.extractCellIdFromElement(element);
+				if (cellId) return `notes-${cellId}`;
+			}
+		} catch (_e) {}
+		return fid;
 	}
 
 	/**
@@ -896,7 +916,8 @@ try { window.__fieldApplyLockUntil = window.__fieldApplyLockUntil || {}; window.
 				if (window.isApplyingServerData) {
 					return;
 				}
-				const fid = event.target.id || '';
+				let fid = event.target.id || '';
+				fid = this.normalizeNotesFieldId(event.target, fid);
 				// Mark fence early on input to prevent echo overwrite
 				try { if (window.serverSync && typeof window.serverSync._markPendingWrite === 'function') { window.serverSync._markPendingWrite(fid); } } catch(_e){}
 				// Extend a 5-minute local lock for this field to advertise active editing via presence
@@ -987,7 +1008,8 @@ try { if (!element.getAttribute('title')) element.setAttribute('title', 'Shift+C
 					if (iso) storeVal = iso; else storeVal = '';
 				}
 
-				const fid = event.target.id || '';
+				let fid = event.target.id || '';
+				fid = this.normalizeNotesFieldId(event.target, fid);
 				const isFree = this.isFreeTextFieldId(fid);
 				this.debouncedFieldUpdate(fid, storeVal, this.BLUR_SAVE_DELAY_MS, { flushDelayMs: isFree ? 0 : 150, source: 'blur' });
 			},
@@ -1015,7 +1037,8 @@ try { if (!element.getAttribute('title')) element.setAttribute('title', 'Shift+C
 					window.updateStatusLights(cellId);
 				}
 
-				const fid = event.target.id || '';
+				let fid = event.target.id || '';
+				fid = this.normalizeNotesFieldId(event.target, fid);
 				// Mark fence for any change
 				try { if (window.serverSync && typeof window.serverSync._markPendingWrite === 'function') { window.serverSync._markPendingWrite(fid); } } catch(_e){}
 				// Consider select changes as typing for gating

@@ -726,6 +726,10 @@ const setBoardAircraftTooltips = () => {
 				const isFree = this.isFreeTextFieldId(fid);
 				// Blur also counts as recent typing end; update timestamp to still gate immediate read-back
 				this._lastTypingAt = Date.now();
+				// Add a short hard-lock on blur for free-text fields to prevent immediate flip-backs from read-back
+				try { if (isFree) { window.__fieldApplyLockUntil = window.__fieldApplyLockUntil || {}; window.__fieldApplyLockUntil[fid] = Date.now() + 15000; } } catch(_e){}
+				// Also mark a write fence on blur for safety
+				try { if (window.serverSync && typeof window.serverSync._markPendingWrite === 'function') { window.serverSync._markPendingWrite(fid); } } catch(_e){}
 				// On blur, flush free-text immediately; others keep normal quick debounce
 				this.debouncedFieldUpdate(fid, storeVal, this.BLUR_SAVE_DELAY_MS, { flushDelayMs: isFree ? 0 : 150, source: 'blur' });
 			},

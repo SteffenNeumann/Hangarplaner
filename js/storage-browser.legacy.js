@@ -185,13 +185,32 @@
         var typing = (now - (this._lastKeyAt||0)) < this._typingWinMs;
         var looksRelevant = function(id){ return /^(aircraft|hangar-position|position|arrival-time|departure-time|status|tow-status|notes)-(\d+)$/.test(id||''); };
         function setField(id, val){
-          try { var el = document.getElementById(id); if (!el) return false; if (looksRelevant(id)){
-            // Skip if user is typing this field
-            if (typing && id===active) return false;
-            // Skip if locked by others
-            var lk = (legacy._remoteLocks || {})[id]; if (lk && (lk.until||0)>now) return false;
-          }
-          if ('value' in el) el.value = String(val||''); else el.textContent = String(val||''); return true;
+          try {
+            var el = document.getElementById(id); if (!el) return false;
+            if (looksRelevant(id)){
+              // Skip if user is typing this field
+              if (typing && id===active) return false;
+              // Skip if locked by others
+              var lk = (legacy._remoteLocks || {})[id]; if (lk && (lk.until||0)>now) return false;
+            }
+            // Do not overwrite non-empty local value with empty incoming
+            var cur = ('value' in el) ? (el.value||'').trim() : (el.textContent||'').trim();
+            if ((val==null || String(val).trim()==='') && cur) return false;
+            if ('value' in el) {
+              el.value = String(val||'');
+              // Styling hook for selects
+              if (/^tow-status-\d+$/.test(id)){
+                try {
+                  var v = (el.value||'neutral').trim();
+                  el.classList.remove('tow-neutral','tow-initiated','tow-ongoing','tow-on-position');
+                  el.classList.add('tow-'+v);
+                  if (typeof window.updateTowStatusStyles==='function') window.updateTowStatusStyles(el);
+                } catch(_s){}
+              }
+            } else {
+              el.textContent = String(val||'');
+            }
+            return true;
           } catch(_e){ return false; }
         }
         var applied = 0;
@@ -246,8 +265,8 @@
   legacy._sendPresenceHeartbeat = function(){ try { var sid = legacy.getSessionId(); var dname=''; try{ dname=(localStorage.getItem('presence.displayName')||'').trim(); }catch(_e){} var role = legacy.isMaster? 'master' : (legacy.canReadFromServer()? 'sync':'standalone'); var locks = legacy._collectLocalLocks(); fetch(presenceUrl(), { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'heartbeat', sessionId: sid, displayName: dname, role: role, page: 'planner', locks: locks }) }); } catch(_e){} };
   legacy._startPresenceHeartbeat = function(){ try { legacy._sendPresenceHeartbeat(); if (legacy._presenceTimer){ clearInterval(legacy._presenceTimer);} legacy._presenceTimer = setInterval(function(){ try{ legacy._sendPresenceHeartbeat(); }catch(_e){} }, 20000); } catch(_e){} };
   legacy._stopPresenceHeartbeat = function(){ try { if (legacy._presenceTimer){ clearInterval(legacy._presenceTimer); legacy._presenceTimer=null; } } catch(_e){} };
-  legacy._refreshRemoteLocks = async function(){ try { var u = presenceUrl() + '?action=list'; var res = await fetch(u, { headers:{ 'Accept':'application/json' } }); if (!res.ok) return; var data = await res.json(); var users = Array.isArray(data && data.users)? data.users : []; var my = legacy.getSessionId(); var now=Date.now(); var map={}; users.forEach(function(u){ try { var sid=(u && u.sessionId)||''; if (!sid || sid===my) return; var locks=(u && u.locks) || {}; Object.keys(locks).forEach(function(fid){ var until = parseInt(locks[fid],10)||0; if (until>now){ map[fid] = { until: until, sessionId: sid, displayName: (u.displayName||'User') }; } }); } catch(_e){} }); legacy._remoteLocks = map; legacy._renderLockPills(); } catch(_e){} };
-  legacy._renderLockPills = function(){ try { var now = Date.now(); var m = legacy._remoteLocks||{}; Object.keys(m).forEach(function(fid){ try { var info=m[fid]; if (!info || (info.until||0)<=now) return; var el=document.getElementById(fid); if (!el) return; var id='editing-pill-'+fid; var pill=document.getElementById(id); if (!pill){ pill=document.createElement('span'); pill.id=id; pill.className='editing-pill'; pill.style.cssText='margin-left:6px; padding:2px 6px; border-radius:10px; font-size:11px; line-height:14px; background:#fde68a; color:#92400e; border:1px solid #f59e0b; white-space:nowrap;'; try { el.insertAdjacentElement('afterend', pill); } catch(_e){ try { el.parentNode && el.parentNode.appendChild(pill);}catch(__){} } } var mins=Math.max(0, Math.ceil(((info.until||0)-now)/60000)); pill.textContent=(info.displayName||'User')+' editing • '+mins+'m'; } catch(_e){} }); } catch(_e){} };
+  legacy._refreshRemoteLocks = async function(){ try { var u = presenceUrl() + '?action=list'; var res = await fetch(u, { headers:{ 'Accept':'application/json' } }); if (!res.ok) return; var data = await res.json(); var users = Array.isArray(data && data.users)? data.users : []; var my = legacy.getSessionId(); var now=Date.now(); var map={}; var otherMasters = users.filter(function(usr){ try { return (usr && usr.role && String(usr.role).toLowerCase()==='master' && usr.sessionId && usr.sessionId!==my); } catch(_e){ return false; } }); if (!otherMasters.length){ legacy._remoteLocks = {}; legacy._renderLockPills(); return; } otherMasters.forEach(function(u){ try { var sid=(u && u.sessionId)||''; var locks=(u && u.locks) || {}; Object.keys(locks).forEach(function(fid){ var until = parseInt(locks[fid],10)||0; if (until>now){ map[fid] = { until: until, sessionId: sid, displayName: (u.displayName||'User') }; } }); } catch(_e){} }); legacy._remoteLocks = map; legacy._renderLockPills(); } catch(_e){} };
+  legacy._renderLockPills = function(){ try { var now = Date.now(); var m = legacy._remoteLocks||{}; Object.keys(m).forEach(function(fid){ try { var info=m[fid]; if (!info || (info.until||0)<=now) return; var el=document.getElementById(fid); if (!el) return; var container = el.closest('.input-container') || el.parentElement; if (container && !/relative/.test(container.style.position||'')) { try { container.style.position='relative'; } catch(_s){} } var id='editing-pill-'+fid; var pill=document.getElementById(id); if (!pill){ pill=document.createElement('span'); pill.id=id; pill.className='editing-pill'; pill.style.cssText='position:absolute; right:8px; top:50%; transform:translateY(-50%); display:inline-block; padding:2px 6px; border-radius:10px; font-size:11px; line-height:14px; background:#fde68a; color:#92400e; border:1px solid #f59e0b; white-space:nowrap; pointer-events:none;'; try { (container||el.parentNode).appendChild(pill); } catch(_e){ try { el.insertAdjacentElement('afterend', pill);}catch(__){} } } var mins=Math.max(0, Math.ceil(((info.until||0)-now)/60000)); pill.textContent=(info.displayName||'User')+' editing • '+mins+'m'; } catch(_e){} }); } catch(_e){} };
 
   // Typing detection + local lock management (5 min window)
   try {

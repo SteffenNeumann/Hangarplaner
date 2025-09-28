@@ -87,9 +87,15 @@
       });
     },
     applyServerData: function(data){
-      // Minimal: just signal applied via console; optional hooks may update the DOM elsewhere.
-      try { console.log('legacy applyServerData', data && typeof data === 'object' ? '(ok)' : '(none)'); } catch(_e){}
-      return false;
+      // Apply tiles via applyTileData polyfill when available (primary + secondary)
+      try {
+        var a=false,b=false;
+        if (data && typeof window.serverSync.applyTileData === 'function'){
+          try { if (Array.isArray(data.primaryTiles)) a = !!window.serverSync.applyTileData(data.primaryTiles, false); } catch(_e){}
+          try { if (Array.isArray(data.secondaryTiles)) b = !!window.serverSync.applyTileData(data.secondaryTiles, true); } catch(_e){}
+        }
+        return !!(a||b);
+      } catch(_e){ return false; }
     },
     manualSync: function(){ return this.syncWithServer(); },
     syncWithServer: function(){

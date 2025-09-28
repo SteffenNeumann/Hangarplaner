@@ -1723,12 +1723,15 @@ class ServerSync {
 			}
 
 			// Versuche Legacy-Handler, falle bei Fehlschlag auf direkte Anwendung zurück
+			// WICHTIG: Nur verwenden, wenn ein Bulk-Apply sicher ist (keine Fences, kein Tippen, kein aktives Feld)
+			const canUseLegacyBulk = (!hasFences && !typingActive && !activeRelevant);
 			if (
+				canUseLegacyBulk &&
 				window.hangarData &&
 				typeof window.hangarData.applyLoadedHangarPlan === "function"
 			) {
 				try {
-					console.log("🔄 Versuche hangarData.applyLoadedHangarPlan...");
+					console.log("🔄 Verwende hangarData.applyLoadedHangarPlan (safe bulk apply, keine aktiven Edits)...");
 					const result = window.hangarData.applyLoadedHangarPlan(serverData);
 					console.log("📄 Ergebnis hangarData.applyLoadedHangarPlan:", result);
 					if (result) {

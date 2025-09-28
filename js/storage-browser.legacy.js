@@ -41,6 +41,7 @@
     serverSyncUrl: safeOrigin() ? (safeOrigin() + '/sync/data.php') : '/sync/data.php',
     isMaster: false,
     isSlaveActive: false,
+    _readTimer: null,
     getServerUrl: function(){ return this.serverSyncUrl || getServerUrl(); },
     getSessionId: function(){ return ensureSession(); },
     canReadFromServer: function(){
@@ -49,6 +50,32 @@
         return m === 'sync' || m === 'master';
       } catch(_e){ return false; }
     },
+    _pollReadOnce: function(){
+      try {
+        var self = this; var url = self.getServerUrl(); if (!url) return;
+        var q = url.indexOf('?')>=0 ? '&' : '?';
+        xhrGet(url + q + 'action=load', function(err, data){
+          if (err || !data) return;
+          try {
+            if (typeof window.serverSync.applyServerData === 'function') {
+              window.serverSync.applyServerData(data);
+            } else if (typeof window.serverSync.applyTileData === 'function') {
+              try { window.serverSync.applyTileData(data.primaryTiles||[], false); } catch(_e){}
+              try { window.serverSync.applyTileData(data.secondaryTiles||[], true); } catch(_e){}
+            } else if (typeof window.syncDebugRead === 'function') {
+              window.syncDebugRead();
+            }
+          } catch(_e){}
+        });
+      } catch(_e){}
+    },
+    _startReadPolling: function(ms){
+      try { this._stopReadPolling(); } catch(_e){}
+      var self = this; this._readTimer = setInterval(function(){
+        try { if (self.canReadFromServer && self.canReadFromServer()) self._pollReadOnce(); } catch(_e){}
+      }, ms || 3000);
+    },
+    _stopReadPolling: function(){ if (this._readTimer){ try { clearInterval(this._readTimer); } catch(_e){} this._readTimer = null; } },
     loadFromServer: function(){
       var self = this;
       return new Promise(function(resolve){
@@ -90,14 +117,14 @@
           x.setRequestHeader('Content-Type','application/json');
           x.setRequestHeader('X-Sync-Role','master');
           x.setRequestHeader('X-Sync-Session', sid);
-          x.onreadystatechange = function(){ if (x.readyState===4){ resolve(x.status>=200 && x.status<300); } };
+          x.onreadystatechange = function(){ if (x.readyState===4){ var ok = (x.status>=200 && x.status<300); try { if (ok) setTimeout(function(){ self._pollReadOnce(); }, 1000); } catch(_e){} resolve(ok); } };
           x.send(JSON.stringify(body));
         } catch(e){ resolve(false); }
       });
     },
-    startSlaveMode: function(){ this.isSlaveActive = true; return Promise.resolve(); },
-    startMasterMode: function(){ this.isMaster = true; this.isSlaveActive = true; return Promise.resolve(); },
-    stopPeriodicSync: function(){}
+    startSlaveMode: function(){ this.isSlaveActive = true; try { this._startReadPolling(3000); } catch(_e){} return Promise.resolve(); },
+    startMasterMode: function(){ this.isMaster = true; this.isSlaveActive = true; try { this._startReadPolling(5000); } catch(_e){} return Promise.resolve(); },
+    stopPeriodicSync: function(){ try { this._stopReadPolling(); } catch(_e){} }
   };
   if (!window.serverSync) window.serverSync = legacy;
   if (!window.storageBrowser) window.storageBrowser = window.serverSync;

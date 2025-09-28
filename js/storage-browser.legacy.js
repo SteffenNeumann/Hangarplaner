@@ -76,6 +76,81 @@
       }, ms || 3000);
     },
     _stopReadPolling: function(){ if (this._readTimer){ try { clearInterval(this._readTimer); } catch(_e){} this._readTimer = null; } },
+
+    // ===== Write polling (Master) and DOM delta helpers =====
+    _writeTimer: null,
+    _lastDomChecksum: '',
+    _checksum: function(str){ try{ var h=0,i=0,l=str.length; for(i=0;i<l;i++){ h=(h<<5)-h+str.charCodeAt(i); h|=0; } return String(h); } catch(_e){ return String(+new Date()); } },
+    _collectDomFieldMap: function(){
+      try {
+        var map = {};
+        var list = document.querySelectorAll("[id^='aircraft-'], [id^='hangar-position-'], [id^='position-'], [id^='arrival-time-'], [id^='departure-time-'], [id^='status-'], [id^='tow-status-'], [id^='notes-']");
+        for (var i=0;i<list.length;i++){
+          var id = list[i].id; var m = id && id.match(/^(aircraft|hangar-position|position|arrival-time|departure-time|status|tow-status|notes)-(\d+)$/);
+          if (!m) continue; var fid = m[1]+"-"+m[2]; var v = (list[i].value!=null? list[i].value : (list[i].textContent||'')).trim();
+          map[fid] = v;
+        }
+        return map;
+      } catch(_e){ return {}; }
+    },
+    _serverFieldMap: function(data){
+      try {
+        var map = {};
+        function put(tile, prefix){
+          var id = parseInt(tile && tile.tileId,10)||0; if (!id) return;
+          map['aircraft-'+id] = (tile.aircraftId||'')+'';
+          map['arrival-time-'+id] = (tile.arrivalTime||'')+'';
+          map['departure-time-'+id] = (tile.departureTime||'')+'';
+          map['hangar-position-'+id] = (tile.hangarPosition||'')+'';
+          map['position-'+id] = (tile.position||'')+'';
+          map['status-'+id] = (tile.status||'neutral')+'';
+          map['tow-status-'+id] = (tile.towStatus||'neutral')+'';
+          map['notes-'+id] = (tile.notes||'')+'';
+        }
+        var a = Array.isArray(data && data.primaryTiles) ? data.primaryTiles : [];
+        for (var i=0;i<a.length;i++){ put(a[i]); }
+        var b = Array.isArray(data && data.secondaryTiles) ? data.secondaryTiles : [];
+        for (var j=0;j<b.length;j++){ put(b[j]); }
+        return map;
+      } catch(_e){ return {}; }
+    },
+    _computeDelta: function(serverMap, domMap){
+      try {
+        var delta = {};
+        for (var k in domMap){ if (!Object.prototype.hasOwnProperty.call(domMap,k)) continue; var dv = (domMap[k]||'')+''; var sv = (serverMap[k]||'')+''; if (dv !== sv){ delta[k] = dv; } }
+        return delta;
+      } catch(_e){ return {}; }
+    },
+    _postDomDelta: function(url, sid, settings, done){
+      var self=this;
+      try {
+        var q = url.indexOf('?')>=0 ? '&' : '?';
+        xhrGet(url + q + 'action=load', function(err, data){
+          try {
+            var serverMap = err? {} : self._serverFieldMap(data||{});
+            var domMap = self._collectDomFieldMap();
+            var delta = self._computeDelta(serverMap, domMap);
+            var body = { metadata:{ timestamp: Date.now() }, settings: settings||{} };
+            if (delta && Object.keys(delta).length){ body.fieldUpdates = delta; }
+            var x = new XMLHttpRequest();
+            x.open('POST', url, true);
+            x.setRequestHeader('Content-Type','application/json');
+            x.setRequestHeader('X-Sync-Role','master');
+            x.setRequestHeader('X-Sync-Session', sid);
+            x.onreadystatechange = function(){ if (x.readyState===4){ var ok=(x.status>=200&&x.status<300); try{ if(ok) setTimeout(function(){ self._pollReadOnce(); }, 1000);}catch(_e){} if (typeof done==='function') done(ok); } };
+            x.send(JSON.stringify(body));
+          } catch(e){ if (typeof done==='function') done(false); }
+        });
+      } catch(e){ if (typeof done==='function') done(false); }
+    },
+    _startWritePolling: function(ms){
+      try { this._stopWritePolling(); } catch(_e){}
+      var self=this; this._writeTimer = setInterval(function(){ try{
+        if (!self.isMaster) return; var dom = self._collectDomFieldMap(); var chk = self._checksum(JSON.stringify(dom)); if (chk === self._lastDomChecksum) return; self._lastDomChecksum = chk; var url = self.getServerUrl(); if (!url) return; var sid = self.getSessionId(); self._postDomDelta(url, sid, {});
+      }catch(_e){} }, ms || 5000);
+    },
+    _stopWritePolling: function(){ if (this._writeTimer){ try { clearInterval(this._writeTimer); } catch(_e){} this._writeTimer=null; } },
+
     loadFromServer: function(){
       var self = this;
       return new Promise(function(resolve){
@@ -117,20 +192,14 @@
               settings.displayOptions = o;
             }
           } catch(_e){}
-          var body = { metadata:{ timestamp: Date.now() }, settings: settings };
-          var x = new XMLHttpRequest();
-          x.open('POST', url, true);
-          x.setRequestHeader('Content-Type','application/json');
-          x.setRequestHeader('X-Sync-Role','master');
-          x.setRequestHeader('X-Sync-Session', sid);
-          x.onreadystatechange = function(){ if (x.readyState===4){ var ok = (x.status>=200 && x.status<300); try { if (ok) setTimeout(function(){ self._pollReadOnce(); }, 1000); } catch(_e){} resolve(ok); } };
-          x.send(JSON.stringify(body));
+          // Build delta against server snapshot and POST
+          self._postDomDelta(url, sid, settings, function(ok){ resolve(!!ok); });
         } catch(e){ resolve(false); }
       });
     },
-    startSlaveMode: function(){ this.isSlaveActive = true; try { this._startReadPolling(3000); } catch(_e){} return Promise.resolve(); },
-    startMasterMode: function(){ this.isMaster = true; this.isSlaveActive = true; try { this._startReadPolling(5000); } catch(_e){} return Promise.resolve(); },
-    stopPeriodicSync: function(){ try { this._stopReadPolling(); } catch(_e){} }
+    startSlaveMode: function(){ this.isSlaveActive = true; try { this._startReadPolling(3000); this._stopWritePolling(); } catch(_e){} return Promise.resolve(); },
+    startMasterMode: function(){ this.isMaster = true; this.isSlaveActive = true; try { this._startReadPolling(5000); this._startWritePolling(5000); } catch(_e){} return Promise.resolve(); },
+    stopPeriodicSync: function(){ try { this._stopReadPolling(); this._stopWritePolling(); } catch(_e){} }
   };
   if (!window.serverSync) window.serverSync = legacy;
   if (!window.storageBrowser) window.storageBrowser = window.serverSync;

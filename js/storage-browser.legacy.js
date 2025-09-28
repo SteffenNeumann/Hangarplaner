@@ -261,17 +261,53 @@
   };
   // ===== Presence (multi-master) minimal support =====
   function presenceUrl(){ try { var b = legacy.getServerUrl(); return b.replace(/data\.php(?:\?.*)?$/,'presence.php'); } catch(_e){ return (safeOrigin()||'') + '/sync/presence.php'; } }
-  legacy._collectLocalLocks = function(){ try { return (window.__fieldApplyLockUntil && typeof window.__fieldApplyLockUntil==='object')? window.__fieldApplyLockUntil : {}; } catch(_e){ return {}; } };
+  legacy._collectLocalLocks = function(){
+    try {
+      var now = Date.now();
+      var map = (window.__fieldApplyLockUntil && typeof window.__fieldApplyLockUntil==='object') ? window.__fieldApplyLockUntil : {};
+      var out = {};
+      var fid = (window.__lastActiveFieldId || '').toString();
+      if (fid && map[fid] && (parseInt(map[fid],10)||0) > now){ out[fid] = parseInt(map[fid],10); return out; }
+      // Fallback: choose the most recent non-expired lock
+      var latestK = ''; var latestV = 0;
+      for (var k in map){ if (!Object.prototype.hasOwnProperty.call(map,k)) continue; var u = parseInt(map[k],10)||0; if (u>now && u>latestV){ latestV=u; latestK=k; } }
+      if (latestK) out[latestK] = latestV;
+      return out;
+    } catch(_e){ return {}; }
+  };
   legacy._sendPresenceHeartbeat = function(){ try { var sid = legacy.getSessionId(); var dname=''; try{ dname=(localStorage.getItem('presence.displayName')||'').trim(); }catch(_e){} var role = legacy.isMaster? 'master' : (legacy.canReadFromServer()? 'sync':'standalone'); var locks = legacy._collectLocalLocks(); fetch(presenceUrl(), { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'heartbeat', sessionId: sid, displayName: dname, role: role, page: 'planner', locks: locks }) }); } catch(_e){} };
   legacy._startPresenceHeartbeat = function(){ try { legacy._sendPresenceHeartbeat(); if (legacy._presenceTimer){ clearInterval(legacy._presenceTimer);} legacy._presenceTimer = setInterval(function(){ try{ legacy._sendPresenceHeartbeat(); }catch(_e){} }, 20000); } catch(_e){} };
   legacy._stopPresenceHeartbeat = function(){ try { if (legacy._presenceTimer){ clearInterval(legacy._presenceTimer); legacy._presenceTimer=null; } } catch(_e){} };
   legacy._refreshRemoteLocks = async function(){ try { var u = presenceUrl() + '?action=list'; var res = await fetch(u, { headers:{ 'Accept':'application/json' } }); if (!res.ok) return; var data = await res.json(); var users = Array.isArray(data && data.users)? data.users : []; var my = legacy.getSessionId(); var now=Date.now(); var map={}; var otherMasters = users.filter(function(usr){ try { return (usr && usr.role && String(usr.role).toLowerCase()==='master' && usr.sessionId && usr.sessionId!==my); } catch(_e){ return false; } }); if (!otherMasters.length){ legacy._remoteLocks = {}; legacy._renderLockPills(); return; } otherMasters.forEach(function(u){ try { var sid=(u && u.sessionId)||''; var locks=(u && u.locks) || {}; Object.keys(locks).forEach(function(fid){ var until = parseInt(locks[fid],10)||0; if (until>now){ map[fid] = { until: until, sessionId: sid, displayName: (u.displayName||'User') }; } }); } catch(_e){} }); legacy._remoteLocks = map; legacy._renderLockPills(); } catch(_e){} };
-  legacy._renderLockPills = function(){ try { var now = Date.now(); var m = legacy._remoteLocks||{}; Object.keys(m).forEach(function(fid){ try { var info=m[fid]; if (!info || (info.until||0)<=now) return; var el=document.getElementById(fid); if (!el) return; var container = el.closest('.input-container') || el.parentElement; if (container && !/relative/.test(container.style.position||'')) { try { container.style.position='relative'; } catch(_s){} } var id='editing-pill-'+fid; var pill=document.getElementById(id); if (!pill){ pill=document.createElement('span'); pill.id=id; pill.className='editing-pill'; pill.style.cssText='position:absolute; right:8px; top:50%; transform:translateY(-50%); display:inline-block; padding:2px 6px; border-radius:10px; font-size:11px; line-height:14px; background:#fde68a; color:#92400e; border:1px solid #f59e0b; white-space:nowrap; pointer-events:none;'; try { (container||el.parentNode).appendChild(pill); } catch(_e){ try { el.insertAdjacentElement('afterend', pill);}catch(__){} } } var mins=Math.max(0, Math.ceil(((info.until||0)-now)/60000)); pill.textContent=(info.displayName||'User')+' editing • '+mins+'m'; } catch(_e){} }); } catch(_e){} };
+  legacy._renderLockPills = function(){
+    try {
+      // Only show pills in multi-master context
+      if (!legacy.isMaster) { try { document.querySelectorAll('span.editing-pill').forEach(function(p){ p.remove(); }); } catch(_){} return; }
+      var now = Date.now(); var m = legacy._remoteLocks||{};
+      // Remove stale pills not present in map
+      try { document.querySelectorAll('span.editing-pill').forEach(function(p){ var fid = (p.id||'').replace('editing-pill-',''); if (!m[fid] || (m[fid].until||0)<=now){ p.remove(); } }); } catch(_r){}
+      Object.keys(m).forEach(function(fid){
+        try {
+          var info=m[fid]; if (!info || (info.until||0)<=now) return;
+          var el=document.getElementById(fid); if (!el) return;
+          var container = el.closest('.input-container') || el.parentElement;
+          if (container && !/relative/.test(container.style.position||'')) { try { container.style.position='relative'; } catch(_s){} }
+          var id='editing-pill-'+fid; var pill=document.getElementById(id);
+          if (!pill){
+            pill=document.createElement('span'); pill.id=id; pill.className='editing-pill';
+            pill.style.cssText='position:absolute; right:8px; top:-8px; display:inline-block; padding:2px 6px; border-radius:10px; font-size:11px; line-height:14px; background:#fde68a; color:#92400e; border:1px solid #f59e0b; white-space:nowrap; pointer-events:none;';
+            try { (container||el.parentNode).appendChild(pill); } catch(_e){ try { el.insertAdjacentElement('afterend', pill);}catch(__){} }
+          }
+          var mins=Math.max(0, Math.ceil(((info.until||0)-now)/60000)); pill.textContent=(info.displayName||'User')+' editing • '+mins+'m';
+        } catch(_e){}
+      });
+    } catch(_e){}
+  };
 
   // Typing detection + local lock management (5 min window)
   try {
-    document.addEventListener('keydown', function(ev){ try { legacy._lastKeyAt = Date.now(); var t = ev && ev.target; if (!t || !t.id) return; var m = t.id.match(/^(aircraft|hangar-position|position|arrival-time|departure-time|status|tow-status|notes)-(\d+)$/); if (!m) return; window.__fieldApplyLockUntil = window.__fieldApplyLockUntil || {}; window.__fieldApplyLockUntil[t.id] = Date.now() + legacy._lockMs; } catch(_e){} }, true);
-    document.addEventListener('input', function(ev){ try { legacy._lastKeyAt = Date.now(); var t = ev && ev.target; if (!t || !t.id) return; var m = t.id.match(/^(aircraft|hangar-position|position|arrival-time|departure-time|status|tow-status|notes)-(\d+)$/); if (!m) return; window.__fieldApplyLockUntil = window.__fieldApplyLockUntil || {}; window.__fieldApplyLockUntil[t.id] = Date.now() + legacy._lockMs; } catch(_e){} }, true);
+    document.addEventListener('keydown', function(ev){ try { legacy._lastKeyAt = Date.now(); var t = ev && ev.target; if (!t || !t.id) return; var m = t.id.match(/^(aircraft|hangar-position|position|arrival-time|departure-time|status|tow-status|notes)-(\d+)$/); if (!m) return; window.__lastActiveFieldId = t.id; window.__fieldApplyLockUntil = {}; window.__fieldApplyLockUntil[t.id] = Date.now() + legacy._lockMs; } catch(_e){} }, true);
+    document.addEventListener('input', function(ev){ try { legacy._lastKeyAt = Date.now(); var t = ev && ev.target; if (!t || !t.id) return; var m = t.id.match(/^(aircraft|hangar-position|position|arrival-time|departure-time|status|tow-status|notes)-(\d+)$/); if (!m) return; window.__lastActiveFieldId = t.id; window.__fieldApplyLockUntil = {}; window.__fieldApplyLockUntil[t.id] = Date.now() + legacy._lockMs; } catch(_e){} }, true);
     // Periodically refresh remote locks
     setInterval(function(){ try { legacy._refreshRemoteLocks(); } catch(_e){} }, 15000);
   } catch(_e){}

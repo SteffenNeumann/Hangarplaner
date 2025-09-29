@@ -720,10 +720,16 @@ class ServerSync {
 				}
 			} catch(_e) {}
 			// Also skip if a relevant field is currently focused (prevents caret jumps/flip-backs)
+			// BUT do not stall read-only receivers: in Sync mode or when the element is disabled, we still proceed.
 			try {
 				const activeId = (typeof document !== 'undefined' && document.activeElement && document.activeElement.id) ? document.activeElement.id : '';
 				if (this._isRelevantFieldId && this._isRelevantFieldId(activeId)) {
-					return; // finally will clear _isCheckingUpdates
+					const el = document.getElementById(activeId);
+					const isReadOnly = !!(document.body && document.body.classList.contains('read-only')) || !!(window.sharingManager && window.sharingManager.syncMode === 'sync');
+					const isDisabled = !!(el && el.disabled === true);
+					if (!isReadOnly && !isDisabled) {
+						return; // finally will clear _isCheckingUpdates
+					}
 				}
 			} catch(_e) {}
 			// Also opportunistically refresh remote locks (throttled)
@@ -1863,6 +1869,9 @@ class ServerSync {
 		const recentlyEdited = (fid, windowMs = (this._writeFenceMs || 7000)) => {
 			try {
 				if (!fid) return false;
+				// In read-only, ignore 'recently edited' guards (no local edits should happen)
+				const isReadOnly = !!(document.body && document.body.classList.contains('read-only')) || !!(window.sharingManager && window.sharingManager.syncMode === 'sync');
+				if (isReadOnly) return false;
 				const getLE = (typeof window.getLastLocalEdit === 'function') ? window.getLastLocalEdit : null;
 				if (!getLE) return false;
 				const e = getLE(fid);
@@ -1885,8 +1894,11 @@ class ServerSync {
 						delete window.__fieldApplyLockUntil[fid];
 					}
 				} catch(_e){}
-				// Skip when user is actively editing this element
-				if (el && document.activeElement === el) return false;
+				// Skip when user is actively editing this element (only in editable modes)
+				if (el && document.activeElement === el) {
+					const isReadOnly = !!(document.body && document.body.classList.contains('read-only')) || !!(window.sharingManager && window.sharingManager.syncMode === 'sync');
+					if (!isReadOnly && !el.disabled) return false;
+				}
 				// Skip when a write fence is active for this field
 				if (typeof this._isWriteFenceActive === 'function' && this._isWriteFenceActive(fid)) return false;
 				// Skip when the user very recently edited this specific field

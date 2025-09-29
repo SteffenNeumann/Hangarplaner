@@ -860,12 +860,10 @@ class ServerSync {
 				try { if (!__uname) __uname = (localStorage.getItem('presence.displayName') || '').trim(); } catch(_e){}
 				requestBody = { metadata: { timestamp: Date.now(), displayName: __uname }, fieldUpdates: delta, preconditions: pre, settings: currentData.settings || {} };
             } else {
-                // No field delta: post metadata + settings only (safe; no tiles)
-				let __uname2 = '';
-				try { const inp = document.getElementById('presenceNameInput'); if (inp && inp.value) __uname2 = (inp.value||'').trim(); } catch(_eDom){}
-				try { if (!__uname2) __uname2 = (localStorage.getItem('presence.displayName') || '').trim(); } catch(_e){}
-				requestBody = { metadata: { timestamp: Date.now(), displayName: __uname2 }, settings: currentData.settings || {} };
-                console.log('✉️ No field delta; posting settings-only payload (multi-master safe)');
+                // No field delta: skip POST in multi-master to avoid metadata churn and self-echo suppression
+                // Read-back polling will still converge both clients.
+                console.log('⏭️ No field delta; skipping POST (multi-master safe)');
+                return true;
             }
 
 			// Optimierung: Verwende AbortController für Timeout
@@ -1511,8 +1509,8 @@ class ServerSync {
 			console.warn("⚠️ Keine Server-Daten zum Anwenden");
 			return false;
 		}
-		// Skip echo of our own write in multi-master scenario
-		try { const sid = (typeof this.getSessionId==='function') ? this.getSessionId() : (this.sessionId || ''); const lastWriter = (serverData?.metadata?.lastWriterSession || '').trim(); if (sid && lastWriter && lastWriter === sid) { return false; } } catch(_e){}
+		// Do not skip entire snapshots based on lastWriterSession; rely on field-level fences/locks to prevent flip-backs.
+		// This ensures we still apply other users' changes even if our client posted a metadata-only write earlier.
 		// Reset detection log
 		try { const lw = (serverData?.metadata?.lastWriter||''); const lws = (serverData?.metadata?.lastWriterSession||''); if (lw==='reset' || lws==='system') { console.log('🧹 Reset snapshot detected', { lastWriter: lw, lastWriterSession: lws }); } } catch(_e){}
 		// Stale snapshot gating by server timestamp to prevent oscillation

@@ -3611,27 +3611,19 @@ You’ll see the result in the browser console.
 			<script src="js/hangar.js"></script>
 			<script type="module">
 			(function(){
-			  try {
-			    // Feature-detect optional chaining support at runtime
-			    new Function('return ({}?.a), true;')();
-			  } catch(e){
+			  // Always prefer the modern sync client; fallback to legacy only if import fails
+			  import('./js/storage-browser.js?v=f3b16ae').catch(function(){
 			    var s = document.createElement('script');
 			    s.src = 'js/storage-browser.legacy.js?v=2';
 			    document.head.appendChild(s);
-			    return;
-			  }
-  import('./js/storage-browser.js?v=f3b16ae').catch(function(){
-    var s = document.createElement('script');
-    s.src = 'js/storage-browser.legacy.js?v=2';
-    document.head.appendChild(s);
-  });
-  // Watchdog: if serverSync didn't initialize, load legacy after a short delay
-  setTimeout(function(){ try {
-    var ok = !!(window.serverSync && typeof window.serverSync.syncWithServer==='function' && (typeof window.serverSync.getServerUrl==='function' || window.serverSync.serverSyncUrl));
-    if (!ok){ var s2 = document.createElement('script'); s2.src='js/storage-browser.legacy.js?v=3'; document.head.appendChild(s2); }
-  } catch(_e){} }, 800);
-})();
-</script>
+			  });
+			  // Watchdog: if serverSync didn't initialize, load legacy after a short delay
+			  setTimeout(function(){ try {
+			    var ok = !!(window.serverSync && typeof window.serverSync.syncWithServer==='function' && (typeof window.serverSync.getServerUrl==='function' || window.serverSync.serverSyncUrl));
+			    if (!ok){ var s2 = document.createElement('script'); s2.src='js/storage-browser.legacy.js?v=3'; document.head.appendChild(s2); }
+			  } catch(_e){} }, 800);
+			})();
+			</script>
 			<script nomodule src="js/storage-browser.legacy.js?v=2"></script>
 			<script src="js/sync-manager.js"></script>
 			<script src="js/fleet-database.js"></script>

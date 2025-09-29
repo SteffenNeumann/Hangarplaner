@@ -153,6 +153,12 @@
             x.setRequestHeader('Content-Type','application/json');
             x.setRequestHeader('X-Sync-Role','master');
             x.setRequestHeader('X-Sync-Session', sid);
+            try {
+              var dname = '';
+              try { dname = (localStorage.getItem('presence.displayName')||'').trim(); } catch(_d){}
+              if (!dname) { try { dname = 'User-' + String(sid||'').slice(-4); } catch(_e){} }
+              x.setRequestHeader('X-Display-Name', dname);
+            } catch(_h){}
             x.onreadystatechange = function(){ if (x.readyState===4){ var ok=(x.status>=200&&x.status<300); try{ if(ok) setTimeout(function(){ self._pollReadOnce(); }, 1000);}catch(_e){} if (typeof done==='function') done(ok); } };
             x.send(JSON.stringify(body));
           } catch(e){ if (typeof done==='function') done(false); }

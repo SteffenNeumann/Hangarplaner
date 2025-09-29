@@ -196,6 +196,26 @@ else if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception("Ungültiges JSON-Format: " . json_last_error_msg());
         }
         
+        // Resolve display name fallback from body metadata when header missing
+        if ($displayName === '') {
+            if (is_array($data)) {
+                if (isset($data['metadata']) && is_array($data['metadata'])) {
+                    if (!empty($data['metadata']['displayName'])) {
+                        $displayName = trim((string)$data['metadata']['displayName']);
+                    } elseif (!empty($data['metadata']['userDisplayName'])) {
+                        $displayName = trim((string)$data['metadata']['userDisplayName']);
+                    }
+                }
+                if ($displayName === '' && !empty($data['displayName'])) {
+                    $displayName = trim((string)$data['displayName']);
+                }
+            }
+        }
+        if ($displayName === '') {
+            if (!empty($_SERVER['REMOTE_USER'])) $displayName = $_SERVER['REMOTE_USER'];
+            elseif (!empty($_SERVER['PHP_AUTH_USER'])) $displayName = $_SERVER['PHP_AUTH_USER'];
+        }
+        
         // Basis-Validierung der Datenstruktur
         if (!isset($data['metadata'])) {
             $data['metadata'] = [];

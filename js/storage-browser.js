@@ -855,10 +855,16 @@ class ServerSync {
 						pre[fid] = (base[key] ?? '');
 					});
 				} catch(_e){}
-				requestBody = { metadata: { timestamp: Date.now() }, fieldUpdates: delta, preconditions: pre, settings: currentData.settings || {} };
+				let __uname = '';
+				try { const inp = document.getElementById('presenceNameInput'); if (inp && inp.value) __uname = (inp.value||'').trim(); } catch(_eDom){}
+				try { if (!__uname) __uname = (localStorage.getItem('presence.displayName') || '').trim(); } catch(_e){}
+				requestBody = { metadata: { timestamp: Date.now(), displayName: __uname }, fieldUpdates: delta, preconditions: pre, settings: currentData.settings || {} };
             } else {
                 // No field delta: post metadata + settings only (safe; no tiles)
-                requestBody = { metadata: { timestamp: Date.now() }, settings: currentData.settings || {} };
+				let __uname2 = '';
+				try { const inp = document.getElementById('presenceNameInput'); if (inp && inp.value) __uname2 = (inp.value||'').trim(); } catch(_eDom){}
+				try { if (!__uname2) __uname2 = (localStorage.getItem('presence.displayName') || '').trim(); } catch(_e){}
+				requestBody = { metadata: { timestamp: Date.now(), displayName: __uname2 }, settings: currentData.settings || {} };
                 console.log('✉️ No field delta; posting settings-only payload (multi-master safe)');
             }
 
@@ -1099,7 +1105,10 @@ class ServerSync {
 					pre[fid] = (base[key] ?? '');
 				});
 			} catch(_e){}
-			const body = { metadata: { timestamp: Date.now() }, fieldUpdates, preconditions: pre, settings: {} };
+			let __uname3 = '';
+			try { const inp = document.getElementById('presenceNameInput'); if (inp && inp.value) __uname3 = (inp.value||'').trim(); } catch(_eDom){}
+			try { if (!__uname3) __uname3 = (localStorage.getItem('presence.displayName') || '').trim(); } catch(_e){}
+			const body = { metadata: { timestamp: Date.now(), displayName: __uname3 }, fieldUpdates, preconditions: pre, settings: {} };
 			const headers = { "Content-Type": "application/json" };
 			if (this.isMaster) headers["X-Sync-Role"] = "master";
 			try {

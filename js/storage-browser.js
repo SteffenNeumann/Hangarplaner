@@ -1966,11 +1966,31 @@ class ServerSync {
 				if (notesInput) {
 					const newVal = tileData.notes || '';
 					const fid = `notes-${tileId}`;
-					if (canApplyField(fid, notesInput)){
-						if (!(document.activeElement === notesInput && notesInput.value === newVal)) {
-							notesInput.value = newVal;
+					// Extra guard for free-text: if current DOM differs from our last baseline, treat it as a local edit and skip applying server
+					try {
+						const base = (tileId>=100 ? (this._baselineSecondary[tileId]||{}) : (this._baselinePrimary[tileId]||{}));
+						const baseNotes = (base && typeof base.notes !== 'undefined') ? (base.notes || '') : '';
+						const curNotes = (notesInput.value || '');
+						if (curNotes !== baseNotes) {
+							// Skip applying server notes while DOM diverges from baseline (likely fresh local edit not yet converged)
+							console.log(`⏭️ Skip server notes apply for ${fid}: DOM diverges from baseline (dom='${curNotes}', base='${baseNotes}')`);
+							// still respect hard-lock cleanup if expired
+							// no return; continue to next field
+							// effectively skipping set below
+						} else if (canApplyField(fid, notesInput)){
+							if (!(document.activeElement === notesInput && notesInput.value === newVal)) {
+								notesInput.value = newVal;
+							}
+							console.log(`📝 Notizen gesetzt: ${tileId} = ${newVal}`);
 						}
-						console.log(`📝 Notizen gesetzt: ${tileId} = ${newVal}`);
+					} catch(_e) {
+						// Fallback to standard guard path
+						if (canApplyField(fid, notesInput)){
+							if (!(document.activeElement === notesInput && notesInput.value === newVal)) {
+								notesInput.value = newVal;
+							}
+							console.log(`📝 Notizen gesetzt: ${tileId} = ${newVal}`);
+						}
 					}
 				}
 			}

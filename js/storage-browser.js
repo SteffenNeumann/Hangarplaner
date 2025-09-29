@@ -714,7 +714,8 @@ class ServerSync {
 			try {
 				const typingWin = Math.min(15000, (this._writeFenceMs || 7000));
 				if (window.hangarEventManager && typeof window.hangarEventManager.isUserTypingRecently === 'function') {
-					if (window.hangarEventManager.isUserTypingRecently(typingWin)) {
+					const isReadOnly = !!(document.body && document.body.classList.contains('read-only')) || !!(window.sharingManager && window.sharingManager.syncMode === 'sync');
+					if (!isReadOnly && window.hangarEventManager.isUserTypingRecently(typingWin)) {
 						return; // finally will clear _isCheckingUpdates
 					}
 				}

@@ -1225,10 +1225,20 @@ document.addEventListener('syncModeChanged', () => { refreshHeaderModeLabel(); u
             } catch(_) { return ''; }
           };
           const parts = [];
-          // Deduplicate by sessionId (choose first seen)
+          // Deduplicate by sessionId (choose first seen) and hide myself also by displayName
           const seen = new Set();
           const others = [];
-          (users || []).forEach(u => { const sid = (u && u.sessionId || '').toString(); if (!sid || sid===me || seen.has(sid)) return; seen.add(sid); others.push(u); });
+          let myName = (presence.displayName || '').trim();
+          if (!myName) { try { myName = (localStorage.getItem('presence.displayName')||'').trim(); } catch(_e){} }
+          (users || []).forEach(u => {
+            const sid = (u && u.sessionId || '').toString();
+            const nm = (u && u.displayName ? String(u.displayName) : '').trim();
+            if (!sid || seen.has(sid)) return;
+            if (sid === me) { seen.add(sid); return; }
+            if (myName && nm && nm.toLowerCase() === myName.toLowerCase()) { seen.add(sid); return; }
+            seen.add(sid);
+            others.push(u);
+          });
           others.forEach(u => {
             const name = (u.displayName || '').replace(/[<>]/g, '');
             const r = (u.role || 'standalone').toLowerCase();

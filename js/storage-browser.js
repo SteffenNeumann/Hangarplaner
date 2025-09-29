@@ -246,8 +246,9 @@ class ServerSync {
 			const url = this._getPresenceUrl();
 			const sid = this.getSessionId ? this.getSessionId() : (localStorage.getItem('presence.sessionId') || localStorage.getItem('serverSync.sessionId') || '');
 			let dname = '';
-			try { dname = (localStorage.getItem('presence.displayName') || '').trim(); } catch(_e){}
-			if (!dname) { try { dname = 'User-' + String(sid||'').slice(-4); } catch(_e) { dname = 'User'; } }
+			try { const inp = document.getElementById('presenceNameInput'); if (inp && inp.value) dname = (inp.value||'').trim(); } catch(_eDom){}
+			try { if (!dname) dname = (localStorage.getItem('presence.displayName') || '').trim(); } catch(_e){}
+			if (!dname) { try { dname = 'User-' + String(sid||'').slice(-4); } catch(_e2) { dname = 'User'; } }
 			const role = this._isMasterMode && this._isMasterMode() ? 'master' : (this.canReadFromServer && this.canReadFromServer() ? 'sync' : 'standalone');
 			const locks = this._collectLocalLocks();
 			await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ action:'heartbeat', sessionId: sid, displayName: dname, role, page: 'planner', locks }) });
@@ -880,8 +881,11 @@ class ServerSync {
 				const sid = this.getSessionId();
 				if (sid) headers["X-Sync-Session"] = sid;
 				let dname = '';
-				try { dname = (localStorage.getItem('presence.displayName') || '').trim(); } catch(_e){}
-				if (!dname) { try { dname = 'User-' + String(sid||'').slice(-4); } catch(_e) { dname = 'User'; } }
+				// Prefer live value from header input
+				try { const inp = document.getElementById('presenceNameInput'); if (inp && inp.value) dname = (inp.value || '').trim(); } catch(_eDom){}
+				// Fallback to localStorage
+				if (!dname) { try { dname = (localStorage.getItem('presence.displayName') || '').trim(); } catch(_e){} }
+				if (!dname) { try { dname = 'User-' + String(sid||'').slice(-4); } catch(_e2) { dname = 'User'; } }
 				headers["X-Display-Name"] = dname;
 			} catch(_e) {}
 			const response = await fetch(serverUrl, {
@@ -963,7 +967,8 @@ class ServerSync {
 							try {
 								const sid = this.getSessionId(); if (sid) headers2["X-Sync-Session"] = sid;
 								let dname = '';
-								try { dname = (localStorage.getItem('presence.displayName') || '').trim(); } catch(_e){}
+								try { const inp = document.getElementById('presenceNameInput'); if (inp && inp.value) dname = (inp.value||'').trim(); } catch(_eDom){}
+								if (!dname) { try { dname = (localStorage.getItem('presence.displayName') || '').trim(); } catch(_e){} }
 								if (!dname) { try { dname = 'User-' + String(sid||'').slice(-4); } catch(_e) { dname = 'User'; } }
 								headers2["X-Display-Name"] = dname;
 							} catch(_e){}
@@ -1100,7 +1105,8 @@ class ServerSync {
 			try {
 				const sid = this.getSessionId(); if (sid) headers["X-Sync-Session"] = sid;
 				let dname = '';
-				try { dname = (localStorage.getItem('presence.displayName') || '').trim(); } catch(_e){}
+				try { const inp = document.getElementById('presenceNameInput'); if (inp && inp.value) dname = (inp.value||'').trim(); } catch(_eDom){}
+				if (!dname) { try { dname = (localStorage.getItem('presence.displayName') || '').trim(); } catch(_e){} }
 				if (!dname) { try { dname = 'User-' + String(sid||'').slice(-4); } catch(_e) { dname = 'User'; } }
 				headers["X-Display-Name"] = dname;
 			} catch(_e){}
@@ -1147,7 +1153,8 @@ class ServerSync {
 						try {
 							const sid = this.getSessionId(); if (sid) headers2["X-Sync-Session"] = sid;
 							let dname = '';
-							try { dname = (localStorage.getItem('presence.displayName') || '').trim(); } catch(_e){}
+							try { const inp = document.getElementById('presenceNameInput'); if (inp && inp.value) dname = (inp.value||'').trim(); } catch(_eDom){}
+							if (!dname) { try { dname = (localStorage.getItem('presence.displayName') || '').trim(); } catch(_e){} }
 							if (!dname) { try { dname = 'User-' + String(sid||'').slice(-4); } catch(_e) { dname = 'User'; } }
 							headers2["X-Display-Name"] = dname;
 						} catch(_e){}

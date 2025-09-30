@@ -5256,14 +5256,8 @@ body:not(.dark-mode) #mailLogList li {
   backdrop-filter: saturate(120%) blur(1px);
 }
 .editing-pill .editing-pill-tail {
-  position: absolute;
-  left: 8px;
-  bottom: -6px;
-  width: 0; height: 0;
-  border-left: 6px solid rgba(245, 158, 11, 0.7); /* fallback */
-  border-top: 6px solid transparent;
-  /* Preferred with variable */
-  border-left-color: color-mix(in srgb, var(--menu-accent) 60%, transparent);
+  /* Tail removed as requested */
+  display: none !important;
 }
 .dark-mode .editing-pill {
   /* Slightly lower opacity in dark mode for glassy look */
@@ -5273,10 +5267,7 @@ body:not(.dark-mode) #mailLogList li {
   background: color-mix(in srgb, var(--menu-accent) 28%, transparent);
   border-color: color-mix(in srgb, var(--menu-accent) 55%, transparent);
 }
-.dark-mode .editing-pill .editing-pill-tail {
-  border-left-color: rgba(245, 158, 11, 0.55);
-  border-left-color: color-mix(in srgb, var(--menu-accent) 55%, transparent);
-}
+.dark-mode .editing-pill .editing-pill-tail { display: none !important; }
 
 /* Light theme variants (legacy mapping) */
 .presence-chip.master { background: #ecfdf5 !important; border-color: #a7f3d0 !important; color: #065f46 !important; }

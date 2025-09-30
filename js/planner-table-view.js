@@ -379,6 +379,12 @@ if (!acInput.getAttribute('title')) acInput.setAttribute('title', 'Shift+Click t
         // Fire same pattern as Board: change then blur to trigger immediate flush by Event Manager
         eventFire(`#notes-${tileId}`, 'change'); 
         blurThenSync(`#notes-${tileId}`);
+        // Additionally call the Event Manager flush path directly to ensure immediate server write even if the Board field is hidden
+        try {
+          if (window.hangarEventManager && typeof window.hangarEventManager.debouncedFieldUpdate === 'function'){
+            window.hangarEventManager.debouncedFieldUpdate(`notes-${tileId}`, v, 150, { flushDelayMs: 0, source: 'blur' });
+          }
+        } catch(_e){}
       }
     };
     if (readOnly) return; // no wiring when read-only

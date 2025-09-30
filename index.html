@@ -4313,6 +4313,12 @@ async function fallbackSyncWrite(){ try { var url = getServerUrl(); var sid = en
 										e.target.value
 									);
 								}
+								// Ensure immediate server flush via Event Manager for existing primary tiles as well
+								try {
+									if (window.hangarEventManager && typeof window.hangarEventManager.debouncedFieldUpdate === 'function'){
+										window.hangarEventManager.debouncedFieldUpdate(e.target.id, e.target.value, 150, { flushDelayMs: 0, source: 'blur' });
+									}
+								} catch(_e){}
 							});
 						});
 				}

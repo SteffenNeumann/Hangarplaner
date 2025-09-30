@@ -704,16 +704,22 @@ function setupEventListenersForTile(tileElement, cellId) {
 				}
 			} catch(_e) {}
 			// KORREKTUR: Aircraft ID Change Handler NUR bei blur - API-Aufruf erst nach vollständiger Eingabe
-			if (
-				window.hangarEvents &&
-				typeof window.hangarEvents.handleAircraftIdChange === "function"
-			) {
-				window.hangarEvents.handleAircraftIdChange(
-					e.target.id,
-					e.target.value
-				);
-			}
-		});
+				if (
+					window.hangarEvents &&
+					typeof window.hangarEvents.handleAircraftIdChange === "function"
+				) {
+					window.hangarEvents.handleAircraftIdChange(
+						e.target.id,
+						e.target.value
+					);
+				}
+				// Ensure immediate server flush via Event Manager even if other handlers are missed
+				try {
+					if (window.hangarEventManager && typeof window.hangarEventManager.debouncedFieldUpdate === 'function'){
+						window.hangarEventManager.debouncedFieldUpdate(e.target.id, e.target.value, 150, { flushDelayMs: 0, source: 'blur' });
+					}
+				} catch(_e){}
+			});
 		// Mark this aircraft input as wired to avoid duplicate listeners
 		aircraftInput.setAttribute("data-listener-added", "true");
 		// Fix: declare and guard towSelector for this tile

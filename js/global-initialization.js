@@ -98,6 +98,24 @@ window.globalInitialization = {
 		// 5. Kritische Funktionen sicherstellen
 		this.ensureCriticalFunctions();
 
+		// Provide a safety shim for resetSyncFlags so consoles can recover stuck flags even if module import failed
+		try {
+			if (typeof window.resetSyncFlags !== 'function') {
+				window.resetSyncFlags = function(){
+					try {
+						console.log('🔧 (shim) RESET SYNC FLAGS...');
+						if (window.serverSync) {
+							window.serverSync.isApplyingServerData = false;
+						}
+						window.isApplyingServerData = false;
+						window.isLoadingServerData = false;
+						window.isSavingToServer = false;
+						console.log('✅ (shim) Flags reset');
+					} catch(e){ console.warn('resetSyncFlags shim failed', e); }
+				};
+			}
+		} catch(_e){}
+
 		// 6. Module-Status prüfen
 		this.checkAllModules();
 

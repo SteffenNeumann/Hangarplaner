@@ -277,7 +277,7 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 		try { force = !!force; } catch(_e){}
 		try {
 			const now = Date.now();
-			if (!force && (now - (this._lastPresenceRefreshAt||0)) < 15000) return; // 15s throttle
+			if (!force && (now - (this._lastPresenceRefreshAt||0)) < 1000) return; // throttle to ~1s
 			this._lastPresenceRefreshAt = now;
 			const url = this._getPresenceUrl() + '?action=list';
 			const res = await fetch(url, { headers: { 'Accept':'application/json' } });
@@ -304,6 +304,13 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 			try { this._renderEditingLockPills(); } catch(_e){}
 		} catch(_e){}
 	}
+	_startPresenceRefreshPoller(){
+		try {
+			if (this._presenceRefreshTimer) { clearInterval(this._presenceRefreshTimer); this._presenceRefreshTimer = null; }
+			this._presenceRefreshTimer = setInterval(() => { try { this._refreshRemoteLocksFromPresence(true); } catch(_e){} }, 1000);
+		} catch(_e){}
+	}
+	_stopPresenceRefreshPoller(){ try { if (this._presenceRefreshTimer) { clearInterval(this._presenceRefreshTimer); this._presenceRefreshTimer = null; } } catch(_e){}
 	_renderEditingLockPills(){
 		try {
 			const now = Date.now();
@@ -610,6 +617,8 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 		this.startPeriodicSync(); // Für das Senden von Daten
 		// Start presence heartbeats for locks
 		this._startPresenceHeartbeat();
+		// Fast presence lock polling for immediate pills
+		this._startPresenceRefreshPoller();
 
 		// Zusätzlich Updates empfangen (15 Sekunden Intervall)
 			this.slaveCheckInterval = setInterval(async () => {

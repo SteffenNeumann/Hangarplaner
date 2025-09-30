@@ -346,8 +346,8 @@ var mins=Math.max(0, Math.ceil(((info.until||0)-now)/60000));
     document.addEventListener('input', function(ev){ try { legacy._lastKeyAt = Date.now(); var t = ev && ev.target; if (!t || !t.id) return; var m = t.id.match(/^(aircraft|hangar-position|position|arrival-time|departure-time|status|tow-status|notes)-(\d+)$/); if (!m) return; window.__lastActiveFieldId = t.id; window.__fieldApplyLockUntil = {}; window.__fieldApplyLockUntil[t.id] = Date.now() + legacy._lockMs; setTimeout(function(){ try { legacy._sendPresenceHeartbeat(); } catch(_e){} }, 0); } catch(_e){} }, true);
     // Immediate write on blur for notes and selects in Master mode
     document.addEventListener('blur', function(ev){ try { if (!legacy.isMaster) return; var t=ev && ev.target; if (!t || !t.id) return; if (!/^(notes|status|tow-status)-(\d+)$/.test(t.id)) return; var url=legacy.getServerUrl(); var sid=legacy.getSessionId(); legacy._postDomDelta(url, sid, {}); } catch(_e){} }, true);
-    // Periodically refresh remote locks
-    setInterval(function(){ try { legacy._refreshRemoteLocks(); } catch(_e){} }, 15000);
+    // Periodically refresh remote locks (fast for near-immediate pills)
+    setInterval(function(){ try { legacy._refreshRemoteLocks(); } catch(_e){} }, 1000);
   } catch(_e){}
 
   if (!window.serverSync) window.serverSync = legacy;

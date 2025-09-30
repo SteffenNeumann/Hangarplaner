@@ -685,7 +685,7 @@ function setupEventListenersForTile(tileElement, cellId) {
 				}
 			} catch(_) {}
 		});
-		aircraftInput.addEventListener("blur", function (e) {
+		const onAircraftBlur = function (e) {
 			try {
 				if (!e || !e.target || typeof e.target.value !== 'string') return;
 				const prev = (e.target.value || '').toString();
@@ -704,22 +704,28 @@ function setupEventListenersForTile(tileElement, cellId) {
 				}
 			} catch(_e) {}
 			// KORREKTUR: Aircraft ID Change Handler NUR bei blur - API-Aufruf erst nach vollständiger Eingabe
-				if (
-					window.hangarEvents &&
-					typeof window.hangarEvents.handleAircraftIdChange === "function"
-				) {
-					window.hangarEvents.handleAircraftIdChange(
-						e.target.id,
-						e.target.value
-					);
+			if (
+				window.hangarEvents &&
+				typeof window.hangarEvents.handleAircraftIdChange === "function"
+			) {
+				window.hangarEvents.handleAircraftIdChange(
+					e.target.id,
+					e.target.value
+				);
+			}
+			// Ensure immediate server flush via Event Manager even if other handlers are missed
+			try {
+				if (window.hangarEventManager && typeof window.hangarEventManager.debouncedFieldUpdate === 'function'){
+					window.hangarEventManager.debouncedFieldUpdate(e.target.id, e.target.value, 150, { flushDelayMs: 0, source: 'blur' });
 				}
-				// Ensure immediate server flush via Event Manager even if other handlers are missed
-				try {
-					if (window.hangarEventManager && typeof window.hangarEventManager.debouncedFieldUpdate === 'function'){
-						window.hangarEventManager.debouncedFieldUpdate(e.target.id, e.target.value, 150, { flushDelayMs: 0, source: 'blur' });
-					}
-				} catch(_e){}
-			});
+			} catch(_e){}
+		};
+		aircraftInput.addEventListener("blur", onAircraftBlur);
+		// Also handle focusout (fires reliably on Tab navigation)
+		aircraftInput.addEventListener("focusout", onAircraftBlur);
+		// As an additional safety, detect Tab key and trigger processing right away
+		aircraftInput.addEventListener('keydown', function(ev){ if (ev.key === 'Tab') { try { onAircraftBlur({ target: ev.currentTarget }); } catch(_){} } });
+		
 		// Mark this aircraft input as wired to avoid duplicate listeners
 		aircraftInput.setAttribute("data-listener-added", "true");
 		// Fix: declare and guard towSelector for this tile

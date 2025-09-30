@@ -4287,39 +4287,44 @@ async function fallbackSyncWrite(){ try { var url = getServerUrl(); var sid = en
 								} catch(_) {}
 							});
 
-							input.addEventListener("blur", function (e) {
+							const onPrimaryAircraftBlur = function (e) {
 								try {
-									const prev = (this.value || '').toString();
+									const prev = (e && e.target && e.target.value ? e.target.value : this.value || '').toString();
 									let formatted = '';
+									const target = (e && e.target) ? e.target : this;
 									if (typeof window.safeFormatAircraftId === 'function') {
-										formatted = window.safeFormatAircraftId(this) || '';
+										formatted = window.safeFormatAircraftId(target) || '';
 									} else if (typeof formatAircraftId === 'function') {
-										formatted = formatAircraftId(this) || '';
+										formatted = formatAircraftId(target) || '';
 									}
 									// Guard: if formatter produced empty but user had content, keep a sane fallback
 									if (formatted.trim().length === 0 && prev.trim().length > 0) {
-										this.value = prev.trim().toUpperCase();
+										target.value = prev.trim().toUpperCase();
 									} else if (formatted.trim().length > 0) {
-										this.value = formatted;
+										target.value = formatted;
 									}
 								} catch(_e) {}
 								// KORREKTUR: Aircraft ID Change Handler NUR bei blur - API-Aufruf erst nach vollständiger Eingabe
-								if (
-									window.hangarEvents &&
-									window.hangarEvents.handleAircraftIdChange
-								) {
-									window.hangarEvents.handleAircraftIdChange(
-										e.target.id,
-										e.target.value
-									);
-								}
-								// Ensure immediate server flush via Event Manager for existing primary tiles as well
 								try {
-									if (window.hangarEventManager && typeof window.hangarEventManager.debouncedFieldUpdate === 'function'){
-										window.hangarEventManager.debouncedFieldUpdate(e.target.id, e.target.value, 150, { flushDelayMs: 0, source: 'blur' });
+									const t = (e && e.target) ? e.target : this;
+									if (
+										window.hangarEvents &&
+										typeof window.hangarEvents.handleAircraftIdChange === 'function'
+									) {
+										window.hangarEvents.handleAircraftIdChange(t.id, t.value);
 									}
 								} catch(_e){}
-							});
+								// Ensure immediate server flush via Event Manager for existing primary tiles as well
+								try {
+									const t = (e && e.target) ? e.target : this;
+									if (window.hangarEventManager && typeof window.hangarEventManager.debouncedFieldUpdate === 'function'){
+										window.hangarEventManager.debouncedFieldUpdate(t.id, t.value, 150, { flushDelayMs: 0, source: 'blur' });
+									}
+								} catch(_e){}
+							};
+							input.addEventListener('blur', onPrimaryAircraftBlur);
+							input.addEventListener('focusout', onPrimaryAircraftBlur);
+							input.addEventListener('keydown', function(ev){ if (ev.key === 'Tab'){ try { onPrimaryAircraftBlur.call(this, { target: this }); } catch(_){} } });
 						});
 				}
 

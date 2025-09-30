@@ -439,6 +439,18 @@ if (!acInput.getAttribute('title')) acInput.setAttribute('title', 'Shift+Click t
       handlers[col](val);
       // keep table model in sync so sort/render after click doesn’t drop edits
       if (isFinite(tileId)) updateRowCache(tileId, col, val);
+      // For notes (free text), prefer a targeted write to ensure immediate cross-client convergence
+      if (col === 'notes') {
+        try {
+          const fid = isFinite(tileId) ? `notes-${tileId}` : '';
+          if (fid && isMaster() && window.serverSync && typeof window.serverSync.syncFieldUpdates === 'function'){
+            try { if (typeof window.serverSync._markPendingWrite === 'function') window.serverSync._markPendingWrite(fid); } catch(_){ }
+            await window.serverSync.syncFieldUpdates({ [fid]: val }, { immediate: true });
+            // We already posted a targeted update; skip full sync below
+            return;
+          }
+        } catch(_){}
+      }
       if (col === 'towStatus') { updateTowSelectChipClasses(el, val); try { updateTowAlertDots(); } catch(_){} }
       // Master mode: persist via centralized server sync if available
       if (isMaster() && window.serverSync && typeof window.serverSync.syncWithServer === 'function'){

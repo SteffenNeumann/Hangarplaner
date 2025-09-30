@@ -302,7 +302,7 @@ var self=this; this._writeTimer = setInterval(function(){ try{
       return out;
     } catch(_e){ return {}; }
   };
-  legacy._sendPresenceHeartbeat = function(){ try { var sid = legacy.getSessionId(); var dname=''; try{ dname=(localStorage.getItem('presence.displayName')||'').trim(); }catch(_e){} var role = legacy.isMaster? 'master' : (legacy.canReadFromServer()? 'sync':'standalone'); var locks = legacy._collectLocalLocks(); fetch(presenceUrl(), { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'heartbeat', sessionId: sid, displayName: dname, role: role, page: 'planner', locks: locks }) }); } catch(_e){} };
+legacy._sendPresenceHeartbeat = function(){ try { var sid = legacy.getSessionId(); var dname=''; try{ dname=(localStorage.getItem('presence.displayName')||'').trim(); }catch(_e){} var role = legacy.isMaster? 'master' : (legacy.canReadFromServer()? 'sync':'standalone'); var locks = legacy._collectLocalLocks(); fetch(presenceUrl(), { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'heartbeat', sessionId: sid, displayName: dname, role: role, page: 'planner', locks: locks, locksReplace: true }) }); } catch(_e){} };
   legacy._startPresenceHeartbeat = function(){ try { legacy._sendPresenceHeartbeat(); if (legacy._presenceTimer){ clearInterval(legacy._presenceTimer);} legacy._presenceTimer = setInterval(function(){ try{ legacy._sendPresenceHeartbeat(); }catch(_e){} }, 20000); } catch(_e){} };
   legacy._stopPresenceHeartbeat = function(){ try { if (legacy._presenceTimer){ clearInterval(legacy._presenceTimer); legacy._presenceTimer=null; } } catch(_e){} };
   legacy._refreshRemoteLocks = async function(){ try { var u = presenceUrl() + '?action=list'; var res = await fetch(u, { headers:{ 'Accept':'application/json' } }); if (!res.ok) return; var data = await res.json(); var users = Array.isArray(data && data.users)? data.users : []; var my = legacy.getSessionId(); var now=Date.now(); var map={}; var otherMasters = users.filter(function(usr){ try { return (usr && usr.role && String(usr.role).toLowerCase()==='master' && usr.sessionId && usr.sessionId!==my); } catch(_e){ return false; } }); if (!otherMasters.length){ legacy._remoteLocks = {}; legacy._renderLockPills(); return; } otherMasters.forEach(function(u){ try { var sid=(u && u.sessionId)||''; var locks=(u && u.locks) || {}; Object.keys(locks).forEach(function(fid){ var until = parseInt(locks[fid],10)||0; if (until>now){ map[fid] = { until: until, sessionId: sid, displayName: (u.displayName||'User') }; } }); } catch(_e){} }); legacy._remoteLocks = map; legacy._renderLockPills(); } catch(_e){} };
@@ -320,20 +320,21 @@ var self=this; this._writeTimer = setInterval(function(){ try{
           var container = el.closest('.input-container') || el.parentElement;
           if (container && !/relative/.test(container.style.position||'')) { try { container.style.position='relative'; } catch(_s){} }
           var id='editing-pill-'+fid; var pill=document.getElementById(id);
-          if (!pill){
+if (!pill){
             pill=document.createElement('span'); pill.id=id; pill.className='editing-pill';
-            pill.style.cssText='position:absolute; right:6px; top:-12px; display:inline-block; padding:2px 6px; border-radius:10px; font-size:11px; line-height:14px; background:#fde68a; color:#92400e; border:1px solid #f59e0b; white-space:nowrap; pointer-events:none; z-index:2;';
-            // Inner text container
-            var txt=document.createElement('span'); txt.className='pill-txt'; pill.appendChild(txt);
-            // Add a small angled tail (speech bubble)
-            var tail=document.createElement('i');
-            tail.style.cssText='position:absolute; left:8px; bottom:-6px; width:0; height:0; border-left:6px solid #f59e0b; border-top:6px solid transparent; border-bottom:0 solid transparent;';
-            pill.appendChild(tail);
+            // Tail element (styled via CSS)
+            var tail=document.createElement('i'); tail.className='editing-pill-tail'; pill.appendChild(tail);
             try { (container||el.parentNode).appendChild(pill); } catch(_e){ try { el.insertAdjacentElement('afterend', pill);}catch(__){} }
           }
-          var mins=Math.max(0, Math.ceil(((info.until||0)-now)/60000));
-          var tspan = pill.querySelector('.pill-txt');
-          if (tspan) { tspan.textContent=(info.displayName||'User')+' editing • '+mins+'m'; } else { pill.textContent=(info.displayName||'User')+' editing • '+mins+'m'; }
+var mins=Math.max(0, Math.ceil(((info.until||0)-now)/60000));
+          try {
+            var txt=(info.displayName||'User')+' editing • '+mins+'m';
+            if (pill.firstChild && pill.firstChild.classList && pill.firstChild.classList.contains('editing-pill-tail')){
+              pill.lastChild && pill.lastChild.nodeType===Node.TEXT_NODE ? (pill.lastChild.textContent=txt) : pill.appendChild(document.createTextNode(txt));
+            } else {
+              pill.textContent = txt;
+            }
+          } catch(_e){}
         } catch(_e){}
       });
     } catch(_e){}

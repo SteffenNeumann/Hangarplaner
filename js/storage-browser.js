@@ -261,7 +261,7 @@ class ServerSync {
 			if (!dname) { try { dname = 'User-' + String(sid||'').slice(-4); } catch(_e2) { dname = 'User'; } }
 			const role = this._isMasterMode && this._isMasterMode() ? 'master' : (this.canReadFromServer && this.canReadFromServer() ? 'sync' : 'standalone');
 			const locks = this._collectLocalLocks();
-			await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ action:'heartbeat', sessionId: sid, displayName: dname, role, page: 'planner', locks }) });
+await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ action:'heartbeat', sessionId: sid, displayName: dname, role, page: 'planner', locks, locksReplace: true }) });
 		} catch(_e){}
 	}
 	_startPresenceHeartbeat(){

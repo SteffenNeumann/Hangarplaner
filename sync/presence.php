@@ -173,10 +173,13 @@ if ($method === 'POST') {
                 if ($until > 0) { $locks[$fid] = $until; }
             }
         }
+        // Optional: replace entire locks map for this session
+        $locksReplace = false;
+        if (isset($body['locksReplace'])) { $locksReplace = !!$body['locksReplace']; }
 
         // Atomic update to avoid overwrite races
         $now = time();
-        $users = update_presence_atomic($presenceFile, $TTL_SECONDS, function (&$map) use ($action, $sessionId, $displayName, $role, $page, $locks, $now, $reqId) {
+        $users = update_presence_atomic($presenceFile, $TTL_SECONDS, function (&$map) use ($action, $sessionId, $displayName, $role, $page, $locks, $locksReplace, $now, $reqId) {
             if ($action === 'leave') {
                 if (isset($map[$sessionId])) unset($map[$sessionId]);
                 presence_log("$reqId LEAVE sessionId=$sessionId");
@@ -184,8 +187,12 @@ if ($method === 'POST') {
                 // Preserve first login time (loginAt) across heartbeats; set on first sighting
                 $existing = isset($map[$sessionId]) && is_array($map[$sessionId]) ? $map[$sessionId] : null;
                 $loginAt = isset($existing['loginAt']) ? intval($existing['loginAt']) : $now;
-                $prevLocks = isset($existing['locks']) && is_array($existing['locks']) ? $existing['locks'] : [];
-                // Merge locks (latest until wins)
+                // Replace vs merge policy for locks
+                $prevLocks = [];
+                if (!$locksReplace) {
+                    $prevLocks = isset($existing['locks']) && is_array($existing['locks']) ? $existing['locks'] : [];
+                }
+                // Merge/replace
                 foreach ($locks as $fid => $until) {
                     $prev = isset($prevLocks[$fid]) ? intval($prevLocks[$fid]) : 0;
                     if ($until > $prev) $prevLocks[$fid] = $until;
@@ -199,7 +206,7 @@ if ($method === 'POST') {
                     'lastSeen' => $now,
                     'locks' => $prevLocks,
                 ];
-                presence_log("$reqId HEARTBEAT sessionId=$sessionId role=$role page=$page locks=" . count($locks) . " loginAt=$loginAt");
+                presence_log("$reqId HEARTBEAT sessionId=$sessionId role=$role page=$page locks=" . count($locks) . " replace=" . ($locksReplace? '1':'0') . " loginAt=$loginAt");
             }
         }, $reqId);
 

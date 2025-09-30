@@ -1160,16 +1160,38 @@ document.addEventListener('syncModeChanged', () => { refreshHeaderModeLabel(); u
         listId: null,
       };
 
-      // Stable sessionId
-      try {
-        presence.sessionId = localStorage.getItem('presence.sessionId');
-        if (!presence.sessionId) {
-          presence.sessionId = Math.random().toString(36).slice(2) + Date.now().toString(36);
-          localStorage.setItem('presence.sessionId', presence.sessionId);
+      // Stable sessionId (UNIFIED across legacy and new clients)
+      // Prefer an existing serverSync session, then presence, else create one, and persist under BOTH keys.
+      function unifySessionId(){
+        try {
+          let sid = '';
+          // 1) Prefer central getter if available
+          try {
+            if (window.serverSync && typeof window.serverSync.getSessionId === 'function') {
+              sid = window.serverSync.getSessionId();
+            }
+          } catch(_e){}
+          // 2) Else prefer stored serverSync.sessionId
+          if (!sid) {
+            try { sid = (localStorage.getItem('serverSync.sessionId') || '').toString().trim(); } catch(_e){}
+          }
+          // 3) Else fall back to stored presence.sessionId
+          if (!sid) {
+            try { sid = (localStorage.getItem('presence.sessionId') || '').toString().trim(); } catch(_e){}
+          }
+          // 4) Create new if still missing
+          if (!sid) {
+            sid = Math.random().toString(36).slice(2) + Date.now().toString(36);
+          }
+          // Persist under both keys for forward/backward compatibility
+          try { localStorage.setItem('serverSync.sessionId', sid); } catch(_e){}
+          try { localStorage.setItem('presence.sessionId', sid); } catch(_e){}
+          return sid;
+        } catch(_e){
+          return Math.random().toString(36).slice(2) + Date.now().toString(36);
         }
-      } catch(e){
-        presence.sessionId = Math.random().toString(36).slice(2) + Date.now().toString(36);
       }
+      presence.sessionId = unifySessionId();
 
       // Load/save display name
       try { presence.displayName = localStorage.getItem('presence.displayName') || ''; } catch(e){ presence.displayName = ''; }

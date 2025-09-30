@@ -231,14 +231,24 @@ class ServerSync {
 	}
 	_collectLocalLocks(){
 		try {
-			const out = {};
 			const now = Date.now();
-			if (typeof window.__fieldApplyLockUntil === 'object' && window.__fieldApplyLockUntil) {
-				Object.entries(window.__fieldApplyLockUntil).forEach(([fid, until]) => {
-					try { const u = parseInt(until, 10) || 0; if (u > now && this._isRelevantFieldId && this._isRelevantFieldId(fid)) { out[fid] = u; } } catch(_e){}
-				});
-			}
-			return out;
+			const map = (window.__fieldApplyLockUntil && typeof window.__fieldApplyLockUntil==='object') ? window.__fieldApplyLockUntil : {};
+			// Prefer the explicitly tracked last active field
+			try {
+				const fid = (window.__lastActiveFieldId || '').toString();
+				const until = parseInt(map[fid] || 0, 10) || 0;
+				if (fid && until > now && this._isRelevantFieldId && this._isRelevantFieldId(fid)){
+					const out = {}; out[fid] = until; return out;
+				}
+			} catch(_e){}
+			// Fallback: choose the most recent non-expired lock
+			let latestK = '';
+			let latestV = 0;
+			try {
+				Object.keys(map).forEach(k => { const u = parseInt(map[k],10)||0; if (u>now && u>latestV && this._isRelevantFieldId && this._isRelevantFieldId(k)){ latestV=u; latestK=k; } });
+			} catch(_e){}
+			if (latestK){ const out = {}; out[latestK] = latestV; return out; }
+			return {};
 		} catch(_e){ return {}; }
 	}
 	async _sendPresenceHeartbeat(){
@@ -298,6 +308,14 @@ class ServerSync {
 		try {
 			const now = Date.now();
 			const map = this._remoteLocks || {};
+			// Remove stale pills not present or expired
+			try {
+				document.querySelectorAll('span.editing-pill').forEach(p => {
+					const fid = (p.id||'').replace('editing-pill-','');
+					const info = map[fid];
+					if (!info || (info.until||0) <= now) { p.remove(); }
+				});
+			} catch(_r){}
 			Object.entries(map).forEach(([fid, info]) => {
 				try { if (!info || (info.until||0) <= now) return; this._createOrUpdateEditingLockPill(fid, info.displayName || 'User', info.until); } catch(_e){}
 			});
@@ -312,16 +330,33 @@ class ServerSync {
 			if (!el) return;
 			const id = `editing-pill-${fieldId}`;
 			let pill = document.getElementById(id);
+			// Anchor in an input container if available
+			let container = null;
+			try { container = el.closest('.input-container') || el.parentElement; } catch(_c) {}
+			if (container && !/relative/.test((container.style && container.style.position) || '')){
+				try { container.style.position = 'relative'; } catch(_s){}
+			}
 			if (!pill) {
 				pill = document.createElement('span');
 				pill.id = id;
 				pill.className = 'editing-pill';
-				pill.style.cssText = 'margin-left:6px; padding:2px 6px; border-radius:10px; font-size:11px; line-height:14px; background:#fde68a; color:#92400e; border:1px solid #f59e0b; white-space:nowrap;';
-				// Place pill next to input (after it)
-				try { el.insertAdjacentElement('afterend', pill); } catch(_e){ try { el.parentNode && el.parentNode.appendChild(pill); } catch(_){} }
+				// Tail element for speech bubble
+				const tail = document.createElement('i');
+				tail.className = 'editing-pill-tail';
+				pill.appendChild(tail);
+				try { (container||el.parentNode).appendChild(pill); } catch(_e){ try { el.insertAdjacentElement('afterend', pill); } catch(_){} }
 			}
 			const mins = Math.max(0, Math.ceil((until - Date.now())/60000));
-			pill.textContent = `${label} editing • ${mins}m`;
+			// Update text (keep tail child)
+			try {
+				const txt = `${label} editing • ${mins}m`;
+				// If firstChild is tail, manage text separately
+				if (pill.firstChild && pill.firstChild.classList && pill.firstChild.classList.contains('editing-pill-tail')){
+					pill.lastChild && pill.lastChild.nodeType === Node.TEXT_NODE ? (pill.lastChild.textContent = txt) : pill.appendChild(document.createTextNode(txt));
+				} else {
+					pill.textContent = txt; // fallback
+				}
+			} catch(_t){}
 		} catch(_e){}
 	}
 		_fieldIdFor(tileId, key){

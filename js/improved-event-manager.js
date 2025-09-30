@@ -654,31 +654,42 @@ const setBoardAircraftTooltips = () => {
 		}
 
 		// Input Event (während der Eingabe)
-		this.safeAddEventListener(
-			element,
-			"input",
-			(event) => {
-				if (window.isApplyingServerData) {
-					return;
-				}
-				let fid = event.target.id || '';
-				// Normalize miswired Board notes field ids (e.g., textarea with aircraft-<id>)
-				fid = this.normalizeNotesFieldId(event.target, fid);
-				// Mark field as locally edited and mark a write fence immediately to avoid server echo overriding while typing
-				try { if (window.serverSync && typeof window.serverSync._markPendingWrite === 'function') { window.serverSync._markPendingWrite(fid); } } catch(_e){}
-				// Extend a 5-minute local lock for this field to advertise active editing via presence
-				try { window.__fieldApplyLockUntil = window.__fieldApplyLockUntil || {}; window.__fieldApplyLockUntil[fid] = Date.now() + 300000; } catch(_e){}
-				// Treat any relevant input as recent typing to gate read-backs
-				this._lastTypingAt = Date.now();
-				if (this.isFreeTextFieldId(fid)) {
-					// Local save after 500ms, server flush after typing idle window
-					this.debouncedFieldUpdate(fid, event.target.value, 500, { flushDelayMs: this.TYPING_DEBOUNCE_MS, source: 'input' });
-				} else {
-					this.debouncedFieldUpdate(fid, event.target.value);
-				}
-			},
-			`${containerType}_input`
-		);
+			this.safeAddEventListener(
+				element,
+				"input",
+				(event) => {
+					if (window.isApplyingServerData) {
+						return;
+					}
+					let fid = event.target.id || '';
+					// Normalize miswired Board notes field ids (e.g., textarea with aircraft-<id>)
+					fid = this.normalizeNotesFieldId(event.target, fid);
+					// Mark field as locally edited and mark a write fence immediately to avoid server echo overriding while typing
+					try { if (window.serverSync && typeof window.serverSync._markPendingWrite === 'function') { window.serverSync._markPendingWrite(fid); } } catch(_e){}
+					// Single-active-lock policy: advertise only this field for 5 minutes
+					try {
+						window.__lastActiveFieldId = fid;
+						window.__fieldApplyLockUntil = {};
+						window.__fieldApplyLockUntil[fid] = Date.now() + 300000;
+						// Immediate presence heartbeat + quick locks refresh (1s cooldown)
+						const now = Date.now();
+						if (!window.__presenceQuickCooldown || now > window.__presenceQuickCooldown) {
+							window.__presenceQuickCooldown = now + 1000;
+							setTimeout(() => { try { window.serverSync && window.serverSync._sendPresenceHeartbeat && window.serverSync._sendPresenceHeartbeat(); } catch(_){} }, 0);
+							setTimeout(() => { try { window.serverSync && window.serverSync._refreshRemoteLocksFromPresence && window.serverSync._refreshRemoteLocksFromPresence(true); } catch(_){} }, 150);
+						}
+					} catch(_e){}
+					// Treat any relevant input as recent typing to gate read-backs
+					this._lastTypingAt = Date.now();
+					if (this.isFreeTextFieldId(fid)) {
+						// Local save after 500ms, server flush after typing idle window
+						this.debouncedFieldUpdate(fid, event.target.value, 500, { flushDelayMs: this.TYPING_DEBOUNCE_MS, source: 'input' });
+					} else {
+						this.debouncedFieldUpdate(fid, event.target.value);
+					}
+				},
+				`${containerType}_input`
+			);
 
 		// Blur Event (wenn Feld verlassen wird)
 		this.safeAddEventListener(
@@ -733,8 +744,19 @@ const setBoardAircraftTooltips = () => {
 				const isFree = this.isFreeTextFieldId(fid);
 				// Blur also counts as recent typing end; update timestamp to still gate immediate read-back
 				this._lastTypingAt = Date.now();
-				// Add a short hard-lock on blur for free-text fields to prevent immediate flip-backs from read-back
-				try { if (isFree) { window.__fieldApplyLockUntil = window.__fieldApplyLockUntil || {}; window.__fieldApplyLockUntil[fid] = Date.now() + 15000; } } catch(_e){}
+				// Blur keeps the same active field; reaffirm single-active-lock
+				try {
+					window.__lastActiveFieldId = fid;
+					window.__fieldApplyLockUntil = {};
+					// For blur we still keep 5 min lock as per policy
+					window.__fieldApplyLockUntil[fid] = Date.now() + 300000;
+					const now = Date.now();
+					if (!window.__presenceQuickCooldown || now > window.__presenceQuickCooldown) {
+						window.__presenceQuickCooldown = now + 1000;
+						setTimeout(() => { try { window.serverSync && window.serverSync._sendPresenceHeartbeat && window.serverSync._sendPresenceHeartbeat(); } catch(_){} }, 0);
+						setTimeout(() => { try { window.serverSync && window.serverSync._refreshRemoteLocksFromPresence && window.serverSync._refreshRemoteLocksFromPresence(true); } catch(_){} }, 150);
+					}
+				} catch(_e){}
 				// Also mark a write fence on blur for safety
 				try { if (window.serverSync && typeof window.serverSync._markPendingWrite === 'function') { window.serverSync._markPendingWrite(fid); } } catch(_e){}
 				// On blur, flush free-text immediately; others keep normal quick debounce
@@ -759,11 +781,22 @@ const setBoardAircraftTooltips = () => {
 				fid = this.normalizeNotesFieldId(event.target, fid);
 				// Mark fence on change for non-free-text fields too
 				try { if (window.serverSync && typeof window.serverSync._markPendingWrite === 'function') { window.serverSync._markPendingWrite(fid); } } catch(_e){}
+				// Single-active-lock policy: advertise only this field for 5 minutes
+				try {
+					window.__lastActiveFieldId = fid;
+					window.__fieldApplyLockUntil = {};
+					window.__fieldApplyLockUntil[fid] = Date.now() + 300000;
+					const now = Date.now();
+					if (!window.__presenceQuickCooldown || now > window.__presenceQuickCooldown) {
+						window.__presenceQuickCooldown = now + 1000;
+						setTimeout(() => { try { window.serverSync && window.serverSync._sendPresenceHeartbeat && window.serverSync._sendPresenceHeartbeat(); } catch(_){} }, 0);
+						setTimeout(() => { try { window.serverSync && window.serverSync._refreshRemoteLocksFromPresence && window.serverSync._refreshRemoteLocksFromPresence(true); } catch(_){} }, 150);
+					}
+				} catch(_e){}
 				// Treat any change as recent typing to gate read-backs (covers selects/date-time)
 				this._lastTypingAt = Date.now();
 				const isFree = this.isFreeTextFieldId(fid);
 				// Hard lock this field from server applies for a short window after local change
-try { window.__fieldApplyLockUntil = window.__fieldApplyLockUntil || {}; window.__fieldApplyLockUntil[fid] = Date.now() + 300000; } catch(_e){}
 				this.debouncedFieldUpdate(fid, event.target.value, 150, { flushDelayMs: isFree ? this.TYPING_DEBOUNCE_MS : 150, source: 'change' });
 			},
 			`${containerType}_change`
@@ -1111,8 +1144,36 @@ try { window.__fieldApplyLockUntil = window.__fieldApplyLockUntil || {}; window.
 	}
 }
 
-// Globale Instanz erstellen
-window.hangarEventManager = new HangarEventManager();
+		// Globale Instanz erstellen
+		window.hangarEventManager = new HangarEventManager();
+		
+		// Global delegated blockers for locked fields (multi-master): prevent focus/typing while locked by others
+		(function(){
+			try {
+				const looksRelevantId = (id)=> /^(aircraft|hangar-position|position|arrival-time|departure-time|status|tow-status|notes)-(\d+)$/.test(id||'');
+				const isMaster = ()=> { try { return (window.serverSync && window.serverSync.isMaster) || (window.sharingManager && window.sharingManager.syncMode === 'master'); } catch(_){ return false; } };
+				const isLockedElsewhere = (fid)=>{
+					try {
+						const info = window.serverSync && window.serverSync._remoteLocks ? window.serverSync._remoteLocks[fid] : null;
+						return !!(info && (info.until||0) > Date.now());
+					} catch(_){ return false; }
+				};
+				const guard = (e)=>{
+					try {
+						if (!isMaster()) return;
+						const t = e && e.target ? e.target.closest('input[id], textarea[id], select[id]') : null;
+						if (!t || !looksRelevantId(t.id||'')) return;
+						if (isLockedElsewhere(t.id)){
+							e.preventDefault(); e.stopPropagation();
+							try { t.blur(); } catch(_b){}
+							try { window.showNotification && window.showNotification('Locked by another user • try again later', 'warning'); } catch(_n){}
+						}
+					} catch(_){ }
+				};
+				document.addEventListener('pointerdown', guard, true);
+				document.addEventListener('focusin', guard, true);
+			} catch(_){}
+		})();
 window.improved_event_manager = window.hangarEventManager; // Kompatibilität
 
 // *** ZENTRALE INITIALISIERUNG STATT SEPARATER DOMContentLoaded ***

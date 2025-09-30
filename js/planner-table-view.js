@@ -376,8 +376,7 @@ if (!acInput.getAttribute('title')) acInput.setAttribute('title', 'Shift+Click t
       },
       notes: (v)=>{ 
         setIdValue(`notes-${tileId}`, v); 
-        // Mirror aircraft handler: fire input/change and then blur to trigger immediate sync
-        eventFire(`#notes-${tileId}`, 'input'); 
+        // Fire same pattern as Board: change then blur to trigger immediate flush by Event Manager
         eventFire(`#notes-${tileId}`, 'change'); 
         blurThenSync(`#notes-${tileId}`);
       }

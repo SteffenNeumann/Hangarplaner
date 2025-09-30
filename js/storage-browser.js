@@ -1731,7 +1731,9 @@ class ServerSync {
 				const aid = (typeof document !== 'undefined' && document.activeElement && document.activeElement.id) ? document.activeElement.id : '';
 				activeRelevant = !!(this._isRelevantFieldId && this._isRelevantFieldId(aid));
 			} catch(_e){}
-			const mayBulkApply = !!(window.dataCoordinator && !hasFences && !typingActive && !activeRelevant);
+			let mayBulkApply = !!(window.dataCoordinator && !hasFences && !typingActive && !activeRelevant);
+			// In read-only (Sync), prefer direct field application to avoid diverging logic for certain fields (notes/position)
+			try { if (window.sharingManager && window.sharingManager.syncMode === 'sync') { mayBulkApply = false; } } catch(_e){}
 			if (mayBulkApply) {
 				console.log("🔄 Verwende dataCoordinator für Server-Daten (safe bulk apply)...");
 				window.dataCoordinator.loadProject(toApply, "server");

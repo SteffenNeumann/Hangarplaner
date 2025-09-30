@@ -203,8 +203,15 @@ class HangarEventManager {
 				return;
 			}
 
-			// ===== Aggregation path: batch multiple field updates into a single POST =====
+			// Fast path: on blur for free-text fields like notes, flush immediately via targeted write
 			try {
+				const isImmediate = options && options.source === 'blur' && (/^notes-\d+$/).test(fieldId);
+				if (isImmediate && window.serverSync && typeof window.serverSync.syncFieldUpdates === 'function') {
+					try { if (window.serverSync && typeof window.serverSync._markPendingWrite === 'function') { window.serverSync._markPendingWrite(fieldId); } } catch(_e){}
+					await window.serverSync.syncFieldUpdates({ [fieldId]: value }, { immediate: true });
+					return;
+				}
+				// ===== Aggregation path: batch multiple field updates into a single POST =====
 				// Mark write fence (if supported by serverSync)
 				try { if (window.serverSync && typeof window.serverSync._markPendingWrite === 'function') { window.serverSync._markPendingWrite(fieldId); } } catch(_e){}
 				// Collect pending updates

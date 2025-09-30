@@ -376,8 +376,10 @@ if (!acInput.getAttribute('title')) acInput.setAttribute('title', 'Shift+Click t
       },
       notes: (v)=>{ 
         setIdValue(`notes-${tileId}`, v); 
+        // Mirror aircraft handler: fire input/change and then blur to trigger immediate sync
         eventFire(`#notes-${tileId}`, 'input'); 
         eventFire(`#notes-${tileId}`, 'change'); 
+        blurThenSync(`#notes-${tileId}`);
       }
     };
     if (readOnly) return; // no wiring when read-only

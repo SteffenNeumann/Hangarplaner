@@ -177,7 +177,7 @@
           cellInput(`pos-${row.tileId}`, row.positionInfo, 'text', ro, 'positionInfo'),
           cellTowStatus(`tow-${row.tileId}`, row.towStatus, ro, 'towStatus'),
           cellSelectWithAmpel(`stat-${row.tileId}`, row.status, ro, [{val: 'neutral', text: ''}, {val: 'ready', text: 'Ready'}, {val: 'maintenance', text: 'MX'}, {val: 'aog', text: 'AOG'}], 'status'),
-          cellInput(`notes-${row.tileId}`, row.notes, 'text', ro, 'notes')
+          cellInput(`notes-table-${row.tileId}`, row.notes, 'text', ro, 'notes')
         ].join('');
         
         // Attach compact date-time picker behavior to this row's Arr/Dep inputs
@@ -547,7 +547,7 @@ if (!acInput.getAttribute('title')) acInput.setAttribute('title', 'Shift+Click t
         case 'position': return `pos-${id}`;
         case 'status': return `stat-${id}`;
         case 'tow-status': return `tow-${id}`;
-        case 'notes': return `notes-${id}`;
+        case 'notes': return `notes-table-${id}`;
         default: return '';
       }
     } catch(_) { return ''; }

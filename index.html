@@ -1590,42 +1590,8 @@ function isReadOnlySync(){
     if (any) { const m = any.id.match(/-(\d+)$/); if (m) return parseInt(m[1],10); }
     return null;
   }
-  function clearSingleTile(cellId){
-    try {
-      if (!cellId && cellId !== 0) return false;
-      // Locate the tile host (primary or secondary)
-      let tile = document.querySelector(`[data-cell-id="${cellId}"]`);
-      if (!tile) {
-        // Try by proximity to known inputs
-        const aircraft = document.getElementById(`aircraft-${cellId}`);
-        tile = aircraft?.closest('.hangar-cell') || null;
-      }
-      // Clear Aircraft ID
-      const ac = document.getElementById(`aircraft-${cellId}`);
-      if (ac) ac.value = '';
-      // Clear times + dataset.iso
-      const arr = document.getElementById(`arrival-time-${cellId}`);
-      if (arr) { arr.value = ''; try { delete arr.dataset.iso; } catch(e){} }
-      const dep = document.getElementById(`departure-time-${cellId}`);
-      if (dep) { dep.value = ''; try { delete dep.dataset.iso; } catch(e){} }
-      // Clear Pos (route Position in info grid)
-      const posInfo = document.getElementById(`position-${cellId}`);
-      if (posInfo) posInfo.value = '';
-      // Keep Hangar Position (header) untouched intentionally
-      // Clear Notes
-      const notes = document.getElementById(`notes-${cellId}`);
-      if (notes) notes.value = '';
-      // Tow -> neutral + styling
-      const tow = document.getElementById(`tow-status-${cellId}`);
-      if (tow) { tow.value = 'neutral'; if (typeof updateTowStatusStyles === 'function') updateTowStatusStyles(tow); }
-      // Status -> neutral + status light
-      const status = document.getElementById(`status-${cellId}`);
-      if (status) { status.value = 'neutral'; if (typeof updateStatusLight === 'function') updateStatusLight(status); }
-      // Remove Last Update badge (and persisted record)
-      try { if (window.LastUpdateBadges && typeof window.LastUpdateBadges.remove === 'function') { window.LastUpdateBadges.remove(parseInt(cellId,10)); } } catch(e){}
-      return true;
-    } catch(e){ console.warn('clearSingleTile failed', e); return false; }
-  }
+  // clearSingleTile is now defined in hangar.js (async with proper sync support)
+  // This local version was causing issues by overwriting the global async version
   function injectDeleteIntoTile(tile){
     try {
       if (!tile || tile.__deleteInjected) return;
@@ -1645,32 +1611,10 @@ function isReadOnlySync(){
       btn.addEventListener('click', async (e)=>{
         e.preventDefault(); e.stopPropagation();
         if (isReadOnlySync()) return; // No action in read-only
-        const ss = window.serverSync;
-        try { if (ss && typeof ss.suspendReads === 'function') ss.suspendReads(); } catch(_e) {}
-        const ok = await (window.clearSingleTile ? window.clearSingleTile(cellId) : clearSingleTile(cellId));
-          try {
-            if (ok && window.serverSync?.isMaster) {
-              const updates = {};
-              try {
-                updates[`aircraft-${cellId}`] = '';
-                updates[`arrival-time-${cellId}`] = '';
-                updates[`departure-time-${cellId}`] = '';
-                updates[`position-${cellId}`] = '';
-                updates[`notes-${cellId}`] = '';
-                updates[`status-${cellId}`] = 'neutral';
-                updates[`tow-status-${cellId}`] = 'neutral';
-              } catch(_e) {}
-              if (typeof window.serverSync.syncFieldUpdates === 'function') {
-                await window.serverSync.syncFieldUpdates(updates);
-              } else {
-                await window.serverSync.syncWithServer();
-              }
-            }
-          } catch(err) {
-            console.warn('Tile clear sync failed:', err);
-          } finally {
-            try { if (ss && typeof ss.resumeReads === 'function') ss.resumeReads(true); } catch(_e) {}
-          }
+        // clearSingleTile now handles suspend/resume and sync internally
+        if (window.clearSingleTile) {
+          await window.clearSingleTile(cellId);
+        }
       });
       header.appendChild(btn);
       tile.__deleteInjected = true;
@@ -1696,8 +1640,7 @@ function isReadOnlySync(){
   // Ensure injection after full DOM load as a fallback (tiles present)
   try { document.addEventListener('DOMContentLoaded', function(){ setTimeout(init, 600); }, { once: true }); } catch(_e){}
   document.addEventListener('secondaryTilesCreated', function(){ setTimeout(injectAll, 50); setTimeout(hookSyncToggles, 60); });
-  // Expose for potential reuse
-  window.clearSingleTile = clearSingleTile;
+  // clearSingleTile is exposed from hangar.js - don't overwrite it here
 })();
 </script>
 <script>

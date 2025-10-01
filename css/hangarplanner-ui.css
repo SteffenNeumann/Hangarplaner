@@ -5270,12 +5270,24 @@ body:not(.dark-mode) #mailLogList li {
 .dark-mode .editing-pill .editing-pill-tail { display: none !important; }
 
 /* Remote user field lock border indicator (Multi-Master Mode) */
-.remote-locked-field {
+.remote-locked-field,
+input.remote-locked-field,
+textarea.remote-locked-field,
+select.remote-locked-field,
+.aircraft-id.remote-locked-field,
+.info-input.remote-locked-field {
 	border: 2px solid var(--menu-accent) !important;
-	transition: border-color 0.2s ease;
+	box-shadow: 0 0 0 1px var(--menu-accent) !important;
+	transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
-.dark-mode .remote-locked-field {
+.dark-mode .remote-locked-field,
+.dark-mode input.remote-locked-field,
+.dark-mode textarea.remote-locked-field,
+.dark-mode select.remote-locked-field,
+.dark-mode .aircraft-id.remote-locked-field,
+.dark-mode .info-input.remote-locked-field {
 	border-color: var(--menu-accent) !important;
+	box-shadow: 0 0 0 1px var(--menu-accent) !important;
 }
 
 /* Light theme variants (legacy mapping) */

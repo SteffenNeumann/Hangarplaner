@@ -335,10 +335,19 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 					const fid = (p.id||'').replace('editing-pill-','');
 					const info = map[fid];
 					if (!info || (info.until||0) <= now) {
-						// Remove border from field when removing pill
+						// Remove styles and pill from field
 						const field = document.getElementById(fid);
 						if (field) {
 							field.classList.remove('remote-locked-field');
+							// Restore original styles
+							if (field.dataset.originalBg !== undefined) {
+								field.style.background = field.dataset.originalBg;
+								field.style.border = field.dataset.originalBorder;
+								field.style.boxShadow = field.dataset.originalBoxShadow;
+								delete field.dataset.originalBg;
+								delete field.dataset.originalBorder;
+								delete field.dataset.originalBoxShadow;
+							}
 						}
 						p.remove();
 					}
@@ -350,12 +359,21 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 			// Also show our local pill for own locks as subtle hint (optional)
 			const local = this._collectLocalLocks();
 			Object.entries(local).forEach(([fid, until]) => { try { this._createOrUpdateEditingLockPill(fid, 'You', until); } catch(_e){} });
-			// Clean up orphaned borders for fields without locks
+			// Clean up orphaned styles for fields without locks
 			try {
 				document.querySelectorAll('.remote-locked-field').forEach(field => {
 					const fieldId = field.id;
 					if (!this._remoteLocks[fieldId]) {
 						field.classList.remove('remote-locked-field');
+						// Restore original styles
+						if (field.dataset.originalBg !== undefined) {
+							field.style.background = field.dataset.originalBg;
+							field.style.border = field.dataset.originalBorder;
+							field.style.boxShadow = field.dataset.originalBoxShadow;
+							delete field.dataset.originalBg;
+							delete field.dataset.originalBorder;
+							delete field.dataset.originalBoxShadow;
+						}
 					}
 				});
 			} catch(_c){}
@@ -397,19 +415,36 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 			// Add background highlight for remote users only (Multi-Master Mode)
 			try {
 				if (label !== 'You') {
-					// Add background highlight to the actual input field for remote users
+					// Store original styles so we can restore them later
+					if (!el.dataset.originalBg) {
+						el.dataset.originalBg = el.style.background || '';
+						el.dataset.originalBorder = el.style.border || '';
+						el.dataset.originalBoxShadow = el.style.boxShadow || '';
+					}
+					// Apply inline styles - these will override any CSS
 					el.classList.add('remote-locked-field');
-					const computedStyle = window.getComputedStyle(el);
-					console.log(`🔒 Added remote-locked-field to ${fieldId} for user: ${label}`);
-					console.log(`   Background: ${computedStyle.backgroundColor}`);
-					console.log(`   Border: ${computedStyle.border}`);
-					console.log(`   Box-shadow: ${computedStyle.boxShadow}`);
+					el.style.background = 'rgba(244, 158, 12, 0.25)';
+					el.style.border = '2px solid rgba(244, 158, 12, 0.8)';
+					el.style.boxShadow = '0 0 12px rgba(244, 158, 12, 0.5)';
+					el.style.transition = 'all 0.2s ease';
+					console.log(`🔒 🎨 Applied INLINE styles to ${fieldId} for user: ${label}`);
+					console.log(`   Background: ${el.style.background}`);
+					console.log(`   Border: ${el.style.border}`);
+					console.log(`   Box-shadow: ${el.style.boxShadow}`);
 				} else {
-					// Remove highlight for own fields
+					// Restore original styles for own fields
 					el.classList.remove('remote-locked-field');
-					console.log(`✅ Removed remote-locked-field from ${fieldId} (own field)`);
+					if (el.dataset.originalBg !== undefined) {
+						el.style.background = el.dataset.originalBg;
+						el.style.border = el.dataset.originalBorder;
+						el.style.boxShadow = el.dataset.originalBoxShadow;
+						delete el.dataset.originalBg;
+						delete el.dataset.originalBorder;
+						delete el.dataset.originalBoxShadow;
+					}
+					console.log(`✅ Removed remote-locked styles from ${fieldId} (own field)`);
 				}
-			} catch(_b){ console.error('Failed to add/remove remote-locked-field class:', _b); }
+			} catch(_b){ console.error('Failed to add/remove remote-locked-field styles:', _b); }
 		} catch(_e){}
 	}
 		_fieldIdFor(tileId, key){

@@ -380,9 +380,14 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 		} catch(_e){}
 	}
 	_createOrUpdateEditingLockPill(fieldId, label, until){
+		console.log(`🔍 _createOrUpdateEditingLockPill called: fieldId=${fieldId}, label=${label}, until=${until}`);
 		try {
 			const el = document.getElementById(fieldId);
-			if (!el) return;
+			console.log(`🔍 Element found:`, el);
+			if (!el) {
+				console.warn(`⚠️ No element found for fieldId: ${fieldId}`);
+				return;
+			}
 			const id = `editing-pill-${fieldId}`;
 			let pill = document.getElementById(id);
 			// Anchor in an input container if available
@@ -413,8 +418,10 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 				}
 			} catch(_t){}
 			// Add background highlight for remote users only (Multi-Master Mode)
+			console.log(`🎨 About to check label condition: label='${label}', condition result: ${label !== 'You'}`);
 			try {
 				if (label !== 'You') {
+					console.log(`🟢 Condition passed! Applying inline styles to ${fieldId}...`);
 					// Store original styles so we can restore them later
 					if (!el.dataset.originalBg) {
 						el.dataset.originalBg = el.style.background || '';
@@ -422,15 +429,22 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 						el.dataset.originalBoxShadow = el.style.boxShadow || '';
 					}
 					// Apply inline styles - these will override any CSS
+					console.log(`🔧 About to add class and set styles...`);
 					el.classList.add('remote-locked-field');
+					console.log(`🔧 Class added. Now setting background...`);
 					el.style.background = 'rgba(244, 158, 12, 0.25)';
+					console.log(`🔧 Background set. Now setting border...`);
 					el.style.border = '2px solid rgba(244, 158, 12, 0.8)';
+					console.log(`🔧 Border set. Now setting boxShadow...`);
 					el.style.boxShadow = '0 0 12px rgba(244, 158, 12, 0.5)';
+					console.log(`🔧 BoxShadow set. Now setting transition...`);
 					el.style.transition = 'all 0.2s ease';
 					console.log(`🔒 🎨 Applied INLINE styles to ${fieldId} for user: ${label}`);
 					console.log(`   Background: ${el.style.background}`);
 					console.log(`   Border: ${el.style.border}`);
 					console.log(`   Box-shadow: ${el.style.boxShadow}`);
+					console.log(`   Element after styling:`, el);
+					console.log(`   Element.style object:`, el.style);
 				} else {
 					// Restore original styles for own fields
 					el.classList.remove('remote-locked-field');

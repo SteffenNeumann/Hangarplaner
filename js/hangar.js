@@ -1747,16 +1747,13 @@ async function performScreenReset(){
 			});
 
 			// 3) Reset tile status selectors and lights to neutral
-			if (typeof resetAllTilesToNeutral === 'function') {
-				resetAllTilesToNeutral();
-			} else {
-				// Fallback
-				document.querySelectorAll('.status-selector').forEach(sel => {
-					sel.value = 'neutral';
-					if (window.updateStatusLight) window.updateStatusLight(sel);
-					clearedFieldIds.push(sel.id);
-				});
-			}
+			// IMPORTANT: Must add status field IDs to clearedFieldIds for server sync
+			document.querySelectorAll('select[id^="status-"]').forEach(sel => {
+				sel.value = 'neutral';
+				if (window.updateStatusLight) window.updateStatusLight(sel);
+				try { if (typeof updateStatusSelectorStyles === 'function') updateStatusSelectorStyles(sel); } catch(_) {}
+				clearedFieldIds.push(sel.id);
+			});
 
 			// 3b) Persist cleared values locally and notify event handlers
 			try {

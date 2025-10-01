@@ -1310,8 +1310,13 @@ newFetchFlightBtn.onclick = async function (event) {
 
 // Per-tile clear helper (keeps Hangar Position)
 window.clearSingleTile = window.clearSingleTile || async function(cellId){
+  const ss = window.serverSync;
+  let didSync = false;
   try {
     if (!cellId && cellId !== 0) return false;
+
+    // Pause incoming reads during destructive local changes to avoid re-population from stale server state
+    try { if (ss && typeof ss.suspendReads === 'function') ss.suspendReads(); } catch(_e){}
 
     const clearedUpdates = {};
     const suppress = !!window.__suppressFieldSync;
@@ -1329,7 +1334,7 @@ window.clearSingleTile = window.clearSingleTile || async function(cellId){
     if (posInfo) { posInfo.value=''; clearedUpdates[`position-${cellId}`] = ''; }
 
     const manual = document.getElementById(`manual-input-${cellId}`);
-    if (manual) { manual.value=''; clearedUpdates[`manual-input-${cellId}`] = ''; }
+    if (manual) { manual.value=''; /* not synced to server by design */ }
 
     const notes = document.getElementById(`notes-${cellId}`);
     if (notes) { notes.value=''; clearedUpdates[`notes-${cellId}`] = ''; }
@@ -1360,19 +1365,31 @@ window.clearSingleTile = window.clearSingleTile || async function(cellId){
 
     // If master, post a targeted fieldUpdates payload immediately for fast cross-client convergence
     try {
-      if (!suppress && window.serverSync && window.serverSync.isMaster && typeof window.serverSync.syncFieldUpdates === 'function'){
-        // Build updates map with field ids -> values
-        const updates = { ...clearedUpdates };
-        // Note: syncFieldUpdates handles headers and read-back; our read-back is already gated when typing
-        await window.serverSync.syncFieldUpdates(updates, { source: 'clearTile' });
-        console.log('✅ clearSingleTile: changes synced to server');
+      if (!suppress && ss && ss.isMaster && typeof ss.syncFieldUpdates === 'function'){
+        // Build updates map with allowed field ids only
+        const updates = {};
+        const allowRe = /^(aircraft|arrival-time|departure-time|position|status|tow-status|notes)-(\d+)$/;
+        Object.entries(clearedUpdates).forEach(([fid, val]) => { if (allowRe.test(fid)) updates[fid] = val; });
+        if (Object.keys(updates).length > 0) {
+          await ss.syncFieldUpdates(updates, { source: 'clearTile' });
+          didSync = true;
+          console.log('✅ clearSingleTile: changes synced to server');
+        } else {
+          console.log('ℹ️ clearSingleTile: nothing to sync (no recognized fields found)');
+        }
+      } else if (ss && !ss.isMaster) {
+        try { window.showNotification && window.showNotification('Read-only mode: local clear only (no server write)', 'warning'); } catch(_n){}
       }
     } catch(err){
       console.warn('clearSingleTile: targeted sync failed', err);
     }
 
-return true;
+    return true;
   } catch(e) { console.warn('clearSingleTile failed:', e); return false; }
+  finally {
+    // Always resume reads afterwards; if we wrote, force an immediate update check to speed convergence
+    try { if (ss && typeof ss.resumeReads === 'function') ss.resumeReads(!!didSync); } catch(_e){}
+  }
 };
 
 // Global helpers: position label and free tile list (independent of planner selection flow)

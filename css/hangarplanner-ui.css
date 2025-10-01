@@ -3224,18 +3224,19 @@ body.dark-mode {
 }
 
 /* Light mode: borderless inputs and dropdowns with subtle hover */
-body:not(.dark-mode) #hangarGrid .hangar-cell .aircraft-id,
-body:not(.dark-mode) #hangarGrid .hangar-cell .info-input,
-body:not(.dark-mode) #hangarGrid .hangar-cell .position-input,
-body:not(.dark-mode) #hangarGrid .hangar-cell .notes-textarea,
-body:not(.dark-mode) #hangarGrid .hangar-cell .status-selector,
-body:not(.dark-mode) #hangarGrid .hangar-cell select.status-selector,
-body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .aircraft-id,
-body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .info-input,
-body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .position-input,
-body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .notes-textarea,
-body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .status-selector,
-body:not(.dark-mode) #secondaryHangarGrid .hangar-cell select.status-selector {
+/* IMPORTANT: Exclude remote-locked-field from transparent border rule */
+body:not(.dark-mode) #hangarGrid .hangar-cell .aircraft-id:not(.remote-locked-field),
+body:not(.dark-mode) #hangarGrid .hangar-cell .info-input:not(.remote-locked-field),
+body:not(.dark-mode) #hangarGrid .hangar-cell .position-input:not(.remote-locked-field),
+body:not(.dark-mode) #hangarGrid .hangar-cell .notes-textarea:not(.remote-locked-field),
+body:not(.dark-mode) #hangarGrid .hangar-cell .status-selector:not(.remote-locked-field),
+body:not(.dark-mode) #hangarGrid .hangar-cell select.status-selector:not(.remote-locked-field),
+body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .aircraft-id:not(.remote-locked-field),
+body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .info-input:not(.remote-locked-field),
+body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .position-input:not(.remote-locked-field),
+body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .notes-textarea:not(.remote-locked-field),
+body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .status-selector:not(.remote-locked-field),
+body:not(.dark-mode) #secondaryHangarGrid .hangar-cell select.status-selector:not(.remote-locked-field) {
 	border: 1px solid transparent !important;
 	box-shadow: none !important;
 }

@@ -396,7 +396,33 @@ class HangarEventManager {
 			return;
 		}
 
-		console.log("🔧 Initialisiere Event-Manager...");
+	console.log("🔧 Initialisiere Event-Manager...");
+
+		// Add global window visibility change handler for tab switching
+		try {
+			document.addEventListener('visibilitychange', () => {
+				if (document.hidden) {
+					// User switched tabs or minimized window - clear all locks
+					try {
+						window.__lastActiveFieldId = '';
+						window.__fieldApplyLockUntil = {};
+						setTimeout(() => { try { window.serverSync && window.serverSync._sendPresenceHeartbeat && window.serverSync._sendPresenceHeartbeat(); } catch(_){} }, 0);
+						setTimeout(() => { try { window.serverSync && window.serverSync._refreshRemoteLocksFromPresence && window.serverSync._refreshRemoteLocksFromPresence(true); } catch(_){} }, 50);
+						console.log('👁️ Tab hidden: Cleared all locks');
+					} catch(_e){}
+				}
+			});
+			// Also add window blur for additional coverage
+			window.addEventListener('blur', () => {
+				try {
+					window.__lastActiveFieldId = '';
+					window.__fieldApplyLockUntil = {};
+					setTimeout(() => { try { window.serverSync && window.serverSync._sendPresenceHeartbeat && window.serverSync._sendPresenceHeartbeat(); } catch(_){} }, 0);
+					setTimeout(() => { try { window.serverSync && window.serverSync._refreshRemoteLocksFromPresence && window.serverSync._refreshRemoteLocksFromPresence(true); } catch(_){} }, 50);
+					console.log('🧊 Window blur: Cleared all locks');
+				} catch(_e){}
+			});
+		} catch(_e){ console.error('Failed to setup global lock handlers:', _e); }
 
 		// Bestehende Event-Handler bereinigen
 		this.cleanupExistingHandlers();
@@ -780,6 +806,27 @@ const setBoardAircraftTooltips = () => {
 				this.debouncedFieldUpdate(fid, storeVal, this.BLUR_SAVE_DELAY_MS, { flushDelayMs: isFree ? 0 : 150, source: 'blur' });
 			},
 			`${containerType}_blur`
+		);
+
+		// Keydown Event (for Tab key detection)
+		this.safeAddEventListener(
+			element,
+			"keydown",
+			(event) => {
+				if (window.isApplyingServerData) return;
+				// Tab key pressed - clear lock immediately
+				if (event.key === 'Tab' || event.keyCode === 9) {
+					try {
+						window.__lastActiveFieldId = '';
+						window.__fieldApplyLockUntil = {};
+						// Immediate presence update
+						setTimeout(() => { try { window.serverSync && window.serverSync._sendPresenceHeartbeat && window.serverSync._sendPresenceHeartbeat(); } catch(_){} }, 0);
+						setTimeout(() => { try { window.serverSync && window.serverSync._refreshRemoteLocksFromPresence && window.serverSync._refreshRemoteLocksFromPresence(true); } catch(_){} }, 50);
+						console.log('⏭️ Tab key: Cleared lock immediately');
+					} catch(_e){}
+				}
+			},
+			`${containerType}_keydown`
 		);
 
 		// Change Event (für Dropdowns)

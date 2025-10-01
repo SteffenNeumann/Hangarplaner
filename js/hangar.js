@@ -1795,8 +1795,12 @@ async function performScreenReset(){
 		// If write is enabled (Master), persist cleared state to server immediately
 		if (resetSucceeded && window.serverSync?.isMaster) {
 			try {
+				// Mark this sync as a reset operation for receiver detection
+				try { if (!window.__syncMetadataOverride) window.__syncMetadataOverride = {}; window.__syncMetadataOverride.lastWriter = 'reset'; window.__syncMetadataOverride.lastWriterSession = 'system'; } catch(_e){}
 				console.log('📤 Reset screen: syncing cleared state to server...');
 				await window.serverSync.syncWithServer();
+				// Clear reset marker after sync
+				try { if (window.__syncMetadataOverride) { delete window.__syncMetadataOverride.lastWriter; delete window.__syncMetadataOverride.lastWriterSession; } } catch(_e){}
 				console.log('✅ Reset screen: changes synced to server');
 				// After a successful write, force an immediate read-back for fast convergence
 				try { if (ss && typeof ss.resumeReads === 'function') ss.resumeReads(true); } catch(_e){}

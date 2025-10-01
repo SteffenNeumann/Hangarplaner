@@ -1029,10 +1029,13 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 						pre[fid] = (base[key] ?? '');
 					});
 				} catch(_e){}
-				let __uname = '';
-				try { const inp = document.getElementById('presenceNameInput'); if (inp && inp.value) __uname = (inp.value||'').trim(); } catch(_eDom){}
-				try { if (!__uname) __uname = (localStorage.getItem('presence.displayName') || '').trim(); } catch(_e){}
-				requestBody = { metadata: { timestamp: Date.now(), displayName: __uname }, fieldUpdates: delta, preconditions: pre, settings: currentData.settings || {} };
+			let __uname = '';
+			try { const inp = document.getElementById('presenceNameInput'); if (inp && inp.value) __uname = (inp.value||'').trim(); } catch(_eDom){}
+			try { if (!__uname) __uname = (localStorage.getItem('presence.displayName') || '').trim(); } catch(_e){}
+			const metadata = { timestamp: Date.now(), displayName: __uname };
+			// Apply metadata overrides (e.g., for reset detection)
+			try { if (window.__syncMetadataOverride) Object.assign(metadata, window.__syncMetadataOverride); } catch(_e){}
+			requestBody = { metadata, fieldUpdates: delta, preconditions: pre, settings: currentData.settings || {} };
             } else {
                 // No field delta: skip POST in multi-master to avoid metadata churn and self-echo suppression
                 // Read-back polling will still converge both clients.
@@ -1277,10 +1280,13 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 					pre[fid] = (base[key] ?? '');
 				});
 			} catch(_e){}
-			let __uname3 = '';
-			try { const inp = document.getElementById('presenceNameInput'); if (inp && inp.value) __uname3 = (inp.value||'').trim(); } catch(_eDom){}
-			try { if (!__uname3) __uname3 = (localStorage.getItem('presence.displayName') || '').trim(); } catch(_e){}
-			const body = { metadata: { timestamp: Date.now(), displayName: __uname3 }, fieldUpdates, preconditions: pre, settings: {} };
+		let __uname3 = '';
+		try { const inp = document.getElementById('presenceNameInput'); if (inp && inp.value) __uname3 = (inp.value||'').trim(); } catch(_eDom){}
+		try { if (!__uname3) __uname3 = (localStorage.getItem('presence.displayName') || '').trim(); } catch(_e){}
+		const metadata = { timestamp: Date.now(), displayName: __uname3 };
+		// Apply metadata overrides (e.g., for reset detection)
+		try { if (window.__syncMetadataOverride) Object.assign(metadata, window.__syncMetadataOverride); } catch(_e){}
+		const body = { metadata, fieldUpdates, preconditions: pre, settings: {} };
 			const headers = { "Content-Type": "application/json" };
 			if (this.isMaster) headers["X-Sync-Role"] = "master";
 			try {
@@ -1685,8 +1691,10 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 		}
 		// Do not skip entire snapshots based on lastWriterSession; rely on field-level fences/locks to prevent flip-backs.
 		// This ensures we still apply other users' changes even if our client posted a metadata-only write earlier.
-		// Reset detection log
-		try { const lw = (serverData?.metadata?.lastWriter||''); const lws = (serverData?.metadata?.lastWriterSession||''); if (lw==='reset' || lws==='system') { console.log('🧹 Reset snapshot detected', { lastWriter: lw, lastWriterSession: lws }); } } catch(_e){}
+		// Reset detection: bypass user value protection when applying reset snapshots
+		let isResetSnapshot = false;
+		try { const lw = (serverData?.metadata?.lastWriter||''); const lws = (serverData?.metadata?.lastWriterSession||''); if (lw==='reset' || lws==='system') { isResetSnapshot = true; console.log('🧹 Reset snapshot detected - bypassing user value protection', { lastWriter: lw, lastWriterSession: lws }); } } catch(_e){}
+		this._isApplyingReset = isResetSnapshot;
 		// Stale snapshot gating by server timestamp to prevent oscillation
 		try {
 			const incTs = parseInt(serverData?.metadata?.timestamp || 0, 10);
@@ -1995,6 +2003,7 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 				this.isApplyingServerData = false;
 				window.isApplyingServerData = false;
 				this._bypassFencesOnce = false;
+				this._isApplyingReset = false;
 				console.log("🏁 Server-Sync abgeschlossen, Flag zurückgesetzt");
 
 				// Event-Handler nach Server-Load reaktivieren
@@ -2094,22 +2103,29 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 					const current = (aircraftInput.value || '').trim();
 					const oldValue = aircraftInput.value;
 					const fid = `aircraft-${tileId}`;
-					if (!canApplyField(fid, aircraftInput)) { /* skip overwrite while actively edited */ }
-					else if (incoming.length > 0) {
-						if (!(document.activeElement === aircraftInput && current === incoming)) {
-							aircraftInput.value = incoming;
-						}
-						console.log(`✈️ Aircraft ID gesetzt: ${tileId} = ${current} → ${incoming}`);
-						successfullyApplied++;
-					} else {
-						// Server provided empty/blank aircraftId: keep user value if present
-						if (current.length === 0) {
-							aircraftInput.value = '';
-							console.log(`✈️ Aircraft ID geleert (leer und kein vorhandener Wert): ${tileId}`);
-						} else {
-							console.log(`⏭️ Leere Server-AIRCRAFT_ID ignoriert – behalte Nutzerwert: ${tileId} = ${current}`);
-						}
+				if (!canApplyField(fid, aircraftInput)) { /* skip overwrite while actively edited */ }
+				else if (incoming.length > 0) {
+					if (!(document.activeElement === aircraftInput && current === incoming)) {
+						aircraftInput.value = incoming;
 					}
+					console.log(`✈️ Aircraft ID gesetzt: ${tileId} = ${current} → ${incoming}`);
+					successfullyApplied++;
+				} else {
+					// Server provided empty/blank aircraftId
+					// IMPORTANT: For reset snapshots, always apply empty value (overwrite user data)
+					if (this._isApplyingReset) {
+						aircraftInput.value = '';
+						console.log(`🧹 Aircraft ID geleert durch Reset: ${tileId} (war: ${current})`);
+						successfullyApplied++;
+					} else if (current.length === 0) {
+						// No user value present, apply empty from server
+						aircraftInput.value = '';
+						console.log(`✈️ Aircraft ID geleert (leer und kein vorhandener Wert): ${tileId}`);
+					} else {
+						// User has value, server is empty (NOT a reset): keep user value
+						console.log(`⏭️ Leere Server-AIRCRAFT_ID ignoriert – behalte Nutzerwert: ${tileId} = ${current}`);
+					}
+				}
 				} else {
 					console.warn(`❌ Aircraft Input nicht gefunden: aircraft-${tileId}`);
 					failedToApply++;

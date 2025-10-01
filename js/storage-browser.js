@@ -326,9 +326,15 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 	}
 	_stopPresenceRefreshPoller(){ try { if (this._presenceRefreshTimer) { clearInterval(this._presenceRefreshTimer); this._presenceRefreshTimer = null; } } catch(_e){}
 	_renderEditingLockPills(){
+		console.log(`📋 _renderEditingLockPills called`);
 		try {
 			const now = Date.now();
 			const map = this._remoteLocks || {};
+			console.log(`📋 Remote locks:`, map);
+			console.log(`📋 Number of remote locks: ${Object.keys(map).length}`);
+			Object.entries(map).forEach(([fid, info]) => {
+				console.log(`   Lock: ${fid} -> ${info.displayName}, expires: ${info.until}, now: ${now}, valid: ${(info.until||0) > now}`);
+			});
 			// Remove stale pills not present or expired
 			try {
 				document.querySelectorAll('span.editing-pill').forEach(p => {
@@ -353,8 +359,16 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 					}
 				});
 			} catch(_r){}
+			console.log(`🔄 Processing ${Object.keys(map).length} remote locks...`);
 			Object.entries(map).forEach(([fid, info]) => {
-				try { if (!info || (info.until||0) <= now) return; this._createOrUpdateEditingLockPill(fid, info.displayName || 'User', info.until); } catch(_e){}
+				try { 
+					if (!info || (info.until||0) <= now) {
+						console.log(`⏭️ Skipping expired/invalid lock for ${fid}`);
+						return;
+					}
+					console.log(`➡️ Calling _createOrUpdateEditingLockPill for ${fid}`);
+					this._createOrUpdateEditingLockPill(fid, info.displayName || 'User', info.until); 
+				} catch(_e){ console.error(`❌ Error processing lock for ${fid}:`, _e); }
 			});
 			// Also show our local pill for own locks as subtle hint (optional)
 			const local = this._collectLocalLocks();

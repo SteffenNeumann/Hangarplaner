@@ -5270,25 +5270,28 @@ body:not(.dark-mode) #mailLogList li {
 }
 .dark-mode .editing-pill .editing-pill-tail { display: none !important; }
 
-/* Remote user field lock border indicator (Multi-Master Mode) */
+/* Remote user field lock indicator (Multi-Master Mode) - Using background color for better visibility */
 .remote-locked-field,
 input.remote-locked-field,
 textarea.remote-locked-field,
 select.remote-locked-field,
 .aircraft-id.remote-locked-field,
 .info-input.remote-locked-field {
-	border: 2px solid var(--menu-accent) !important;
-	box-shadow: 0 0 0 1px var(--menu-accent) !important;
-	transition: border-color 0.2s ease, box-shadow 0.2s ease;
+	background: rgba(244, 158, 12, 0.15) !important; /* Orange accent with 15% opacity */
+	border: 2px solid rgba(244, 158, 12, 0.6) !important; /* Orange border */
+	box-shadow: 0 0 8px rgba(244, 158, 12, 0.3) !important; /* Subtle glow */
+	transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
+
 .dark-mode .remote-locked-field,
 .dark-mode input.remote-locked-field,
 .dark-mode textarea.remote-locked-field,
 .dark-mode select.remote-locked-field,
 .dark-mode .aircraft-id.remote-locked-field,
 .dark-mode .info-input.remote-locked-field {
-	border-color: var(--menu-accent) !important;
-	box-shadow: 0 0 0 1px var(--menu-accent) !important;
+	background: rgba(244, 158, 12, 0.25) !important; /* Brighter in dark mode */
+	border: 2px solid rgba(244, 158, 12, 0.7) !important;
+	box-shadow: 0 0 12px rgba(244, 158, 12, 0.4) !important;
 }
 
 /* Light theme variants (legacy mapping) */

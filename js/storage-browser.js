@@ -394,16 +394,20 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 					pill.textContent = txt; // fallback
 				}
 			} catch(_t){}
-			// Add border indicator for remote users only (Multi-Master Mode)
+			// Add background highlight for remote users only (Multi-Master Mode)
 			try {
 				if (label !== 'You') {
-					// Add border to the actual input field for remote users
+					// Add background highlight to the actual input field for remote users
 					el.classList.add('remote-locked-field');
-					console.log(`🔒 Added remote-locked-field class to ${fieldId} for user: ${label}`);
+					const computedStyle = window.getComputedStyle(el);
+					console.log(`🔒 Added remote-locked-field to ${fieldId} for user: ${label}`);
+					console.log(`   Background: ${computedStyle.backgroundColor}`);
+					console.log(`   Border: ${computedStyle.border}`);
+					console.log(`   Box-shadow: ${computedStyle.boxShadow}`);
 				} else {
-					// Remove border for own fields
+					// Remove highlight for own fields
 					el.classList.remove('remote-locked-field');
-					console.log(`✅ Removed remote-locked-field class from ${fieldId} (own field)`);
+					console.log(`✅ Removed remote-locked-field from ${fieldId} (own field)`);
 				}
 			} catch(_b){ console.error('Failed to add/remove remote-locked-field class:', _b); }
 		} catch(_e){}

@@ -311,8 +311,8 @@ legacy._sendPresenceHeartbeat = function(){ try { var sid = legacy.getSessionId(
       // Only show pills in multi-master context
       if (!legacy.isMaster) { try { document.querySelectorAll('span.editing-pill').forEach(function(p){ p.remove(); }); } catch(_){} return; }
       var now = Date.now(); var m = legacy._remoteLocks||{};
-      // Remove stale pills not present in map
-      try { document.querySelectorAll('span.editing-pill').forEach(function(p){ var fid = (p.id||'').replace('editing-pill-',''); if (!m[fid] || (m[fid].until||0)<=now){ p.remove(); } }); } catch(_r){}
+      // Remove stale pills not present in map and restore styles
+      try { document.querySelectorAll('span.editing-pill').forEach(function(p){ var fid = (p.id||'').replace('editing-pill-',''); if (!m[fid] || (m[fid].until||0)<=now){ try { var f = document.getElementById(fid); if (f){ f.classList.remove('remote-locked-field'); if (f.dataset.originalBg !== undefined){ try { f.style.setProperty('background-color', f.dataset.originalBg || '', 'important'); } catch(_r1){ f.style.background = f.dataset.originalBg || ''; } try { f.style.setProperty('background', f.dataset.originalBg || '', 'important'); } catch(_r1b){} try { f.style.setProperty('border', f.dataset.originalBorder || '', 'important'); } catch(_r2){ f.style.border = f.dataset.originalBorder || ''; } try { f.style.setProperty('box-shadow', f.dataset.originalBoxShadow || '', 'important'); } catch(_r3){ f.style.boxShadow = f.dataset.originalBoxShadow || ''; } try { f.style.removeProperty('outline'); f.style.removeProperty('outline-offset'); } catch(_r4){} delete f.dataset.originalBg; delete f.dataset.originalBorder; delete f.dataset.originalBoxShadow; } } } catch(_rs){} p.remove(); } }); } catch(_r){}
       Object.keys(m).forEach(function(fid){
         try {
           var info=m[fid]; if (!info || (info.until||0)<=now) return;
@@ -335,6 +335,21 @@ var mins=Math.max(0, Math.ceil(((info.until||0)-now)/60000));
               pill.textContent = txt;
             }
           } catch(_e){}
+          // Apply inline highlight with !important to defeat theme overrides
+          try {
+            if (!el.dataset.originalBg) {
+              el.dataset.originalBg = el.style.background || '';
+              el.dataset.originalBorder = el.style.border || '';
+              el.dataset.originalBoxShadow = el.style.boxShadow || '';
+            }
+            el.classList.add('remote-locked-field');
+            try { el.style.setProperty('background-color', 'rgba(244, 158, 12, 0.25)', 'important'); } catch(_s1){ el.style.background = 'rgba(244, 158, 12, 0.25)'; }
+            try { el.style.setProperty('background', 'rgba(244, 158, 12, 0.25)', 'important'); } catch(_s1b){}
+            try { el.style.setProperty('border', '2px solid rgba(244, 158, 12, 0.9)', 'important'); } catch(_s2){ el.style.border = '2px solid rgba(244, 158, 12, 0.9)'; }
+            try { el.style.setProperty('outline', '2px solid rgba(244, 158, 12, 0.9)', 'important'); } catch(_s3){}
+            try { el.style.setProperty('outline-offset', '1px', 'important'); } catch(_s3b){}
+            try { el.style.setProperty('box-shadow', '0 0 14px rgba(244, 158, 12, 0.55)', 'important'); } catch(_s4){ el.style.boxShadow = '0 0 14px rgba(244, 158, 12, 0.55)'; }
+          } catch(_b){}
         } catch(_e){}
       });
     } catch(_e){}

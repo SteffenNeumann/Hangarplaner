@@ -380,14 +380,16 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 					if (!this._remoteLocks[fieldId]) {
 						field.classList.remove('remote-locked-field');
 						// Restore original styles
-						if (field.dataset.originalBg !== undefined) {
-							field.style.background = field.dataset.originalBg;
-							field.style.border = field.dataset.originalBorder;
-							field.style.boxShadow = field.dataset.originalBoxShadow;
-							delete field.dataset.originalBg;
-							delete field.dataset.originalBorder;
-							delete field.dataset.originalBoxShadow;
-						}
+					if (field.dataset.originalBg !== undefined) {
+						try { field.style.setProperty('background-color', field.dataset.originalBg || '', 'important'); } catch(_r1) { field.style.background = field.dataset.originalBg || ''; }
+						try { field.style.setProperty('background', field.dataset.originalBg || '', 'important'); } catch(_r1b) {}
+						try { field.style.setProperty('border', field.dataset.originalBorder || '', 'important'); } catch(_r2) { field.style.border = field.dataset.originalBorder || ''; }
+						try { field.style.setProperty('box-shadow', field.dataset.originalBoxShadow || '', 'important'); } catch(_r3) { field.style.boxShadow = field.dataset.originalBoxShadow || ''; }
+						try { field.style.removeProperty('outline'); field.style.removeProperty('outline-offset'); } catch(_r4) {}
+						delete field.dataset.originalBg;
+						delete field.dataset.originalBorder;
+						delete field.dataset.originalBoxShadow;
+					}
 					}
 				});
 			} catch(_c){}
@@ -442,30 +444,42 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 						el.dataset.originalBorder = el.style.border || '';
 						el.dataset.originalBoxShadow = el.style.boxShadow || '';
 					}
-					// Apply inline styles - these will override any CSS
+					// Apply inline styles - these will override any CSS (even with external !important)
 					console.log(`🔧 About to add class and set styles...`);
 					el.classList.add('remote-locked-field');
 					console.log(`🔧 Class added. Now setting background...`);
-					el.style.background = 'rgba(244, 158, 12, 0.25)';
+					try {
+						el.style.setProperty('background-color', 'rgba(244, 158, 12, 0.25)', 'important');
+						el.style.setProperty('background', 'rgba(244, 158, 12, 0.25)', 'important');
+					} catch(_s1) { el.style.background = 'rgba(244, 158, 12, 0.25)'; }
 					console.log(`🔧 Background set. Now setting border...`);
-					el.style.border = '2px solid rgba(244, 158, 12, 0.8)';
-					console.log(`🔧 Border set. Now setting boxShadow...`);
-					el.style.boxShadow = '0 0 12px rgba(244, 158, 12, 0.5)';
-					console.log(`🔧 BoxShadow set. Now setting transition...`);
+					try {
+						el.style.setProperty('border', '2px solid rgba(244, 158, 12, 0.9)', 'important');
+					} catch(_s2) { el.style.border = '2px solid rgba(244, 158, 12, 0.9)'; }
+					console.log(`🔧 Border set. Now setting outline/glow...`);
+					try {
+						el.style.setProperty('outline', '2px solid rgba(244, 158, 12, 0.9)', 'important');
+						el.style.setProperty('outline-offset', '1px', 'important');
+						el.style.setProperty('box-shadow', '0 0 14px rgba(244, 158, 12, 0.55)', 'important');
+					} catch(_s3) { el.style.boxShadow = '0 0 14px rgba(244, 158, 12, 0.55)'; }
+					console.log(`🔧 Glow set. Now setting transition...`);
 					el.style.transition = 'all 0.2s ease';
 					console.log(`🔒 🎨 Applied INLINE styles to ${fieldId} for user: ${label}`);
 					console.log(`   Background: ${el.style.background}`);
 					console.log(`   Border: ${el.style.border}`);
 					console.log(`   Box-shadow: ${el.style.boxShadow}`);
+					console.log(`   Outline: ${el.style.outline}`);
 					console.log(`   Element after styling:`, el);
 					console.log(`   Element.style object:`, el.style);
 				} else {
 					// Restore original styles for own fields
 					el.classList.remove('remote-locked-field');
 					if (el.dataset.originalBg !== undefined) {
-						el.style.background = el.dataset.originalBg;
-						el.style.border = el.dataset.originalBorder;
-						el.style.boxShadow = el.dataset.originalBoxShadow;
+						try { el.style.setProperty('background-color', el.dataset.originalBg || '', 'important'); } catch(_r1) { el.style.background = el.dataset.originalBg || ''; }
+						try { el.style.setProperty('background', el.dataset.originalBg || '', 'important'); } catch(_r1b) {}
+						try { el.style.setProperty('border', el.dataset.originalBorder || '', 'important'); } catch(_r2) { el.style.border = el.dataset.originalBorder || ''; }
+						try { el.style.setProperty('box-shadow', el.dataset.originalBoxShadow || '', 'important'); } catch(_r3) { el.style.boxShadow = el.dataset.originalBoxShadow || ''; }
+						try { el.style.removeProperty('outline'); el.style.removeProperty('outline-offset'); } catch(_r4) {}
 						delete el.dataset.originalBg;
 						delete el.dataset.originalBorder;
 						delete el.dataset.originalBoxShadow;

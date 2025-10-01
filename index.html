@@ -1647,7 +1647,7 @@ function isReadOnlySync(){
         if (isReadOnlySync()) return; // No action in read-only
         const ss = window.serverSync;
         try { if (ss && typeof ss.suspendReads === 'function') ss.suspendReads(); } catch(_e) {}
-        const ok = clearSingleTile(cellId);
+        const ok = await (window.clearSingleTile ? window.clearSingleTile(cellId) : clearSingleTile(cellId));
           try {
             if (ok && window.serverSync?.isMaster) {
               const updates = {};

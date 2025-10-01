@@ -1309,7 +1309,7 @@ newFetchFlightBtn.onclick = async function (event) {
 	}
 
 // Per-tile clear helper (keeps Hangar Position)
-window.clearSingleTile = window.clearSingleTile || function(cellId){
+window.clearSingleTile = window.clearSingleTile || async function(cellId){
   try {
     if (!cellId && cellId !== 0) return false;
 
@@ -1364,10 +1364,12 @@ window.clearSingleTile = window.clearSingleTile || function(cellId){
         // Build updates map with field ids -> values
         const updates = { ...clearedUpdates };
         // Note: syncFieldUpdates handles headers and read-back; our read-back is already gated when typing
-        window.serverSync.syncFieldUpdates(updates, { })
-          .catch(err => console.warn('clearSingleTile: targeted sync failed', err));
+        await window.serverSync.syncFieldUpdates(updates, { source: 'clearTile' });
+        console.log('✅ clearSingleTile: changes synced to server');
       }
-    } catch(_e){}
+    } catch(err){
+      console.warn('clearSingleTile: targeted sync failed', err);
+    }
 
 return true;
   } catch(e) { console.warn('clearSingleTile failed:', e); return false; }
@@ -1535,7 +1537,7 @@ window.moveTileContent = window.moveTileContent || async function(sourceId, dest
     try { if (window.createOrUpdateLastUpdateBadge) window.createOrUpdateLastUpdateBadge(d, 'move'); } catch(_){ }
 
     // Clear source (keeps hangar-position)
-    try { window.clearSingleTile && window.clearSingleTile(s); } catch(_){ }
+    try { window.clearSingleTile && await window.clearSingleTile(s); } catch(_){ }
 
     // Atomic server sync for move (single payload)
     try {
@@ -1779,9 +1781,13 @@ async function performScreenReset(){
 		// If write is enabled (Master), persist cleared state to server immediately
 		if (resetSucceeded && window.serverSync?.isMaster) {
 			try {
+				console.log('📤 Reset screen: syncing cleared state to server...');
 				await window.serverSync.syncWithServer();
+				console.log('✅ Reset screen: changes synced to server');
 				// After a successful write, force an immediate read-back for fast convergence
 				try { if (ss && typeof ss.resumeReads === 'function') ss.resumeReads(true); } catch(_e){}
+				// Trigger immediate poll on slaves by reducing their next interval
+				console.log('🔔 Reset screen: receivers will pick up changes on next poll (≤3s)');
 			} catch (syncErr) {
 				console.warn('Reset screen sync failed:', syncErr);
 			}

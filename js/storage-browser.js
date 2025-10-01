@@ -320,7 +320,8 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 	_startPresenceRefreshPoller(){
 		try {
 			if (this._presenceRefreshTimer) { clearInterval(this._presenceRefreshTimer); this._presenceRefreshTimer = null; }
-			this._presenceRefreshTimer = setInterval(() => { try { this._refreshRemoteLocksFromPresence(true); } catch(_e){} }, 1000);
+			// Faster polling (500ms) for more responsive lock updates
+			this._presenceRefreshTimer = setInterval(() => { try { this._refreshRemoteLocksFromPresence(true); } catch(_e){} }, 500);
 		} catch(_e){}
 	}
 	_stopPresenceRefreshPoller(){ try { if (this._presenceRefreshTimer) { clearInterval(this._presenceRefreshTimer); this._presenceRefreshTimer = null; } } catch(_e){}
@@ -398,11 +399,13 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 				if (label !== 'You') {
 					// Add border to the actual input field for remote users
 					el.classList.add('remote-locked-field');
+					console.log(`🔒 Added remote-locked-field class to ${fieldId} for user: ${label}`);
 				} else {
 					// Remove border for own fields
 					el.classList.remove('remote-locked-field');
+					console.log(`✅ Removed remote-locked-field class from ${fieldId} (own field)`);
 				}
-			} catch(_b){}
+			} catch(_b){ console.error('Failed to add/remove remote-locked-field class:', _b); }
 		} catch(_e){}
 	}
 		_fieldIdFor(tileId, key){

@@ -653,6 +653,27 @@ const setBoardAircraftTooltips = () => {
 			return false;
 		}
 
+		// Focus Event (when field gains focus) - Set lock immediately
+		this.safeAddEventListener(
+			element,
+			"focus",
+			(event) => {
+				if (window.isApplyingServerData) return;
+				let fid = event.target.id || '';
+				fid = this.normalizeNotesFieldId(event.target, fid);
+				// Set lock immediately on focus
+				try {
+					window.__lastActiveFieldId = fid;
+					window.__fieldApplyLockUntil = {};
+					window.__fieldApplyLockUntil[fid] = Date.now() + 300000;
+					// Immediate presence update (no cooldown on focus)
+					setTimeout(() => { try { window.serverSync && window.serverSync._sendPresenceHeartbeat && window.serverSync._sendPresenceHeartbeat(); } catch(_){} }, 0);
+					setTimeout(() => { try { window.serverSync && window.serverSync._refreshRemoteLocksFromPresence && window.serverSync._refreshRemoteLocksFromPresence(true); } catch(_){} }, 100);
+				} catch(_e){}
+			},
+			`${containerType}_focus`
+		);
+
 		// Input Event (während der Eingabe)
 			this.safeAddEventListener(
 				element,
@@ -739,24 +760,20 @@ const setBoardAircraftTooltips = () => {
 					if (iso) storeVal = iso; else storeVal = '';
 				}
 
-				let fid = event.target.id || '';
-				fid = this.normalizeNotesFieldId(event.target, fid);
-				const isFree = this.isFreeTextFieldId(fid);
-				// Blur also counts as recent typing end; update timestamp to still gate immediate read-back
-				this._lastTypingAt = Date.now();
-				// Blur keeps the same active field; reaffirm single-active-lock
-				try {
-					window.__lastActiveFieldId = fid;
-					window.__fieldApplyLockUntil = {};
-					// For blur we still keep 5 min lock as per policy
-					window.__fieldApplyLockUntil[fid] = Date.now() + 300000;
-					const now = Date.now();
-					if (!window.__presenceQuickCooldown || now > window.__presenceQuickCooldown) {
-						window.__presenceQuickCooldown = now + 1000;
-						setTimeout(() => { try { window.serverSync && window.serverSync._sendPresenceHeartbeat && window.serverSync._sendPresenceHeartbeat(); } catch(_){} }, 0);
-						setTimeout(() => { try { window.serverSync && window.serverSync._refreshRemoteLocksFromPresence && window.serverSync._refreshRemoteLocksFromPresence(true); } catch(_){} }, 150);
-					}
-				} catch(_e){}
+			let fid = event.target.id || '';
+			fid = this.normalizeNotesFieldId(event.target, fid);
+			const isFree = this.isFreeTextFieldId(fid);
+			// Blur also counts as recent typing end; update timestamp to still gate immediate read-back
+			this._lastTypingAt = Date.now();
+			// IMPORTANT: Clear lock immediately on blur so other users see field is available
+			try {
+				window.__lastActiveFieldId = '';
+				window.__fieldApplyLockUntil = {};
+				// Send immediate presence update to clear lock for other users
+				setTimeout(() => { try { window.serverSync && window.serverSync._sendPresenceHeartbeat && window.serverSync._sendPresenceHeartbeat(); } catch(_){} }, 0);
+				// Immediate remote lock refresh to remove pills/borders
+				setTimeout(() => { try { window.serverSync && window.serverSync._refreshRemoteLocksFromPresence && window.serverSync._refreshRemoteLocksFromPresence(true); } catch(_){} }, 50);
+			} catch(_e){}
 				// Also mark a write fence on blur for safety
 				try { if (window.serverSync && typeof window.serverSync._markPendingWrite === 'function') { window.serverSync._markPendingWrite(fid); } } catch(_e){}
 				// On blur, flush free-text immediately; others keep normal quick debounce

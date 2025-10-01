@@ -5269,6 +5269,15 @@ body:not(.dark-mode) #mailLogList li {
 }
 .dark-mode .editing-pill .editing-pill-tail { display: none !important; }
 
+/* Remote user field lock border indicator (Multi-Master Mode) */
+.remote-locked-field {
+	border: 2px solid var(--menu-accent) !important;
+	transition: border-color 0.2s ease;
+}
+.dark-mode .remote-locked-field {
+	border-color: var(--menu-accent) !important;
+}
+
 /* Light theme variants (legacy mapping) */
 .presence-chip.master { background: #ecfdf5 !important; border-color: #a7f3d0 !important; color: #065f46 !important; }
 .presence-chip.sync { background: #eff6ff !important; border-color: #bfdbfe !important; color: #1d4ed8 !important; }

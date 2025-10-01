@@ -279,6 +279,8 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 			const now = Date.now();
 			if (!force && (now - (this._lastPresenceRefreshAt||0)) < 1000) return; // throttle to ~1s
 			this._lastPresenceRefreshAt = now;
+			// Store previous locks state for cleanup
+			const previousLocks = { ...this._remoteLocks };
 			const url = this._getPresenceUrl() + '?action=list';
 			const res = await fetch(url, { headers: { 'Accept':'application/json' } });
 			if (!res.ok) return;
@@ -300,6 +302,17 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 				} catch(_e){}
 			});
 			this._remoteLocks = locks;
+			// Clean up borders for removed locks before rendering
+			try {
+				Object.keys(previousLocks).forEach(fieldId => {
+					if (!this._remoteLocks[fieldId]) {
+						const field = document.getElementById(fieldId);
+						if (field) {
+							field.classList.remove('remote-locked-field');
+						}
+					}
+				});
+			} catch(_c){}
 			// Render visual pills for active locks
 			try { this._renderEditingLockPills(); } catch(_e){}
 		} catch(_e){}
@@ -320,7 +333,14 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 				document.querySelectorAll('span.editing-pill').forEach(p => {
 					const fid = (p.id||'').replace('editing-pill-','');
 					const info = map[fid];
-					if (!info || (info.until||0) <= now) { p.remove(); }
+					if (!info || (info.until||0) <= now) {
+						// Remove border from field when removing pill
+						const field = document.getElementById(fid);
+						if (field) {
+							field.classList.remove('remote-locked-field');
+						}
+						p.remove();
+					}
 				});
 			} catch(_r){}
 			Object.entries(map).forEach(([fid, info]) => {
@@ -329,6 +349,15 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 			// Also show our local pill for own locks as subtle hint (optional)
 			const local = this._collectLocalLocks();
 			Object.entries(local).forEach(([fid, until]) => { try { this._createOrUpdateEditingLockPill(fid, 'You', until); } catch(_e){} });
+			// Clean up orphaned borders for fields without locks
+			try {
+				document.querySelectorAll('.remote-locked-field').forEach(field => {
+					const fieldId = field.id;
+					if (!this._remoteLocks[fieldId]) {
+						field.classList.remove('remote-locked-field');
+					}
+				});
+			} catch(_c){}
 		} catch(_e){}
 	}
 	_createOrUpdateEditingLockPill(fieldId, label, until){
@@ -364,6 +393,16 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 					pill.textContent = txt; // fallback
 				}
 			} catch(_t){}
+			// Add border indicator for remote users only (Multi-Master Mode)
+			try {
+				if (label !== 'You') {
+					// Add border to the actual input field for remote users
+					el.classList.add('remote-locked-field');
+				} else {
+					// Remove border for own fields
+					el.classList.remove('remote-locked-field');
+				}
+			} catch(_b){}
 		} catch(_e){}
 	}
 		_fieldIdFor(tileId, key){

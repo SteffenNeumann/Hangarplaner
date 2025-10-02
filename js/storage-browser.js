@@ -50,6 +50,8 @@ class ServerSync {
 			this.applyServerData = this.applyServerData.bind(this);
 			this.applyTileData = this.applyTileData.bind(this);
 		} catch(_e){}
+		// Diagnostics
+		try { console.log(`📦 ServerSync (modern) loaded. URL=${this.serverSyncUrl}`); } catch(_e){}
 	}
 
 	/**
@@ -1037,10 +1039,17 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 			try { if (window.__syncMetadataOverride) Object.assign(metadata, window.__syncMetadataOverride); } catch(_e){}
 			requestBody = { metadata, fieldUpdates: delta, preconditions: pre, settings: currentData.settings || {} };
             } else {
-                // No field delta: skip POST in multi-master to avoid metadata churn and self-echo suppression
-                // Read-back polling will still converge both clients.
-                console.log('⏭️ No field delta; skipping POST (multi-master safe)');
-                return true;
+                // No field delta: send a lightweight heartbeat periodically so receivers advance timestamp
+                // and convergence happens even without field changes.
+                this._lastHeartbeatAt = this._lastHeartbeatAt || 0;
+                const nowHb = Date.now();
+                const HEARTBEAT_MS = 30000; // 30s
+                if ((nowHb - this._lastHeartbeatAt) < HEARTBEAT_MS) {
+                    console.log('⏭️ No field delta; skipping POST (recent heartbeat)');
+                    return true;
+                }
+                this._lastHeartbeatAt = nowHb;
+                requestBody = { metadata: { timestamp: nowHb }, fieldUpdates: {}, preconditions: {}, settings: currentData.settings || {} };
             }
 
 			// Optimierung: Verwende AbortController für Timeout

@@ -3582,11 +3582,8 @@ import('./js/storage-browser.js?v=ff5e426').catch(function(){
 			    s.src = 'js/storage-browser.legacy.js?v=2';
 			    document.head.appendChild(s);
 			  });
-			  // Watchdog: if serverSync didn't initialize, load legacy after a short delay
-			  setTimeout(function(){ try {
-			    var ok = !!(window.serverSync && typeof window.serverSync.syncWithServer==='function' && (typeof window.serverSync.getServerUrl==='function' || window.serverSync.serverSyncUrl));
-			    if (!ok){ var s2 = document.createElement('script'); s2.src='js/storage-browser.legacy.js?v=3'; document.head.appendChild(s2); }
-			  } catch(_e){} }, 800);
+  // Note: legacy fallback is provided via the catch() above and a <script nomodule> tag.
+  // Removed aggressive watchdog that could load legacy on modern browsers before ServerSync finishes initializing.
 			})();
 			</script>
 			<script nomodule src="js/storage-browser.legacy.js?v=2"></script>

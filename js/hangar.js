@@ -1321,21 +1321,32 @@ window.clearSingleTile = window.clearSingleTile || async function(cellId){
     const clearedUpdates = {};
     const suppress = !!window.__suppressFieldSync;
 
-    // Only reset dropdowns: Tow Status and Status
+    const ac = document.getElementById(`aircraft-${cellId}`);
+    if (ac) { ac.value = ''; clearedUpdates[`aircraft-${cellId}`] = ''; }
+
+    const arr = document.getElementById(`arrival-time-${cellId}`);
+    if (arr) { arr.value=''; try { delete arr.dataset.iso; } catch(e){} clearedUpdates[`arrival-time-${cellId}`] = ''; }
+
+    const dep = document.getElementById(`departure-time-${cellId}`);
+    if (dep) { dep.value=''; try { delete dep.dataset.iso; } catch(e){} clearedUpdates[`departure-time-${cellId}`] = ''; }
+
+    const posInfo = document.getElementById(`position-${cellId}`);
+    if (posInfo) { posInfo.value=''; clearedUpdates[`position-${cellId}`] = ''; }
+
+    const manual = document.getElementById(`manual-input-${cellId}`);
+    if (manual) { manual.value=''; /* not synced to server by design */ }
+
+    const notes = document.getElementById(`notes-${cellId}`);
+    if (notes) { notes.value=''; clearedUpdates[`notes-${cellId}`] = ''; }
+
     const tow = document.getElementById(`tow-status-${cellId}`);
-    if (tow) {
-      tow.value = 'neutral';
-      try { if (window.updateTowStatusStyles) window.updateTowStatusStyles(tow); } catch(_){}
-      clearedUpdates[`tow-status-${cellId}`] = 'neutral';
-    }
+    if (tow) { tow.value='neutral'; if (window.updateTowStatusStyles) window.updateTowStatusStyles(tow); clearedUpdates[`tow-status-${cellId}`] = 'neutral'; }
 
     const status = document.getElementById(`status-${cellId}`);
-    if (status) {
-      status.value = 'neutral';
-      try { if (window.updateStatusLight) window.updateStatusLight(status); } catch(_){}
-      try { if (typeof updateStatusSelectorStyles === 'function') updateStatusSelectorStyles(status); } catch(_){}
-      clearedUpdates[`status-${cellId}`] = 'neutral';
-    }
+    if (status) { status.value='neutral'; if (window.updateStatusLight) window.updateStatusLight(status); clearedUpdates[`status-${cellId}`] = 'neutral'; }
+
+    // Remove per-tile update badge/meta
+    try { if (window.LastUpdateBadges && typeof window.LastUpdateBadges.remove === 'function') window.LastUpdateBadges.remove(parseInt(cellId,10)); } catch(e){}
 
     // Persist cleared values locally and trigger unified handlers
     try {
@@ -1542,38 +1553,8 @@ window.moveTileContent = window.moveTileContent || async function(sourceId, dest
     // Create/update last-update badge on destination
     try { if (window.createOrUpdateLastUpdateBadge) window.createOrUpdateLastUpdateBadge(d, 'move'); } catch(_){ }
 
-// Clear source fields inline (keep hangar-position)
-    try {
-      const srcFields = [
-        `aircraft-${s}`,
-        `arrival-time-${s}`,
-        `departure-time-${s}`,
-        `position-${s}`,
-        `notes-${s}`,
-        `status-${s}`,
-        `tow-status-${s}`
-      ];
-      srcFields.forEach(fid => {
-        const el = document.getElementById(fid);
-        if (!el) return;
-        if (fid.startsWith('arrival-time-') || fid.startsWith('departure-time-')) {
-          try { el.value = ''; delete el.dataset.iso; } catch(_e) { try { el.value=''; } catch(_){} }
-        } else if (fid.startsWith('status-')) {
-          try { el.value = 'neutral'; if (window.updateStatusLight) window.updateStatusLight(el); if (typeof updateStatusSelectorStyles === 'function') updateStatusSelectorStyles(el); } catch(_e){}
-        } else if (fid.startsWith('tow-status-')) {
-          try { el.value = 'neutral'; if (window.updateTowStatusStyles) window.updateTowStatusStyles(el); } catch(_e){}
-        } else {
-          try { el.value = ''; } catch(_e){}
-        }
-        try {
-          if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage === 'function') {
-            const v = (fid.startsWith('status-') || fid.startsWith('tow-status-')) ? 'neutral' : '';
-            window.hangarEventManager.updateFieldInStorage(fid, v, { flushDelayMs: 600, source: 'move' });
-          }
-        } catch(_e){}
-        try { const isSelect = el.tagName === 'SELECT'; el.dispatchEvent(new Event(isSelect ? 'change' : 'input', { bubbles: true })); } catch(_e){}
-      });
-    } catch(_){ }
+    // Clear source (keeps hangar-position)
+    try { window.clearSingleTile && await window.clearSingleTile(s); } catch(_){ }
 
     // Atomic server sync for move (single payload)
     try {
@@ -1737,39 +1718,69 @@ async function performScreenReset(){
 				window.__skipLocalRehydrateUntil = Date.now() + 10000; // 10s guard
 			} catch (e) { /* noop */ }
 
-			// 1) Clear update badges (timestamps) only
-			try { if (window.LastUpdateBadges && typeof window.LastUpdateBadges.clearAll === 'function') { window.LastUpdateBadges.clearAll(); } } catch(_){ }
+			// 1) Clear all update badges and persisted meta
+			if (window.LastUpdateBadges && typeof window.LastUpdateBadges.clearAll === 'function') {
+				window.LastUpdateBadges.clearAll();
+			}
 
-			// 2) Reset ONLY dropdowns (Tow Status, Status) to neutral — leave all text inputs unchanged
+			// 2) Reset inputs for all tiles (primary and secondary), except Hangar Position
+			const tiles = document.querySelectorAll('#hangarGrid .hangar-cell, #secondaryHangarGrid .hangar-cell');
 			clearedFieldIds.length = 0;
-			document.querySelectorAll('select[id^="tow-status-"]').forEach(sel => {
-				try { sel.value = 'neutral'; } catch(_e){}
-				try { if (window.updateTowStatusStyles) window.updateTowStatusStyles(sel); } catch(_e){}
-				clearedFieldIds.push(sel.id);
+			tiles.forEach(tile => {
+				// Clear aircraft id
+				tile.querySelectorAll('input[id^="aircraft-"]').forEach(el => { el.value = ''; clearedFieldIds.push(el.id); });
+				// Clear times (also remove any ISO dataset)
+				tile.querySelectorAll('input[id^="arrival-time-"]').forEach(el => { el.value = ''; try { delete el.dataset.iso; } catch(e){} clearedFieldIds.push(el.id); });
+				tile.querySelectorAll('input[id^="departure-time-"]').forEach(el => { el.value = ''; try { delete el.dataset.iso; } catch(e){} clearedFieldIds.push(el.id); });
+				// Clear route/position (Pos in info grid)
+				tile.querySelectorAll('input[id^="position-"]').forEach(el => { el.value = ''; clearedFieldIds.push(el.id); });
+				// Optional auxiliary manual input (if exists in some layouts)
+				tile.querySelectorAll('input[id^="manual-input-"]').forEach(el => { el.value = ''; clearedFieldIds.push(el.id); });
+				// Notes
+				tile.querySelectorAll('textarea[id^="notes-"]').forEach(el => { el.value = ''; clearedFieldIds.push(el.id); });
+				// Tow status -> neutral
+				tile.querySelectorAll('select[id^="tow-status-"]').forEach(sel => {
+					sel.value = 'neutral';
+					if (window.updateTowStatusStyles) window.updateTowStatusStyles(sel);
+					clearedFieldIds.push(sel.id);
+				});
 			});
+
+			// 3) Reset tile status selectors and lights to neutral
+			// IMPORTANT: Must add status field IDs to clearedFieldIds for server sync
 			document.querySelectorAll('select[id^="status-"]').forEach(sel => {
-				try { sel.value = 'neutral'; } catch(_e){}
-				try { if (window.updateStatusLight) window.updateStatusLight(sel); } catch(_e){}
-				try { if (typeof updateStatusSelectorStyles === 'function') updateStatusSelectorStyles(sel); } catch(_e){}
+				sel.value = 'neutral';
+				if (window.updateStatusLight) window.updateStatusLight(sel);
+				try { if (typeof updateStatusSelectorStyles === 'function') updateStatusSelectorStyles(sel); } catch(_) {}
 				clearedFieldIds.push(sel.id);
 			});
 
-			// 3) Persist selector resets locally and notify listeners
+			// 3b) Persist cleared values locally and notify event handlers
+			try {
+				// Clear hangarPlannerData snapshot to prevent local rehydrate from refilling
+				localStorage.setItem('hangarPlannerData', JSON.stringify({}));
+			} catch(_e){}
 			try {
 				if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage === 'function'){
 					clearedFieldIds.forEach(id => {
-						try { window.hangarEventManager.updateFieldInStorage(id, 'neutral'); } catch(_e){}
+						window.hangarEventManager.updateFieldInStorage(id, '');
+						// Dispatch input/change to trigger any other listeners
 						const el = document.getElementById(id);
 						if (el){
 							const isSelect = el.tagName === 'SELECT';
-							try { el.dispatchEvent(new Event(isSelect ? 'change' : 'input', { bubbles: true })); } catch(_){}
-							try { el.dispatchEvent(new Event('blur', { bubbles: true })); } catch(_){}
+							const isAircraft = /^aircraft-/.test(id);
+							// Always notify main listeners
+							el.dispatchEvent(new Event(isSelect ? 'change' : 'input', { bubbles: true }));
+							// Avoid blur on freshly cleared aircraft inputs to prevent formatter re-entry during reset
+							if (!isAircraft) {
+								el.dispatchEvent(new Event('blur', { bubbles: true }));
+							}
 						}
 					});
 				}
 			} catch(_e){}
 
-			// 3b) Force refresh of Status lights after resets
+			// 3c) Force refresh of Status lights after resets
 			try { if (typeof window.updateAllStatusLightsForced === 'function') window.updateAllStatusLightsForced(); } catch(_e){}
 
 			resetSucceeded = true;
@@ -1781,14 +1792,19 @@ async function performScreenReset(){
 			try { if (ss && typeof ss.resumeReads === 'function') ss.resumeReads(false); } catch(_e){}
 		}
 
-		// If write is enabled (Master), persist selector resets to server immediately
+		// If write is enabled (Master), persist cleared state to server immediately
 		if (resetSucceeded && window.serverSync?.isMaster) {
 			try {
-				console.log('📤 Reset screen: syncing dropdown resets to server...');
+				// Mark this sync as a reset operation for receiver detection
+				try { if (!window.__syncMetadataOverride) window.__syncMetadataOverride = {}; window.__syncMetadataOverride.lastWriter = 'reset'; window.__syncMetadataOverride.lastWriterSession = 'system'; } catch(_e){}
+				console.log('📤 Reset screen: syncing cleared state to server...');
 				await window.serverSync.syncWithServer();
+				// Clear reset marker after sync
+				try { if (window.__syncMetadataOverride) { delete window.__syncMetadataOverride.lastWriter; delete window.__syncMetadataOverride.lastWriterSession; } } catch(_e){}
 				console.log('✅ Reset screen: changes synced to server');
 				// After a successful write, force an immediate read-back for fast convergence
 				try { if (ss && typeof ss.resumeReads === 'function') ss.resumeReads(true); } catch(_e){}
+				// Trigger immediate poll on slaves by reducing their next interval
 				console.log('🔔 Reset screen: receivers will pick up changes on next poll (≤3s)');
 			} catch (syncErr) {
 				console.warn('Reset screen sync failed:', syncErr);
@@ -1840,7 +1856,7 @@ try { doneModal.addEventListener('click', (ev)=>{ if (ev.target === doneModal) c
 
 		// Fallback to native confirm if modal not present
 		e.preventDefault();
-const ok = window.confirm('Reset screen?\n\nThis will:\n• reset all Status and Tow dropdowns to neutral\n• leave all other inputs unchanged');
+		const ok = window.confirm('Reset screen?\n\nThis will:\n• clear all per-tile update timestamps\n• reset all tile inputs (Aircraft, Arr/Dep, Pos/Route, Notes, Tow, Status)\n• keep Hangar Position inputs unchanged');
 		if (!ok) return;
 		const success = await performScreenReset();
 		if (success && window.showNotification) window.showNotification('Screen reset completed', 'success');

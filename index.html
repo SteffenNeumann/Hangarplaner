@@ -110,6 +110,39 @@
 		  } catch(e) { /* ignore */ }
 		})();
 		</script>
+		<!-- Early serverSync shim + ?server= override -->
+		<script>
+		(function(){
+		  try {
+		    // Ensure a minimal serverSync exists very early
+		    if (!window.serverSync) {
+		      var origin = '';
+		      try { origin = window.location.origin; } catch(_e){}
+		      var defaultUrl = (origin? origin : '') + '/sync/data.php';
+		      window.serverSync = {
+		        serverSyncUrl: defaultUrl,
+		        getServerUrl: function(){ try { return this.serverSyncUrl || (window.location.origin + '/sync/data.php'); } catch(_e){ return this.serverSyncUrl || '/sync/data.php'; } },
+		        getSessionId: function(){ try { var sid = localStorage.getItem('serverSync.sessionId') || ''; if (!sid){ sid = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('serverSync.sessionId', sid); } return sid; } catch(_e){ return Math.random().toString(36).slice(2) + Date.now().toString(36); } }
+		      };
+		      window.storageBrowser = window.serverSync;
+		      try { console.log('🔧 Early serverSync shim installed:', window.serverSync.getServerUrl()); } catch(_e){}
+		    }
+		    // Optional URL override: ?server=https://backend.example.com/sync/data.php
+		    try {
+		      var params = new URLSearchParams(window.location.search);
+		      var override = params.get('server');
+		      if (override) {
+		        try { new URL(override); } catch(_bad) { override = ''; }
+		        if (override) {
+		          window.serverSync.serverSyncUrl = override;
+		          try { localStorage.setItem('hangarServerSyncUrl', override); } catch(_e){}
+		          try { console.log('🌐 serverSync override from URL:', override); } catch(_e){}
+		        }
+		      }
+		    } catch(_e){}
+		  } catch(_e){}
+		})();
+		</script>
 		<link rel="stylesheet" href="css/hangarplanner-ui.css" />
 		<link rel="stylesheet" href="css/dark-mode-zoom.css" />
 		<link rel="stylesheet" href="css/weather-widget.css" />

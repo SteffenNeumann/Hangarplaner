@@ -47,7 +47,7 @@ const weatherAPI = {
 		const airportDisplay = document.querySelector(".weather-airport");
 
 		if (!weatherWidget) {
-			console.error("Wetter-Widget Element nicht gefunden!");
+			console.warn("Wetter-Widget Element nicht gefunden!");
 			return;
 		}
 

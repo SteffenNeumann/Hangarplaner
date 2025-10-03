@@ -117,6 +117,18 @@ class FleetDatabaseManager {
 			console.log("📊 Server Status Daten:", data);
 			return data;
 		} catch (error) {
+			if (error && (error.name === "AbortError" || error.code === 20 || String(error).toLowerCase().includes("aborted"))) {
+				console.warn("ℹ️ Server-Status-Abfrage abgebrochen (unbedenklich):", error);
+				return {
+					exists: false,
+					syncStatus: "unknown",
+					totalAircrafts: 0,
+					airlines: [],
+					success: false,
+					error: "aborted",
+				};
+			}
+
 			console.error("❌ Fehler beim Abrufen des Server-Status:", error);
 
 			// Fallback: Annahme dass keine Daten vorhanden sind

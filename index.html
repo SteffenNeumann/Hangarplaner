@@ -4,6 +4,8 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>Hangar Planner - Aircraft Management</title>
+		<!-- Explicit favicon to prevent /favicon.ico 404 -->
+		<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%233A4354'/%3E%3Cpath d='M7 21h18M7 11h18M12 6l8 10-8 10' stroke='%23FF7043' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" type="image/svg+xml"/>
 		<script>
 		(function(){
 		  try {
@@ -3575,16 +3577,15 @@ You’ll see the result in the browser console.
 			<script src="js/hangar-pdf.js"></script>
 			<script src="js/hangar.js"></script>
 			<script type="module">
-			(function(){
-			  // Always prefer the modern sync client; fallback to legacy only if import fails
-import('./js/storage-browser.js?v=ff5e426').catch(function(){
-			    var s = document.createElement('script');
-			    s.src = 'js/storage-browser.legacy.js?v=2';
-			    document.head.appendChild(s);
-			  });
-  // Note: legacy fallback is provided via the catch() above and a <script nomodule> tag.
-  // Removed aggressive watchdog that could load legacy on modern browsers before ServerSync finishes initializing.
-			})();
+(async () => {
+  try {
+    await import('./js/storage-browser.js?v=ff5e426');
+  } catch (e) {
+    const s = document.createElement('script');
+    s.src = 'js/storage-browser.legacy.js?v=2';
+    document.head.appendChild(s);
+  }
+})();
 			</script>
 			<script nomodule src="js/storage-browser.legacy.js?v=2"></script>
 			<script src="js/sync-manager.js"></script>

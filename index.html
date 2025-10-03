@@ -4,6 +4,8 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>Hangar Planner - Aircraft Management</title>
+		<!-- Prevent favicon 404 on browsers that request /favicon.ico -->
+		<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%233A4354'/%3E%3Cpath d='M7 21h18M7 11h18M12 6l8 10-8 10' stroke='%23FF7043' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" type="image/svg+xml"/>
 		<script>
 		(function(){
 		  try {
@@ -3633,7 +3635,7 @@ if (window.serverSync) {
 								if (!window.serverSync && window.storageBrowser) {
 									window.serverSync = window.storageBrowser;
 								}
-							}
+							} catch (e) {}
 					}
 					function installFallbackManager(){
 						if (window.sharingManager) return;

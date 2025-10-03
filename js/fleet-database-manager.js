@@ -117,6 +117,19 @@ class FleetDatabaseManager {
 			console.log("📊 Server Status Daten:", data);
 			return data;
 		} catch (error) {
+			// Treat network issues as non-fatal and return a safe fallback without spamming errors
+			if (error && (error.name === 'TypeError' || /NetworkError/i.test(String(error)))) {
+				console.warn("ℹ️ Fleet DB status unreachable (network):", error?.message || error);
+				return {
+					exists: false,
+					syncStatus: "unknown",
+					totalAircrafts: 0,
+					airlines: [],
+					success: false,
+					error: "network",
+				};
+			}
+
 			console.error("❌ Fehler beim Abrufen des Server-Status:", error);
 
 			// Fallback: Annahme dass keine Daten vorhanden sind

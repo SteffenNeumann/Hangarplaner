@@ -3635,7 +3635,7 @@ if (window.serverSync) {
 								if (!window.serverSync && window.storageBrowser) {
 									window.serverSync = window.storageBrowser;
 								}
-							} catch (e) {}
+							} finally {}
 					}
 					function installFallbackManager(){
 						if (window.sharingManager) return;

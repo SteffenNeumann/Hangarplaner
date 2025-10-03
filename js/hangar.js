@@ -2021,8 +2021,8 @@ function setupStatusSync() {
 	const headerStatus = document.getElementById("header-status");
 
 	if (!fetchStatus || !headerStatus) {
-		console.warn(
-			"Status-Elemente nicht gefunden, Synchronisation nicht möglich"
+		console.info(
+			"Header-Status-UI nicht gefunden – überspringe UI-Status-Sync (Server-Sync nicht betroffen)"
 		);
 		return;
 	}

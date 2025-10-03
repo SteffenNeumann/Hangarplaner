@@ -4,8 +4,6 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>Hangar Planner - Aircraft Management</title>
-		<!-- Explicit favicon to prevent /favicon.ico 404 -->
-		<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%233A4354'/%3E%3Cpath d='M7 21h18M7 11h18M12 6l8 10-8 10' stroke='%23FF7043' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" type="image/svg+xml"/>
 		<script>
 		(function(){
 		  try {
@@ -108,39 +106,6 @@
 		      console.log('🔧 Debug fetch wrapper installed');
 		    }
 		  } catch(e) { /* ignore */ }
-		})();
-		</script>
-		<!-- Early serverSync shim + ?server= override -->
-		<script>
-		(function(){
-		  try {
-		    // Ensure a minimal serverSync exists very early
-		    if (!window.serverSync) {
-		      var origin = '';
-		      try { origin = window.location.origin; } catch(_e){}
-		      var defaultUrl = (origin? origin : '') + '/sync/data.php';
-		      window.serverSync = {
-		        serverSyncUrl: defaultUrl,
-		        getServerUrl: function(){ try { return this.serverSyncUrl || (window.location.origin + '/sync/data.php'); } catch(_e){ return this.serverSyncUrl || '/sync/data.php'; } },
-		        getSessionId: function(){ try { var sid = localStorage.getItem('serverSync.sessionId') || ''; if (!sid){ sid = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('serverSync.sessionId', sid); } return sid; } catch(_e){ return Math.random().toString(36).slice(2) + Date.now().toString(36); } }
-		      };
-		      window.storageBrowser = window.serverSync;
-		      try { console.log('🔧 Early serverSync shim installed:', window.serverSync.getServerUrl()); } catch(_e){}
-		    }
-		    // Optional URL override: ?server=https://backend.example.com/sync/data.php
-		    try {
-		      var params = new URLSearchParams(window.location.search);
-		      var override = params.get('server');
-		      if (override) {
-		        try { new URL(override); } catch(_bad) { override = ''; }
-		        if (override) {
-		          window.serverSync.serverSyncUrl = override;
-		          try { localStorage.setItem('hangarServerSyncUrl', override); } catch(_e){}
-		          try { console.log('🌐 serverSync override from URL:', override); } catch(_e){}
-		        }
-		      }
-		    } catch(_e){}
-		  } catch(_e){}
 		})();
 		</script>
 		<link rel="stylesheet" href="css/hangarplanner-ui.css" />
@@ -3610,15 +3575,16 @@ You’ll see the result in the browser console.
 			<script src="js/hangar-pdf.js"></script>
 			<script src="js/hangar.js"></script>
 			<script type="module">
-(async () => {
-  try {
-    await import('./js/storage-browser.js?v=ff5e426');
-  } catch (e) {
-    const s = document.createElement('script');
-    s.src = 'js/storage-browser.legacy.js?v=2';
-    document.head.appendChild(s);
-  }
-})();
+			(function(){
+			  // Always prefer the modern sync client; fallback to legacy only if import fails
+import('./js/storage-browser.js?v=ff5e426').catch(function(){
+			    var s = document.createElement('script');
+			    s.src = 'js/storage-browser.legacy.js?v=2';
+			    document.head.appendChild(s);
+			  });
+  // Note: legacy fallback is provided via the catch() above and a <script nomodule> tag.
+  // Removed aggressive watchdog that could load legacy on modern browsers before ServerSync finishes initializing.
+			})();
 			</script>
 			<script nomodule src="js/storage-browser.legacy.js?v=2"></script>
 			<script src="js/sync-manager.js"></script>
@@ -3667,7 +3633,7 @@ if (window.serverSync) {
 								if (!window.serverSync && window.storageBrowser) {
 									window.serverSync = window.storageBrowser;
 								}
-							} catch (e) {}
+							}
 					}
 					function installFallbackManager(){
 						if (window.sharingManager) return;

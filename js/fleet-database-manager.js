@@ -11,7 +11,7 @@
 
 class FleetDatabaseManager {
 	constructor() {
-		this.apiEndpoint = this.resolveApiEndpoint();
+		this.apiEndpoint = "sync/fleet-database.php";
 		this.localCache = null;
 		this.isInitialized = false;
 		this.syncInProgress = false;
@@ -89,62 +89,15 @@ class FleetDatabaseManager {
 	}
 
 	/**
-	 * Löst das Fleet-DB-API-Endpoint auf Basis der ServerSync-URL auf
-	 */
-	resolveApiEndpoint() {
-		try {
-			let base = null;
-			if (window.serverSync && typeof window.serverSync.getServerUrl === 'function') {
-				base = window.serverSync.getServerUrl();
-			} else if (window.serverSync && window.serverSync.serverSyncUrl) {
-				base = window.serverSync.serverSyncUrl;
-			} else {
-				base = (function(){ try { return window.location.origin + '/sync/data.php'; } catch(_e){ return '/sync/data.php'; } })();
-			}
-			const u = new URL(base, window.location.href);
-			// Replace data.php with fleet-database.php, or append if path ends with /sync
-			if (/data\.php$/i.test(u.pathname)) {
-				u.pathname = u.pathname.replace(/data\.php$/i, 'fleet-database.php');
-			} else if (!/fleet-database\.php$/i.test(u.pathname)) {
-				// normalize .../sync -> .../sync/fleet-database.php
-				u.pathname = u.pathname.replace(/\/?$/,'');
-				if (/\/sync$/i.test(u.pathname)) {
-					u.pathname = u.pathname + '/fleet-database.php';
-				} else {
-					// best effort
-					u.pathname = '/sync/fleet-database.php';
-				}
-			}
-			// Avoid mixed content if page is HTTPS and host matches
-			try {
-				if (window.location.protocol === 'https:' && u.protocol === 'http:' && u.hostname === window.location.hostname) {
-					u.protocol = 'https:';
-				}
-			} catch(_e){}
-			const resolved = u.toString();
-			try { console.log('🔗 Fleet-DB Endpoint:', resolved); } catch(_e){}
-			return resolved;
-		} catch(e) {
-			return (function(){ try { return window.location.origin + '/sync/fleet-database.php'; } catch(_e){ return '/sync/fleet-database.php'; } })();
-		}
-	}
-
-	_buildUrl(extraParams = {}) {
-		try {
-			const u = new URL(this.apiEndpoint, window.location.href);
-			Object.entries(extraParams || {}).forEach(([k,v]) => { try { u.searchParams.set(k, String(v)); } catch(_e){} });
-			return u.toString();
-		} catch(e){ return this.apiEndpoint; }
-	}
-
-	/**
 	 * Status der serverseitigen Datenbank abrufen
 	 */
 	async getServerStatus() {
 		try {
-			const url = this._buildUrl({ action: 'status' });
-			console.log("📡 Rufe Server-Status ab:", url);
-			const response = await fetch(url);
+			console.log(
+				"📡 Rufe Server-Status ab:",
+				`${this.apiEndpoint}?action=status`
+			);
+			const response = await fetch(`${this.apiEndpoint}?action=status`);
 
 			console.log(
 				"📡 Server Response Status:",
@@ -164,19 +117,6 @@ class FleetDatabaseManager {
 			console.log("📊 Server Status Daten:", data);
 			return data;
 		} catch (error) {
-			try { console.warn('⚠️ getServerStatus failed for', this._buildUrl({ action: 'status' })); } catch(_e){}
-			if (error && (error.name === "AbortError" || error.code === 20 || String(error).toLowerCase().includes("aborted"))) {
-				console.warn("ℹ️ Server-Status-Abfrage abgebrochen (unbedenklich):", error);
-				return {
-					exists: false,
-					syncStatus: "unknown",
-					totalAircrafts: 0,
-					airlines: [],
-					success: false,
-					error: "aborted",
-				};
-			}
-
 			console.error("❌ Fehler beim Abrufen des Server-Status:", error);
 
 			// Fallback: Annahme dass keine Daten vorhanden sind
@@ -196,9 +136,8 @@ class FleetDatabaseManager {
 	 */
 	async loadFromServer() {
 		try {
-			const url = this._buildUrl();
-			console.log("📥 Lade Daten vom Server:", url);
-			const response = await fetch(url);
+			console.log("📥 Lade Daten vom Server:", this.apiEndpoint);
+			const response = await fetch(this.apiEndpoint);
 
 			console.log(
 				"📡 Server Response Status:",
@@ -259,14 +198,13 @@ class FleetDatabaseManager {
 				);
 			}
 
-			const url = this._buildUrl({ sync: 'false' });
 			console.log(
 				"📤 Sende POST Request an:",
-				url
+				`${this.apiEndpoint}?sync=false`
 			);
 			console.log("📊 Daten die gesendet werden:", apiData);
 
-			const response = await fetch(url, {
+			const response = await fetch(`${this.apiEndpoint}?sync=false`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -353,8 +291,7 @@ class FleetDatabaseManager {
 				window.showNotification("Fleet-Datenbank wird abgeglichen...", "info");
 			}
 
-			const url = this._buildUrl({ sync: 'true' });
-			const response = await fetch(url, {
+			const response = await fetch(`${this.apiEndpoint}?sync=true`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",

@@ -494,7 +494,7 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 			const copyTile = (t)=>{
 				const id = parseInt(t?.tileId||0,10);
 				const out = { tileId: id };
-				const keys = ['aircraftId','arrivalTime','departureTime','hangarPosition','position','status','towStatus','notes','updatedAt','updatedBy'];
+				const keys = ['aircraftId','arrivalTime','departureTime','hangarPosition','position','status','towStatus','notes','updatedAt','updatedBy','updatedBySession'];
 				keys.forEach(k=>{
 					if (t.hasOwnProperty(k)){
 						const fid = this._fieldIdFor(id, k);
@@ -1684,6 +1684,7 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 					notes: row?.notes || '',
 					updatedAt: row?.updatedAt || undefined,
 					updatedBy: row?.updatedBy || undefined,
+					updatedBySession: row?.updatedBySession || undefined,
 				});
 				serverData = {
 					...serverData,

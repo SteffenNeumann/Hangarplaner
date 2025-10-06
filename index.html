@@ -3679,18 +3679,8 @@ if (window.serverSync) {
 									if (!window.storageBrowser) {
 										window.storageBrowser = window.serverSync;
 									}
-								} else if (!window.storageBrowser) {
-									// Install a minimal alias so improved-event-manager can proceed
-									var _url = (function(){ try { return window.location.origin + '/sync/data.php'; } catch(_e){ return '/sync/data.php'; } })();
-									window.storageBrowser = {
-										serverSyncUrl: _url,
-										getServerUrl: function(){ return this.serverSyncUrl || _url; },
-										getSessionId: function(){ try { var sid = localStorage.getItem('serverSync.sessionId') || ''; if (!sid){ sid = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('serverSync.sessionId', sid); } return sid; } catch(_e){ return Math.random().toString(36).slice(2) + Date.now().toString(36); } },
-										syncWithServer: ()=> Promise.resolve(false)
-									};
-								}
-                        // Ensure window.serverSync points to the active sync object
-                        if (!window.serverSync && window.storageBrowser) {
+                        // Ensure window.serverSync points to the active sync object (only if real client is present)
+                        if (!window.serverSync && window.storageBrowser && (typeof window.storageBrowser.loadFromServer==='function' || typeof window.storageBrowser.startSlaveMode==='function')) {
                             window.serverSync = window.storageBrowser;
                         }
                     } catch(_e){}
@@ -3794,7 +3784,7 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
 						console.log('Minimal Sync Manager fallback installed');
 					}
 					window.hangarInitQueue = window.hangarInitQueue || [];
-					window.hangarInitQueue.push(function(){ setTimeout(function(){ ensureSyncGlobals(); installFallbackManager(); }, 400); });
+window.hangarInitQueue.push(function(){ setTimeout(function(){ ensureSyncGlobals(); }, 1200); });
 					try { document.addEventListener('DOMContentLoaded', function(){ ensureSyncGlobals(); }, { once: true }); } catch(_e){}
 				})();
 						</script>

@@ -2057,29 +2057,32 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 			const tileId = tileData.tileId || (isSecondary ? 101 + index : 1 + index);
 			console.log(`🔄 Verarbeite Kachel ${tileId}:`, tileData);
 
-			// Aircraft ID — do not overwrite a non-empty user value with empty server data
+			// Aircraft ID — allow authoritative clears from server (from other session) unless guarded
 			if (Object.prototype.hasOwnProperty.call(tileData, 'aircraftId')) {
 				const aircraftInput = document.getElementById(`aircraft-${tileId}`);
 				if (aircraftInput) {
 					const incomingRaw = (typeof tileData.aircraftId === 'string') ? tileData.aircraftId : '';
 					const incoming = incomingRaw.trim();
 					const current = (aircraftInput.value || '').trim();
-					const oldValue = aircraftInput.value;
 					const fid = `aircraft-${tileId}`;
-					if (!canApplyField(fid, aircraftInput)) { /* skip overwrite while actively edited */ }
-					else if (incoming.length > 0) {
+					const fromOtherSession = !!(tileData.updatedBySession) &&
+						(typeof this.getSessionId === 'function') &&
+						(tileData.updatedBySession !== this.getSessionId());
+
+					if (!canApplyField(fid, aircraftInput)) {
+						// skip while locally editing/fenced
+					} else if (incoming.length > 0) {
 						if (!(document.activeElement === aircraftInput && current === incoming)) {
 							aircraftInput.value = incoming;
 						}
 						console.log(`✈️ Aircraft ID gesetzt: ${tileId} = ${current} → ${incoming}`);
 						successfullyApplied++;
 					} else {
-						// Server provided empty/blank aircraftId: keep user value if present
-						if (current.length === 0) {
+						// incoming is empty → clear if from other session or local field already empty
+						if (fromOtherSession || current.length === 0) {
 							aircraftInput.value = '';
-							console.log(`✈️ Aircraft ID geleert (leer und kein vorhandener Wert): ${tileId}`);
-						} else {
-							console.log(`⏭️ Leere Server-AIRCRAFT_ID ignoriert – behalte Nutzerwert: ${tileId} = ${current}`);
+							console.log(`✈️ Aircraft ID geleert (autoritativer Server-Clear): ${tileId}`);
+							successfullyApplied++;
 						}
 					}
 				} else {

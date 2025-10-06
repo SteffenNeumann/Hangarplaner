@@ -1590,7 +1590,7 @@ function isReadOnlySync(){
     if (any) { const m = any.id.match(/-(\d+)$/); if (m) return parseInt(m[1],10); }
     return null;
   }
-  function clearSingleTile(cellId){
+  function clearTileHeaderAction(cellId){
     try {
       if (!cellId && cellId !== 0) return false;
       // Locate the tile host (primary or secondary)
@@ -1624,7 +1624,7 @@ function isReadOnlySync(){
       // Remove Last Update badge (and persisted record)
       try { if (window.LastUpdateBadges && typeof window.LastUpdateBadges.remove === 'function') { window.LastUpdateBadges.remove(parseInt(cellId,10)); } } catch(e){}
       return true;
-    } catch(e){ console.warn('clearSingleTile failed', e); return false; }
+    } catch(e){ console.warn('clearTileHeaderAction failed', e); return false; }
   }
   function injectDeleteIntoTile(tile){
     try {
@@ -1647,7 +1647,14 @@ function isReadOnlySync(){
         if (isReadOnlySync()) return; // No action in read-only
         const ss = window.serverSync;
         try { if (ss && typeof ss.suspendReads === 'function') ss.suspendReads(); } catch(_e) {}
-        const ok = clearSingleTile(cellId);
+        let ok = false;
+        try {
+          if (typeof window.clearSingleTile === 'function' && window.clearSingleTile !== clearTileHeaderAction) {
+            ok = window.clearSingleTile(cellId);
+          } else {
+            ok = clearTileHeaderAction(cellId);
+          }
+        } catch(_e) { ok = false; }
           try {
             if (ok && window.serverSync?.isMaster) {
               const updates = {};
@@ -1696,8 +1703,8 @@ function isReadOnlySync(){
   // Ensure injection after full DOM load as a fallback (tiles present)
   try { document.addEventListener('DOMContentLoaded', function(){ setTimeout(init, 600); }, { once: true }); } catch(_e){}
   document.addEventListener('secondaryTilesCreated', function(){ setTimeout(injectAll, 50); setTimeout(hookSyncToggles, 60); });
-  // Expose for potential reuse
-  window.clearSingleTile = clearSingleTile;
+  // Expose fallback helper without overriding global
+  window.clearTileHeaderAction = clearTileHeaderAction;
 })();
 </script>
 <script>

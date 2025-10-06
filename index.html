@@ -3689,13 +3689,13 @@ if (window.serverSync) {
 										syncWithServer: ()=> Promise.resolve(false)
 									};
 								}
-								// Ensure window.serverSync points to the active sync object
-								if (!window.serverSync && window.storageBrowser) {
-									window.serverSync = window.storageBrowser;
-								}
-							}
-					}
-					function installFallbackManager(){
+                        // Ensure window.serverSync points to the active sync object
+                        if (!window.serverSync && window.storageBrowser) {
+                            window.serverSync = window.storageBrowser;
+                        }
+                    } catch(_e){}
+                }
+                function installFallbackManager(){
 						if (window.sharingManager) return;
 						console.warn('SharingManager missing; installing minimal fallback');
 window.sharingManager = {

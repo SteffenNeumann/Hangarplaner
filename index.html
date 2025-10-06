@@ -3905,6 +3905,20 @@ async function fallbackSyncWrite(){ try { var url = getServerUrl(); var sid = en
 							window.syncDebugWrite = async function(){ try { var url = getServerUrl(); var sid = ensureSession(); var dname = (localStorage.getItem('presence.displayName') || '').trim(); var body = { metadata:{ debugPing: new Date().toISOString(), timestamp: Math.round(Date.now()) } }; log('POST '+url); var res = await fetch(url, { method:'POST', headers:{ 'Content-Type':'application/json', 'X-Sync-Role':'master', 'X-Sync-Session': sid, 'X-Display-Name': dname }, body: JSON.stringify(body) }); log('POST status '+res.status); var text = await res.text(); log('Body (first 200): '+ text.slice(0,200)); await window.syncDebugRead(); } catch(e){ log('WRITE error: '+e.message); } };
 							window.hangarInitQueue = window.hangarInitQueue || [];
 							window.hangarInitQueue.push(function(){ try{ var el = document.getElementById('syncDebugUrl'); if (el){ el.textContent = getServerUrl(); } polyfillApplyTileData(); }catch(e){} });
+							// Start fallback read polling when in Sync mode and slaveCheckForUpdates is unavailable
+							window.hangarInitQueue.push(function(){
+							  try {
+							    const inSync = !!(window.sharingManager && window.sharingManager.syncMode === 'sync');
+							    const hasSlave = !!(window.serverSync && typeof window.serverSync.slaveCheckForUpdates === 'function');
+							    if (inSync && !hasSlave) {
+							      if (!window.__fallbackReadTimer) {
+							        window.__fallbackReadTimer = setInterval(function(){ try { window.syncDebugRead && window.syncDebugRead(); } catch(_e){} }, 3000);
+							        // fire once immediately
+							        setTimeout(function(){ try { window.syncDebugRead && window.syncDebugRead(); } catch(_e){} }, 500);
+							      }
+							    }
+							  } catch(_e){}
+							});
 							window.hangarInitQueue.push(function(){ try{ var el = document.getElementById('syncDebugUrl'); if (el){ el.textContent = getServerUrl(); } polyfillApplyTileData(); }catch(e){} });
 						})();
 						</script>

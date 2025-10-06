@@ -2480,6 +2480,14 @@ async function checkForSelectedAircraft() {
 			if (window.__skipLocalRehydrateUntil && Date.now() < window.__skipLocalRehydrateUntil) {
 				return;
 			}
+			// If server read is enabled (Sync or Master), do not rehydrate from localStorage
+			try {
+				const canRead = !!(window.serverSync && typeof window.serverSync.canReadFromServer === 'function' && window.serverSync.canReadFromServer());
+				const isReadOnlySync = !!(window.sharingManager && window.sharingManager.syncMode === 'sync');
+				if (canRead || isReadOnlySync) {
+					return;
+				}
+			} catch(_e){}
 			const raw = localStorage.getItem('hangarPlannerData');
 			if (!raw) return;
 			const data = JSON.parse(raw);

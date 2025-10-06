@@ -3683,7 +3683,8 @@ if (window.serverSync) {
                         if (!window.serverSync && window.storageBrowser && (typeof window.storageBrowser.loadFromServer==='function' || typeof window.storageBrowser.startSlaveMode==='function')) {
                             window.serverSync = window.storageBrowser;
                         }
-                    } catch(_e){}
+                    }
+                    catch(_e){}
                 }
                 function installFallbackManager(){
 						if (window.sharingManager) return;

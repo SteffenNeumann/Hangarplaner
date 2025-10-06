@@ -2076,12 +2076,17 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 						if (!(document.activeElement === aircraftInput && current === incoming)) {
 							aircraftInput.value = incoming;
 						}
+						// Persist locally and notify listeners
+						try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, incoming, { source:'server', flushDelayMs:0 }); } catch(_e){}
+						try { aircraftInput.dispatchEvent(new Event('input', { bubbles:true })); aircraftInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
 						console.log(`✈️ Aircraft ID gesetzt: ${tileId} = ${current} → ${incoming}`);
 						successfullyApplied++;
 					} else {
 						// incoming is empty → clear if from other session or local field already empty
 						if (fromOtherSession || current.length === 0) {
 							aircraftInput.value = '';
+							try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, '', { source:'server', flushDelayMs:0 }); } catch(_e){}
+							try { aircraftInput.dispatchEvent(new Event('input', { bubbles:true })); aircraftInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
 							console.log(`✈️ Aircraft ID geleert (autoritativer Server-Clear): ${tileId}`);
 							successfullyApplied++;
 						}
@@ -2103,6 +2108,8 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 						if (!(document.activeElement === hangarPosInput && oldValue === newVal)) {
 							hangarPosInput.value = newVal;
 						}
+						try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, newVal, { source:'server', flushDelayMs:0 }); } catch(_e){}
+						try { hangarPosInput.dispatchEvent(new Event('input', { bubbles:true })); hangarPosInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
 						console.log(`📍 Hangar Position gesetzt: ${tileId} = ${oldValue} → ${newVal}`);
 						successfullyApplied++;
 					}
@@ -2123,6 +2130,8 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 						if (!(document.activeElement === posInfoInput && oldValue === newVal)) {
 							posInfoInput.value = newVal;
 						}
+						try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, newVal, { source:'server', flushDelayMs:0 }); } catch(_e){}
+						try { posInfoInput.dispatchEvent(new Event('input', { bubbles:true })); posInfoInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
 						console.log(`📍 Pos (info) gesetzt: ${tileId} = ${oldValue} → ${newVal}`);
 						successfullyApplied++;
 					}
@@ -2142,6 +2151,8 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 						if (!(document.activeElement === notesInput && notesInput.value === newVal)) {
 							notesInput.value = newVal;
 						}
+						try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, newVal, { source:'server', flushDelayMs:0 }); } catch(_e){}
+						try { notesInput.dispatchEvent(new Event('input', { bubbles:true })); notesInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
 						console.log(`📝 Notizen gesetzt: ${tileId} = ${newVal}`);
 					}
 				}
@@ -2162,12 +2173,16 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 							toSet = h.formatISOToCompactUTC ? h.formatISOToCompactUTC(toSet) : toSet;
 							// Store original ISO in dataset for later use
 							if (arrivalInput.dataset) arrivalInput.dataset.iso = tileData.arrivalTime;
+							try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, (arrivalInput.dataset?.iso||toSet||''), { source:'server', flushDelayMs:0 }); } catch(_e){}
+							try { arrivalInput.dispatchEvent(new Event('input', { bubbles:true })); arrivalInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
 						} else if (h.isHHmm && h.isHHmm(toSet) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
 							const bases = h.getBaseDates();
 							const isoTime = h.coerceHHmmToDateTimeLocalUtc(toSet, bases.arrivalBase || '');
 							if (isoTime && h.formatISOToCompactUTC) {
 								toSet = h.formatISOToCompactUTC(isoTime);
-								if (arrivalInput.dataset) arrivalInput.dataset.iso = isoTime;
+								if (arrivalInput.dataset) arrivalInput.dataset.iso = iso;
+								try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, iso, { source:'server', flushDelayMs:0 }); } catch(_e){}
+								try { arrivalInput.dispatchEvent(new Event('input', { bubbles:true })); arrivalInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
 							}
 						} else if (h.isCompactDateTime && h.isCompactDateTime(toSet)) {
 							// Already in compact format, store corresponding ISO
@@ -2179,6 +2194,8 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 					}
 						arrivalInput.value = toSet || '';
 						try { if (!toSet && arrivalInput.dataset) delete arrivalInput.dataset.iso; } catch(_e){}
+						try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, (arrivalInput.dataset?.iso||''), { source:'server', flushDelayMs:0 }); } catch(_e){}
+						try { arrivalInput.dispatchEvent(new Event('input', { bubbles:true })); arrivalInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
 						console.log(`🛬 Ankunftszeit gesetzt: ${tileId} = ${toSet || ''}`);
 					}
 				}
@@ -2199,12 +2216,16 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 							toSet = h.formatISOToCompactUTC ? h.formatISOToCompactUTC(toSet) : toSet;
 							// Store original ISO in dataset for later use
 							if (departureInput.dataset) departureInput.dataset.iso = tileData.departureTime;
+							try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, (departureInput.dataset?.iso||toSet||''), { source:'server', flushDelayMs:0 }); } catch(_e){}
+							try { departureInput.dispatchEvent(new Event('input', { bubbles:true })); departureInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
 						} else if (h.isHHmm && h.isHHmm(toSet) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
 							const bases = h.getBaseDates();
 							const isoTime = h.coerceHHmmToDateTimeLocalUtc(toSet, bases.departureBase || '');
 							if (isoTime && h.formatISOToCompactUTC) {
 								toSet = h.formatISOToCompactUTC(isoTime);
-								if (departureInput.dataset) departureInput.dataset.iso = isoTime;
+								if (departureInput.dataset) departureInput.dataset.iso = iso;
+								try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, iso, { source:'server', flushDelayMs:0 }); } catch(_e){}
+								try { departureInput.dispatchEvent(new Event('input', { bubbles:true })); departureInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
 							}
 						} else if (h.isCompactDateTime && h.isCompactDateTime(toSet)) {
 							// Already in compact format, store corresponding ISO
@@ -2216,6 +2237,8 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 					}
 						departureInput.value = toSet || '';
 						try { if (!toSet && departureInput.dataset) delete departureInput.dataset.iso; } catch(_e){}
+						try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, (departureInput.dataset?.iso||''), { source:'server', flushDelayMs:0 }); } catch(_e){}
+						try { departureInput.dispatchEvent(new Event('input', { bubbles:true })); departureInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
 						console.log(`🛫 Abflugzeit gesetzt: ${tileId} = ${toSet || ''}`);
 					}
 				}

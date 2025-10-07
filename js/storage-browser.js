@@ -2058,12 +2058,12 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 			const tileId = tileData.tileId || (isSecondary ? 101 + index : 1 + index);
 			console.log(`🔄 Verarbeite Kachel ${tileId}:`, tileData);
 
-			// Aircraft ID — treat missing key as empty (server often omits empty fields)
-			{
+			// Aircraft ID — allow authoritative clears from server (from other session) unless guarded
+			if (Object.prototype.hasOwnProperty.call(tileData, 'aircraftId')) {
 				const aircraftInput = document.getElementById(`aircraft-${tileId}`);
 				if (aircraftInput) {
 					const incomingRaw = (typeof tileData.aircraftId === 'string') ? tileData.aircraftId : '';
-					const incoming = (incomingRaw || '').trim();
+					const incoming = incomingRaw.trim();
 					const current = (aircraftInput.value || '').trim();
 					const fid = `aircraft-${tileId}`;
 					const fromOtherSession = !!(tileData.updatedBySession) &&
@@ -2082,11 +2082,11 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 						console.log(`✈️ Aircraft ID gesetzt: ${tileId} = ${current} → ${incoming}`);
 						successfullyApplied++;
 					} else {
-						// missing or empty → clear on receiver
+						// incoming is empty → ALWAYS clear on receiver
 						aircraftInput.value = '';
 						try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, '', { source:'server', flushDelayMs:0 }); } catch(_e){}
 						try { aircraftInput.dispatchEvent(new Event('input', { bubbles:true })); aircraftInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
-						console.log(`✈️ Aircraft ID geleert (Server-Clear or missing): ${tileId}`);
+						console.log(`✈️ Aircraft ID geleert (Server-Clear): ${tileId}`);
 						successfullyApplied++;
 					}
 				} else {
@@ -2117,8 +2117,8 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 				}
 			}
 
-			// Position in info grid — treat missing as empty
-			{
+			// Position in info grid — apply only when server provided position key
+			if (Object.prototype.hasOwnProperty.call(tileData, 'position')) {
 				const posInfoInput = document.getElementById(`position-${tileId}`);
 				if (posInfoInput) {
 					const newVal = tileData.position || '';
@@ -2139,8 +2139,8 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 				}
 			}
 
-			// Notes — treat missing as empty
-			{
+			// Notes (apply even when empty string if key present)
+			if (Object.prototype.hasOwnProperty.call(tileData, 'notes')) {
 				const notesInput = document.getElementById(`notes-${tileId}`);
 				if (notesInput) {
 					const newVal = tileData.notes || '';
@@ -2156,8 +2156,8 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 				}
 			}
 
-			// Arrival Time — treat missing as empty
-			{
+			// Arrival Time (apply even when empty string)
+			if (Object.prototype.hasOwnProperty.call(tileData, 'arrivalTime')) {
 				const arrivalInput = document.getElementById(`arrival-time-${tileId}`);
 				if (arrivalInput) {
 					const fid = `arrival-time-${tileId}`;
@@ -2199,8 +2199,8 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 				}
 			}
 
-			// Departure Time — treat missing as empty
-			{
+			// Departure Time (apply even when empty string)
+			if (Object.prototype.hasOwnProperty.call(tileData, 'departureTime')) {
 				const departureInput = document.getElementById(`departure-time-${tileId}`);
 				if (departureInput) {
 					const fid = `departure-time-${tileId}`;

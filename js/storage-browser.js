@@ -2101,10 +2101,15 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 			if (Object.prototype.hasOwnProperty.call(tileData, 'hangarPosition')) {
 				const hangarPosInput = document.getElementById(`hangar-position-${tileId}`);
 				if (hangarPosInput) {
-					const newVal = tileData.hangarPosition || '';
-					const oldValue = hangarPosInput.value;
+					const incomingRaw = (typeof tileData.hangarPosition === 'string') ? tileData.hangarPosition : '';
+					const newVal = incomingRaw.trim();
+					const oldValue = (hangarPosInput.value || '').trim();
 					const fid = `hangar-position-${tileId}`;
-					if (canApplyField(fid, hangarPosInput)){
+					
+					if (!canApplyField(fid, hangarPosInput)) {
+						// skip while locally editing/fenced
+					} else if (newVal.length > 0 || fromOtherSession || oldValue.length === 0) {
+						// Apply if: non-empty incoming, OR authoritative clear from other session, OR local already empty
 						if (!(document.activeElement === hangarPosInput && oldValue === newVal)) {
 							hangarPosInput.value = newVal;
 						}
@@ -2123,10 +2128,15 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 			if (Object.prototype.hasOwnProperty.call(tileData, 'position')) {
 				const posInfoInput = document.getElementById(`position-${tileId}`);
 				if (posInfoInput) {
-					const newVal = tileData.position || '';
-					const oldValue = posInfoInput.value;
+					const incomingRaw = (typeof tileData.position === 'string') ? tileData.position : '';
+					const newVal = incomingRaw.trim();
+					const oldValue = (posInfoInput.value || '').trim();
 					const fid = `position-${tileId}`;
-					if (canApplyField(fid, posInfoInput)){
+					
+					if (!canApplyField(fid, posInfoInput)) {
+						// skip while locally editing/fenced
+					} else if (newVal.length > 0 || fromOtherSession || oldValue.length === 0) {
+						// Apply if: non-empty incoming, OR authoritative clear from other session, OR local already empty
 						if (!(document.activeElement === posInfoInput && oldValue === newVal)) {
 							posInfoInput.value = newVal;
 						}
@@ -2141,30 +2151,44 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 				}
 			}
 
-			// Notes (apply even when empty string if key present)
+			// Notes (apply even when empty string if key present, including authoritative clears)
 			if (Object.prototype.hasOwnProperty.call(tileData, 'notes')) {
 				const notesInput = document.getElementById(`notes-${tileId}`);
 				if (notesInput) {
-					const newVal = tileData.notes || '';
+					const incomingRaw = (typeof tileData.notes === 'string') ? tileData.notes : '';
+					const newVal = incomingRaw.trim();
+					const oldValue = (notesInput.value || '').trim();
 					const fid = `notes-${tileId}`;
-					if (canApplyField(fid, notesInput)){
+					
+					if (!canApplyField(fid, notesInput)) {
+						// skip while locally editing/fenced
+					} else if (newVal.length > 0 || fromOtherSession || oldValue.length === 0) {
+						// Apply if: non-empty incoming, OR authoritative clear from other session, OR local already empty
 						if (!(document.activeElement === notesInput && notesInput.value === newVal)) {
 							notesInput.value = newVal;
 						}
 						try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, newVal, { source:'server', flushDelayMs:0 }); } catch(_e){}
 						try { notesInput.dispatchEvent(new Event('input', { bubbles:true })); notesInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
-						console.log(`📝 Notizen gesetzt: ${tileId} = ${newVal}`);
+						console.log(`📝 Notizen gesetzt: ${tileId} = ${newVal || '(geleert)'}`);
+						successfullyApplied++;
 					}
 				}
 			}
 
-			// Arrival Time (apply even when empty string)
+			// Arrival Time (apply even when empty string, including authoritative clears)
 			if (Object.prototype.hasOwnProperty.call(tileData, 'arrivalTime')) {
 				const arrivalInput = document.getElementById(`arrival-time-${tileId}`);
 				if (arrivalInput) {
 					const fid = `arrival-time-${tileId}`;
-					if (canApplyField(fid, arrivalInput)){
-						let toSet = tileData.arrivalTime || '';
+					const oldValue = (arrivalInput.value || '').trim();
+					const incomingRaw = (typeof tileData.arrivalTime === 'string') ? tileData.arrivalTime : '';
+					
+					// Check if we can apply (respects fences/typing) or if it's authoritative clear
+					if (!canApplyField(fid, arrivalInput) && incomingRaw.trim() === '' && !fromOtherSession) {
+						// Skip: locally fenced/editing AND incoming is empty AND not from other session
+					} else if (canApplyField(fid, arrivalInput) || (incomingRaw.trim() === '' && fromOtherSession)) {
+						// Apply if: can normally apply OR it's an authoritative clear from other session
+						let toSet = incomingRaw;
 						// Convert ISO format to compact display format for all input types
 					if (toSet && window.helpers) {
 						const h = window.helpers;
@@ -2196,18 +2220,26 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 						try { if (!toSet && arrivalInput.dataset) delete arrivalInput.dataset.iso; } catch(_e){}
 						try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, (arrivalInput.dataset?.iso||''), { source:'server', flushDelayMs:0 }); } catch(_e){}
 						try { arrivalInput.dispatchEvent(new Event('input', { bubbles:true })); arrivalInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
-						console.log(`🛬 Ankunftszeit gesetzt: ${tileId} = ${toSet || ''}`);
+						console.log(`🛬 Ankunftszeit gesetzt: ${tileId} = ${oldValue} → ${toSet || '(geleert)'}`);
+						successfullyApplied++;
 					}
 				}
 			}
 
-			// Departure Time (apply even when empty string)
+			// Departure Time (apply even when empty string, including authoritative clears)
 			if (Object.prototype.hasOwnProperty.call(tileData, 'departureTime')) {
 				const departureInput = document.getElementById(`departure-time-${tileId}`);
 				if (departureInput) {
 					const fid = `departure-time-${tileId}`;
-					if (canApplyField(fid, departureInput)){
-						let toSet = tileData.departureTime || '';
+					const oldValue = (departureInput.value || '').trim();
+					const incomingRaw = (typeof tileData.departureTime === 'string') ? tileData.departureTime : '';
+					
+					// Check if we can apply (respects fences/typing) or if it's authoritative clear
+					if (!canApplyField(fid, departureInput) && incomingRaw.trim() === '' && !fromOtherSession) {
+						// Skip: locally fenced/editing AND incoming is empty AND not from other session
+					} else if (canApplyField(fid, departureInput) || (incomingRaw.trim() === '' && fromOtherSession)) {
+						// Apply if: can normally apply OR it's an authoritative clear from other session
+						let toSet = incomingRaw;
 						// Convert ISO format to compact display format for all input types
 					if (toSet && window.helpers) {
 						const h = window.helpers;
@@ -2239,7 +2271,8 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 						try { if (!toSet && departureInput.dataset) delete departureInput.dataset.iso; } catch(_e){}
 						try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, (departureInput.dataset?.iso||''), { source:'server', flushDelayMs:0 }); } catch(_e){}
 						try { departureInput.dispatchEvent(new Event('input', { bubbles:true })); departureInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
-						console.log(`🛫 Abflugzeit gesetzt: ${tileId} = ${toSet || ''}`);
+						console.log(`🛫 Abflugzeit gesetzt: ${tileId} = ${oldValue} → ${toSet || '(geleert)'}`);
+						successfullyApplied++;
 					}
 				}
 			}

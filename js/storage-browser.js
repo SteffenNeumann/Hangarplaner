@@ -1932,37 +1932,6 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 				console.log("📊 Sekundäre Kacheln angewendet:", b);
 			}
 
-			// Receiver convergence: clear tiles present locally but missing in server snapshot
-			try {
-				const serverIds = new Set();
-				try { (dataForApply.primaryTiles||[]).forEach(t=>{ const id = parseInt(t?.tileId||0,10); if (id) serverIds.add(id); }); } catch(_e){}
-				try { (dataForApply.secondaryTiles||[]).forEach(t=>{ const id = parseInt(t?.tileId||0,10); if (id) serverIds.add(id); }); } catch(_e){}
-				const dom = (typeof this.collectTilesFromDom === 'function') ? this.collectTilesFromDom() : null;
-				const domIds = new Set();
-				if (dom) {
-					try { (dom.primary||[]).forEach(t=>{ const id = parseInt(t?.tileId||0,10); if (id) domIds.add(id); }); } catch(_e){}
-					try { (dom.secondary||[]).forEach(t=>{ const id = parseInt(t?.tileId||0,10); if (id) domIds.add(id); }); } catch(_e){}
-				}
-				const toClear = [];
-				domIds.forEach(id => { if (!serverIds.has(id)) toClear.push(id); });
-				if (toClear.length) {
-					const payload = toClear.map(id => ({
-						tileId: id,
-						aircraftId: '',
-						arrivalTime: '',
-						departureTime: '',
-						position: '',
-						notes: '',
-						status: 'neutral',
-						towStatus: 'neutral',
-					}));
-					const c1 = this.applyTileData(payload.filter(t => (t.tileId||0) < 100), false);
-					const c2 = this.applyTileData(payload.filter(t => (t.tileId||0) >= 100), true);
-					applied = !!(applied || c1 || c2);
-					console.log('🧹 Receiver cleared tiles missing in server snapshot:', toClear);
-				}
-			} catch(_e){}
-
 			// Basis-Fallback für Projektname
 			if (serverData.metadata && serverData.metadata.projectName) {
 				const projectNameInput = document.getElementById("projectName");

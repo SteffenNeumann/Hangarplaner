@@ -80,17 +80,10 @@ async function initializeUI() {
 			// Status-Selektoren initialisieren
 			initializeStatusSelectors();
 
-			// Position-/Flugzeit-Werte aus localStorage NUR im Offline-Betrieb anwenden
+			// Position-Werte und Flugzeit-Werte anwenden
 			setTimeout(() => {
-				try {
-					const canRead = !!(window.serverSync && typeof window.serverSync.canReadFromServer === 'function' && window.serverSync.canReadFromServer());
-					if (!canRead) {
-						applyPositionValuesFromLocalStorage();
-						applyFlightTimeValuesFromLocalStorage();
-					} else {
-						console.log('⏭️ Skip localStorage rehydrate (server read enabled)');
-					}
-				} catch(_) { /* fallback safe */ }
+				applyPositionValuesFromLocalStorage();
+				applyFlightTimeValuesFromLocalStorage();
 			}, 500);
 		}
 
@@ -131,17 +124,10 @@ async function initializeUI() {
 				initializeStatusSelectors();
 
 
-				// Position-/Flugzeit-Werte aus localStorage NUR im Offline-Betrieb anwenden
+				// Position-Werte und Flugzeit-Werte anwenden
 				setTimeout(() => {
-					try {
-						const canRead = !!(window.serverSync && typeof window.serverSync.canReadFromServer === 'function' && window.serverSync.canReadFromServer());
-						if (!canRead) {
-							applyPositionValuesFromLocalStorage();
-							applyFlightTimeValuesFromLocalStorage();
-						} else {
-							console.log('⏭️ Skip localStorage rehydrate (server read enabled)');
-						}
-					} catch(_) { /* fallback safe */ }
+					applyPositionValuesFromLocalStorage();
+					applyFlightTimeValuesFromLocalStorage();
 				}, 500);
 			}
 		}
@@ -157,11 +143,6 @@ async function initializeUI() {
  */
 function applyPositionValuesFromLocalStorage() {
 	try {
-		// Do not rehydrate when server reading is enabled (Sync/Master)
-		if (window.serverSync && typeof window.serverSync.canReadFromServer === 'function' && window.serverSync.canReadFromServer()) {
-			console.log('⏭️ applyPositionValuesFromLocalStorage skipped (server read enabled)');
-			return;
-		}
 		const savedData = JSON.parse(
 			localStorage.getItem("hangarPlannerSettings") || "{}"
 		);
@@ -191,11 +172,6 @@ function applyPositionValuesFromLocalStorage() {
  */
 function applyFlightTimeValuesFromLocalStorage() {
 	try {
-		// Do not rehydrate when server reading is enabled (Sync/Master)
-		if (window.serverSync && typeof window.serverSync.canReadFromServer === 'function' && window.serverSync.canReadFromServer()) {
-			console.log('⏭️ applyFlightTimeValuesFromLocalStorage skipped (server read enabled)');
-			return;
-		}
 		const savedData = JSON.parse(
 			localStorage.getItem("hangarPlannerSettings") || "{}"
 		);

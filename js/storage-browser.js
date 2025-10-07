@@ -2082,14 +2082,12 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 						console.log(`✈️ Aircraft ID gesetzt: ${tileId} = ${current} → ${incoming}`);
 						successfullyApplied++;
 					} else {
-						// incoming is empty → clear if from other session or local field already empty
-						if (fromOtherSession || current.length === 0) {
-							aircraftInput.value = '';
-							try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, '', { source:'server', flushDelayMs:0 }); } catch(_e){}
-							try { aircraftInput.dispatchEvent(new Event('input', { bubbles:true })); aircraftInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
-							console.log(`✈️ Aircraft ID geleert (autoritativer Server-Clear): ${tileId}`);
-							successfullyApplied++;
-						}
+						// incoming is empty → ALWAYS clear on receiver
+						aircraftInput.value = '';
+						try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, '', { source:'server', flushDelayMs:0 }); } catch(_e){}
+						try { aircraftInput.dispatchEvent(new Event('input', { bubbles:true })); aircraftInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
+						console.log(`✈️ Aircraft ID geleert (Server-Clear): ${tileId}`);
+						successfullyApplied++;
 					}
 				} else {
 					console.warn(`❌ Aircraft Input nicht gefunden: aircraft-${tileId}`);

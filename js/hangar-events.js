@@ -49,31 +49,6 @@ function initializeStatusSelectors() {
 async function initializeUI() {
 	console.log("Initialisiere UI...");
 
-	// Helper: early detection whether server read should be considered enabled
-	function isServerReadEnabledEarly(){
-		try {
-			// Prefer persisted sync mode (survives reloads)
-			const raw = localStorage.getItem('hangarSyncSettings');
-			if (raw) {
-				try {
-					const s = JSON.parse(raw);
-					const m = (s && typeof s.syncMode === 'string') ? s.syncMode.toLowerCase() : '';
-					if (m === 'sync' || m === 'master') return true;
-				} catch(_){}
-			}
-			// Fallback to live serverSync capability
-			if (window.serverSync && typeof window.serverSync.canReadFromServer === 'function') {
-				return !!window.serverSync.canReadFromServer();
-			}
-			// Fallback to sharingManager (if already present)
-			if (window.sharingManager && typeof window.sharingManager.syncMode === 'string') {
-				const m = window.sharingManager.syncMode.toLowerCase();
-				return (m === 'sync' || m === 'master');
-			}
-		} catch(_){}
-		return false;
-	}
-
 	try {
 		// *** MIGRATION: Verwende das neue display-options System ***
 		// Alte hangarPlannerSettings werden an das neue System weitergeleitet
@@ -108,12 +83,12 @@ async function initializeUI() {
 			// Position-/Flugzeit-Werte aus localStorage NUR im Offline-Betrieb anwenden
 			setTimeout(() => {
 				try {
-					const canReadEarly = isServerReadEnabledEarly();
-					if (!canReadEarly) {
+					const canRead = !!(window.serverSync && typeof window.serverSync.canReadFromServer === 'function' && window.serverSync.canReadFromServer());
+					if (!canRead) {
 						applyPositionValuesFromLocalStorage();
 						applyFlightTimeValuesFromLocalStorage();
 					} else {
-						console.log('⏭️ Skip localStorage rehydrate (server read likely enabled)');
+						console.log('⏭️ Skip localStorage rehydrate (server read enabled)');
 					}
 				} catch(_) { /* fallback safe */ }
 			}, 500);
@@ -159,12 +134,12 @@ async function initializeUI() {
 				// Position-/Flugzeit-Werte aus localStorage NUR im Offline-Betrieb anwenden
 				setTimeout(() => {
 					try {
-						const canReadEarly = isServerReadEnabledEarly();
-						if (!canReadEarly) {
+						const canRead = !!(window.serverSync && typeof window.serverSync.canReadFromServer === 'function' && window.serverSync.canReadFromServer());
+						if (!canRead) {
 							applyPositionValuesFromLocalStorage();
 							applyFlightTimeValuesFromLocalStorage();
 						} else {
-							console.log('⏭️ Skip localStorage rehydrate (server read likely enabled)');
+							console.log('⏭️ Skip localStorage rehydrate (server read enabled)');
 						}
 					} catch(_) { /* fallback safe */ }
 				}, 500);
@@ -183,7 +158,7 @@ async function initializeUI() {
 function applyPositionValuesFromLocalStorage() {
 	try {
 		// Do not rehydrate when server reading is enabled (Sync/Master)
-		if (isServerReadEnabledEarly()) {
+		if (window.serverSync && typeof window.serverSync.canReadFromServer === 'function' && window.serverSync.canReadFromServer()) {
 			console.log('⏭️ applyPositionValuesFromLocalStorage skipped (server read enabled)');
 			return;
 		}
@@ -217,7 +192,7 @@ function applyPositionValuesFromLocalStorage() {
 function applyFlightTimeValuesFromLocalStorage() {
 	try {
 		// Do not rehydrate when server reading is enabled (Sync/Master)
-		if (isServerReadEnabledEarly()) {
+		if (window.serverSync && typeof window.serverSync.canReadFromServer === 'function' && window.serverSync.canReadFromServer()) {
 			console.log('⏭️ applyFlightTimeValuesFromLocalStorage skipped (server read enabled)');
 			return;
 		}

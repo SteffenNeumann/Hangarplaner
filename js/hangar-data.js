@@ -1263,9 +1263,9 @@ function collectTilesData() {
 				position:
 					document.getElementById(`hangar-position-${cellId}`)?.value || "",
 				aircraftId: document.getElementById(`aircraft-${cellId}`)?.value || "",
-				status: document.getElementById(`status-${cellId}`)?.value || "ready",
+				status: document.getElementById(`status-${cellId}`)?.value || "neutral",
 				towStatus:
-					document.getElementById(`tow-status-${cellId}`)?.value || "initiated",
+					document.getElementById(`tow-status-${cellId}`)?.value || "neutral",
 				notes: document.getElementById(`notes-${cellId}`)?.value || "",
 				arrivalTime: arrivalTime,
 				departureTime: departureTime,
@@ -1331,10 +1331,10 @@ function collectTilesData() {
 						document.getElementById(`hangar-position-${cellId}`)?.value || "",
 					aircraftId:
 						document.getElementById(`aircraft-${cellId}`)?.value || "",
-					status: document.getElementById(`status-${cellId}`)?.value || "ready",
+					status: document.getElementById(`status-${cellId}`)?.value || "neutral",
 					towStatus:
 						document.getElementById(`tow-status-${cellId}`)?.value ||
-						"initiated",
+						"neutral",
 					notes: document.getElementById(`notes-${cellId}`)?.value || "",
 					arrivalTime: arrivalTime,
 					departureTime: departureTime,
@@ -1478,7 +1478,7 @@ function applyProjectData(projectData) {
 				// Status setzen
 				const statusSelect = document.getElementById(`status-${id}`);
 				if (statusSelect) {
-					statusSelect.value = status || "ready";
+					statusSelect.value = status || "neutral";
 					// Status-Event auslösen, um das Statuslicht zu aktualisieren
 					const event = new Event("change");
 					statusSelect.dispatchEvent(event);
@@ -1490,7 +1490,7 @@ function applyProjectData(projectData) {
 				// Tow-Status setzen
 				const towStatusSelect = document.getElementById(`tow-status-${id}`);
 				if (towStatusSelect) {
-					towStatusSelect.value = towStatus || "initiated";
+					towStatusSelect.value = towStatus || "neutral";
 					// Event auslösen, um Styling zu aktualisieren
 					const event = new Event("change");
 					towStatusSelect.dispatchEvent(event);

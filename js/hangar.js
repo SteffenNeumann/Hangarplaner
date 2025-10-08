@@ -1624,6 +1624,20 @@ window.moveTileContent = window.moveTileContent || async function(sourceId, dest
 window.openTileSelectionOverlay = window.openTileSelectionOverlay || function(options){
   try {
     console.warn('🚀 openTileSelectionOverlay called with options:', options);
+    
+    // Check if overlay already exists - prevent duplicates
+    const existingOverlay = document.getElementById('tileSelectionOverlay');
+    if (existingOverlay) {
+      console.warn('⚠️ Overlay already exists, removing old one first');
+      try {
+        if (existingOverlay.parentNode) {
+          existingOverlay.parentNode.removeChild(existingOverlay);
+        }
+      } catch(e) {
+        console.error('Failed to remove existing overlay:', e);
+      }
+    }
+    
     const tiles = Array.isArray(options?.tiles) ? options.tiles : (window.getFreeTilesWithLabels ? window.getFreeTilesWithLabels() : []);
     const onSelect = typeof options?.onSelect === 'function' ? options.onSelect : null;
     console.warn('📋 tiles:', tiles, 'onSelect:', !!onSelect);

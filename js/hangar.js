@@ -1662,7 +1662,13 @@ window.openTileSelectionOverlay = window.openTileSelectionOverlay || function(op
         btn.title = `Kachel #${id}${label ? ` • Position: ${label}` : ''}`;
         btn.addEventListener('click', () => {
           // Close modal immediately before any other processing
-          try { document.body.removeChild(overlay); } catch(_){}
+          try { 
+            if (overlay && overlay.parentNode) {
+              overlay.parentNode.removeChild(overlay);
+            }
+          } catch(err){
+            console.warn('Failed to remove overlay:', err);
+          }
           // Then execute callback
           try { if (onSelect) onSelect(id); } catch(_){}
         });
@@ -1683,7 +1689,13 @@ window.openTileSelectionOverlay = window.openTileSelectionOverlay || function(op
     cancelBtn.style.minHeight = '32px';
     cancelBtn.style.fontSize = '12px';
     cancelBtn.textContent = 'Abbrechen';
-    cancelBtn.addEventListener('click', () => { try { document.body.removeChild(overlay); } catch(_){} });
+    cancelBtn.addEventListener('click', () => { 
+      try { 
+        if (overlay && overlay.parentNode) {
+          overlay.parentNode.removeChild(overlay);
+        }
+      } catch(_){} 
+    });
     footer.appendChild(cancelBtn);
 
     modal.appendChild(title);
@@ -1695,8 +1707,25 @@ window.openTileSelectionOverlay = window.openTileSelectionOverlay || function(op
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
 
-    overlay.addEventListener('click', (e)=>{ if (e.target === overlay) { try { document.body.removeChild(overlay); } catch(_){} } });
-    const escListener = (ev)=>{ if (ev.key === 'Escape') { try { document.body.removeChild(overlay); } catch(_){} document.removeEventListener('keydown', escListener); } };
+    overlay.addEventListener('click', (e)=>{ 
+      if (e.target === overlay) { 
+        try { 
+          if (overlay && overlay.parentNode) {
+            overlay.parentNode.removeChild(overlay);
+          }
+        } catch(_){} 
+      } 
+    });
+    const escListener = (ev)=>{ 
+      if (ev.key === 'Escape') { 
+        try { 
+          if (overlay && overlay.parentNode) {
+            overlay.parentNode.removeChild(overlay);
+          }
+        } catch(_){} 
+        document.removeEventListener('keydown', escListener); 
+      } 
+    };
     document.addEventListener('keydown', escListener);
     return overlay;
   } catch(e){ try { window.showNotification && window.showNotification('Open selection overlay failed: ' + e.message, 'error'); } catch(_){} return null; }
@@ -2415,7 +2444,13 @@ async function checkForSelectedAircraft() {
 					const target = e.currentTarget;
 					const tid = parseInt(target.dataset.tileId, 10);
 					// Close modal immediately before any other processing
-					try { document.body.removeChild(overlay); } catch(_){}
+					try { 
+						if (overlay && overlay.parentNode) {
+							overlay.parentNode.removeChild(overlay);
+						}
+					} catch(err){
+						console.warn('Failed to remove overlay:', err);
+					}
 					// Then execute insert
 					finalizeInsert(tid);
 				});
@@ -2438,7 +2473,11 @@ async function checkForSelectedAircraft() {
 			cancelBtn.style.fontSize = '12px';
 			cancelBtn.textContent = 'Abbrechen';
 			cancelBtn.addEventListener('click', () => {
-				document.body.removeChild(overlay);
+				try {
+					if (overlay && overlay.parentNode) {
+						overlay.parentNode.removeChild(overlay);
+					}
+				} catch(_){}
 				clearSelection();
 			});
 			footer.appendChild(cancelBtn);
@@ -2456,13 +2495,21 @@ async function checkForSelectedAircraft() {
 			// Close behaviors
 			overlay.addEventListener('click', (e) => {
 				if (e.target === overlay) {
-					document.body.removeChild(overlay);
+					try {
+						if (overlay && overlay.parentNode) {
+							overlay.parentNode.removeChild(overlay);
+						}
+					} catch(_){}
 					clearSelection();
 				}
 			});
 			document.addEventListener('keydown', function escListener(ev){
 				if (ev.key === 'Escape') {
-					try { document.body.removeChild(overlay); } catch {}
+					try { 
+						if (overlay && overlay.parentNode) {
+							overlay.parentNode.removeChild(overlay);
+						}
+					} catch {}
 					clearSelection();
 					document.removeEventListener('keydown', escListener);
 				}

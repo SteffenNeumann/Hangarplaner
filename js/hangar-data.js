@@ -672,8 +672,8 @@ function applyLoadedTileData(data) {
 		// Arrival Time setzen (auch leeren wenn leerer String geliefert)
 		const arrivalInput = document.getElementById(`arrival-time-${id}`);
 		if (arrivalInput) {
-			if (Object.prototype.hasOwnProperty.call(tile, 'arrivalTime')) {
-				const v = tile.arrivalTime || '';
+			if (Object.prototype.hasOwnProperty.call(tileData, 'arrivalTime')) {
+				const v = tileData.arrivalTime || '';
 				arrivalInput.value = v;
 				try { if (!v && arrivalInput.dataset) delete arrivalInput.dataset.iso; } catch(_e){}
 			}
@@ -682,8 +682,8 @@ function applyLoadedTileData(data) {
 		// Departure Time setzen (auch leeren wenn leerer String geliefert)
 		const departureInput = document.getElementById(`departure-time-${id}`);
 		if (departureInput) {
-			if (Object.prototype.hasOwnProperty.call(tile, 'departureTime')) {
-				const v = tile.departureTime || '';
+			if (Object.prototype.hasOwnProperty.call(tileData, 'departureTime')) {
+				const v = tileData.departureTime || '';
 				departureInput.value = v;
 				try { if (!v && departureInput.dataset) delete departureInput.dataset.iso; } catch(_e){}
 			}
@@ -691,15 +691,15 @@ function applyLoadedTileData(data) {
 
 		// Header Hangar Position (legacy 'position' maps to header)
 		const hangarPosInputLegacy = document.getElementById(`hangar-position-${id}`);
-		if (hangarPosInputLegacy && Object.prototype.hasOwnProperty.call(tile, 'position')) {
-			hangarPosInputLegacy.value = tile.position || '';
+		if (hangarPosInputLegacy && Object.prototype.hasOwnProperty.call(tileData, 'position')) {
+			hangarPosInputLegacy.value = tileData.position || '';
 		}
 
 		// Position Info Grid setzen (use explicit legacy key 'positionInfoGrid' only)
 		const positionInfoInput = document.getElementById(`position-${id}`);
 		if (positionInfoInput) {
-			if (Object.prototype.hasOwnProperty.call(tile, 'positionInfoGrid')) {
-				positionInfoInput.value = tile.positionInfoGrid || '';
+			if (Object.prototype.hasOwnProperty.call(tileData, 'positionInfoGrid')) {
+				positionInfoInput.value = tileData.positionInfoGrid || '';
 			}
 		}
 			});
@@ -1215,6 +1215,49 @@ function collectTilesData() {
 		.querySelectorAll("#hangarGrid .hangar-cell")
 		.forEach((cell, index) => {
 			const cellId = index + 1;
+			
+			// Collect arrival time (prefer ISO from dataset)
+			const arrivalElement = document.getElementById(`arrival-time-${cellId}`);
+			let arrivalTime = "";
+			if (arrivalElement) {
+				const rawIso = arrivalElement.dataset?.iso || "";
+				if (rawIso) {
+					arrivalTime = rawIso;
+				} else if (
+					window.helpers &&
+					typeof window.helpers.canonicalizeDateTimeFieldValue === "function"
+				) {
+					arrivalTime =
+						window.helpers.canonicalizeDateTimeFieldValue(
+							arrivalElement.id,
+							arrivalElement.value || ""
+						) || "";
+				} else {
+					arrivalTime = arrivalElement.value || "";
+				}
+			}
+			
+			// Collect departure time (prefer ISO from dataset)
+			const departureElement = document.getElementById(`departure-time-${cellId}`);
+			let departureTime = "";
+			if (departureElement) {
+				const rawIso = departureElement.dataset?.iso || "";
+				if (rawIso) {
+					departureTime = rawIso;
+				} else if (
+					window.helpers &&
+					typeof window.helpers.canonicalizeDateTimeFieldValue === "function"
+				) {
+					departureTime =
+						window.helpers.canonicalizeDateTimeFieldValue(
+							departureElement.id,
+							departureElement.value || ""
+						) || "";
+				} else {
+					departureTime = departureElement.value || "";
+				}
+			}
+			
 			const tileData = {
 				id: cellId,
 				position:
@@ -1224,6 +1267,9 @@ function collectTilesData() {
 				towStatus:
 					document.getElementById(`tow-status-${cellId}`)?.value || "initiated",
 				notes: document.getElementById(`notes-${cellId}`)?.value || "",
+				arrivalTime: arrivalTime,
+				departureTime: departureTime,
+				positionInfoGrid: document.getElementById(`position-${cellId}`)?.value || "",
 			};
 
 			tiles.push(tileData);
@@ -1237,6 +1283,48 @@ function collectTilesData() {
 				cell.getAttribute("data-cell-id") || cell.id.split("-").pop()
 			);
 			if (cellId >= 101) {
+				// Collect arrival time (prefer ISO from dataset)
+				const arrivalElement = document.getElementById(`arrival-time-${cellId}`);
+				let arrivalTime = "";
+				if (arrivalElement) {
+					const rawIso = arrivalElement.dataset?.iso || "";
+					if (rawIso) {
+						arrivalTime = rawIso;
+					} else if (
+						window.helpers &&
+						typeof window.helpers.canonicalizeDateTimeFieldValue === "function"
+					) {
+						arrivalTime =
+							window.helpers.canonicalizeDateTimeFieldValue(
+								arrivalElement.id,
+								arrivalElement.value || ""
+							) || "";
+					} else {
+						arrivalTime = arrivalElement.value || "";
+					}
+				}
+				
+				// Collect departure time (prefer ISO from dataset)
+				const departureElement = document.getElementById(`departure-time-${cellId}`);
+				let departureTime = "";
+				if (departureElement) {
+					const rawIso = departureElement.dataset?.iso || "";
+					if (rawIso) {
+						departureTime = rawIso;
+					} else if (
+						window.helpers &&
+						typeof window.helpers.canonicalizeDateTimeFieldValue === "function"
+					) {
+						departureTime =
+							window.helpers.canonicalizeDateTimeFieldValue(
+								departureElement.id,
+								departureElement.value || ""
+							) || "";
+					} else {
+						departureTime = departureElement.value || "";
+					}
+				}
+				
 				const tileData = {
 					id: cellId,
 					position:
@@ -1248,6 +1336,9 @@ function collectTilesData() {
 						document.getElementById(`tow-status-${cellId}`)?.value ||
 						"initiated",
 					notes: document.getElementById(`notes-${cellId}`)?.value || "",
+					arrivalTime: arrivalTime,
+					departureTime: departureTime,
+					positionInfoGrid: document.getElementById(`position-${cellId}`)?.value || "",
 				};
 
 				tiles.push(tileData);

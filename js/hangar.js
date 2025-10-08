@@ -1842,10 +1842,11 @@ async function performScreenReset(){
 		if (resetSucceeded && window.serverSync?.isMaster) {
 			try {
 				await window.serverSync.syncWithServer();
-				// After a successful write, force an immediate read-back for fast convergence
-				try { if (ss && typeof ss.resumeReads === 'function') ss.resumeReads(true); } catch(_e){}
+				// Only force read-back after successful sync to prevent refilling from stale server data
+				if (ss && typeof ss.resumeReads === 'function') ss.resumeReads(true);
 			} catch (syncErr) {
 				console.warn('Reset screen sync failed:', syncErr);
+				// Don't resume reads with force if sync failed - let normal polling handle it
 			}
 		}
 

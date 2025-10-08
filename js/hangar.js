@@ -1623,12 +1623,9 @@ window.moveTileContent = window.moveTileContent || async function(sourceId, dest
 // Standalone selection overlay opener (Board/Table right-click)
 window.openTileSelectionOverlay = window.openTileSelectionOverlay || function(options){
   try {
-    console.warn('🚀 openTileSelectionOverlay called with options:', options);
-    
     // Check if overlay already exists - prevent duplicates
     const existingOverlay = document.getElementById('tileSelectionOverlay');
     if (existingOverlay) {
-      console.warn('⚠️ Overlay already exists, removing old one first');
       try {
         if (existingOverlay.parentNode) {
           existingOverlay.parentNode.removeChild(existingOverlay);
@@ -1640,9 +1637,7 @@ window.openTileSelectionOverlay = window.openTileSelectionOverlay || function(op
     
     const tiles = Array.isArray(options?.tiles) ? options.tiles : (window.getFreeTilesWithLabels ? window.getFreeTilesWithLabels() : []);
     const onSelect = typeof options?.onSelect === 'function' ? options.onSelect : null;
-    console.warn('📋 tiles:', tiles, 'onSelect:', !!onSelect);
     const normalized = (tiles||[]).map(item => (typeof item === 'number' ? { id:item, label: getPositionLabelForTileId(item) } : { id:item.id, label:item.label||getPositionLabelForTileId(item.id) }));
-    console.warn('📊 normalized tiles:', normalized);
 
     const overlay = document.createElement('div');
     overlay.id = 'tileSelectionOverlay';
@@ -1667,10 +1662,8 @@ window.openTileSelectionOverlay = window.openTileSelectionOverlay || function(op
 
     const grid = document.createElement('div');
     grid.className = 'grid grid-cols-4 gap-2 mb-4';
-    console.warn('🏗️ Creating grid with', normalized.length, 'tiles');
     if (normalized.length > 0) {
       normalized.forEach(({id,label}) => {
-        console.warn('🔲 Creating button for tile', id, label);
         const btn = document.createElement('button');
         btn.className = 'sidebar-btn sidebar-btn-primary';
         btn.style.minHeight = '32px';
@@ -1679,29 +1672,20 @@ window.openTileSelectionOverlay = window.openTileSelectionOverlay || function(op
         btn.dataset.tileId = String(id);
         btn.textContent = label || `#${id}`;
         btn.title = `Kachel #${id}${label ? ` • Position: ${label}` : ''}`;
-        console.warn('➕ Adding click listener to button', id);
         btn.addEventListener('click', (e) => {
-          console.warn('🔘 Free space button clicked, id:', id, 'event:', e);
           e.preventDefault();
           e.stopPropagation();
           // Close modal immediately before any other processing
           try { 
-            console.warn('🔍 overlay exists?', !!overlay, 'parentNode?', !!overlay?.parentNode);
             if (overlay && overlay.parentNode) {
-              console.warn('✅ Removing overlay from DOM');
               overlay.parentNode.removeChild(overlay);
-              console.warn('✅ Overlay removed successfully');
-            } else {
-              console.warn('❌ Cannot remove: overlay or parentNode missing');
             }
           } catch(err){
-            console.error('❌ Failed to remove overlay:', err);
+            console.error('Failed to remove overlay:', err);
           }
           // Then execute callback
-          console.warn('📞 Executing onSelect callback');
           try { if (onSelect) onSelect(id); } catch(e){ console.error('Callback error:', e); }
-        }, {capture: false, once: false});
-        console.warn('✅ Click listener added to button', id);
+        });
         grid.appendChild(btn);
       });
     } else {
@@ -1735,9 +1719,7 @@ window.openTileSelectionOverlay = window.openTileSelectionOverlay || function(op
     modal.appendChild(footer);
 
     overlay.appendChild(modal);
-    console.warn('➕ Appending overlay to document.body');
     document.body.appendChild(overlay);
-    console.warn('✅ Overlay appended, returning overlay element');
 
     overlay.addEventListener('click', (e)=>{ 
       if (e.target === overlay) { 

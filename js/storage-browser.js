@@ -2054,21 +2054,23 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 		let successfullyApplied = 0;
 		let failedToApply = 0;
 
-		tiles.forEach((tileData, index) => {
-			const tileId = tileData.tileId || (isSecondary ? 101 + index : 1 + index);
-			console.log(`🔄 Verarbeite Kachel ${tileId}:`, tileData);
+	tiles.forEach((tileData, index) => {
+		const tileId = tileData.tileId || (isSecondary ? 101 + index : 1 + index);
+		console.log(`🔄 Verarbeite Kachel ${tileId}:`, tileData);
 
-			// Aircraft ID — allow authoritative clears from server (from other session) unless guarded
-			if (Object.prototype.hasOwnProperty.call(tileData, 'aircraftId')) {
-				const aircraftInput = document.getElementById(`aircraft-${tileId}`);
-				if (aircraftInput) {
-					const incomingRaw = (typeof tileData.aircraftId === 'string') ? tileData.aircraftId : '';
-					const incoming = incomingRaw.trim();
-					const current = (aircraftInput.value || '').trim();
-					const fid = `aircraft-${tileId}`;
-					const fromOtherSession = !!(tileData.updatedBySession) &&
-						(typeof this.getSessionId === 'function') &&
-						(tileData.updatedBySession !== this.getSessionId());
+		// Determine if update is from another session (used by all field handlers below)
+		const fromOtherSession = !!(tileData.updatedBySession) &&
+			(typeof this.getSessionId === 'function') &&
+			(tileData.updatedBySession !== this.getSessionId());
+
+		// Aircraft ID — allow authoritative clears from server (from other session) unless guarded
+		if (Object.prototype.hasOwnProperty.call(tileData, 'aircraftId')) {
+			const aircraftInput = document.getElementById(`aircraft-${tileId}`);
+			if (aircraftInput) {
+				const incomingRaw = (typeof tileData.aircraftId === 'string') ? tileData.aircraftId : '';
+				const incoming = incomingRaw.trim();
+				const current = (aircraftInput.value || '').trim();
+				const fid = `aircraft-${tileId}`;
 
 					if (!canApplyField(fid, aircraftInput)) {
 						// skip while locally editing/fenced

@@ -1397,8 +1397,9 @@ return true;
       window.getFreeTilesWithLabels = function(){
         try {
           const list = [];
-          const inputs = document.querySelectorAll('#hangarGrid .hangar-cell input[id^="aircraft-"], #secondaryHangarGrid .hangar-cell input[id^="aircraft-"]');
-          inputs.forEach(inp => {
+          // Process primary hangar first (preserves DOM/visual order)
+          const primaryInputs = document.querySelectorAll('#hangarGrid .hangar-cell input[id^="aircraft-"]');
+          primaryInputs.forEach(inp => {
             const m = (inp.id||'').match(/aircraft-(\d+)/);
             if (!m) return;
             const cellId = parseInt(m[1],10);
@@ -1411,9 +1412,24 @@ return true;
             const isEmpty = !inp.value || inp.value.trim() === '';
             if (!isHidden && isEmpty){ list.push({ id: cellId, label: window.getPositionLabelForTileId(cellId) }); }
           });
+          // Process secondary hangar second (preserves DOM/visual order)
+          const secondaryInputs = document.querySelectorAll('#secondaryHangarGrid .hangar-cell input[id^="aircraft-"]');
+          secondaryInputs.forEach(inp => {
+            const m = (inp.id||'').match(/aircraft-(\d+)/);
+            if (!m) return;
+            const cellId = parseInt(m[1],10);
+            const cell = inp.closest('.hangar-cell');
+            if (!cell) return;
+            const style = window.getComputedStyle ? window.getComputedStyle(cell) : cell.style;
+            let isHidden = cell.classList.contains('hidden') || style.display === 'none' || style.visibility === 'hidden' || cell.getClientRects().length === 0;
+            if (document && document.body && document.body.classList && document.body.classList.contains('table-view')) isHidden = false;
+            const isEmpty = !inp.value || inp.value.trim() === '';
+            if (!isHidden && isEmpty){ list.push({ id: cellId, label: window.getPositionLabelForTileId(cellId) }); }
+          });
+          // Dedup by id (guard against unexpected DOM duplication) while preserving order
           const byId = new Map();
           list.forEach(it => { if (!byId.has(it.id)) byId.set(it.id, it); });
-          return Array.from(byId.values()).sort((a,b)=>{ const ap = a.id >= 101 ? 1 : 0; const bp = b.id >= 101 ? 1 : 0; if (ap!==bp) return ap-bp; return a.id-b.id; });
+          return Array.from(byId.values());
         } catch(_) { return []; }
       };
     }
@@ -1645,7 +1661,10 @@ window.openTileSelectionOverlay = window.openTileSelectionOverlay || function(op
         btn.textContent = label || `#${id}`;
         btn.title = `Kachel #${id}${label ? ` • Position: ${label}` : ''}`;
         btn.addEventListener('click', () => {
-          try { if (onSelect) onSelect(id); } finally { try { document.body.removeChild(overlay); } catch(_){} }
+          // Close modal immediately before any other processing
+          try { document.body.removeChild(overlay); } catch(_){}
+          // Then execute callback
+          try { if (onSelect) onSelect(id); } catch(_){}
         });
         grid.appendChild(btn);
       });
@@ -2154,8 +2173,9 @@ async function checkForSelectedAircraft() {
 		// Hilfsfunktion: alle freien (leeren) sichtbaren Kacheln sammeln (nur primär)
 		function getFreeTilesWithLabels() {
 			const list = [];
-			const inputs = document.querySelectorAll('#hangarGrid .hangar-cell input[id^="aircraft-"], #secondaryHangarGrid .hangar-cell input[id^="aircraft-"]');
-			inputs.forEach((inp) => {
+			// Process primary hangar first (preserves DOM/visual order)
+			const primaryInputs = document.querySelectorAll('#hangarGrid .hangar-cell input[id^="aircraft-"]');
+			primaryInputs.forEach((inp) => {
 				const idMatch = inp.id.match(/aircraft-(\d+)/);
 				if (!idMatch) return;
 				const cellId = parseInt(idMatch[1], 10);
@@ -2173,16 +2193,28 @@ async function checkForSelectedAircraft() {
 					list.push({ id: cellId, label: getPositionLabelForTileId(cellId) });
 				}
 			});
-			// Dedup by id (guard against unexpected DOM duplication)
+			// Process secondary hangar second (preserves DOM/visual order)
+			const secondaryInputs = document.querySelectorAll('#secondaryHangarGrid .hangar-cell input[id^="aircraft-"]');
+			secondaryInputs.forEach((inp) => {
+				const idMatch = inp.id.match(/aircraft-(\d+)/);
+				if (!idMatch) return;
+				const cellId = parseInt(idMatch[1], 10);
+				const cell = inp.closest('.hangar-cell');
+				if (!cell) return;
+				const style = window.getComputedStyle ? window.getComputedStyle(cell) : cell.style;
+				let isHidden = cell.classList.contains('hidden') || style.display === 'none' || style.visibility === 'hidden' || cell.getClientRects().length === 0;
+				if (document && document.body && document.body.classList && document.body.classList.contains('table-view')) {
+					isHidden = false;
+				}
+				const isEmpty = !inp.value || inp.value.trim() === '';
+				if (!isHidden && isEmpty) {
+					list.push({ id: cellId, label: getPositionLabelForTileId(cellId) });
+				}
+			});
+			// Dedup by id (guard against unexpected DOM duplication) while preserving order
 			const byId = new Map();
 			list.forEach(item => { if (!byId.has(item.id)) byId.set(item.id, item); });
-			// Sort: primary (1..12) first, then secondary (>=101), by id
-			return Array.from(byId.values()).sort((a,b)=>{
-				const ap = a.id >= 101 ? 1 : 0;
-				const bp = b.id >= 101 ? 1 : 0;
-				if (ap !== bp) return ap - bp;
-				return a.id - b.id;
-			});
+			return Array.from(byId.values());
 		}
 		// Expose globally
 		try { window.getFreeTilesWithLabels = getFreeTilesWithLabels; } catch(_){}
@@ -2329,19 +2361,14 @@ async function checkForSelectedAircraft() {
 			clearSelection();
 		}
 
-		function showTileSelectionModal(freeTiles) {
-			// Support both: array of numbers OR array of {id,label}
-			const normalized = (freeTiles || []).map(item => {
-				if (typeof item === 'number') {
-					return { id: item, label: getPositionLabelForTileId(item) };
-				}
-				return { id: item.id, label: item.label || getPositionLabelForTileId(item.id) };
-			}).sort((a,b)=>{
-				const ap = a.id >= 101 ? 1 : 0;
-				const bp = b.id >= 101 ? 1 : 0;
-				if (ap !== bp) return ap - bp;
-				return a.id - b.id;
-			});
+	function showTileSelectionModal(freeTiles) {
+		// Support both: array of numbers OR array of {id,label}
+		const normalized = (freeTiles || []).map(item => {
+			if (typeof item === 'number') {
+				return { id: item, label: getPositionLabelForTileId(item) };
+			}
+			return { id: item.id, label: item.label || getPositionLabelForTileId(item.id) };
+		});
 
 			// Overlay
 			const overlay = document.createElement('div');
@@ -2384,12 +2411,14 @@ async function checkForSelectedAircraft() {
 					btn.dataset.posLabel = label;
 					btn.textContent = label || `#${id}`;
 					btn.title = `Kachel #${id}${label ? ` • Position: ${label}` : ''}`;
-					btn.addEventListener('click', (e) => {
-						const target = e.currentTarget;
-						const tid = parseInt(target.dataset.tileId, 10);
-						finalizeInsert(tid);
-						document.body.removeChild(overlay);
-					});
+				btn.addEventListener('click', (e) => {
+					const target = e.currentTarget;
+					const tid = parseInt(target.dataset.tileId, 10);
+					// Close modal immediately before any other processing
+					try { document.body.removeChild(overlay); } catch(_){}
+					// Then execute insert
+					finalizeInsert(tid);
+				});
 					grid.appendChild(btn);
 				});
 			} else {

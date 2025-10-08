@@ -1,8 +1,15 @@
 # HangarPlaner Synchronization System — Design & Operation
 
-Version: 2025-09-20
+Version: 2025-10-08 (Updated)
 
-This document describes the HangarPlaner synchronization system in detail for future reference and backup. It covers the client and server components, data flow, conflict management (multi‑master), data formats, tunable parameters, and test procedures.
+This document describes the HangarPlaner synchronization system in detail for future reference and backup. It covers the client and server components, data flow, conflict management (multi‑master), presence-based locking, data formats, tunable parameters, and test procedures.
+
+**Recent Updates (2025-10-08):**
+- Added detailed presence-based collaborative locking system
+- Documented visual field lock indicators ("editing pills")
+- Enhanced empty field propagation mechanism with `updatedBySession` checks
+- Clarified multi-master convergence strategy (dual-cycle sync)
+- Updated polling intervals and fence configurations
 
 
 ## 1) Modes
@@ -90,8 +97,32 @@ Core synchronization engine:
   - No exclusive master lock; multi-master is allowed. The endpoint merges inbound changes and annotates last writer session.
 
 ### 3.2 Presence Endpoint (sync/presence.php)
-- GET `?action=list` — lists active sessions with role and display name.
-- POST `heartbeat/leave` — updates presence info (optional for read gating).
+- GET `?action=list` — lists active sessions with role, display name, and field locks.
+- POST `heartbeat/leave` — updates presence info with:
+  - `sessionId`: Stable client session identifier
+  - `displayName`: User-provided name for display
+  - `role`: Current sync mode ('master', 'sync', 'standalone')
+  - `page`: Current page context ('planner', 'database', etc.)
+  - `locks`: Object mapping fieldIds to lock expiration timestamps
+  - `locksReplace`: Boolean to replace (true) or merge (false) locks
+- Response format:
+  ```json
+  {
+    "users": [
+      {
+        "sessionId": "abc123",
+        "displayName": "Alice",
+        "role": "master",
+        "page": "planner",
+        "lastSeen": 1696747200000,
+        "locks": {
+          "aircraft-1": 1696747215000,
+          "notes-1": 1696747218000
+        }
+      }
+    ]
+  }
+  ```
 
 
 ## 4) Data Model (JSON)
@@ -180,8 +211,123 @@ Client-side
    - After a successful keep-local retry, baselines are updated for those fields to prevent repeated 409s for the same delta.
 
 Outcome
-- Recent user edits are preserved locally and then re‑asserted on the server without “flip-backs”.
+- Recent user edits are preserved locally and then re‑asserted on the server without "flip-backs".
 - When both users stop, the system converges to the last write.
+
+
+## 5.1) Presence-Based Collaborative Locking (2025-10-08)
+
+To further reduce edit collisions in multi-master scenarios, the system implements real-time field-level locking with visual feedback.
+
+### Mechanism
+
+1. **Lock Collection** (`_collectLocalLocks()`)
+   - Tracks active field being edited via `window.__lastActiveFieldId`
+   - Reads lock expiration times from `window.__fieldApplyLockUntil`
+   - Returns map of currently locked fields: `{ 'aircraft-1': timestampMs }`
+
+2. **Presence Heartbeat** (`_sendPresenceHeartbeat()`)
+   - Frequency: Every 20 seconds
+   - Payload includes:
+     - Session ID and display name
+     - Current role (master/sync/standalone)
+     - Active field locks with expiration timestamps
+   - Server stores and broadcasts this information
+
+3. **Remote Lock Refresh** (`_refreshRemoteLocksFromPresence()`)
+   - Frequency: Every 500ms (responsive UI updates)
+   - Fetches list of all active users from presence endpoint
+   - Aggregates field locks from other sessions
+   - Stores in `_remoteLocks`: `{ fieldId: { until, sessionId, displayName } }`
+
+4. **Visual Indicators** (`_createOrUpdateEditingLockPill()`)
+   - Creates "editing pill" overlays for locked fields
+   - Format: `"Alice editing • 3m"`
+   - Styling for remote users:
+     - Background: `rgba(244, 158, 12, 0.25)` (amber tint)
+     - Border: `2px solid rgba(244, 158, 12, 0.8)`
+     - Box shadow: `0 0 12px rgba(244, 158, 12, 0.5)`
+   - Pills auto-expire when lock timestamp passes
+
+5. **Write Enforcement** (in `syncWithServer()` and `syncFieldUpdates()`)
+   - Before POST, filters out locked fields:
+     ```javascript
+     Object.keys(fieldUpdates).forEach(fieldId => {
+       const lockInfo = this._remoteLocks[fieldId];
+       if (lockInfo && lockInfo.until > now) {
+         delete fieldUpdates[fieldId]; // Skip
+         showNotification(`Field locked by ${lockInfo.displayName}`, 'warning');
+       }
+     });
+     ```
+   - Prevents overwriting fields actively edited by others
+
+### Benefits
+- **Real-time conflict prevention**: Users see who's editing what before attempting changes
+- **Graceful degradation**: If presence service unavailable, falls back to standard conflict resolution
+- **Non-blocking**: Warnings instead of errors; users can wait and retry
+- **Auto-expiration**: Stale locks don't permanently block fields
+
+### Configuration
+- Heartbeat interval: 20s (configurable in `_startPresenceHeartbeat()`)
+- Lock refresh interval: 500ms (configurable in `_startPresenceRefreshPoller()`)
+- Lock duration: Tied to `window.__fieldApplyLockUntil` (15s default hard-lock window)
+
+
+## 5.2) Empty Field Propagation (Fixed 2025-10-07)
+
+**Problem:** When a Master user cleared a field (e.g., delete aircraft ID or use trashcan), Sync (read-only) clients did not see the cleared state. The field remained populated.
+
+**Root Cause:** Protective logic prevented empty server values from overwriting non-empty local values, designed to guard against incomplete server responses or race conditions.
+
+**Solution:** Use `updatedBySession` metadata to distinguish:
+- **Authoritative clear**: `updatedBySession` present and different from local session → Allow empty value
+- **Missing/corrupt data**: `updatedBySession` absent or same → Protect local value
+
+### Implementation
+
+In `applyServerData()` / `applyTileData()`, for each field:
+
+```javascript
+const fromOtherSession = !!(tileData.updatedBySession) &&
+    (typeof this.getSessionId === 'function') &&
+    (tileData.updatedBySession !== this.getSessionId());
+
+const newVal = (tileData.aircraftId || '').trim();
+const oldValue = (inputElement.value || '').trim();
+
+if (!canApplyField(fieldId, inputElement)) {
+  // Skip while locally editing/fenced
+} else if (newVal.length > 0 || fromOtherSession || oldValue.length === 0) {
+  // Apply if:
+  // - non-empty incoming value, OR
+  // - authoritative clear from another session, OR
+  // - local field already empty (safe overwrite)
+  inputElement.value = newVal;
+  // ... update storage and dispatch events
+}
+```
+
+### Server Requirements
+
+The server (`sync/data.php`) must include `updatedBySession` in tile metadata:
+
+```json
+{
+  "tileId": 1,
+  "aircraftId": "",
+  "status": "neutral",
+  "updatedAt": "2025-10-07T08:00:00Z",
+  "updatedBy": "Alice",
+  "updatedBySession": "abc123"  // Required for authoritative clear detection
+}
+```
+
+### Impact
+- ✅ Intentional field deletions now sync correctly across all clients
+- ✅ Protection against incomplete/corrupt data remains active
+- ✅ Backward compatible: Falls back to previous behavior if `updatedBySession` absent
+- ✅ Applies to all field types: aircraftId, positions, times, notes, status, towStatus
 
 
 ## 6) Change Log (Planner Panel)
@@ -194,13 +340,44 @@ Outcome
 
 ## 7) Timings & Tunables
 
-- `_writeFenceMs`: 20000 (20s) — write fence TTL per field.
-- Hard-lock per-field apply window: 15000 (15s) after local `change`.
-- Typing debounce: 5000 (5s) for free text fields.
-- Periodic read (Slave): ~3s; write (Master): ~5s; read-back (Master): ~15s (subject to skip/delay while typing).
-- `requireOtherMastersForRead`: default false. If set true, Master applies tile updates only when another Master is online (presence‑gated).
+### Core Sync Intervals
+- Periodic read (Sync mode): **3s** — timestamp polling via `slaveCheckForUpdates()`
+- Periodic write (Master mode): **5s** — delta POST via `syncWithServer()` (change-detected)
+- Read-back (Master mode): **3s** — dual-cycle polling for multi-master convergence
 
-Adjusting these controls the tradeoff between responsiveness and anti-oscillation.
+### Anti-Oscillation Protections
+- `_writeFenceMs`: **20000ms (20s)** — write fence TTL per field
+- Hard-lock per-field apply window: **15000ms (15s)** after local `change` event
+- Conflict retry window: **15000ms (15s)** — keep local edits on 409 conflict
+- Typing debounce: **5000ms (5s)** for free text fields (notes, aircraft, positions)
+
+### Presence & Locking
+- Presence heartbeat interval: **20000ms (20s)** — broadcasts role, name, locks
+- Lock refresh interval: **500ms** — polls for remote user locks
+- Lock duration: Inherited from hard-lock window (**15s** default)
+
+### Timeouts & Watchdogs
+- Fetch timeout: **10000ms (10s)** via AbortController
+- Load watchdog: **15000ms (15s)** recovery timer for hung operations
+
+### Flags & Gating
+- `requireOtherMastersForRead`: **false** (default) — If true, Master applies updates only when other Masters online (presence-gated)
+
+### Tuning Guidelines
+**Increase responsiveness:**
+- Decrease polling intervals (3s → 1s) for faster updates
+- Decrease lock refresh (500ms → 250ms) for more responsive pills
+- Risk: Higher network traffic and server load
+
+**Reduce oscillation:**
+- Increase write fence (20s → 30s) for longer local-edit protection
+- Increase hard-lock (15s → 20s) for more stable typing experience
+- Risk: Slower convergence, stale lock indicators
+
+**Balance (current defaults):**
+- Write fence 20s + Hard-lock 15s provides ~35s total protection window
+- 3s/5s polling intervals balance freshness with bandwidth
+- 500ms lock refresh keeps UI responsive without excess requests
 
 
 ## 8) Testing Procedures
@@ -237,12 +414,48 @@ Adjusting these controls the tradeoff between responsiveness and anti-oscillatio
 - Make per-field lock window adaptive based on churn rate.
 
 
-## 11) Summary of Current Defaults (as of 2025-09-20)
+## 11) Summary of Current Defaults (as of 2025-10-08)
 
-- Multi-master enabled. No exclusive server lock.
-- Delta-only writes; full payload writes are disabled in multi‑master.
-- Write fences: 20s TTL; marked on input/change.
-- Hard lock on field after local change: 15s.
-- Typing-aware throttling for writes and read-backs.
-- 409 auto-retry keeps recent local for exact fields; otherwise accept server.
-- Presence gating for Master read is available but off by default.
+### Core Features
+- **Multi-master enabled**: No exclusive server lock; multiple Masters can write concurrently
+- **Delta-only writes**: Field-level updates only; full payload writes disabled
+- **Presence-based locking**: Real-time visual indicators for fields being edited by others
+- **Empty field propagation**: Authoritative clears sync correctly via `updatedBySession` check
+- **Dual-cycle convergence**: Master reads back at 3s + writes at 5s for eventual consistency
+
+### Protection Mechanisms
+- **Write fences**: 20s TTL per field; marked on input/change
+- **Hard locks**: 15s apply window after local `change` event
+- **Typing throttling**: Skips writes/reads while user actively typing
+- **409 conflict resolution**: Auto-retry keeps recent local (15s window); otherwise accept server
+- **Baseline tracking**: Prevents re-post loops after successful conflict resolution
+
+### Presence & Collaboration
+- **Heartbeat interval**: 20s (broadcasts session, role, locks)
+- **Lock refresh**: 500ms (responsive visual feedback)
+- **Lock enforcement**: Filters locked fields before POST
+- **Visual pills**: Amber-tinted overlays show "User editing • Xm"
+
+### Intervals & Timeouts
+- **Sync mode polling**: 3s timestamp check + conditional load
+- **Master mode write**: 5s change-detected delta POST
+- **Master mode read**: 3s read-back polling
+- **Fetch timeout**: 10s via AbortController
+- **Watchdog recovery**: 15s for hung operations
+
+### Flags & Options
+- `requireOtherMastersForRead`: **false** (disabled by default)
+- `TYPING_DEBOUNCE_MS`: **5000ms** (5s for free text)
+- Conflict retry window: **15000ms** (15s keep-local protection)
+
+### Server Requirements
+- Must stamp tiles with `updatedAt`, `updatedBy`, `updatedBySession`
+- Must support precondition validation and return 409 on conflict
+- Must handle `fieldUpdates` with partial tile merges
+- Presence endpoint must track sessions with locks
+
+---
+
+**Document Status**: ✅ Current as of 2025-10-08  
+**See also**: `SYNC-CODE-REVIEW.md` for detailed code analysis  
+**See also**: `SYNC-MODE-FAQ.md` for end-user guidance

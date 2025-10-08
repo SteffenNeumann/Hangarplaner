@@ -1661,16 +1661,23 @@ window.openTileSelectionOverlay = window.openTileSelectionOverlay || function(op
         btn.textContent = label || `#${id}`;
         btn.title = `Kachel #${id}${label ? ` • Position: ${label}` : ''}`;
         btn.addEventListener('click', () => {
+          console.log('🔘 Free space button clicked, id:', id);
           // Close modal immediately before any other processing
           try { 
+            console.log('🔍 overlay exists?', !!overlay, 'parentNode?', !!overlay?.parentNode);
             if (overlay && overlay.parentNode) {
+              console.log('✅ Removing overlay from DOM');
               overlay.parentNode.removeChild(overlay);
+              console.log('✅ Overlay removed successfully');
+            } else {
+              console.warn('❌ Cannot remove: overlay or parentNode missing');
             }
           } catch(err){
-            console.warn('Failed to remove overlay:', err);
+            console.error('❌ Failed to remove overlay:', err);
           }
           // Then execute callback
-          try { if (onSelect) onSelect(id); } catch(_){}
+          console.log('📞 Executing onSelect callback');
+          try { if (onSelect) onSelect(id); } catch(e){ console.error('Callback error:', e); }
         });
         grid.appendChild(btn);
       });

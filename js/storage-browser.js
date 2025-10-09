@@ -2264,28 +2264,35 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 				}
 			}
 
-			// Status (apply on key presence)
-			if (Object.prototype.hasOwnProperty.call(tileData, 'status')) {
-				const statusSelect = document.getElementById(`status-${tileId}`);
-				if (statusSelect) {
-					const fid = `status-${tileId}`;
-					if (canApplyField(fid, statusSelect)){
-						statusSelect.value = tileData.status || 'neutral';
-						console.log(`🚦 Status gesetzt: ${tileId} = ${tileData.status || 'neutral'}`);
-					}
+		// Status (apply on key presence, but only if value is not empty or from other session)
+		if (Object.prototype.hasOwnProperty.call(tileData, 'status')) {
+			const statusSelect = document.getElementById(`status-${tileId}`);
+			if (statusSelect) {
+				const fid = `status-${tileId}`;
+				const incomingStatus = tileData.status || 'neutral';
+				const currentStatus = statusSelect.value || 'neutral';
+				// Only apply if: can apply AND (has non-neutral value OR is from other session OR current is neutral)
+				if (canApplyField(fid, statusSelect) && (incomingStatus !== 'neutral' || fromOtherSession || currentStatus === 'neutral')){
+					statusSelect.value = incomingStatus;
+					console.log(`🚦 Status gesetzt: ${tileId} = ${currentStatus} → ${incomingStatus}`);
+					successfullyApplied++;
 				}
 			}
+		}
 
-			// Tow Status (apply on key presence)
-			if (Object.prototype.hasOwnProperty.call(tileData, 'towStatus')) {
-				const towStatusSelect = document.getElementById(`tow-status-${tileId}`);
-				if (towStatusSelect) {
-					const oldValue = towStatusSelect.value;
-					const fid = `tow-status-${tileId}`;
-					if (canApplyField(fid, towStatusSelect)){
-						towStatusSelect.value = tileData.towStatus || 'neutral';
-						console.log(`🚚 Tow Status gesetzt: ${tileId} = ${oldValue} → ${towStatusSelect.value}`);
-						try {
+		// Tow Status (apply on key presence, but only if value is not empty or from other session)
+		if (Object.prototype.hasOwnProperty.call(tileData, 'towStatus')) {
+			const towStatusSelect = document.getElementById(`tow-status-${tileId}`);
+			if (towStatusSelect) {
+				const oldValue = towStatusSelect.value || 'neutral';
+				const fid = `tow-status-${tileId}`;
+				const incomingTowStatus = tileData.towStatus || 'neutral';
+				// Only apply if: can apply AND (has non-neutral value OR is from other session OR current is neutral)
+				if (canApplyField(fid, towStatusSelect) && (incomingTowStatus !== 'neutral' || fromOtherSession || oldValue === 'neutral')){
+					towStatusSelect.value = incomingTowStatus;
+					console.log(`🚚 Tow Status gesetzt: ${tileId} = ${oldValue} → ${incomingTowStatus}`);
+					successfullyApplied++;
+					try {
 						if (typeof window.updateTowStatusStyles === 'function') {
 							window.updateTowStatusStyles(towStatusSelect);
 						} else if (typeof updateTowStatusStyles === 'function') {
@@ -2302,10 +2309,9 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 					} catch(e) {
 						console.warn('⚠️ Tow-Status Styling-Aktualisierung fehlgeschlagen:', e);
 					}
-					successfullyApplied++;
-						}
-					}
-				} else {
+				}
+			}
+		} else {
 					console.warn(`❌ Tow Status Select nicht gefunden: tow-status-${tileId}`);
 					failedToApply++;
 				}

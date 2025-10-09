@@ -2006,35 +2006,41 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 				return !!(e && e.editedAt && (Date.now() - e.editedAt) < windowMs);
 			} catch(_e){ return false; }
 		};
-		const canApplyField = (fid, el) => {
+	const canApplyField = (fid, el, fromOtherSession = false) => {
+		try {
+			if (!fid) return true;
+			// For the first DOM application after startup, bypass fences/recent edit checks to ensure UI mirrors server
+			if (this._bypassFencesOnce) {
+				// Still avoid overwriting the actively focused element to prevent caret jumps
+				if (el && document.activeElement === el) return false;
+				return true;
+			}
+			// Hard lock: if field is locked from local change, do not apply server value
 			try {
-				if (!fid) return true;
-				// For the first DOM application after startup, bypass fences/recent edit checks to ensure UI mirrors server
-				if (this._bypassFencesOnce) {
-					// Still avoid overwriting the actively focused element to prevent caret jumps
-					if (el && document.activeElement === el) return false;
-					return true;
+				if (window.__fieldApplyLockUntil && window.__fieldApplyLockUntil[fid]){
+					if (Date.now() < window.__fieldApplyLockUntil[fid]) return false;
+					delete window.__fieldApplyLockUntil[fid];
 				}
-				// Hard lock: if field is locked from local change, do not apply server value
-				try {
-					if (window.__fieldApplyLockUntil && window.__fieldApplyLockUntil[fid]){
-						if (Date.now() < window.__fieldApplyLockUntil[fid]) return false;
-						delete window.__fieldApplyLockUntil[fid];
-					}
-				} catch(_e){}
-				// Skip when user is actively editing this element (only in editable modes)
-				if (el && document.activeElement === el) {
-					const isReadOnly = !!(document.body && document.body.classList.contains('read-only')) || !!(window.sharingManager && window.sharingManager.syncMode === 'sync');
-					if (!isReadOnly && !el.disabled) return false;
-				}
-				// Skip when a write fence is active for this field
+			} catch(_e){}
+			// Skip when user is actively editing this element (only in editable modes)
+			if (el && document.activeElement === el) {
+				const isReadOnly = !!(document.body && document.body.classList.contains('read-only')) || !!(window.sharingManager && window.sharingManager.syncMode === 'sync');
+				if (!isReadOnly && !el.disabled) return false;
+			}
+			// DUAL MASTER FIX: For aircraft ID fields, skip write fence check if the update is from another Master
+			// This prevents flip-backs when both Masters are editing different aircraft IDs
+			const isAircraftField = /^aircraft-\d+$/.test(fid);
+			const isDualMasterUpdate = isAircraftField && fromOtherSession && this._isMasterMode && this._isMasterMode();
+			if (!isDualMasterUpdate) {
+				// Skip when a write fence is active for this field (except for aircraft ID from other Master)
 				if (typeof this._isWriteFenceActive === 'function' && this._isWriteFenceActive(fid)) return false;
 				// Skip when the user very recently edited this specific field
 				if (recentlyEdited(fid)) return false;
-				// Do not block read applies based on remote locks; local hard-locks and fences already protect user edits
-				return true;
-			} catch(_e){ return true; }
-		};
+			}
+			// Do not block read applies based on remote locks; local hard-locks and fences already protect user edits
+			return true;
+		} catch(_e){ return true; }
+	};
 
 		let successfullyApplied = 0;
 		let failedToApply = 0;
@@ -2057,8 +2063,9 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 				const current = (aircraftInput.value || '').trim();
 				const fid = `aircraft-${tileId}`;
 
-					if (!canApplyField(fid, aircraftInput)) {
-						// skip while locally editing/fenced
+					// DUAL MASTER FIX: Pass fromOtherSession flag to canApplyField
+					if (!canApplyField(fid, aircraftInput, fromOtherSession)) {
+						// skip while locally editing/fenced (but not if update from other Master)
 					} else if (incoming.length > 0) {
 						if (!(document.activeElement === aircraftInput && current === incoming)) {
 							aircraftInput.value = incoming;
@@ -2066,7 +2073,12 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 						// Persist locally and notify listeners
 						try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, incoming, { source:'server', flushDelayMs:0 }); } catch(_e){}
 						try { aircraftInput.dispatchEvent(new Event('input', { bubbles:true })); aircraftInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
-						console.log(`✈️ Aircraft ID gesetzt: ${tileId} = ${current} → ${incoming}`);
+						console.log(`✈️ Aircraft ID gesetzt: ${tileId} = ${current} → ${incoming}${fromOtherSession ? ' (von anderem Master)' : ''}`);
+						// DUAL MASTER FIX: Clear local write fence for this field if applied from another Master
+						if (fromOtherSession && this._pendingWrites && this._pendingWrites[fid]) {
+							delete this._pendingWrites[fid];
+							console.log(`🧹 Cleared local write fence for ${fid} (accepted other Master's update)`);
+						}
 						successfullyApplied++;
 					} else {
 						// incoming is empty → clear if from other session or local field already empty
@@ -2075,6 +2087,10 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 							try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, '', { source:'server', flushDelayMs:0 }); } catch(_e){}
 							try { aircraftInput.dispatchEvent(new Event('input', { bubbles:true })); aircraftInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
 							console.log(`✈️ Aircraft ID geleert (autoritativer Server-Clear): ${tileId}`);
+							// DUAL MASTER FIX: Clear local write fence when clearing from another Master
+							if (fromOtherSession && this._pendingWrites && this._pendingWrites[fid]) {
+								delete this._pendingWrites[fid];
+							}
 							successfullyApplied++;
 						}
 					}

@@ -1443,49 +1443,34 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 
 					// Normalize tile positions → ensure header hangarPosition and info-grid position remain distinct
 					try {
-						if (data && Array.isArray(data.primaryTiles)) {
-							data.primaryTiles = data.primaryTiles.map((t)=>{
-								const out = { ...t };
-								// Map local collector's positionInfoGrid → position (info grid)
-								if (Object.prototype.hasOwnProperty.call(out, 'positionInfoGrid')) {
-									out.position = out.positionInfoGrid || '';
-									delete out.positionInfoGrid;
-								}
-								// Ensure hangarPosition is populated from the header field (collector used 'position' for header)
-								if (!Object.prototype.hasOwnProperty.call(out, 'hangarPosition')) {
-									const headerPos = (typeof t.hangarPosition !== 'undefined') ? (t.hangarPosition || '') : ((typeof t.position !== 'undefined') ? (t.position || '') : '');
-									out.hangarPosition = headerPos;
-								}
-								// If 'position' equals header and there is no explicit info grid value, clear it to avoid cross-population
-								try {
-									const header = (out.hangarPosition || '').trim();
-									if ((out.position || '').trim() === header && header && !Object.prototype.hasOwnProperty.call(t, 'positionInfoGrid')) {
-										out.position = '';
-									}
-								} catch(_e){}
-								return out;
-							});
-						}
-						if (data && Array.isArray(data.secondaryTiles)) {
-							data.secondaryTiles = data.secondaryTiles.map((t)=>{
-								const out = { ...t };
-								if (Object.prototype.hasOwnProperty.call(out, 'positionInfoGrid')) {
-									out.position = out.positionInfoGrid || '';
-									delete out.positionInfoGrid;
-								}
-								if (!Object.prototype.hasOwnProperty.call(out, 'hangarPosition')) {
-									const headerPos = (typeof t.hangarPosition !== 'undefined') ? (t.hangarPosition || '') : ((typeof t.position !== 'undefined') ? (t.position || '') : '');
-									out.hangarPosition = headerPos;
-								}
-								try {
-									const header = (out.hangarPosition || '').trim();
-									if ((out.position || '').trim() === header && header && !Object.prototype.hasOwnProperty.call(t, 'positionInfoGrid')) {
-										out.position = '';
-									}
-								} catch(_e){}
-								return out;
-							});
-						}
+					if (data && Array.isArray(data.primaryTiles)) {
+						data.primaryTiles = data.primaryTiles.map((t)=>{
+							const out = { ...t };
+							// Map local collector's positionInfoGrid → position (info grid)
+							if (Object.prototype.hasOwnProperty.call(out, 'positionInfoGrid')) {
+								out.position = out.positionInfoGrid || '';
+								delete out.positionInfoGrid;
+							}
+							// Ensure hangarPosition is populated if not present
+							if (!Object.prototype.hasOwnProperty.call(out, 'hangarPosition')) {
+								out.hangarPosition = out.hangarPosition || '';
+							}
+							return out;
+						});
+					}
+					if (data && Array.isArray(data.secondaryTiles)) {
+						data.secondaryTiles = data.secondaryTiles.map((t)=>{
+							const out = { ...t };
+							if (Object.prototype.hasOwnProperty.call(out, 'positionInfoGrid')) {
+								out.position = out.positionInfoGrid || '';
+								delete out.positionInfoGrid;
+							}
+							if (!Object.prototype.hasOwnProperty.call(out, 'hangarPosition')) {
+								out.hangarPosition = out.hangarPosition || '';
+							}
+							return out;
+						});
+					}
 					} catch(_e) { console.warn('tile position normalization failed', _e); }
 
 					// *** NEU: Display Options ergänzen ***

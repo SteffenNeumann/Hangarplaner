@@ -513,19 +513,19 @@ function collectContainerTileData(containerSelector) {
 				}
 			} catch (e) {}
 
-			const tileDataObject = {
-				tileId: tileId,
-				aircraftId: aircraftId,
-				position: position, // Hangar position (hangar-position-X)
-				positionInfoGrid: positionInfoGrid, // Position in Info Grid (position-X)
-				manualInput: manualInput,
-				notes: notes,
-				status: status,
-				towStatus: towStatus,
-				arrivalTime: arrivalTime,
-				departureTime: departureTime,
-				updatedAt: updatedAtIso,
-			};
+		const tileDataObject = {
+			tileId: tileId,
+			aircraftId: aircraftId,
+			hangarPosition: position, // Hangar position (hangar-position-X)
+			position: positionInfoGrid, // Position in Info Grid (position-X)
+			manualInput: manualInput,
+			notes: notes,
+			status: status,
+			towStatus: towStatus,
+			arrivalTime: arrivalTime,
+			departureTime: departureTime,
+			updatedAt: updatedAtIso,
+		};
 
 			console.log(
 				`✅ Gesammelte Daten für Kachel ${tileId} (${
@@ -616,10 +616,11 @@ function applyLoadedTileData(data) {
 
 		// Warte kurz auf UI-Update und wende dann die Daten an
 		setTimeout(() => {
-			data.tilesData.forEach((tileData) => {
+		data.tilesData.forEach((tileData) => {
 				const {
 					id,
 					position,
+					hangarPosition,
 					aircraftId,
 					status,
 					towStatus,
@@ -629,14 +630,18 @@ function applyLoadedTileData(data) {
 					positionInfoGrid,
 				} = tileData;
 
+				// Handle both new format (hangarPosition) and legacy format (position)
+				const hangarPos = hangarPosition || (positionInfoGrid ? "" : position) || "";
+				const infoGridPos = position || positionInfoGrid || "";
+
 				console.log(
-					`Lade Legacy-Kachel ${id}: position=${position}, aircraft=${aircraftId}, status=${status}`
+					`Lade Legacy-Kachel ${id}: hangarPosition=${hangarPos}, position=${infoGridPos}, aircraft=${aircraftId}, status=${status}`
 				);
 
-				// Positionswert setzen
+				// Hangar Positionswert setzen
 				const posInput = document.getElementById(`hangar-position-${id}`);
 				if (posInput) {
-					posInput.value = position || "";
+					posInput.value = hangarPos;
 				}
 
 				// Aircraft ID setzen
@@ -689,18 +694,10 @@ function applyLoadedTileData(data) {
 			}
 		}
 
-		// Header Hangar Position (legacy 'position' maps to header)
-		const hangarPosInputLegacy = document.getElementById(`hangar-position-${id}`);
-		if (hangarPosInputLegacy && Object.prototype.hasOwnProperty.call(tileData, 'position')) {
-			hangarPosInputLegacy.value = tileData.position || '';
-		}
-
-		// Position Info Grid setzen (use explicit legacy key 'positionInfoGrid' only)
+		// Position Info Grid setzen
 		const positionInfoInput = document.getElementById(`position-${id}`);
-		if (positionInfoInput) {
-			if (Object.prototype.hasOwnProperty.call(tileData, 'positionInfoGrid')) {
-				positionInfoInput.value = tileData.positionInfoGrid || '';
-			}
+		if (positionInfoInput && infoGridPos) {
+			positionInfoInput.value = infoGridPos;
 		}
 			});
 
@@ -1258,19 +1255,19 @@ function collectTilesData() {
 				}
 			}
 			
-			const tileData = {
-				id: cellId,
-				position:
-					document.getElementById(`hangar-position-${cellId}`)?.value || "",
-				aircraftId: document.getElementById(`aircraft-${cellId}`)?.value || "",
-				status: document.getElementById(`status-${cellId}`)?.value || "neutral",
-				towStatus:
-					document.getElementById(`tow-status-${cellId}`)?.value || "neutral",
-				notes: document.getElementById(`notes-${cellId}`)?.value || "",
-				arrivalTime: arrivalTime,
-				departureTime: departureTime,
-				positionInfoGrid: document.getElementById(`position-${cellId}`)?.value || "",
-			};
+		const tileData = {
+			id: cellId,
+			hangarPosition:
+				document.getElementById(`hangar-position-${cellId}`)?.value || "",
+			aircraftId: document.getElementById(`aircraft-${cellId}`)?.value || "",
+			status: document.getElementById(`status-${cellId}`)?.value || "neutral",
+			towStatus:
+				document.getElementById(`tow-status-${cellId}`)?.value || "neutral",
+			notes: document.getElementById(`notes-${cellId}`)?.value || "",
+			arrivalTime: arrivalTime,
+			departureTime: departureTime,
+			position: document.getElementById(`position-${cellId}`)?.value || "",
+		};
 
 			tiles.push(tileData);
 		});
@@ -1325,21 +1322,21 @@ function collectTilesData() {
 					}
 				}
 				
-				const tileData = {
-					id: cellId,
-					position:
-						document.getElementById(`hangar-position-${cellId}`)?.value || "",
-					aircraftId:
-						document.getElementById(`aircraft-${cellId}`)?.value || "",
-					status: document.getElementById(`status-${cellId}`)?.value || "neutral",
-					towStatus:
-						document.getElementById(`tow-status-${cellId}`)?.value ||
-						"neutral",
-					notes: document.getElementById(`notes-${cellId}`)?.value || "",
-					arrivalTime: arrivalTime,
-					departureTime: departureTime,
-					positionInfoGrid: document.getElementById(`position-${cellId}`)?.value || "",
-				};
+			const tileData = {
+				id: cellId,
+				hangarPosition:
+					document.getElementById(`hangar-position-${cellId}`)?.value || "",
+				aircraftId:
+					document.getElementById(`aircraft-${cellId}`)?.value || "",
+				status: document.getElementById(`status-${cellId}`)?.value || "neutral",
+				towStatus:
+					document.getElementById(`tow-status-${cellId}`)?.value ||
+					"neutral",
+				notes: document.getElementById(`notes-${cellId}`)?.value || "",
+				arrivalTime: arrivalTime,
+				departureTime: departureTime,
+				position: document.getElementById(`position-${cellId}`)?.value || "",
+			};
 
 				tiles.push(tileData);
 			}
@@ -1435,30 +1432,35 @@ function applyProjectData(projectData) {
 		if (projectData.tilesData && Array.isArray(projectData.tilesData)) {
 			console.log(`Lade ${projectData.tilesData.length} Kacheln`);
 			projectData.tilesData.forEach((tileData) => {
-				const {
-					id,
-					position,
-					aircraftId,
-					status,
-					towStatus,
-					notes,
-					arrivalTime,
-					departureTime,
-					positionInfoGrid,
-				} = tileData;
+			const {
+				id,
+				position,
+				hangarPosition,
+				aircraftId,
+				status,
+				towStatus,
+				notes,
+				arrivalTime,
+				departureTime,
+				positionInfoGrid,
+			} = tileData;
 
-				console.log(
-					`Lade Kachel ${id}: position=${position}, aircraft=${aircraftId}, status=${status}`
-				);
+			// Handle both new format (hangarPosition) and legacy format (position)
+			const hangarPos = hangarPosition || (positionInfoGrid ? "" : position) || "";
+			const infoGridPos = position || positionInfoGrid || "";
 
-				// Positionswert setzen
-				const posInput = document.getElementById(`hangar-position-${id}`);
-				if (posInput) {
-					posInput.value = position || "";
-					console.log(`Position für Tile ${id} gesetzt: ${position}`);
-				} else {
-					console.warn(`Position Input für Tile ${id} nicht gefunden`);
-				}
+			console.log(
+				`Lade Kachel ${id}: hangarPosition=${hangarPos}, position=${infoGridPos}, aircraft=${aircraftId}, status=${status}`
+			);
+
+			// Positionswert setzen (hangar-position-# header field)
+			const posInput = document.getElementById(`hangar-position-${id}`);
+			if (posInput) {
+				posInput.value = hangarPos;
+				console.log(`Hangar Position für Tile ${id} gesetzt: ${hangarPos}`);
+			} else {
+				console.warn(`Position Input für Tile ${id} nicht gefunden`);
+			}
 
 				// Aircraft ID setzen (bewahre Nutzerwert, wenn Server leer liefert)
 				const aircraftInput = document.getElementById(`aircraft-${id}`);
@@ -1534,16 +1536,16 @@ function applyProjectData(projectData) {
 					}
 				}
 
-				// Position Info Grid setzen
-				if (positionInfoGrid) {
-					const positionInfoInput = document.getElementById(`position-${id}`);
-					if (positionInfoInput) {
-						positionInfoInput.value = positionInfoGrid;
-						console.log(
-							`Position Info Grid für Tile ${id} gesetzt: ${positionInfoGrid}`
-						);
-					}
+			// Position Info Grid setzen (position-# info grid field)
+			if (infoGridPos) {
+				const positionInfoInput = document.getElementById(`position-${id}`);
+				if (positionInfoInput) {
+					positionInfoInput.value = infoGridPos;
+					console.log(
+						`Position Info Grid für Tile ${id} gesetzt: ${infoGridPos}`
+					);
 				}
+			}
 			});
 		} else {
 			console.warn(

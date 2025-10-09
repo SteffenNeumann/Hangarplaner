@@ -631,8 +631,10 @@ function applyLoadedTileData(data) {
 				} = tileData;
 
 				// Handle both new format (hangarPosition) and legacy format (position)
-				const hangarPos = hangarPosition || (positionInfoGrid ? "" : position) || "";
-				const infoGridPos = position || positionInfoGrid || "";
+				// NEW format: hangarPosition + position  
+				// OLD format: position (=hangar) + positionInfoGrid (=route)
+				const hangarPos = hangarPosition || (positionInfoGrid !== undefined ? position : "") || "";
+				const infoGridPos = hangarPosition ? position : positionInfoGrid || "";
 
 				console.log(
 					`Lade Legacy-Kachel ${id}: hangarPosition=${hangarPos}, position=${infoGridPos}, aircraft=${aircraftId}, status=${status}`
@@ -1446,8 +1448,10 @@ function applyProjectData(projectData) {
 			} = tileData;
 
 			// Handle both new format (hangarPosition) and legacy format (position)
-			const hangarPos = hangarPosition || (positionInfoGrid ? "" : position) || "";
-			const infoGridPos = position || positionInfoGrid || "";
+			// NEW format: hangarPosition + position
+			// OLD format: position (=hangar) + positionInfoGrid (=route)
+			const hangarPos = hangarPosition || (positionInfoGrid !== undefined ? position : "") || "";
+			const infoGridPos = hangarPosition ? position : positionInfoGrid || "";
 
 			console.log(
 				`Lade Kachel ${id}: hangarPosition=${hangarPos}, position=${infoGridPos}, aircraft=${aircraftId}, status=${status}`

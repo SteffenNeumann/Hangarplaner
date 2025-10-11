@@ -722,10 +722,6 @@ syncModeElement.classList.remove("master", "slave", "standalone");
 			console.warn('⚠️ applyReadOnlyUIState fehlgeschlagen:', e);
 		}
 	}
-		} catch (e) {
-			console.warn('⚠️ applyReadOnlyUIState fehlgeschlagen:', e);
-		}
-	}
 
 // *** OBSOLETE METHODEN - WERDEN NICHT MEHR VERWENDET ***
 
@@ -1091,7 +1087,31 @@ syncModeElement.classList.remove("master", "slave", "standalone");
 	}
 
 	/**
+	 * Helper: Check if user is authenticated
+	 * @returns {boolean} true if authenticated, false otherwise
+	 */
+	isUserAuthenticated() {
+		try {
+			// Check for presence.displayName (set on successful login)
+			const hasDisplayName = !!localStorage.getItem('presence.displayName');
+			if (!hasDisplayName) return false;
+			
+			// Additional check: look for session-related items
+			const hasSessionId = !!(
+				localStorage.getItem('presence.sessionId') || 
+				localStorage.getItem('serverSync.sessionId')
+			);
+			
+			return hasDisplayName;
+		} catch (e) {
+			console.warn('Authentication check failed', e);
+			return false;
+		}
+	}
+
+	/**
 	 * ÜBERARBEITET: Lädt gespeicherte Sync-Einstellungen mit neuen Modi
+	 * NEU: Setzt Standard auf "master" für authentifizierte Benutzer
 	 */
 	loadSavedSharingSettings() {
 		try {
@@ -1099,10 +1119,35 @@ syncModeElement.classList.remove("master", "slave", "standalone");
 				localStorage.getItem("hangarSyncSettings") || "{}"
 			);
 
-			// Lade gespeicherten Modus
-			this.syncMode = settings.syncMode || "offline";
-			this.isLiveSyncEnabled = settings.isLiveSyncEnabled || false;
-			this.isMasterMode = settings.isMasterMode || false;
+			// NEU: Intelligente Standard-Modus-Auswahl
+			const hasSettings = settings.syncMode && settings.lastSaved;
+			const isAuthenticated = this.isUserAuthenticated();
+			
+			if (hasSettings) {
+				// Gespeicherte Einstellungen verwenden
+				this.syncMode = settings.syncMode;
+				this.isLiveSyncEnabled = settings.isLiveSyncEnabled || false;
+				this.isMasterMode = settings.isMasterMode || false;
+				console.log("📁 Gespeicherte Sync-Einstellungen geladen:", { syncMode: this.syncMode, authenticated: isAuthenticated });
+			} else if (isAuthenticated) {
+				// Neue authentifizierte Benutzer -> Master-Modus Standard
+				this.syncMode = "master";
+				this.isLiveSyncEnabled = true;
+				this.isMasterMode = true;
+				console.log("👑 Neuer authentifizierter Benutzer - Master-Modus wird gesetzt");
+			} else {
+				// Nicht authentifizierte Benutzer -> Offline-Modus
+				this.syncMode = "offline";
+				this.isLiveSyncEnabled = false;
+				this.isMasterMode = false;
+				console.log("🏠 Nicht authentifiziert - Offline-Modus wird gesetzt");
+			}
+
+			// NEU: Für neue Benutzer (keine gespeicherten Einstellungen) sofort speichern
+			if (!hasSettings) {
+				this.saveSharingSettings();
+				console.log("💾 Initiale Sync-Einstellungen für neuen Benutzer gespeichert");
+			}
 
 			// Single control preferred
 			const modeCtl = document.getElementById('syncModeControl');
@@ -1114,11 +1159,6 @@ syncModeElement.classList.remove("master", "slave", "standalone");
 				// Fallback without legacy toggles: just apply mode
 				setTimeout(() => this.updateSyncModeByString(this.syncMode), 100);
 			}
-
-			console.log(
-				"📁 Gespeicherte Sync-Einstellungen geladen:",
-				{ syncMode: this.syncMode }
-			);
 		} catch (error) {
 			console.error("❌ Fehler beim Laden der Sync-Einstellungen:", error);
 			this.syncMode = "standalone";

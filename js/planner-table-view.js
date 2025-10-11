@@ -577,6 +577,7 @@ if (!acInput.getAttribute('title')) acInput.setAttribute('title', 'Shift+Click t
       el.__highlightTimer = setTimeout(()=>{ 
         try { 
           el.style.outline = el.__originalOutline || ''; 
+          el.style.removeProperty('outline'); // Ensure CSS rules re-apply
           delete el.__originalOutline;
           delete el.__highlightTimer;
           // Force blur for dropdowns to remove focus styling

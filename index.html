@@ -4622,6 +4622,7 @@ async function fallbackSyncWrite(){ try { var url = getServerUrl(); var sid = en
                     field.__highlightTimer = setTimeout(()=>{ 
                       try { 
                         field.style.outline = field.__originalOutline || ''; 
+                        field.style.removeProperty('outline'); // Ensure CSS rules re-apply
                         delete field.__originalOutline;
                         delete field.__highlightTimer;
                         // Force blur for dropdowns to remove focus styling

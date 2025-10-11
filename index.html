@@ -4607,7 +4607,11 @@ async function fallbackSyncWrite(){ try { var url = getServerUrl(); var sid = en
                   }
                   const field = document.getElementById(fieldId);
                   if (field) {
-                    try { field.focus({ preventScroll: true }); } catch(_){}
+                    // For dropdowns, blur after short delay to remove focus styling
+                    const isDropdown = field.tagName === 'SELECT';
+                    if (!isDropdown) {
+                      try { field.focus({ preventScroll: true }); } catch(_){}
+                    }
                     // Clear any existing highlight timeout for this field
                     if (field.__highlightTimer) { clearTimeout(field.__highlightTimer); field.__highlightTimer = null; }
                     // Store original outline (only if not already storing one)
@@ -4620,6 +4624,8 @@ async function fallbackSyncWrite(){ try { var url = getServerUrl(); var sid = en
                         field.style.outline = field.__originalOutline || ''; 
                         delete field.__originalOutline;
                         delete field.__highlightTimer;
+                        // Force blur for dropdowns to remove focus styling
+                        if (isDropdown) field.blur();
                       } catch(_){} 
                     }, 1500);
                   }

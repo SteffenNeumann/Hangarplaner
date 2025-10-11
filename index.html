@@ -5082,6 +5082,86 @@ window.hangarInitQueue.push(function(){
             })();
             </script>
 
+            <!-- Periodic Change Log Auto-Refresh for Multi-Master Sync -->
+            <script>
+            (function(){
+              let changeLogRefreshInterval = null;
+              
+              function startChangeLogAutoRefresh(){
+                try {
+                  if (changeLogRefreshInterval) {
+                    clearInterval(changeLogRefreshInterval);
+                    changeLogRefreshInterval = null;
+                  }
+                  
+                  // Refresh every 2.5 seconds when in Sync or Master mode
+                  changeLogRefreshInterval = setInterval(()=>{
+                    try {
+                      const canRead = (window.serverSync && 
+                                      typeof window.serverSync.canReadFromServer === 'function' && 
+                                      window.serverSync.canReadFromServer());
+                      if (canRead && window.ChangeLog && typeof window.ChangeLog.render === 'function') {
+                        window.ChangeLog.render();
+                      }
+                    } catch(_e){}
+                  }, 2500); // 2.5 second refresh interval
+                  
+                  console.log('📊 Change Log auto-refresh started (2.5s interval)');
+                } catch(e) {
+                  console.warn('⚠️ Failed to start Change Log auto-refresh:', e);
+                }
+              }
+              
+              function stopChangeLogAutoRefresh(){
+                try {
+                  if (changeLogRefreshInterval) {
+                    clearInterval(changeLogRefreshInterval);
+                    changeLogRefreshInterval = null;
+                    console.log('⏹️ Change Log auto-refresh stopped');
+                  }
+                } catch(e){}
+              }
+              
+              // Start/stop based on sync mode changes
+              try {
+                document.addEventListener('syncModeChanged', ()=>{
+                  try {
+                    const canRead = (window.serverSync && 
+                                    typeof window.serverSync.canReadFromServer === 'function' && 
+                                    window.serverSync.canReadFromServer());
+                    if (canRead) {
+                      startChangeLogAutoRefresh();
+                    } else {
+                      stopChangeLogAutoRefresh();
+                    }
+                  } catch(_e){}
+                });
+              } catch(_e){}
+              
+              // Initialize on load - delay to ensure serverSync is ready
+              window.hangarInitQueue = window.hangarInitQueue || [];
+              window.hangarInitQueue.push(function(){
+                setTimeout(()=>{
+                  try {
+                    const canRead = (window.serverSync && 
+                                    typeof window.serverSync.canReadFromServer === 'function' && 
+                                    window.serverSync.canReadFromServer());
+                    if (canRead) {
+                      startChangeLogAutoRefresh();
+                    }
+                  } catch(_e){}
+                }, 1500); // 1.5 second delay to ensure sync is initialized
+              });
+              
+              // Expose for debugging
+              window.changeLogAutoRefresh = {
+                start: startChangeLogAutoRefresh,
+                stop: stopChangeLogAutoRefresh,
+                isActive: ()=> changeLogRefreshInterval !== null
+              };
+            })();
+            </script>
+
             <!-- Ensure Change Log column exists in Planner even with cached HTML -->
             <script>
             (function(){

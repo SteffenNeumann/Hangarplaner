@@ -4608,9 +4608,20 @@ async function fallbackSyncWrite(){ try { var url = getServerUrl(); var sid = en
                   const field = document.getElementById(fieldId);
                   if (field) {
                     try { field.focus({ preventScroll: true }); } catch(_){}
-                    const old = field.style.outline;
+                    // Clear any existing highlight timeout for this field
+                    if (field.__highlightTimer) { clearTimeout(field.__highlightTimer); field.__highlightTimer = null; }
+                    // Store original outline (only if not already storing one)
+                    if (!field.__originalOutline) { field.__originalOutline = field.style.outline || ''; }
+                    // Apply highlight
                     field.style.outline = '2px solid #ff7043';
-                    setTimeout(()=>{ field.style.outline = old || ''; }, 1500);
+                    // Remove highlight after delay and restore original
+                    field.__highlightTimer = setTimeout(()=>{ 
+                      try { 
+                        field.style.outline = field.__originalOutline || ''; 
+                        delete field.__originalOutline;
+                        delete field.__highlightTimer;
+                      } catch(_){} 
+                    }, 1500);
                   }
                 } catch(e) {}
               }

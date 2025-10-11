@@ -563,9 +563,20 @@ if (!acInput.getAttribute('title')) acInput.setAttribute('title', 'Shift+Click t
       if (!el) return;
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       try { el.focus({ preventScroll: true }); } catch(_){ try { el.focus(); } catch(__){} }
-      const prev = el.style.outline;
+      // Clear any existing highlight timeout for this element
+      if (el.__highlightTimer) { clearTimeout(el.__highlightTimer); el.__highlightTimer = null; }
+      // Store original outline (only if not already storing one)
+      if (!el.__originalOutline) { el.__originalOutline = el.style.outline || ''; }
+      // Apply highlight
       el.style.outline = '2px solid #ff7043';
-      setTimeout(()=>{ try { el.style.outline = prev || ''; } catch(__){} }, 1500);
+      // Remove highlight after delay and restore original
+      el.__highlightTimer = setTimeout(()=>{ 
+        try { 
+          el.style.outline = el.__originalOutline || ''; 
+          delete el.__originalOutline;
+          delete el.__highlightTimer;
+        } catch(_){} 
+      }, 1500);
     } catch(_){}
   }
   

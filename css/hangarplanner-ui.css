@@ -408,6 +408,17 @@ html, body, button, input, select, textarea {
 	margin-top: 25%;
 }
 
+/* Reduce gap for second row (tiles 7-12) to match standard grid gap */
+#hangarGrid .hangar-cell:nth-child(n+7):nth-child(-n+12) {
+	margin-top: calc(-25% + 1rem);
+}
+
+/* Reset margin for offsetted columns in second row to maintain their offset */
+#hangarGrid .hangar-cell:nth-child(8),
+#hangarGrid .hangar-cell:nth-child(11) {
+	margin-top: 25%;
+}
+
 /* Hide second row tiles in columns 2 and 5 (tiles 8 and 11) but keep space as placeholder */
 #hangarGrid .hangar-cell:nth-child(8),
 #hangarGrid .hangar-cell:nth-child(11) {

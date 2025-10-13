@@ -1962,7 +1962,7 @@ input:checked + .toggle-slider:before {
 	text-align: center;
 }
 .section-divider::after {
-	content: "OUTER SECTION";
+	content: "APRON";
 	position: absolute;
 	top: -10px;
 	left: 50%;

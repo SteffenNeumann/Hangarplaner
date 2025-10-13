@@ -402,16 +402,17 @@ html, body, button, input, select, textarea {
 	grid-auto-flow: dense; /* Allow tiles to fill gaps */
 }
 
-/* Staggered brick layout: offset columns 2 and 5 down by half tile height */
+/* Staggered brick layout: offset columns 2 and 5 down by 1/4 tile height */
 #hangarGrid .hangar-cell:nth-child(6n+2),
 #hangarGrid .hangar-cell:nth-child(6n+5) {
-	margin-top: 50%;
+	margin-top: 25%;
 }
 
-/* Hide second row tiles in columns 2 and 5 (tiles 8 and 11) */
+/* Hide second row tiles in columns 2 and 5 (tiles 8 and 11) but keep space as placeholder */
 #hangarGrid .hangar-cell:nth-child(8),
 #hangarGrid .hangar-cell:nth-child(11) {
-	display: none !important;
+	visibility: hidden !important;
+	pointer-events: none !important;
 }
 
 #secondaryHangarGrid {

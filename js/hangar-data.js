@@ -513,19 +513,19 @@ function collectContainerTileData(containerSelector) {
 				}
 			} catch (e) {}
 
-			const tileDataObject = {
-				tileId: tileId,
-				aircraftId: aircraftId,
-				position: position, // Hangar position (hangar-position-X)
-				positionInfoGrid: positionInfoGrid, // Position in Info Grid (position-X)
-				manualInput: manualInput,
-				notes: notes,
-				status: status,
-				towStatus: towStatus,
-				arrivalTime: arrivalTime,
-				departureTime: departureTime,
-				updatedAt: updatedAtIso,
-			};
+		const tileDataObject = {
+			tileId: tileId,
+			aircraftId: aircraftId,
+			hangarPosition: position, // Hangar position (hangar-position-X)
+			position: positionInfoGrid, // Position in Info Grid (position-X)
+			manualInput: manualInput,
+			notes: notes,
+			status: status,
+			towStatus: towStatus,
+			arrivalTime: arrivalTime,
+			departureTime: departureTime,
+			updatedAt: updatedAtIso,
+		};
 
 			console.log(
 				`✅ Gesammelte Daten für Kachel ${tileId} (${
@@ -616,10 +616,11 @@ function applyLoadedTileData(data) {
 
 		// Warte kurz auf UI-Update und wende dann die Daten an
 		setTimeout(() => {
-			data.tilesData.forEach((tileData) => {
+		data.tilesData.forEach((tileData) => {
 				const {
 					id,
 					position,
+					hangarPosition,
 					aircraftId,
 					status,
 					towStatus,
@@ -629,14 +630,20 @@ function applyLoadedTileData(data) {
 					positionInfoGrid,
 				} = tileData;
 
+				// Handle both new format (hangarPosition) and legacy format (position)
+				// NEW format: hangarPosition + position  
+				// OLD format: position (=hangar) + positionInfoGrid (=route)
+				const hangarPos = hangarPosition || (positionInfoGrid !== undefined ? position : "") || "";
+				const infoGridPos = hangarPosition ? position : positionInfoGrid || "";
+
 				console.log(
-					`Lade Legacy-Kachel ${id}: position=${position}, aircraft=${aircraftId}, status=${status}`
+					`Lade Legacy-Kachel ${id}: hangarPosition=${hangarPos}, position=${infoGridPos}, aircraft=${aircraftId}, status=${status}`
 				);
 
-				// Positionswert setzen
+				// Hangar Positionswert setzen
 				const posInput = document.getElementById(`hangar-position-${id}`);
 				if (posInput) {
-					posInput.value = position || "";
+					posInput.value = hangarPos;
 				}
 
 				// Aircraft ID setzen
@@ -672,8 +679,8 @@ function applyLoadedTileData(data) {
 		// Arrival Time setzen (auch leeren wenn leerer String geliefert)
 		const arrivalInput = document.getElementById(`arrival-time-${id}`);
 		if (arrivalInput) {
-			if (Object.prototype.hasOwnProperty.call(tile, 'arrivalTime')) {
-				const v = tile.arrivalTime || '';
+			if (Object.prototype.hasOwnProperty.call(tileData, 'arrivalTime')) {
+				const v = tileData.arrivalTime || '';
 				arrivalInput.value = v;
 				try { if (!v && arrivalInput.dataset) delete arrivalInput.dataset.iso; } catch(_e){}
 			}
@@ -682,25 +689,17 @@ function applyLoadedTileData(data) {
 		// Departure Time setzen (auch leeren wenn leerer String geliefert)
 		const departureInput = document.getElementById(`departure-time-${id}`);
 		if (departureInput) {
-			if (Object.prototype.hasOwnProperty.call(tile, 'departureTime')) {
-				const v = tile.departureTime || '';
+			if (Object.prototype.hasOwnProperty.call(tileData, 'departureTime')) {
+				const v = tileData.departureTime || '';
 				departureInput.value = v;
 				try { if (!v && departureInput.dataset) delete departureInput.dataset.iso; } catch(_e){}
 			}
 		}
 
-		// Header Hangar Position (legacy 'position' maps to header)
-		const hangarPosInputLegacy = document.getElementById(`hangar-position-${id}`);
-		if (hangarPosInputLegacy && Object.prototype.hasOwnProperty.call(tile, 'position')) {
-			hangarPosInputLegacy.value = tile.position || '';
-		}
-
-		// Position Info Grid setzen (use explicit legacy key 'positionInfoGrid' only)
+		// Position Info Grid setzen
 		const positionInfoInput = document.getElementById(`position-${id}`);
-		if (positionInfoInput) {
-			if (Object.prototype.hasOwnProperty.call(tile, 'positionInfoGrid')) {
-				positionInfoInput.value = tile.positionInfoGrid || '';
-			}
+		if (positionInfoInput && infoGridPos) {
+			positionInfoInput.value = infoGridPos;
 		}
 			});
 
@@ -1215,16 +1214,62 @@ function collectTilesData() {
 		.querySelectorAll("#hangarGrid .hangar-cell")
 		.forEach((cell, index) => {
 			const cellId = index + 1;
-			const tileData = {
-				id: cellId,
-				position:
-					document.getElementById(`hangar-position-${cellId}`)?.value || "",
-				aircraftId: document.getElementById(`aircraft-${cellId}`)?.value || "",
-				status: document.getElementById(`status-${cellId}`)?.value || "ready",
-				towStatus:
-					document.getElementById(`tow-status-${cellId}`)?.value || "initiated",
-				notes: document.getElementById(`notes-${cellId}`)?.value || "",
-			};
+			
+			// Collect arrival time (prefer ISO from dataset)
+			const arrivalElement = document.getElementById(`arrival-time-${cellId}`);
+			let arrivalTime = "";
+			if (arrivalElement) {
+				const rawIso = arrivalElement.dataset?.iso || "";
+				if (rawIso) {
+					arrivalTime = rawIso;
+				} else if (
+					window.helpers &&
+					typeof window.helpers.canonicalizeDateTimeFieldValue === "function"
+				) {
+					arrivalTime =
+						window.helpers.canonicalizeDateTimeFieldValue(
+							arrivalElement.id,
+							arrivalElement.value || ""
+						) || "";
+				} else {
+					arrivalTime = arrivalElement.value || "";
+				}
+			}
+			
+			// Collect departure time (prefer ISO from dataset)
+			const departureElement = document.getElementById(`departure-time-${cellId}`);
+			let departureTime = "";
+			if (departureElement) {
+				const rawIso = departureElement.dataset?.iso || "";
+				if (rawIso) {
+					departureTime = rawIso;
+				} else if (
+					window.helpers &&
+					typeof window.helpers.canonicalizeDateTimeFieldValue === "function"
+				) {
+					departureTime =
+						window.helpers.canonicalizeDateTimeFieldValue(
+							departureElement.id,
+							departureElement.value || ""
+						) || "";
+				} else {
+					departureTime = departureElement.value || "";
+				}
+			}
+			
+		const tileData = {
+			id: cellId,
+			hangarPosition:
+				document.getElementById(`hangar-position-${cellId}`)?.value || "",
+			aircraftId: document.getElementById(`aircraft-${cellId}`)?.value || "",
+			status: document.getElementById(`status-${cellId}`)?.value || "neutral",
+			towStatus:
+				document.getElementById(`tow-status-${cellId}`)?.value || "neutral",
+			notes: document.getElementById(`notes-${cellId}`)?.value || "",
+			arrivalTime: arrivalTime,
+			departureTime: departureTime,
+			position: document.getElementById(`position-${cellId}`)?.value || "",
+		};
 
 			tiles.push(tileData);
 		});
@@ -1237,18 +1282,63 @@ function collectTilesData() {
 				cell.getAttribute("data-cell-id") || cell.id.split("-").pop()
 			);
 			if (cellId >= 101) {
-				const tileData = {
-					id: cellId,
-					position:
-						document.getElementById(`hangar-position-${cellId}`)?.value || "",
-					aircraftId:
-						document.getElementById(`aircraft-${cellId}`)?.value || "",
-					status: document.getElementById(`status-${cellId}`)?.value || "ready",
-					towStatus:
-						document.getElementById(`tow-status-${cellId}`)?.value ||
-						"initiated",
-					notes: document.getElementById(`notes-${cellId}`)?.value || "",
-				};
+				// Collect arrival time (prefer ISO from dataset)
+				const arrivalElement = document.getElementById(`arrival-time-${cellId}`);
+				let arrivalTime = "";
+				if (arrivalElement) {
+					const rawIso = arrivalElement.dataset?.iso || "";
+					if (rawIso) {
+						arrivalTime = rawIso;
+					} else if (
+						window.helpers &&
+						typeof window.helpers.canonicalizeDateTimeFieldValue === "function"
+					) {
+						arrivalTime =
+							window.helpers.canonicalizeDateTimeFieldValue(
+								arrivalElement.id,
+								arrivalElement.value || ""
+							) || "";
+					} else {
+						arrivalTime = arrivalElement.value || "";
+					}
+				}
+				
+				// Collect departure time (prefer ISO from dataset)
+				const departureElement = document.getElementById(`departure-time-${cellId}`);
+				let departureTime = "";
+				if (departureElement) {
+					const rawIso = departureElement.dataset?.iso || "";
+					if (rawIso) {
+						departureTime = rawIso;
+					} else if (
+						window.helpers &&
+						typeof window.helpers.canonicalizeDateTimeFieldValue === "function"
+					) {
+						departureTime =
+							window.helpers.canonicalizeDateTimeFieldValue(
+								departureElement.id,
+								departureElement.value || ""
+							) || "";
+					} else {
+						departureTime = departureElement.value || "";
+					}
+				}
+				
+			const tileData = {
+				id: cellId,
+				hangarPosition:
+					document.getElementById(`hangar-position-${cellId}`)?.value || "",
+				aircraftId:
+					document.getElementById(`aircraft-${cellId}`)?.value || "",
+				status: document.getElementById(`status-${cellId}`)?.value || "neutral",
+				towStatus:
+					document.getElementById(`tow-status-${cellId}`)?.value ||
+					"neutral",
+				notes: document.getElementById(`notes-${cellId}`)?.value || "",
+				arrivalTime: arrivalTime,
+				departureTime: departureTime,
+				position: document.getElementById(`position-${cellId}`)?.value || "",
+			};
 
 				tiles.push(tileData);
 			}
@@ -1344,30 +1434,37 @@ function applyProjectData(projectData) {
 		if (projectData.tilesData && Array.isArray(projectData.tilesData)) {
 			console.log(`Lade ${projectData.tilesData.length} Kacheln`);
 			projectData.tilesData.forEach((tileData) => {
-				const {
-					id,
-					position,
-					aircraftId,
-					status,
-					towStatus,
-					notes,
-					arrivalTime,
-					departureTime,
-					positionInfoGrid,
-				} = tileData;
+			const {
+				id,
+				position,
+				hangarPosition,
+				aircraftId,
+				status,
+				towStatus,
+				notes,
+				arrivalTime,
+				departureTime,
+				positionInfoGrid,
+			} = tileData;
 
-				console.log(
-					`Lade Kachel ${id}: position=${position}, aircraft=${aircraftId}, status=${status}`
-				);
+			// Handle both new format (hangarPosition) and legacy format (position)
+			// NEW format: hangarPosition + position
+			// OLD format: position (=hangar) + positionInfoGrid (=route)
+			const hangarPos = hangarPosition || (positionInfoGrid !== undefined ? position : "") || "";
+			const infoGridPos = hangarPosition ? position : positionInfoGrid || "";
 
-				// Positionswert setzen
-				const posInput = document.getElementById(`hangar-position-${id}`);
-				if (posInput) {
-					posInput.value = position || "";
-					console.log(`Position für Tile ${id} gesetzt: ${position}`);
-				} else {
-					console.warn(`Position Input für Tile ${id} nicht gefunden`);
-				}
+			console.log(
+				`Lade Kachel ${id}: hangarPosition=${hangarPos}, position=${infoGridPos}, aircraft=${aircraftId}, status=${status}`
+			);
+
+			// Positionswert setzen (hangar-position-# header field)
+			const posInput = document.getElementById(`hangar-position-${id}`);
+			if (posInput) {
+				posInput.value = hangarPos;
+				console.log(`Hangar Position für Tile ${id} gesetzt: ${hangarPos}`);
+			} else {
+				console.warn(`Position Input für Tile ${id} nicht gefunden`);
+			}
 
 				// Aircraft ID setzen (bewahre Nutzerwert, wenn Server leer liefert)
 				const aircraftInput = document.getElementById(`aircraft-${id}`);
@@ -1387,7 +1484,7 @@ function applyProjectData(projectData) {
 				// Status setzen
 				const statusSelect = document.getElementById(`status-${id}`);
 				if (statusSelect) {
-					statusSelect.value = status || "ready";
+					statusSelect.value = status || "neutral";
 					// Status-Event auslösen, um das Statuslicht zu aktualisieren
 					const event = new Event("change");
 					statusSelect.dispatchEvent(event);
@@ -1399,7 +1496,7 @@ function applyProjectData(projectData) {
 				// Tow-Status setzen
 				const towStatusSelect = document.getElementById(`tow-status-${id}`);
 				if (towStatusSelect) {
-					towStatusSelect.value = towStatus || "initiated";
+					towStatusSelect.value = towStatus || "neutral";
 					// Event auslösen, um Styling zu aktualisieren
 					const event = new Event("change");
 					towStatusSelect.dispatchEvent(event);
@@ -1443,16 +1540,16 @@ function applyProjectData(projectData) {
 					}
 				}
 
-				// Position Info Grid setzen
-				if (positionInfoGrid) {
-					const positionInfoInput = document.getElementById(`position-${id}`);
-					if (positionInfoInput) {
-						positionInfoInput.value = positionInfoGrid;
-						console.log(
-							`Position Info Grid für Tile ${id} gesetzt: ${positionInfoGrid}`
-						);
-					}
+			// Position Info Grid setzen (position-# info grid field)
+			if (infoGridPos) {
+				const positionInfoInput = document.getElementById(`position-${id}`);
+				if (positionInfoInput) {
+					positionInfoInput.value = infoGridPos;
+					console.log(
+						`Position Info Grid für Tile ${id} gesetzt: ${infoGridPos}`
+					);
 				}
+			}
 			});
 		} else {
 			console.warn(

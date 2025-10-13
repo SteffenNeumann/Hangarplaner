@@ -70,7 +70,7 @@ class SharingManager {
     try {
       // Backward compatibility: map legacy 'standalone' to new 'offline'
       const m = (mode === 'standalone') ? 'offline' : mode;
-      if (m === 'offline') { await this.enableStandaloneMode(); }
+      if (m === 'offline') { await this.enableStandaloneMode(); await this.loadServerDataImmediately(); }
       else if (m === 'sync') { await this.enableSyncMode(); await this.loadServerDataImmediately(); }
       else if (m === 'master') {
         await this.enableMasterMode();
@@ -123,7 +123,7 @@ class SharingManager {
       readEnabled = true;
       try { const readToggle = document.getElementById('readDataToggle'); if (readToggle) readToggle.checked = true; } catch(_e){}
     }
-    if (!readEnabled && !writeEnabled) { await this.enableStandaloneMode(); }
+    if (!readEnabled && !writeEnabled) { await this.enableStandaloneMode(); await this.loadServerDataImmediately(); }
     else if (readEnabled && !writeEnabled) { await this.enableSyncMode(); await this.loadServerDataImmediately(); }
     else { await this.enableMasterMode(); await this.loadServerDataImmediately(); }
     this.saveSharingSettings();
@@ -153,9 +153,7 @@ class SharingManager {
     this.showNotification('Offline-Modus aktiviert - Nur lokale Speicherung','info');
     this._emitModeChanged();
 
-    // Skip any server load in Offline mode (per requirements)
-    try { console.log('⏭️ Offline: Initial server load skipped'); } catch(_e){}
-
+    // In Offline mode we still perform an immediate read from server on demand via caller
     console.log('✅ Offline-Modus aktiviert');
   } catch(e){ console.error('❌ Fehler beim Aktivieren des Standalone-Modus:', e); this.showNotification('Fehler beim Wechsel zu Standalone-Modus','error'); } }
   async enableSyncMode(){ try{

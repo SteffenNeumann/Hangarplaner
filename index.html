@@ -745,7 +745,7 @@
 					<header
 						class="bg-white p-4 shadow-md flex justify-between gap-16">
 						<div id="gitstamp" class="text-xs" style="align-self:center; white-space:nowrap; color:#64748b;" title="Last commit loaded">
-						  Loaded 2025-09-28T11:51:40Z · SHA 475a6e4
+						  Loaded 2025-10-09T08:56:36Z · SHA 2fb8e51
 						</div>
 						<!-- Wetter-Widget unverändert lassen -->
 						<div class="flex-grow"></div>
@@ -1590,7 +1590,7 @@ function isReadOnlySync(){
     if (any) { const m = any.id.match(/-(\d+)$/); if (m) return parseInt(m[1],10); }
     return null;
   }
-  function clearSingleTile(cellId){
+  function clearTileHeaderAction(cellId){
     try {
       if (!cellId && cellId !== 0) return false;
       // Locate the tile host (primary or secondary)
@@ -1624,7 +1624,7 @@ function isReadOnlySync(){
       // Remove Last Update badge (and persisted record)
       try { if (window.LastUpdateBadges && typeof window.LastUpdateBadges.remove === 'function') { window.LastUpdateBadges.remove(parseInt(cellId,10)); } } catch(e){}
       return true;
-    } catch(e){ console.warn('clearSingleTile failed', e); return false; }
+    } catch(e){ console.warn('clearTileHeaderAction failed', e); return false; }
   }
   function injectDeleteIntoTile(tile){
     try {
@@ -1647,7 +1647,14 @@ function isReadOnlySync(){
         if (isReadOnlySync()) return; // No action in read-only
         const ss = window.serverSync;
         try { if (ss && typeof ss.suspendReads === 'function') ss.suspendReads(); } catch(_e) {}
-        const ok = clearSingleTile(cellId);
+        let ok = false;
+        try {
+          if (typeof window.clearSingleTile === 'function' && window.clearSingleTile !== clearTileHeaderAction) {
+            ok = window.clearSingleTile(cellId);
+          } else {
+            ok = clearTileHeaderAction(cellId);
+          }
+        } catch(_e) { ok = false; }
           try {
             if (ok && window.serverSync?.isMaster) {
               const updates = {};
@@ -1696,8 +1703,8 @@ function isReadOnlySync(){
   // Ensure injection after full DOM load as a fallback (tiles present)
   try { document.addEventListener('DOMContentLoaded', function(){ setTimeout(init, 600); }, { once: true }); } catch(_e){}
   document.addEventListener('secondaryTilesCreated', function(){ setTimeout(injectAll, 50); setTimeout(hookSyncToggles, 60); });
-  // Expose for potential reuse
-  window.clearSingleTile = clearSingleTile;
+  // Expose fallback helper without overriding global
+  window.clearTileHeaderAction = clearTileHeaderAction;
 })();
 </script>
 <script>
@@ -3679,23 +3686,15 @@ if (window.serverSync) {
 									if (!window.storageBrowser) {
 										window.storageBrowser = window.serverSync;
 									}
-								} else if (!window.storageBrowser) {
-									// Install a minimal alias so improved-event-manager can proceed
-									var _url = (function(){ try { return window.location.origin + '/sync/data.php'; } catch(_e){ return '/sync/data.php'; } })();
-									window.storageBrowser = {
-										serverSyncUrl: _url,
-										getServerUrl: function(){ return this.serverSyncUrl || _url; },
-										getSessionId: function(){ try { var sid = localStorage.getItem('serverSync.sessionId') || ''; if (!sid){ sid = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('serverSync.sessionId', sid); } return sid; } catch(_e){ return Math.random().toString(36).slice(2) + Date.now().toString(36); } },
-										syncWithServer: ()=> Promise.resolve(false)
-									};
-								}
-								// Ensure window.serverSync points to the active sync object
-								if (!window.serverSync && window.storageBrowser) {
-									window.serverSync = window.storageBrowser;
-								}
-							}
-					}
-					function installFallbackManager(){
+                        // Ensure window.serverSync points to the active sync object (only if real client is present)
+                        if (!window.serverSync && window.storageBrowser && (typeof window.storageBrowser.loadFromServer==='function' || typeof window.storageBrowser.startSlaveMode==='function')) {
+                            window.serverSync = window.storageBrowser;
+                        }
+                    }
+                    }
+                    catch(_e){}
+                }
+                function installFallbackManager(){
 						if (window.sharingManager) return;
 						console.warn('SharingManager missing; installing minimal fallback');
 window.sharingManager = {
@@ -3794,7 +3793,7 @@ try { const modeCtl = document.getElementById('syncModeControl'); if (modeCtl){ 
 						console.log('Minimal Sync Manager fallback installed');
 					}
 					window.hangarInitQueue = window.hangarInitQueue || [];
-					window.hangarInitQueue.push(function(){ setTimeout(function(){ ensureSyncGlobals(); installFallbackManager(); }, 400); });
+window.hangarInitQueue.push(function(){ setTimeout(function(){ ensureSyncGlobals(); }, 1200); });
 					try { document.addEventListener('DOMContentLoaded', function(){ ensureSyncGlobals(); }, { once: true }); } catch(_e){}
 				})();
 						</script>
@@ -3894,9 +3893,32 @@ async function fallbackSyncWrite(){ try { var url = getServerUrl(); var sid = en
 							}
 							polyfillApplyTileData();
 							window.syncDebugRead = async function(){ try { var url = getServerUrl(); log('GET '+url); var res = await fetch(url + (url.includes('?') ? '&' : '?') + 'action=load', { headers:{'Accept':'application/json'} }); log('GET status '+res.status); var text = await res.text(); log('Body (first 200): '+ text.slice(0,200)); try { var json = JSON.parse(text); resetFlags(); var tAS = (window.serverSync && typeof window.serverSync.applyServerData); var tAT = (window.serverSync && typeof window.serverSync.applyTileData); log('serverSync types: applyServerData='+tAS+', applyTileData='+tAT); if (window.serverSync && typeof window.serverSync.applyServerData==='function'){ var applied = await window.serverSync.applyServerData(json); if (!applied && typeof window.serverSync.applyTileData==='function'){ var a = window.serverSync.applyTileData(json.primaryTiles||[], false); var b = window.serverSync.applyTileData(json.secondaryTiles||[], true); applied = !!(a || b); } if (!applied){ var c = debugApplyTiles(json); log('debugApplyTiles applied count: '+c); applied = c>0; } log('applyServerData: '+applied); } } catch(_e){} } catch(e){ log('READ error: '+e.message); } };
+							// Polyfill: if serverSync lacks slaveCheckForUpdates/applyServerData (minimal fallback or legacy), provide safe shims
+							(function(){ try {
+							  if (window.serverSync && typeof window.serverSync.slaveCheckForUpdates !== 'function') {
+							    window.serverSync.slaveCheckForUpdates = async function(){ try { await window.syncDebugRead(); return true; } catch(_e){ return false; } };
+							  }
+							  if (window.serverSync && typeof window.serverSync.applyServerData !== 'function' && typeof window.serverSync.applyTileData === 'function') {
+							    window.serverSync.applyServerData = async function(data){ try { if (!data || typeof data !== 'object') return false; var a = this.applyTileData(data.primaryTiles||[], false); var b = this.applyTileData(data.secondaryTiles||[], true); return !!(a||b); } catch(_e){ return false; } };
+							  }
+							} catch(_e){} })();
 							window.syncDebugWrite = async function(){ try { var url = getServerUrl(); var sid = ensureSession(); var dname = (localStorage.getItem('presence.displayName') || '').trim(); var body = { metadata:{ debugPing: new Date().toISOString(), timestamp: Math.round(Date.now()) } }; log('POST '+url); var res = await fetch(url, { method:'POST', headers:{ 'Content-Type':'application/json', 'X-Sync-Role':'master', 'X-Sync-Session': sid, 'X-Display-Name': dname }, body: JSON.stringify(body) }); log('POST status '+res.status); var text = await res.text(); log('Body (first 200): '+ text.slice(0,200)); await window.syncDebugRead(); } catch(e){ log('WRITE error: '+e.message); } };
-							window.syncManual = async function(){ try { var btn = document.getElementById('manualSyncBtn'); if (btn){ btn.disabled = true; btn.textContent = 'Syncing...'; } var ok=false; try { if (window.serverSync && typeof window.serverSync.manualSync==='function'){ ok = await window.serverSync.manualSync(); } else if (window.serverSync && typeof window.serverSync.syncWithServer==='function'){ ok = await window.serverSync.syncWithServer(); } } catch(err){ log('manual sync call failed: '+err.message); ok=false; } if (!ok){ log('Manual sync falling back to direct POST'); ok = await fallbackSyncWrite(); } if (ok){ log('Manual sync OK'); try { await window.syncDebugRead(); } catch(_e){} } else { log('Manual sync failed'); } } finally { var btn2 = document.getElementById('manualSyncBtn'); if (btn2){ btn2.disabled=false; btn2.textContent='Manual Sync'; } } };
 							window.hangarInitQueue = window.hangarInitQueue || [];
+							window.hangarInitQueue.push(function(){ try{ var el = document.getElementById('syncDebugUrl'); if (el){ el.textContent = getServerUrl(); } polyfillApplyTileData(); }catch(e){} });
+							// Start fallback read polling when in Sync mode and slaveCheckForUpdates is unavailable
+							window.hangarInitQueue.push(function(){
+							  try {
+							    const inSync = !!(window.sharingManager && window.sharingManager.syncMode === 'sync');
+							    const hasSlave = !!(window.serverSync && typeof window.serverSync.slaveCheckForUpdates === 'function');
+							    if (inSync && !hasSlave) {
+							      if (!window.__fallbackReadTimer) {
+							        window.__fallbackReadTimer = setInterval(function(){ try { window.syncDebugRead && window.syncDebugRead(); } catch(_e){} }, 3000);
+							        // fire once immediately
+							        setTimeout(function(){ try { window.syncDebugRead && window.syncDebugRead(); } catch(_e){} }, 500);
+							      }
+							    }
+							  } catch(_e){}
+							});
 							window.hangarInitQueue.push(function(){ try{ var el = document.getElementById('syncDebugUrl'); if (el){ el.textContent = getServerUrl(); } polyfillApplyTileData(); }catch(e){} });
 						})();
 						</script>
@@ -4585,10 +4607,28 @@ async function fallbackSyncWrite(){ try { var url = getServerUrl(); var sid = en
                   }
                   const field = document.getElementById(fieldId);
                   if (field) {
-                    try { field.focus({ preventScroll: true }); } catch(_){}
-                    const old = field.style.outline;
+                    // For dropdowns, blur after short delay to remove focus styling
+                    const isDropdown = field.tagName === 'SELECT';
+                    if (!isDropdown) {
+                      try { field.focus({ preventScroll: true }); } catch(_){}
+                    }
+                    // Clear any existing highlight timeout for this field
+                    if (field.__highlightTimer) { clearTimeout(field.__highlightTimer); field.__highlightTimer = null; }
+                    // Store original outline (only if not already storing one)
+                    if (!field.__originalOutline) { field.__originalOutline = field.style.outline || ''; }
+                    // Apply highlight
                     field.style.outline = '2px solid #ff7043';
-                    setTimeout(()=>{ field.style.outline = old || ''; }, 1500);
+                    // Remove highlight after delay and restore original
+                    field.__highlightTimer = setTimeout(()=>{ 
+                      try { 
+                        field.style.outline = field.__originalOutline || ''; 
+                        field.style.removeProperty('outline'); // Ensure CSS rules re-apply
+                        delete field.__originalOutline;
+                        delete field.__highlightTimer;
+                        // Force blur for dropdowns to remove focus styling
+                        if (isDropdown) field.blur();
+                      } catch(_){} 
+                    }, 1500);
                   }
                 } catch(e) {}
               }
@@ -5057,6 +5097,86 @@ window.hangarInitQueue.push(function(){
               try { document.addEventListener('syncModeChanged', ()=>{ try { ChangeLog.render(); } catch(_){} }); } catch(_e){}
               // Expose for debugging
               window.ChangeLog = ChangeLog;
+            })();
+            </script>
+
+            <!-- Periodic Change Log Auto-Refresh for Multi-Master Sync -->
+            <script>
+            (function(){
+              let changeLogRefreshInterval = null;
+              
+              function startChangeLogAutoRefresh(){
+                try {
+                  if (changeLogRefreshInterval) {
+                    clearInterval(changeLogRefreshInterval);
+                    changeLogRefreshInterval = null;
+                  }
+                  
+                  // Refresh every 2.5 seconds when in Sync or Master mode
+                  changeLogRefreshInterval = setInterval(()=>{
+                    try {
+                      const canRead = (window.serverSync && 
+                                      typeof window.serverSync.canReadFromServer === 'function' && 
+                                      window.serverSync.canReadFromServer());
+                      if (canRead && window.ChangeLog && typeof window.ChangeLog.render === 'function') {
+                        window.ChangeLog.render();
+                      }
+                    } catch(_e){}
+                  }, 2500); // 2.5 second refresh interval
+                  
+                  console.log('📊 Change Log auto-refresh started (2.5s interval)');
+                } catch(e) {
+                  console.warn('⚠️ Failed to start Change Log auto-refresh:', e);
+                }
+              }
+              
+              function stopChangeLogAutoRefresh(){
+                try {
+                  if (changeLogRefreshInterval) {
+                    clearInterval(changeLogRefreshInterval);
+                    changeLogRefreshInterval = null;
+                    console.log('⏹️ Change Log auto-refresh stopped');
+                  }
+                } catch(e){}
+              }
+              
+              // Start/stop based on sync mode changes
+              try {
+                document.addEventListener('syncModeChanged', ()=>{
+                  try {
+                    const canRead = (window.serverSync && 
+                                    typeof window.serverSync.canReadFromServer === 'function' && 
+                                    window.serverSync.canReadFromServer());
+                    if (canRead) {
+                      startChangeLogAutoRefresh();
+                    } else {
+                      stopChangeLogAutoRefresh();
+                    }
+                  } catch(_e){}
+                });
+              } catch(_e){}
+              
+              // Initialize on load - delay to ensure serverSync is ready
+              window.hangarInitQueue = window.hangarInitQueue || [];
+              window.hangarInitQueue.push(function(){
+                setTimeout(()=>{
+                  try {
+                    const canRead = (window.serverSync && 
+                                    typeof window.serverSync.canReadFromServer === 'function' && 
+                                    window.serverSync.canReadFromServer());
+                    if (canRead) {
+                      startChangeLogAutoRefresh();
+                    }
+                  } catch(_e){}
+                }, 1500); // 1.5 second delay to ensure sync is initialized
+              });
+              
+              // Expose for debugging
+              window.changeLogAutoRefresh = {
+                start: startChangeLogAutoRefresh,
+                stop: stopChangeLogAutoRefresh,
+                isActive: ()=> changeLogRefreshInterval !== null
+              };
             })();
             </script>
 

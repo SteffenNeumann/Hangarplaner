@@ -494,7 +494,7 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 			const copyTile = (t)=>{
 				const id = parseInt(t?.tileId||0,10);
 				const out = { tileId: id };
-				const keys = ['aircraftId','arrivalTime','departureTime','hangarPosition','position','status','towStatus','notes','updatedAt','updatedBy'];
+				const keys = ['aircraftId','arrivalTime','departureTime','hangarPosition','position','status','towStatus','notes','updatedAt','updatedBy','updatedBySession'];
 				keys.forEach(k=>{
 					if (t.hasOwnProperty(k)){
 						const fid = this._fieldIdFor(id, k);
@@ -1443,49 +1443,34 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 
 					// Normalize tile positions → ensure header hangarPosition and info-grid position remain distinct
 					try {
-						if (data && Array.isArray(data.primaryTiles)) {
-							data.primaryTiles = data.primaryTiles.map((t)=>{
-								const out = { ...t };
-								// Map local collector's positionInfoGrid → position (info grid)
-								if (Object.prototype.hasOwnProperty.call(out, 'positionInfoGrid')) {
-									out.position = out.positionInfoGrid || '';
-									delete out.positionInfoGrid;
-								}
-								// Ensure hangarPosition is populated from the header field (collector used 'position' for header)
-								if (!Object.prototype.hasOwnProperty.call(out, 'hangarPosition')) {
-									const headerPos = (typeof t.hangarPosition !== 'undefined') ? (t.hangarPosition || '') : ((typeof t.position !== 'undefined') ? (t.position || '') : '');
-									out.hangarPosition = headerPos;
-								}
-								// If 'position' equals header and there is no explicit info grid value, clear it to avoid cross-population
-								try {
-									const header = (out.hangarPosition || '').trim();
-									if ((out.position || '').trim() === header && header && !Object.prototype.hasOwnProperty.call(t, 'positionInfoGrid')) {
-										out.position = '';
-									}
-								} catch(_e){}
-								return out;
-							});
-						}
-						if (data && Array.isArray(data.secondaryTiles)) {
-							data.secondaryTiles = data.secondaryTiles.map((t)=>{
-								const out = { ...t };
-								if (Object.prototype.hasOwnProperty.call(out, 'positionInfoGrid')) {
-									out.position = out.positionInfoGrid || '';
-									delete out.positionInfoGrid;
-								}
-								if (!Object.prototype.hasOwnProperty.call(out, 'hangarPosition')) {
-									const headerPos = (typeof t.hangarPosition !== 'undefined') ? (t.hangarPosition || '') : ((typeof t.position !== 'undefined') ? (t.position || '') : '');
-									out.hangarPosition = headerPos;
-								}
-								try {
-									const header = (out.hangarPosition || '').trim();
-									if ((out.position || '').trim() === header && header && !Object.prototype.hasOwnProperty.call(t, 'positionInfoGrid')) {
-										out.position = '';
-									}
-								} catch(_e){}
-								return out;
-							});
-						}
+					if (data && Array.isArray(data.primaryTiles)) {
+						data.primaryTiles = data.primaryTiles.map((t)=>{
+							const out = { ...t };
+							// Map local collector's positionInfoGrid → position (info grid)
+							if (Object.prototype.hasOwnProperty.call(out, 'positionInfoGrid')) {
+								out.position = out.positionInfoGrid || '';
+								delete out.positionInfoGrid;
+							}
+							// Ensure hangarPosition is populated if not present
+							if (!Object.prototype.hasOwnProperty.call(out, 'hangarPosition')) {
+								out.hangarPosition = out.hangarPosition || '';
+							}
+							return out;
+						});
+					}
+					if (data && Array.isArray(data.secondaryTiles)) {
+						data.secondaryTiles = data.secondaryTiles.map((t)=>{
+							const out = { ...t };
+							if (Object.prototype.hasOwnProperty.call(out, 'positionInfoGrid')) {
+								out.position = out.positionInfoGrid || '';
+								delete out.positionInfoGrid;
+							}
+							if (!Object.prototype.hasOwnProperty.call(out, 'hangarPosition')) {
+								out.hangarPosition = out.hangarPosition || '';
+							}
+							return out;
+						});
+					}
 					} catch(_e) { console.warn('tile position normalization failed', _e); }
 
 					// *** NEU: Display Options ergänzen ***
@@ -1684,6 +1669,7 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 					notes: row?.notes || '',
 					updatedAt: row?.updatedAt || undefined,
 					updatedBy: row?.updatedBy || undefined,
+					updatedBySession: row?.updatedBySession || undefined,
 				});
 				serverData = {
 					...serverData,
@@ -2020,66 +2006,92 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 				return !!(e && e.editedAt && (Date.now() - e.editedAt) < windowMs);
 			} catch(_e){ return false; }
 		};
-		const canApplyField = (fid, el) => {
+	const canApplyField = (fid, el, fromOtherSession = false) => {
+		try {
+			if (!fid) return true;
+			// For the first DOM application after startup, bypass fences/recent edit checks to ensure UI mirrors server
+			if (this._bypassFencesOnce) {
+				// Still avoid overwriting the actively focused element to prevent caret jumps
+				if (el && document.activeElement === el) return false;
+				return true;
+			}
+			// Hard lock: if field is locked from local change, do not apply server value
 			try {
-				if (!fid) return true;
-				// For the first DOM application after startup, bypass fences/recent edit checks to ensure UI mirrors server
-				if (this._bypassFencesOnce) {
-					// Still avoid overwriting the actively focused element to prevent caret jumps
-					if (el && document.activeElement === el) return false;
-					return true;
+				if (window.__fieldApplyLockUntil && window.__fieldApplyLockUntil[fid]){
+					if (Date.now() < window.__fieldApplyLockUntil[fid]) return false;
+					delete window.__fieldApplyLockUntil[fid];
 				}
-				// Hard lock: if field is locked from local change, do not apply server value
-				try {
-					if (window.__fieldApplyLockUntil && window.__fieldApplyLockUntil[fid]){
-						if (Date.now() < window.__fieldApplyLockUntil[fid]) return false;
-						delete window.__fieldApplyLockUntil[fid];
-					}
-				} catch(_e){}
-				// Skip when user is actively editing this element (only in editable modes)
-				if (el && document.activeElement === el) {
-					const isReadOnly = !!(document.body && document.body.classList.contains('read-only')) || !!(window.sharingManager && window.sharingManager.syncMode === 'sync');
-					if (!isReadOnly && !el.disabled) return false;
-				}
-				// Skip when a write fence is active for this field
+			} catch(_e){}
+			// Skip when user is actively editing this element (only in editable modes)
+			if (el && document.activeElement === el) {
+				const isReadOnly = !!(document.body && document.body.classList.contains('read-only')) || !!(window.sharingManager && window.sharingManager.syncMode === 'sync');
+				if (!isReadOnly && !el.disabled) return false;
+			}
+			// DUAL MASTER FIX: For aircraft ID fields, skip write fence check if the update is from another Master
+			// This prevents flip-backs when both Masters are editing different aircraft IDs
+			const isAircraftField = /^aircraft-\d+$/.test(fid);
+			const isDualMasterUpdate = isAircraftField && fromOtherSession && this._isMasterMode && this._isMasterMode();
+			if (!isDualMasterUpdate) {
+				// Skip when a write fence is active for this field (except for aircraft ID from other Master)
 				if (typeof this._isWriteFenceActive === 'function' && this._isWriteFenceActive(fid)) return false;
 				// Skip when the user very recently edited this specific field
 				if (recentlyEdited(fid)) return false;
-				// Do not block read applies based on remote locks; local hard-locks and fences already protect user edits
-				return true;
-			} catch(_e){ return true; }
-		};
+			}
+			// Do not block read applies based on remote locks; local hard-locks and fences already protect user edits
+			return true;
+		} catch(_e){ return true; }
+	};
 
 		let successfullyApplied = 0;
 		let failedToApply = 0;
 
-		tiles.forEach((tileData, index) => {
-			const tileId = tileData.tileId || (isSecondary ? 101 + index : 1 + index);
-			console.log(`🔄 Verarbeite Kachel ${tileId}:`, tileData);
+	tiles.forEach((tileData, index) => {
+		const tileId = tileData.tileId || (isSecondary ? 101 + index : 1 + index);
+		console.log(`🔄 Verarbeite Kachel ${tileId}:`, tileData);
 
-			// Aircraft ID — do not overwrite a non-empty user value with empty server data
-			if (Object.prototype.hasOwnProperty.call(tileData, 'aircraftId')) {
-				const aircraftInput = document.getElementById(`aircraft-${tileId}`);
-				if (aircraftInput) {
-					const incomingRaw = (typeof tileData.aircraftId === 'string') ? tileData.aircraftId : '';
-					const incoming = incomingRaw.trim();
-					const current = (aircraftInput.value || '').trim();
-					const oldValue = aircraftInput.value;
-					const fid = `aircraft-${tileId}`;
-					if (!canApplyField(fid, aircraftInput)) { /* skip overwrite while actively edited */ }
-					else if (incoming.length > 0) {
+		// Determine if update is from another session (used by all field handlers below)
+		const fromOtherSession = !!(tileData.updatedBySession) &&
+			(typeof this.getSessionId === 'function') &&
+			(tileData.updatedBySession !== this.getSessionId());
+
+		// Aircraft ID — allow authoritative clears from server (from other session) unless guarded
+		if (Object.prototype.hasOwnProperty.call(tileData, 'aircraftId')) {
+			const aircraftInput = document.getElementById(`aircraft-${tileId}`);
+			if (aircraftInput) {
+				const incomingRaw = (typeof tileData.aircraftId === 'string') ? tileData.aircraftId : '';
+				const incoming = incomingRaw.trim();
+				const current = (aircraftInput.value || '').trim();
+				const fid = `aircraft-${tileId}`;
+
+					// DUAL MASTER FIX: Pass fromOtherSession flag to canApplyField
+					if (!canApplyField(fid, aircraftInput, fromOtherSession)) {
+						// skip while locally editing/fenced (but not if update from other Master)
+					} else if (incoming.length > 0) {
 						if (!(document.activeElement === aircraftInput && current === incoming)) {
 							aircraftInput.value = incoming;
 						}
-						console.log(`✈️ Aircraft ID gesetzt: ${tileId} = ${current} → ${incoming}`);
+						// Persist locally and notify listeners
+						try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, incoming, { source:'server', flushDelayMs:0 }); } catch(_e){}
+						try { aircraftInput.dispatchEvent(new Event('input', { bubbles:true })); aircraftInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
+						console.log(`✈️ Aircraft ID gesetzt: ${tileId} = ${current} → ${incoming}${fromOtherSession ? ' (von anderem Master)' : ''}`);
+						// DUAL MASTER FIX: Clear local write fence for this field if applied from another Master
+						if (fromOtherSession && this._pendingWrites && this._pendingWrites[fid]) {
+							delete this._pendingWrites[fid];
+							console.log(`🧹 Cleared local write fence for ${fid} (accepted other Master's update)`);
+						}
 						successfullyApplied++;
 					} else {
-						// Server provided empty/blank aircraftId: keep user value if present
-						if (current.length === 0) {
+						// incoming is empty → clear if from other session or local field already empty
+						if (fromOtherSession || current.length === 0) {
 							aircraftInput.value = '';
-							console.log(`✈️ Aircraft ID geleert (leer und kein vorhandener Wert): ${tileId}`);
-						} else {
-							console.log(`⏭️ Leere Server-AIRCRAFT_ID ignoriert – behalte Nutzerwert: ${tileId} = ${current}`);
+							try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, '', { source:'server', flushDelayMs:0 }); } catch(_e){}
+							try { aircraftInput.dispatchEvent(new Event('input', { bubbles:true })); aircraftInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
+							console.log(`✈️ Aircraft ID geleert (autoritativer Server-Clear): ${tileId}`);
+							// DUAL MASTER FIX: Clear local write fence when clearing from another Master
+							if (fromOtherSession && this._pendingWrites && this._pendingWrites[fid]) {
+								delete this._pendingWrites[fid];
+							}
+							successfullyApplied++;
 						}
 					}
 				} else {
@@ -2092,13 +2104,20 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 			if (Object.prototype.hasOwnProperty.call(tileData, 'hangarPosition')) {
 				const hangarPosInput = document.getElementById(`hangar-position-${tileId}`);
 				if (hangarPosInput) {
-					const newVal = tileData.hangarPosition || '';
-					const oldValue = hangarPosInput.value;
+					const incomingRaw = (typeof tileData.hangarPosition === 'string') ? tileData.hangarPosition : '';
+					const newVal = incomingRaw.trim();
+					const oldValue = (hangarPosInput.value || '').trim();
 					const fid = `hangar-position-${tileId}`;
-					if (canApplyField(fid, hangarPosInput)){
+					
+					if (!canApplyField(fid, hangarPosInput)) {
+						// skip while locally editing/fenced
+					} else if (newVal.length > 0 || fromOtherSession || oldValue.length === 0) {
+						// Apply if: non-empty incoming, OR authoritative clear from other session, OR local already empty
 						if (!(document.activeElement === hangarPosInput && oldValue === newVal)) {
 							hangarPosInput.value = newVal;
 						}
+						try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, newVal, { source:'server', flushDelayMs:0 }); } catch(_e){}
+						try { hangarPosInput.dispatchEvent(new Event('input', { bubbles:true })); hangarPosInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
 						console.log(`📍 Hangar Position gesetzt: ${tileId} = ${oldValue} → ${newVal}`);
 						successfullyApplied++;
 					}
@@ -2112,13 +2131,20 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 			if (Object.prototype.hasOwnProperty.call(tileData, 'position')) {
 				const posInfoInput = document.getElementById(`position-${tileId}`);
 				if (posInfoInput) {
-					const newVal = tileData.position || '';
-					const oldValue = posInfoInput.value;
+					const incomingRaw = (typeof tileData.position === 'string') ? tileData.position : '';
+					const newVal = incomingRaw.trim();
+					const oldValue = (posInfoInput.value || '').trim();
 					const fid = `position-${tileId}`;
-					if (canApplyField(fid, posInfoInput)){
+					
+					if (!canApplyField(fid, posInfoInput)) {
+						// skip while locally editing/fenced
+					} else if (newVal.length > 0 || fromOtherSession || oldValue.length === 0) {
+						// Apply if: non-empty incoming, OR authoritative clear from other session, OR local already empty
 						if (!(document.activeElement === posInfoInput && oldValue === newVal)) {
 							posInfoInput.value = newVal;
 						}
+						try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, newVal, { source:'server', flushDelayMs:0 }); } catch(_e){}
+						try { posInfoInput.dispatchEvent(new Event('input', { bubbles:true })); posInfoInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
 						console.log(`📍 Pos (info) gesetzt: ${tileId} = ${oldValue} → ${newVal}`);
 						successfullyApplied++;
 					}
@@ -2128,28 +2154,44 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 				}
 			}
 
-			// Notes (apply even when empty string if key present)
+			// Notes (apply even when empty string if key present, including authoritative clears)
 			if (Object.prototype.hasOwnProperty.call(tileData, 'notes')) {
 				const notesInput = document.getElementById(`notes-${tileId}`);
 				if (notesInput) {
-					const newVal = tileData.notes || '';
+					const incomingRaw = (typeof tileData.notes === 'string') ? tileData.notes : '';
+					const newVal = incomingRaw.trim();
+					const oldValue = (notesInput.value || '').trim();
 					const fid = `notes-${tileId}`;
-					if (canApplyField(fid, notesInput)){
+					
+					if (!canApplyField(fid, notesInput)) {
+						// skip while locally editing/fenced
+					} else if (newVal.length > 0 || fromOtherSession || oldValue.length === 0) {
+						// Apply if: non-empty incoming, OR authoritative clear from other session, OR local already empty
 						if (!(document.activeElement === notesInput && notesInput.value === newVal)) {
 							notesInput.value = newVal;
 						}
-						console.log(`📝 Notizen gesetzt: ${tileId} = ${newVal}`);
+						try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, newVal, { source:'server', flushDelayMs:0 }); } catch(_e){}
+						try { notesInput.dispatchEvent(new Event('input', { bubbles:true })); notesInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
+						console.log(`📝 Notizen gesetzt: ${tileId} = ${newVal || '(geleert)'}`);
+						successfullyApplied++;
 					}
 				}
 			}
 
-			// Arrival Time (apply even when empty string)
+			// Arrival Time (apply even when empty string, including authoritative clears)
 			if (Object.prototype.hasOwnProperty.call(tileData, 'arrivalTime')) {
 				const arrivalInput = document.getElementById(`arrival-time-${tileId}`);
 				if (arrivalInput) {
 					const fid = `arrival-time-${tileId}`;
-					if (canApplyField(fid, arrivalInput)){
-						let toSet = tileData.arrivalTime || '';
+					const oldValue = (arrivalInput.value || '').trim();
+					const incomingRaw = (typeof tileData.arrivalTime === 'string') ? tileData.arrivalTime : '';
+					
+					// Check if we can apply (respects fences/typing) or if it's authoritative clear
+					if (!canApplyField(fid, arrivalInput) && incomingRaw.trim() === '' && !fromOtherSession) {
+						// Skip: locally fenced/editing AND incoming is empty AND not from other session
+					} else if (canApplyField(fid, arrivalInput) || (incomingRaw.trim() === '' && fromOtherSession)) {
+						// Apply if: can normally apply OR it's an authoritative clear from other session
+						let toSet = incomingRaw;
 						// Convert ISO format to compact display format for all input types
 					if (toSet && window.helpers) {
 						const h = window.helpers;
@@ -2158,12 +2200,16 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 							toSet = h.formatISOToCompactUTC ? h.formatISOToCompactUTC(toSet) : toSet;
 							// Store original ISO in dataset for later use
 							if (arrivalInput.dataset) arrivalInput.dataset.iso = tileData.arrivalTime;
+							try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, (arrivalInput.dataset?.iso||toSet||''), { source:'server', flushDelayMs:0 }); } catch(_e){}
+							try { arrivalInput.dispatchEvent(new Event('input', { bubbles:true })); arrivalInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
 						} else if (h.isHHmm && h.isHHmm(toSet) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
 							const bases = h.getBaseDates();
 							const isoTime = h.coerceHHmmToDateTimeLocalUtc(toSet, bases.arrivalBase || '');
 							if (isoTime && h.formatISOToCompactUTC) {
 								toSet = h.formatISOToCompactUTC(isoTime);
-								if (arrivalInput.dataset) arrivalInput.dataset.iso = isoTime;
+								if (arrivalInput.dataset) arrivalInput.dataset.iso = iso;
+								try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, iso, { source:'server', flushDelayMs:0 }); } catch(_e){}
+								try { arrivalInput.dispatchEvent(new Event('input', { bubbles:true })); arrivalInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
 							}
 						} else if (h.isCompactDateTime && h.isCompactDateTime(toSet)) {
 							// Already in compact format, store corresponding ISO
@@ -2175,18 +2221,28 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 					}
 						arrivalInput.value = toSet || '';
 						try { if (!toSet && arrivalInput.dataset) delete arrivalInput.dataset.iso; } catch(_e){}
-						console.log(`🛬 Ankunftszeit gesetzt: ${tileId} = ${toSet || ''}`);
+						try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, (arrivalInput.dataset?.iso||''), { source:'server', flushDelayMs:0 }); } catch(_e){}
+						try { arrivalInput.dispatchEvent(new Event('input', { bubbles:true })); arrivalInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
+						console.log(`🛬 Ankunftszeit gesetzt: ${tileId} = ${oldValue} → ${toSet || '(geleert)'}`);
+						successfullyApplied++;
 					}
 				}
 			}
 
-			// Departure Time (apply even when empty string)
+			// Departure Time (apply even when empty string, including authoritative clears)
 			if (Object.prototype.hasOwnProperty.call(tileData, 'departureTime')) {
 				const departureInput = document.getElementById(`departure-time-${tileId}`);
 				if (departureInput) {
 					const fid = `departure-time-${tileId}`;
-					if (canApplyField(fid, departureInput)){
-						let toSet = tileData.departureTime || '';
+					const oldValue = (departureInput.value || '').trim();
+					const incomingRaw = (typeof tileData.departureTime === 'string') ? tileData.departureTime : '';
+					
+					// Check if we can apply (respects fences/typing) or if it's authoritative clear
+					if (!canApplyField(fid, departureInput) && incomingRaw.trim() === '' && !fromOtherSession) {
+						// Skip: locally fenced/editing AND incoming is empty AND not from other session
+					} else if (canApplyField(fid, departureInput) || (incomingRaw.trim() === '' && fromOtherSession)) {
+						// Apply if: can normally apply OR it's an authoritative clear from other session
+						let toSet = incomingRaw;
 						// Convert ISO format to compact display format for all input types
 					if (toSet && window.helpers) {
 						const h = window.helpers;
@@ -2195,12 +2251,16 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 							toSet = h.formatISOToCompactUTC ? h.formatISOToCompactUTC(toSet) : toSet;
 							// Store original ISO in dataset for later use
 							if (departureInput.dataset) departureInput.dataset.iso = tileData.departureTime;
+							try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, (departureInput.dataset?.iso||toSet||''), { source:'server', flushDelayMs:0 }); } catch(_e){}
+							try { departureInput.dispatchEvent(new Event('input', { bubbles:true })); departureInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
 						} else if (h.isHHmm && h.isHHmm(toSet) && h.getBaseDates && h.coerceHHmmToDateTimeLocalUtc) {
 							const bases = h.getBaseDates();
 							const isoTime = h.coerceHHmmToDateTimeLocalUtc(toSet, bases.departureBase || '');
 							if (isoTime && h.formatISOToCompactUTC) {
 								toSet = h.formatISOToCompactUTC(isoTime);
-								if (departureInput.dataset) departureInput.dataset.iso = isoTime;
+								if (departureInput.dataset) departureInput.dataset.iso = iso;
+								try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, iso, { source:'server', flushDelayMs:0 }); } catch(_e){}
+								try { departureInput.dispatchEvent(new Event('input', { bubbles:true })); departureInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
 							}
 						} else if (h.isCompactDateTime && h.isCompactDateTime(toSet)) {
 							// Already in compact format, store corresponding ISO
@@ -2212,33 +2272,43 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 					}
 						departureInput.value = toSet || '';
 						try { if (!toSet && departureInput.dataset) delete departureInput.dataset.iso; } catch(_e){}
-						console.log(`🛫 Abflugzeit gesetzt: ${tileId} = ${toSet || ''}`);
+						try { if (window.hangarEventManager && typeof window.hangarEventManager.updateFieldInStorage==='function') window.hangarEventManager.updateFieldInStorage(fid, (departureInput.dataset?.iso||''), { source:'server', flushDelayMs:0 }); } catch(_e){}
+						try { departureInput.dispatchEvent(new Event('input', { bubbles:true })); departureInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){}
+						console.log(`🛫 Abflugzeit gesetzt: ${tileId} = ${oldValue} → ${toSet || '(geleert)'}`);
+						successfullyApplied++;
 					}
 				}
 			}
 
-			// Status (apply on key presence)
-			if (Object.prototype.hasOwnProperty.call(tileData, 'status')) {
-				const statusSelect = document.getElementById(`status-${tileId}`);
-				if (statusSelect) {
-					const fid = `status-${tileId}`;
-					if (canApplyField(fid, statusSelect)){
-						statusSelect.value = tileData.status || 'neutral';
-						console.log(`🚦 Status gesetzt: ${tileId} = ${tileData.status || 'neutral'}`);
-					}
+		// Status (apply on key presence, but only if value is not empty or from other session)
+		if (Object.prototype.hasOwnProperty.call(tileData, 'status')) {
+			const statusSelect = document.getElementById(`status-${tileId}`);
+			if (statusSelect) {
+				const fid = `status-${tileId}`;
+				const incomingStatus = tileData.status || 'neutral';
+				const currentStatus = statusSelect.value || 'neutral';
+				// Only apply if: can apply AND (has non-neutral value OR is from other session OR current is neutral)
+				if (canApplyField(fid, statusSelect) && (incomingStatus !== 'neutral' || fromOtherSession || currentStatus === 'neutral')){
+					statusSelect.value = incomingStatus;
+					console.log(`🚦 Status gesetzt: ${tileId} = ${currentStatus} → ${incomingStatus}`);
+					successfullyApplied++;
 				}
 			}
+		}
 
-			// Tow Status (apply on key presence)
-			if (Object.prototype.hasOwnProperty.call(tileData, 'towStatus')) {
-				const towStatusSelect = document.getElementById(`tow-status-${tileId}`);
-				if (towStatusSelect) {
-					const oldValue = towStatusSelect.value;
-					const fid = `tow-status-${tileId}`;
-					if (canApplyField(fid, towStatusSelect)){
-						towStatusSelect.value = tileData.towStatus || 'neutral';
-						console.log(`🚚 Tow Status gesetzt: ${tileId} = ${oldValue} → ${towStatusSelect.value}`);
-						try {
+		// Tow Status (apply on key presence, but only if value is not empty or from other session)
+		if (Object.prototype.hasOwnProperty.call(tileData, 'towStatus')) {
+			const towStatusSelect = document.getElementById(`tow-status-${tileId}`);
+			if (towStatusSelect) {
+				const oldValue = towStatusSelect.value || 'neutral';
+				const fid = `tow-status-${tileId}`;
+				const incomingTowStatus = tileData.towStatus || 'neutral';
+				// Only apply if: can apply AND (has non-neutral value OR is from other session OR current is neutral)
+				if (canApplyField(fid, towStatusSelect) && (incomingTowStatus !== 'neutral' || fromOtherSession || oldValue === 'neutral')){
+					towStatusSelect.value = incomingTowStatus;
+					console.log(`🚚 Tow Status gesetzt: ${tileId} = ${oldValue} → ${incomingTowStatus}`);
+					successfullyApplied++;
+					try {
 						if (typeof window.updateTowStatusStyles === 'function') {
 							window.updateTowStatusStyles(towStatusSelect);
 						} else if (typeof updateTowStatusStyles === 'function') {
@@ -2255,10 +2325,9 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 					} catch(e) {
 						console.warn('⚠️ Tow-Status Styling-Aktualisierung fehlgeschlagen:', e);
 					}
-					successfullyApplied++;
-						}
-					}
-				} else {
+				}
+			}
+		} else {
 					console.warn(`❌ Tow Status Select nicht gefunden: tow-status-${tileId}`);
 					failedToApply++;
 				}

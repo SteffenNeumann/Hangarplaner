@@ -195,7 +195,9 @@ var self=this; this._writeTimer = setInterval(function(){ try{
         var active = (document && document.activeElement && document.activeElement.id) ? document.activeElement.id : '';
         var typing = (now - (this._lastKeyAt||0)) < this._typingWinMs;
         var looksRelevant = function(id){ return /^(aircraft|hangar-position|position|arrival-time|departure-time|status|tow-status|notes)-(\d+)$/.test(id||''); };
-        function setField(id, val){
+        // Get current session ID for comparison
+        var mySessionId = (typeof legacy.getSessionId === 'function') ? legacy.getSessionId() : '';
+        function setField(id, val, updatedBySession){
           try {
             var el = document.getElementById(id); if (!el) return false;
             if (looksRelevant(id)){
@@ -204,9 +206,11 @@ var self=this; this._writeTimer = setInterval(function(){ try{
               // Skip if locked by others
               var lk = (legacy._remoteLocks || {})[id]; if (lk && (lk.until||0)>now) return false;
             }
-            // Do not overwrite non-empty local value with empty incoming
+            // Allow authoritative clears from other sessions to overwrite non-empty local values
             var cur = ('value' in el) ? (el.value||'').trim() : (el.textContent||'').trim();
-            if ((val==null || String(val).trim()==='') && cur) return false;
+            var fromOtherSession = !!(updatedBySession && mySessionId && updatedBySession !== mySessionId);
+            // Do not overwrite non-empty local value with empty incoming UNLESS it's from another session (authoritative clear)
+            if ((val==null || String(val).trim()==='') && cur && !fromOtherSession) return false;
             if ('value' in el) {
               el.value = String(val||'');
               // Styling hook for selects
@@ -238,14 +242,15 @@ var self=this; this._writeTimer = setInterval(function(){ try{
         var applied = 0;
         var applyTile = function(t){
           var id = parseInt(t && t.tileId,10)||0; if (!id) return;
-          if (t.aircraftId!=null) applied += setField('aircraft-'+id, t.aircraftId)?1:0;
-          if (t.hangarPosition!=null) applied += setField('hangar-position-'+id, t.hangarPosition)?1:0;
-          if (t.position!=null) applied += setField('position-'+id, t.position)?1:0;
-          if (t.arrivalTime!=null) applied += setField('arrival-time-'+id, t.arrivalTime)?1:0;
-          if (t.departureTime!=null) applied += setField('departure-time-'+id, t.departureTime)?1:0;
-          if (t.status!=null) applied += setField('status-'+id, t.status)?1:0;
-          if (t.towStatus!=null) applied += setField('tow-status-'+id, t.towStatus)?1:0;
-          if (t.notes!=null) applied += setField('notes-'+id, t.notes)?1:0;
+          var updatedBy = (t && t.updatedBySession) ? t.updatedBySession : '';
+          if (t.aircraftId!=null) applied += setField('aircraft-'+id, t.aircraftId, updatedBy)?1:0;
+          if (t.hangarPosition!=null) applied += setField('hangar-position-'+id, t.hangarPosition, updatedBy)?1:0;
+          if (t.position!=null) applied += setField('position-'+id, t.position, updatedBy)?1:0;
+          if (t.arrivalTime!=null) applied += setField('arrival-time-'+id, t.arrivalTime, updatedBy)?1:0;
+          if (t.departureTime!=null) applied += setField('departure-time-'+id, t.departureTime, updatedBy)?1:0;
+          if (t.status!=null) applied += setField('status-'+id, t.status, updatedBy)?1:0;
+          if (t.towStatus!=null) applied += setField('tow-status-'+id, t.towStatus, updatedBy)?1:0;
+          if (t.notes!=null) applied += setField('notes-'+id, t.notes, updatedBy)?1:0;
         };
         var a = Array.isArray(data.primaryTiles)?data.primaryTiles:[]; for (var i=0;i<a.length;i++) applyTile(a[i]);
         var b = Array.isArray(data.secondaryTiles)?data.secondaryTiles:[]; for (var j=0;j<b.length;j++) applyTile(b[j]);

@@ -190,11 +190,17 @@ const uiSettings = {
 
 				const cellId = startIndex + index;
 
-				// Position sammeln
-				const positionInput = document.getElementById(
-					`hangar-position-${cellId}`
-				);
-				const position = positionInput ? positionInput.value : "";
+			// Hangar Position sammeln (header field hangar-position-#)
+			const hangarPositionInput = document.getElementById(
+				`hangar-position-${cellId}`
+			);
+			const hangarPosition = hangarPositionInput ? hangarPositionInput.value : "";
+
+			// Route/Arrival Position sammeln (info grid position-#)
+			const routePositionInput = document.getElementById(
+				`position-${cellId}`
+			);
+			const routePosition = routePositionInput ? routePositionInput.value : "";
 
 				// Aircraft ID sammeln
 				const aircraftInput = document.getElementById(`aircraft-${cellId}`);
@@ -229,32 +235,29 @@ const uiSettings = {
 				const notesTextarea = document.getElementById(`notes-${cellId}`);
 				const notes = notesTextarea ? notesTextarea.value : "";
 
-				// Nur hinzufügen wenn mindestens ein Wert vorhanden ist
-				if (
-					position ||
-					aircraftId ||
-					manualInputValue ||
-					arrivalTime ||
-					departureTime ||
-					notes ||
-					status !== "ready"
-				) {
-					tileValues.push({
-						cellId: cellId,
-						// Keep legacy 'position' field for backward-compatibility (represents header hangar position)
-						position: hangarPosition,
-						// Also store explicit hangarPosition field for clarity going forward
-						hangarPosition: hangarPosition,
-						// Store separate info-grid route position explicitly
-						routePosition: position,
-						aircraftId: aircraftId,
-						manualInput: manualInputValue,
-						arrivalTime: arrivalTime,
-						departureTime: departureTime,
-						status: status,
-						notes: notes,
-					});
-				}
+			// Nur hinzufügen wenn mindestens ein Wert vorhanden ist
+			if (
+				hangarPosition ||
+				routePosition ||
+				aircraftId ||
+				manualInputValue ||
+				arrivalTime ||
+				departureTime ||
+				notes ||
+				status !== "ready"
+			) {
+				tileValues.push({
+					cellId: cellId,
+					hangarPosition: hangarPosition,
+					position: routePosition, // Info grid route/arrival position
+					aircraftId: aircraftId,
+					manualInput: manualInputValue,
+					arrivalTime: arrivalTime,
+					departureTime: departureTime,
+					status: status,
+					notes: notes,
+				});
+			}
 			});
 		} catch (error) {
 			console.error(
@@ -424,13 +427,21 @@ const uiSettings = {
 			const cellId = tileValue.cellId;
 			// console.log(`Anwenden von Werten für Kachel ${cellId}:`, tileValue);
 
-			// Position setzen
-			const positionInput = document.getElementById(
-				`hangar-position-${cellId}`
-			);
-			if (positionInput && tileValue.position) {
-				positionInput.value = tileValue.position;
-			}
+		// Hangar Position setzen (header field)
+		const hangarPositionInput = document.getElementById(
+			`hangar-position-${cellId}`
+		);
+		if (hangarPositionInput && tileValue.hangarPosition) {
+			hangarPositionInput.value = tileValue.hangarPosition;
+		}
+
+		// Route/Arrival Position setzen (info grid field)
+		const routePositionInput = document.getElementById(
+			`position-${cellId}`
+		);
+		if (routePositionInput && tileValue.position) {
+			routePositionInput.value = tileValue.position;
+		}
 
 			// Aircraft ID setzen
 			const aircraftInput = document.getElementById(`aircraft-${cellId}`);
@@ -1022,16 +1033,17 @@ function collectTileData(cellId) {
 			departureTime = window.helpers.canonicalizeDateTimeFieldValue(`departure-time-${cellId}`, departureTime) || '';
 		}
 
-		const tileData = {
-			tileId: cellId,
-			aircraftId: aircraftId,
-			position: position,
-			manualInput: manualInput,
-			notes: notes,
-			status: status,
-			arrivalTime: arrivalTime,
-			departureTime: departureTime,
-		};
+	const tileData = {
+		tileId: cellId,
+		aircraftId: aircraftId,
+		hangarPosition: hangarPosition, // Header hangar position
+		position: position, // Info grid route position
+		manualInput: manualInput,
+		notes: notes,
+		status: status,
+		arrivalTime: arrivalTime,
+		departureTime: departureTime,
+	};
 
 		// console.log(`✅ Daten für Kachel ${cellId} gesammelt:`, tileData);
 		return tileData;

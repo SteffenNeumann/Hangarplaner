@@ -399,6 +399,19 @@ html, body, button, input, select, textarea {
 	gap: 1rem !important;
 	width: 100% !important;
 	grid-template-columns: repeat(6, minmax(240px, 1fr)) !important;
+	grid-auto-flow: dense; /* Allow tiles to fill gaps */
+}
+
+/* Staggered brick layout: offset columns 2 and 5 down by half tile height */
+#hangarGrid .hangar-cell:nth-child(6n+2),
+#hangarGrid .hangar-cell:nth-child(6n+5) {
+	margin-top: 50%;
+}
+
+/* Hide second row tiles in columns 2 and 5 (tiles 8 and 11) */
+#hangarGrid .hangar-cell:nth-child(8),
+#hangarGrid .hangar-cell:nth-child(11) {
+	display: none !important;
 }
 
 #secondaryHangarGrid {

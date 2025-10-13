@@ -103,7 +103,7 @@ window.displayOptions = {
 	defaults: {
 		tilesCount: 8,
 		secondaryTilesCount: 4, // KORRIGIERT: Startwert 4 statt 0
-		layout: 4,
+		layout: 6,
 		darkMode: false,
 		viewMode: false, // false = Kachel, true = Tabelle
 		zoomLevel: 100,
@@ -1218,7 +1218,7 @@ onDarkModeChange() {
 			
 			#hangarGrid, #secondaryHangarGrid {
 				display: grid;
-				grid-template-columns: repeat(4, 1fr);
+				grid-template-columns: repeat(6, 1fr);
 				gap: 16px;
 				padding: 16px;
 			}

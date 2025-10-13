@@ -567,12 +567,14 @@
 						<div class="sidebar-form-row">
 							<label for="layoutType">Layout</label>
 							<div class="input-container">
-								<select id="layoutType" class="sidebar-form-select">
-									<option value="1">1 Column</option>
-									<option value="2">2 Columns</option>
-									<option value="3">3 Columns</option>
-									<option value="4" selected>4 Columns</option>
-								</select>
+							<select id="layoutType" class="sidebar-form-select">
+								<option value="1">1 Column</option>
+								<option value="2">2 Columns</option>
+								<option value="3">3 Columns</option>
+								<option value="4">4 Columns</option>
+								<option value="5">5 Columns</option>
+								<option value="6" selected>6 Columns</option>
+							</select>
 							</div>
 						</div>
 					</div>
@@ -2028,7 +2030,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
 <!-- Abschnitt 1 Container -->
 					<div class="section-container planner-main">
-						<div id="hangarGrid" class="grid grid-cols-4 gap-4">
+					<div id="hangarGrid" class="grid grid-cols-6 gap-4">
 							<!-- 8 Hangar-Kacheln hier -->
 							<!-- Kachel 1 - NEU GESTALTET -->
 							<div
@@ -3186,7 +3188,7 @@ type="datetime-local"
 
 					<!-- Abschnitt 2 Container -->
 					<div id="outerSectionContainer" class="section-container">
-						<div id="secondaryHangarGrid" class="grid grid-cols-4 gap-4">
+					<div id="secondaryHangarGrid" class="grid grid-cols-6 gap-4">
 							<!-- Hier werden dynamisch weitere Kacheln eingefügt -->
 						</div>
 					</div>
@@ -5696,11 +5698,11 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
                     if (!secGrid) return;
                     const current = secGrid.querySelectorAll('.hangar-cell').length;
                     if (typeof window.updateSecondaryTiles === 'function'){
-                        window.updateSecondaryTiles(count, layout || 4);
+                        window.updateSecondaryTiles(count, layout || 6);
                         return;
                     }
                     if (window.hangarUI && typeof window.hangarUI.updateSecondaryTiles === 'function'){
-                        window.hangarUI.updateSecondaryTiles(count, layout || 4);
+                        window.hangarUI.updateSecondaryTiles(count, layout || 6);
                         return;
                     }
                     // Manual minimal clone fallback
@@ -5872,7 +5874,7 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
                     if (secTilesInput && !secTilesInput.__wired){
                         secTilesInput.addEventListener('change', function(){
                             const v = parseInt(this.value) || 4;
-                            ensureSecondaryTiles(v, parseInt(document.getElementById('layoutType')?.value||'4'));
+                            ensureSecondaryTiles(v, parseInt(document.getElementById('layoutType')?.value||'6'));
                         });
                         secTilesInput.__wired = true;
                     }
@@ -5880,7 +5882,7 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
                     const layoutSelect = document.getElementById('layoutType');
                     if (layoutSelect && !layoutSelect.__wired){
                         layoutSelect.addEventListener('change', function(){
-                            const v = parseInt(this.value) || 4;
+                            const v = parseInt(this.value) || 6;
                             applyLayoutColumns(v);
                             // reflow secondary grid to match layout
                             const secCnt = parseInt(document.getElementById('secondaryTilesCount')?.value||'4');
@@ -5892,11 +5894,11 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 
                 function fallbackInit(){
                     const persisted = getPersistedDisplay();
-                    let primary = 8, secondary = 4, layout = 4, tableView = false;
+                    let primary = 8, secondary = 4, layout = 6, tableView = false;
                     if (persisted){
                         primary = parseInt(persisted.tilesCount) || 8;
                         secondary = parseInt(persisted.secondaryTilesCount) || 4;
-                        layout = parseInt(persisted.layout) || 4;
+                        layout = parseInt(persisted.layout) || 6;
                         tableView = !!persisted.viewMode;
                     }
                     const tilesInput = document.getElementById('tilesCount');

@@ -3,7 +3,7 @@ const uiSettings = {
 	// und in data.json gespeichert statt localStorage
 	tilesCount: 8,
 	secondaryTilesCount: 4,
-	layout: 4,
+	layout: 6,
 	darkMode: false,
 	zoomLevel: 100,
 	tableView: false, // Neue Einstellung für die Tabellenansicht
@@ -26,8 +26,8 @@ const uiSettings = {
 			// Aus localStorage laden
 			const savedSettingsJSON = localStorage.getItem("hangarPlannerSettings");
 			if (savedSettingsJSON) {
-				const settings = JSON.parse(savedSettingsJSON);
-				this.layout = settings.layout || 4;
+			const settings = JSON.parse(savedSettingsJSON);
+			this.layout = settings.layout || 6;
 				this.darkMode = settings.darkMode || false;
 				this.zoomLevel = settings.zoomLevel || 100;
 				this.tableView = settings.tableView || false; // Neue Eigenschaft laden
@@ -78,7 +78,7 @@ const uiSettings = {
 			}
 			if (checkElement("layoutType")) {
 				this.layout =
-					parseInt(document.getElementById("layoutType").value) || 4;
+					parseInt(document.getElementById("layoutType").value) || 6;
 			}
 			if (checkElement("darkModeToggle")) {
 				this.darkMode = document.getElementById("darkModeToggle").checked;
@@ -578,7 +578,7 @@ function updateSecondaryTiles(count, layout, preserveData = true) {
 	if (layout) {
 		secondaryGrid.className = `grid grid-cols-${layout} gap-4`;
 		// Fix column width to a constant tile size
-		secondaryGrid.style.gridTemplateColumns = `repeat(${layout}, var(--board-tile-size))`;
+		secondaryGrid.style.gridTemplateColumns = `repeat(${layout}, minmax(240px, 1fr))`;
 	}
 
 	// Sichtbarkeit der sekundären Sektion

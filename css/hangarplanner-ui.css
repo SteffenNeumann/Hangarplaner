@@ -1967,7 +1967,7 @@ input:checked + .toggle-slider:before {
 	top: -10px;
 	left: 50%;
 	transform: translateX(-50%);
-	background-color: transparent;
+	background-color: #ffffff;
 	padding: 0 12px;
 	font-size: 12px;
 	font-weight: 500;
@@ -3301,7 +3301,7 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 }
 
 .dark-mode .section-divider::after {
-	background-color: transparent;
+	background-color: var(--bg-primary);
 	color: var(--text-secondary);
 }
 

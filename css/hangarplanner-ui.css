@@ -410,7 +410,7 @@ html, body, button, input, select, textarea {
 
 /* Reduce gap for second row (tiles 7-12) to be slightly larger than standard grid gap */
 #hangarGrid .hangar-cell:nth-child(n+7):nth-child(-n+12) {
-	margin-top: calc(-25% + 1.5rem);
+	margin-top: calc(-25%);
 }
 
 /* Reset margin for offsetted columns in second row to maintain their offset */

@@ -1799,21 +1799,21 @@ html:not(.dark-mode) .status-selector:focus { outline: none; border-color: #94a3
 .notes-textarea,
 textarea.notes-textarea {
 	resize: none !important;
-	height: 22px !important;
-	min-height: 22px !important;
-	max-height: 22px !important;
+	height: 44px !important;
+	min-height: 44px !important;
+	max-height: 44px !important;
 	border: 1px solid transparent;
 	border-radius: 3px;
 	padding: 2px 0 !important; /* remove left/right padding so text aligns flush-left */
 	margin-left: 0 !important;
 	font-size: 0.8rem;
 	color: var(--text-dark);
-	overflow-y: hidden !important;
-	white-space: nowrap !important;
-	text-overflow: ellipsis !important;
+	overflow-y: auto !important;
+	white-space: normal !important;
+	text-overflow: clip !important;
 	line-height: 18px !important;
-	display: flex !important;
-	align-items: center !important;
+	display: block !important;
+	align-items: flex-start !important;
 	text-indent: 0;
 }
 

@@ -101,7 +101,7 @@ if (!window.collectAllHangarData) {
 window.displayOptions = {
 	// Standardwerte
 	defaults: {
-		tilesCount: 8,
+		tilesCount: 12,
 		secondaryTilesCount: 4, // KORRIGIERT: Startwert 4 statt 0
 		layout: 6,
 		darkMode: false,

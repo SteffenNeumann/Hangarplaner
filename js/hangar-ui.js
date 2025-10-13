@@ -1,7 +1,7 @@
 const uiSettings = {
 	// DEPRECATED: Diese Einstellungen werden jetzt von display-options.js verwaltet
 	// und in data.json gespeichert statt localStorage
-	tilesCount: 8,
+	tilesCount: 12,
 	secondaryTilesCount: 4,
 	layout: 6,
 	darkMode: false,

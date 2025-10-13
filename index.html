@@ -5864,7 +5864,7 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
                     const tilesInput = document.getElementById('tilesCount');
                     if (tilesInput && !tilesInput.__wired){
                         tilesInput.addEventListener('change', function(){
-                            const v = parseInt(this.value) || 8;
+                            const v = parseInt(this.value) || 12;
                             showPrimaryTiles(v);
                         });
                         tilesInput.__wired = true;
@@ -5894,7 +5894,7 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 
                 function fallbackInit(){
                     const persisted = getPersistedDisplay();
-                    let primary = 8, secondary = 4, layout = 6, tableView = false;
+                    let primary = 12, secondary = 4, layout = 6, tableView = false;
                     if (persisted){
                         primary = parseInt(persisted.tilesCount) || 8;
                         secondary = parseInt(persisted.secondaryTilesCount) || 4;

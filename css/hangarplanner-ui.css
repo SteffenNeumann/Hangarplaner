@@ -398,12 +398,14 @@ html, body, button, input, select, textarea {
 	display: grid !important;
 	gap: 1rem !important;
 	width: 100% !important;
+	grid-template-columns: repeat(6, minmax(240px, 1fr)) !important;
 }
 
 #secondaryHangarGrid {
 	display: grid !important;
 	gap: 1rem !important;
 	width: 100% !important;
+	grid-template-columns: repeat(6, minmax(240px, 1fr)) !important;
 }
 
 .status-indicator {

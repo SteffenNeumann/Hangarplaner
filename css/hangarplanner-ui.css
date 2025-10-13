@@ -82,8 +82,8 @@ html, body, button, input, select, textarea {
 	border: 1px solid var(--border-light);
 	border-radius: 12px;
 	background-color: #ffffff !important; /* Zurück auf weiß */
-	/* Make tiles square in board view */
-	aspect-ratio: 1 / 1;
+	/* Make tiles taller to accommodate two-row notes */
+	aspect-ratio: 1 / 1.15;
 	overflow: hidden; /* clip inner content as requested */
 	min-height: 0; /* allow inner flex children to size properly */
 }
@@ -1791,9 +1791,10 @@ html:not(.dark-mode) .status-selector:focus { outline: none; border-color: #94a3
 	display: flex;
 	flex-direction: column;
 	margin-top: 0.25rem;
-	margin-bottom: 0.25rem;
+	margin-bottom: 0.5rem;
 	margin-left: 0 !important;
 	padding-left: 0 !important;
+	padding-bottom: 0.5rem;
 }
 
 .notes-textarea,

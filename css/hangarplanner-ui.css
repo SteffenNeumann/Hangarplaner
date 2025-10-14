@@ -71,7 +71,7 @@ html, body, button, input, select, textarea {
  .hangar-cell {
 	transition: all 0.3s ease;
 	width: 250px; /* Fixed width */
-	height: 260px; /* Fixed height */
+	height: 280px; /* Fixed height - increased for better spacing */
 	min-width: 250px !important;
 	max-width: 250px !important;
 	flex-basis: auto !important;
@@ -366,6 +366,7 @@ html, body, button, input, select, textarea {
 .hangar-container {
 	background-color: #f0f4f8;
 	padding: 2rem;
+	min-width: 1200px; /* Prevent tile collapse when sidebar expands */
 }
 
 .hangar-cell .card-header {
@@ -400,21 +401,21 @@ html, body, button, input, select, textarea {
 	grid-auto-flow: dense; /* Allow tiles to fill gaps */
 }
 
-/* Staggered brick layout: offset columns 2 and 5 down by 1/4 tile height (65px = 260px / 4) */
+/* Staggered brick layout: offset columns 2 and 5 down by 1/4 tile height (70px = 280px / 4) */
 #hangarGrid .hangar-cell:nth-child(6n+2),
 #hangarGrid .hangar-cell:nth-child(6n+5) {
-	margin-top: 65px;
+	margin-top: 70px;
 }
 
 /* Reduce gap for second row (tiles 7-12) to be slightly larger than standard grid gap */
 #hangarGrid .hangar-cell:nth-child(n+7):nth-child(-n+12) {
-	margin-top: calc(-65px);
+	margin-top: calc(-70px);
 }
 
 /* Reset margin for offsetted columns in second row to maintain their offset */
 #hangarGrid .hangar-cell:nth-child(8),
 #hangarGrid .hangar-cell:nth-child(11) {
-	margin-top: 65px;
+	margin-top: 70px;
 }
 
 /* Hide second row tiles in columns 2 and 5 (tiles 8 and 11) but keep space as placeholder */
@@ -1789,10 +1790,10 @@ html:not(.dark-mode) .status-selector:focus { outline: none; border-color: #94a3
 	display: flex;
 	flex-direction: column;
 	margin-top: 0.25rem;
-	margin-bottom: 0.5rem;
+	margin-bottom: 0.75rem; /* Increased bottom margin */
 	margin-left: 0 !important;
 	padding-left: 0 !important;
-	padding-bottom: 0.5rem;
+	padding-bottom: 0.75rem; /* Increased bottom padding */
 }
 
 .notes-textarea,

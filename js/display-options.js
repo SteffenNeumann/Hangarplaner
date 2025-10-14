@@ -642,6 +642,9 @@ applyDarkMode(enabled) {
 		//	layout: this.current.layout,
 		// });
 
+		// Primary Tiles aktualisieren
+		this.updateTiles();
+
 		// Secondary Tiles aktualisieren (preserveData = true für Layout-Änderungen)
 		if (typeof updateSecondaryTiles === "function") {
 			updateSecondaryTiles(

@@ -739,6 +739,16 @@
 						<button id="btnSearch" class="sidebar-btn sidebar-btn-primary">Search</button>
 					</div>
 				</div>
+
+				<!-- History (Undo/Redo) -->
+				<div class="panel-divider"></div>
+				<div class="submenu-title">History</div>
+				<div class="sync-mode-description">Undo or redo your last changes</div>
+				<div class="sidebar-input-group">
+					<button id="undoBtn" class="sidebar-btn sidebar-btn-secondary flex-1" disabled title="Undo last change (Ctrl/Cmd+Z)">Undo</button>
+					<button id="redoBtn" class="sidebar-btn sidebar-btn-secondary flex-1" disabled title="Redo last undone change (Ctrl/Cmd+Y)">Redo</button>
+				</div>
+				<div class="text-sm text-center" style="margin-top: 6px; color: #64748b;">Shortcuts: Ctrl/Cmd+Z, Ctrl/Cmd+Y</div>
 			</div>
 
 			<!-- Hauptbereich mit Hangar-Kacheln -->
@@ -6125,6 +6135,7 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
             })();
             </script>
 <script src="js/planner-table-view.js"></script>
+<script src="js/history-manager.js"></script>
 <script src="debug/move-overlay-debug.js"></script>
 <script src="js/board-move-fallback.js"></script>
 	</body>

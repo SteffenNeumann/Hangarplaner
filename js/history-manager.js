@@ -132,16 +132,23 @@
 		 * Restore state to UI
 		 */
 		restoreState(state) {
-			if (!state || !state.tiles) return;
+			if (!state || !state.tiles) {
+				console.warn('↶ No state or tiles to restore');
+				return;
+			}
 
+			console.log('↶ Restoring state with', state.tiles.length, 'tiles');
 			this.isCapturing = false; // Prevent capturing during restore
 			
 			try {
-				state.tiles.forEach(tileState => {
+				state.tiles.forEach((tileState, index) => {
+					console.log('↶ Processing tile', index + 1, '/', state.tiles.length);
 					this.restoreTileState(tileState);
 				});
+				console.log('↶ All tiles processed');
 			} finally {
 				this.isCapturing = true;
+				console.log('↶ Capturing re-enabled');
 			}
 		}
 
@@ -149,18 +156,36 @@
 		 * Restore single tile state
 		 */
 		restoreTileState(tileState) {
+			if (!tileState) {
+				console.warn('↶ No tileState provided');
+				return;
+			}
+			
+			const { cellId } = tileState;
+			console.log('↶ Restoring tile', cellId, 'with data:', tileState);
+			
 			const setVal = (id, val) => {
 				const el = document.getElementById(id);
 				if (!el) {
-					console.warn('↶ Element not found:', id);
-					return;
+					console.warn('  ↶ Element not found:', id);
+					return false;
 				}
 				
-				const oldVal = el.value;
+				const oldVal = el.value || '';
 				const newVal = val || '';
 				
+				// Skip if values are the same
+				if (oldVal === newVal && el.tagName !== 'SELECT') {
+					return false;
+				}
+				
 				if (el.tagName === 'SELECT') {
-					el.value = newVal || 'neutral';
+					const actualNewVal = newVal || 'neutral';
+					if (el.value === actualNewVal) {
+						return false; // Already at correct value
+					}
+					el.value = actualNewVal;
+					console.log('  ↶ SELECT restored', id, ':', oldVal, '→', actualNewVal);
 					// Trigger styling updates
 					if (id.startsWith('status-') && typeof window.updateStatusLight === 'function') {
 						window.updateStatusLight(el);
@@ -170,6 +195,7 @@
 					}
 				} else {
 					el.value = newVal;
+					console.log('  ↶ INPUT restored', id, ':', oldVal, '→', newVal);
 					// For datetime fields, also update dataset.iso
 					if ((id.includes('arrival-time') || id.includes('departure-time')) && newVal) {
 						el.dataset.iso = newVal;
@@ -179,24 +205,24 @@
 					}
 				}
 				
-				if (oldVal !== newVal) {
-					console.log('↶ Restored', id, ':', oldVal, '→', newVal);
-				}
-				
-				// Trigger change event
-				el.dispatchEvent(new Event('change', { bubbles: true }));
+				// Trigger change event (don't bubble to prevent recursion)
+				el.dispatchEvent(new Event('change', { bubbles: false }));
+				// Also dispatch input event for good measure
+				el.dispatchEvent(new Event('input', { bubbles: false }));
+				return true;
 			};
 
-			const { cellId } = tileState;
-			console.log('↶ Restoring tile', cellId);
-			setVal(`aircraft-${cellId}`, tileState.aircraft);
-			setVal(`arrival-time-${cellId}`, tileState.arrival);
-			setVal(`departure-time-${cellId}`, tileState.departure);
-			setVal(`position-${cellId}`, tileState.position);
-			setVal(`hangar-position-${cellId}`, tileState.hangarPosition);
-			setVal(`status-${cellId}`, tileState.status);
-			setVal(`tow-status-${cellId}`, tileState.towStatus);
-			setVal(`notes-${cellId}`, tileState.notes);
+			let changedCount = 0;
+			if (setVal(`aircraft-${cellId}`, tileState.aircraft)) changedCount++;
+			if (setVal(`arrival-time-${cellId}`, tileState.arrival)) changedCount++;
+			if (setVal(`departure-time-${cellId}`, tileState.departure)) changedCount++;
+			if (setVal(`position-${cellId}`, tileState.position)) changedCount++;
+			if (setVal(`hangar-position-${cellId}`, tileState.hangarPosition)) changedCount++;
+			if (setVal(`status-${cellId}`, tileState.status)) changedCount++;
+			if (setVal(`tow-status-${cellId}`, tileState.towStatus)) changedCount++;
+			if (setVal(`notes-${cellId}`, tileState.notes)) changedCount++;
+			
+			console.log('  ↶ Tile', cellId, 'complete:', changedCount, 'fields changed');
 		}
 
 		/**

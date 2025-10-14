@@ -397,7 +397,7 @@ html, body, button, input, select, textarea {
 	display: grid !important;
 	gap: 24px !important; /* Fixed gap */
 	width: 100% !important;
-	grid-template-columns: repeat(auto-fit, 250px) !important; /* Fixed tile width */
+	grid-template-columns: repeat(6, 250px) !important; /* Force exactly 6 columns */
 	grid-auto-flow: dense; /* Allow tiles to fill gaps */
 }
 
@@ -429,7 +429,7 @@ html, body, button, input, select, textarea {
 	display: grid !important;
 	gap: 24px !important; /* Fixed gap */
 	width: 100% !important;
-	grid-template-columns: repeat(auto-fit, 250px) !important; /* Fixed tile width */
+	grid-template-columns: repeat(6, 250px) !important; /* Force exactly 6 columns */
 }
 
 .status-indicator {

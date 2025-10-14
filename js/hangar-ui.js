@@ -1061,6 +1061,12 @@ function collectTileData(cellId) {
  * @param {number} count - Anzahl der sichtbaren Kacheln
  */
 function updateTiles(count) {
+	// Defensive: Validate count parameter and use default if invalid
+	if (count === undefined || count === null || !isFinite(count) || count < 0) {
+		console.warn(`⚠️ Ungültiger count-Wert (${count}), verwende Standardwert 12`);
+		count = 12;
+	}
+	count = Math.floor(count); // Ensure integer
 	// console.log(`🔧 Aktualisiere primäre Kacheln: ${count}`);
 
 	try {

@@ -998,14 +998,19 @@ onDarkModeChange() {
 	 * Aktualisiert die Anzahl der primären Tiles
 	 */
 	updateTiles() {
+		// Ensure tilesCount has a valid value before passing
+		const count = (this.current && typeof this.current.tilesCount === 'number' && isFinite(this.current.tilesCount))
+			? this.current.tilesCount
+			: this.defaults.tilesCount;
+
 		// Mehrere Fallback-Strategien ausprobieren
 		if (typeof updateTiles === "function") {
-			updateTiles(this.current.tilesCount);
+			updateTiles(count);
 		} else if (typeof window.hangarUI?.updateTiles === "function") {
-			window.hangarUI.updateTiles(this.current.tilesCount);
+			window.hangarUI.updateTiles(count);
 		} else if (typeof window.hangarUI?.uiSettings?.apply === "function") {
 			// Über uiSettings aktualisieren
-			window.hangarUI.uiSettings.tilesCount = this.current.tilesCount;
+			window.hangarUI.uiSettings.tilesCount = count;
 			window.hangarUI.uiSettings.apply();
 		} else {
 			console.warn(

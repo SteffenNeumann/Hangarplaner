@@ -151,10 +151,16 @@
 		restoreTileState(tileState) {
 			const setVal = (id, val) => {
 				const el = document.getElementById(id);
-				if (!el) return;
+				if (!el) {
+					console.warn('↶ Element not found:', id);
+					return;
+				}
+				
+				const oldVal = el.value;
+				const newVal = val || '';
 				
 				if (el.tagName === 'SELECT') {
-					el.value = val || 'neutral';
+					el.value = newVal || 'neutral';
 					// Trigger styling updates
 					if (id.startsWith('status-') && typeof window.updateStatusLight === 'function') {
 						window.updateStatusLight(el);
@@ -163,11 +169,18 @@
 						window.updateTowStatusStyles(el);
 					}
 				} else {
-					el.value = val || '';
+					el.value = newVal;
 					// For datetime fields, also update dataset.iso
-					if ((id.includes('arrival-time') || id.includes('departure-time')) && val) {
-						el.dataset.iso = val;
+					if ((id.includes('arrival-time') || id.includes('departure-time')) && newVal) {
+						el.dataset.iso = newVal;
+					} else if ((id.includes('arrival-time') || id.includes('departure-time')) && !newVal) {
+						// Clear dataset.iso if value is empty
+						try { delete el.dataset.iso; } catch(e) {}
 					}
+				}
+				
+				if (oldVal !== newVal) {
+					console.log('↶ Restored', id, ':', oldVal, '→', newVal);
 				}
 				
 				// Trigger change event
@@ -175,6 +188,7 @@
 			};
 
 			const { cellId } = tileState;
+			console.log('↶ Restoring tile', cellId);
 			setVal(`aircraft-${cellId}`, tileState.aircraft);
 			setVal(`arrival-time-${cellId}`, tileState.arrival);
 			setVal(`departure-time-${cellId}`, tileState.departure);
@@ -206,6 +220,14 @@
 			if (!this.isCapturing) return;
 			if (this.isReadOnlyMode()) return;
 
+			// Don't push duplicate states
+			if (this.undoStack.length > 0) {
+				const lastState = this.undoStack[this.undoStack.length - 1];
+				if (JSON.stringify(lastState.tiles) === JSON.stringify(state.tiles)) {
+					return; // Skip duplicate
+				}
+			}
+
 			// Add to undo stack
 			this.undoStack.push(state);
 			
@@ -219,24 +241,31 @@
 
 			this.saveHistory();
 			this.updateButtonStates();
+			
+			console.log('📝 State captured, undo stack:', this.undoStack.length);
 		}
 
 		/**
 		 * Undo last action
 		 */
 		async undo() {
-			if (!this.canUndo()) return;
+			if (!this.canUndo()) {
+				console.warn('↶ Undo: No states to undo');
+				return;
+			}
 			if (this.isReadOnlyMode()) {
 				this.showNotification('Undo disabled in read-only mode', 'warning');
 				return;
 			}
 
 			try {
-				// Capture current state before undo
+				// Capture current state before undo (to allow redo)
 				const currentState = this.captureState();
+				console.log('↶ Current state captured for redo');
 				
-				// Pop from undo stack
+				// Pop from undo stack (this is the state to restore TO)
 				const previousState = this.undoStack.pop();
+				console.log('↶ Restoring state from:', new Date(previousState.timestamp).toLocaleTimeString());
 				
 				// Push current to redo stack
 				this.redoStack.push(currentState);
@@ -246,6 +275,7 @@
 
 				// Restore previous state
 				this.restoreState(previousState);
+				console.log('↶ State restored, tiles updated:', previousState.tiles.length);
 
 				// Sync to server if in Master mode
 				await this.syncToServer();
@@ -254,7 +284,7 @@
 				this.updateButtonStates();
 				this.showNotification('Undo applied', 'success');
 				
-				console.log('↶ Undo applied, stack:', this.undoStack.length);
+				console.log('↶ Undo complete. Remaining undo:', this.undoStack.length, 'redo:', this.redoStack.length);
 			} catch (e) {
 				console.error('Undo failed:', e);
 				this.showNotification('Undo failed: ' + e.message, 'error');
@@ -335,6 +365,16 @@
 		 * Setup change listeners for tiles
 		 */
 		setupChangeListeners() {
+			// Capture initial state on first load
+			setTimeout(() => {
+				try {
+					const initialState = this.captureState();
+					console.log('📸 Initial state captured:', initialState.tiles.length, 'tiles');
+				} catch (e) {
+					console.warn('Failed to capture initial state:', e);
+				}
+			}, 500);
+			
 			// Capture state on field changes
 			const captureOnChange = (e) => {
 				const target = e.target;
@@ -357,6 +397,8 @@
 				
 				const isTrackedField = patterns.some(pattern => pattern.test(id));
 				if (!isTrackedField) return;
+
+				console.log('📝 Change detected:', id, '=', target.value);
 
 				// Debounce: capture state after short delay
 				clearTimeout(this._captureTimeout);

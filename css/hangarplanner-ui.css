@@ -70,22 +70,20 @@ html, body, button, input, select, textarea {
 
  .hangar-cell {
 	transition: all 0.3s ease;
-	width: 100%; /* fill the grid track width */
-	min-width: var(--card-min-width) !important;
-	max-width: none !important;
+	width: 280px; /* Fixed width */
+	height: 320px; /* Fixed height */
+	min-width: 280px !important;
+	max-width: 280px !important;
 	flex-basis: auto !important;
-	margin: 0; /* left-align inside grid track */
+	margin: 0;
 	box-sizing: border-box;
 	transform-origin: center center;
-	justify-self: stretch; /* stretch within grid area */
+	justify-self: center; /* center within grid area */
 	box-shadow: none !important;
 	border: 1px solid var(--border-light);
 	border-radius: 12px;
 	background-color: #ffffff !important; /* Zurück auf weiß */
-	/* Make tiles taller to accommodate two-row notes */
-	aspect-ratio: 1 / 1.15;
 	overflow: hidden; /* clip inner content as requested */
-	min-height: 0; /* allow inner flex children to size properly */
 }
 
 /* MAXIMALE PRIORITÄT: Überschreibe alle möglichen Status-basierten Hintergründe */
@@ -385,38 +383,38 @@ html, body, button, input, select, textarea {
 #hangarGrid,
 #secondaryHangarGrid {
 	display: grid;
-	gap: 16px;
+	gap: 24px; /* Fixed gap */
 	width: 100%;
 	transition: all 0.3s ease;
 	transform-origin: top left;
-	justify-content: start; /* align grid tracks to the left */
-	justify-items: stretch; /* tiles fill their grid columns */
+	justify-content: center; /* Center tiles within grid */
+	justify-items: center; /* Center tiles in their grid cells */
 }
 
 /* WICHTIG: Grid Layout Fix - Direkte CSS Grid Styles */
 #hangarGrid {
 	display: grid !important;
-	gap: 1rem !important;
+	gap: 24px !important; /* Fixed gap */
 	width: 100% !important;
-	grid-template-columns: repeat(6, minmax(240px, 1fr)) !important;
+	grid-template-columns: repeat(auto-fit, 280px) !important; /* Fixed tile width */
 	grid-auto-flow: dense; /* Allow tiles to fill gaps */
 }
 
-/* Staggered brick layout: offset columns 2 and 5 down by 1/4 tile height */
+/* Staggered brick layout: offset columns 2 and 5 down by 1/4 tile height (80px = 320px / 4) */
 #hangarGrid .hangar-cell:nth-child(6n+2),
 #hangarGrid .hangar-cell:nth-child(6n+5) {
-	margin-top: 25%;
+	margin-top: 80px;
 }
 
 /* Reduce gap for second row (tiles 7-12) to be slightly larger than standard grid gap */
 #hangarGrid .hangar-cell:nth-child(n+7):nth-child(-n+12) {
-	margin-top: calc(-25%);
+	margin-top: calc(-80px);
 }
 
 /* Reset margin for offsetted columns in second row to maintain their offset */
 #hangarGrid .hangar-cell:nth-child(8),
 #hangarGrid .hangar-cell:nth-child(11) {
-	margin-top: 25%;
+	margin-top: 80px;
 }
 
 /* Hide second row tiles in columns 2 and 5 (tiles 8 and 11) but keep space as placeholder */
@@ -428,9 +426,9 @@ html, body, button, input, select, textarea {
 
 #secondaryHangarGrid {
 	display: grid !important;
-	gap: 1rem !important;
+	gap: 24px !important; /* Fixed gap */
 	width: 100% !important;
-	grid-template-columns: repeat(6, minmax(240px, 1fr)) !important;
+	grid-template-columns: repeat(auto-fit, 280px) !important; /* Fixed tile width */
 }
 
 .status-indicator {

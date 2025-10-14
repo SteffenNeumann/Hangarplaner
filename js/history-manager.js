@@ -12,17 +12,19 @@
 
 	class HistoryManager {
 		constructor() {
+			// Singleton pattern - return existing instance if it exists
+			if (HistoryManager.instance) {
+				return HistoryManager.instance;
+			}
+			
 			this.undoStack = [];
 			this.redoStack = [];
 			this.maxHistory = MAX_HISTORY;
 			this.isCapturing = true;
 			this.initialized = false;
 			
-			// Singleton pattern
-			if (window.HistoryManager) {
-				return window.HistoryManager;
-			}
-			window.HistoryManager = this;
+			// Store singleton instance
+			HistoryManager.instance = this;
 		}
 
 		init() {
@@ -483,8 +485,13 @@
 	// Initialize History Manager
 	function initHistoryManager() {
 		try {
+			// Create singleton instance (will return existing if already created)
 			const manager = new HistoryManager();
-			manager.init();
+			
+			// Initialize if not already done
+			if (!manager.initialized) {
+				manager.init();
+			}
 		} catch (e) {
 			console.error('Failed to initialize History Manager:', e);
 		}

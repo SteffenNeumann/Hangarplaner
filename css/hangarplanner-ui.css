@@ -70,10 +70,10 @@ html, body, button, input, select, textarea {
 
  .hangar-cell {
 	transition: all 0.3s ease;
-	width: 280px; /* Fixed width */
-	height: 320px; /* Fixed height */
-	min-width: 280px !important;
-	max-width: 280px !important;
+	width: 250px; /* Fixed width */
+	height: 260px; /* Fixed height */
+	min-width: 250px !important;
+	max-width: 250px !important;
 	flex-basis: auto !important;
 	margin: 0;
 	box-sizing: border-box;
@@ -396,25 +396,25 @@ html, body, button, input, select, textarea {
 	display: grid !important;
 	gap: 24px !important; /* Fixed gap */
 	width: 100% !important;
-	grid-template-columns: repeat(auto-fit, 280px) !important; /* Fixed tile width */
+	grid-template-columns: repeat(auto-fit, 250px) !important; /* Fixed tile width */
 	grid-auto-flow: dense; /* Allow tiles to fill gaps */
 }
 
-/* Staggered brick layout: offset columns 2 and 5 down by 1/4 tile height (80px = 320px / 4) */
+/* Staggered brick layout: offset columns 2 and 5 down by 1/4 tile height (65px = 260px / 4) */
 #hangarGrid .hangar-cell:nth-child(6n+2),
 #hangarGrid .hangar-cell:nth-child(6n+5) {
-	margin-top: 80px;
+	margin-top: 65px;
 }
 
 /* Reduce gap for second row (tiles 7-12) to be slightly larger than standard grid gap */
 #hangarGrid .hangar-cell:nth-child(n+7):nth-child(-n+12) {
-	margin-top: calc(-80px);
+	margin-top: calc(-65px);
 }
 
 /* Reset margin for offsetted columns in second row to maintain their offset */
 #hangarGrid .hangar-cell:nth-child(8),
 #hangarGrid .hangar-cell:nth-child(11) {
-	margin-top: 80px;
+	margin-top: 65px;
 }
 
 /* Hide second row tiles in columns 2 and 5 (tiles 8 and 11) but keep space as placeholder */
@@ -428,7 +428,7 @@ html, body, button, input, select, textarea {
 	display: grid !important;
 	gap: 24px !important; /* Fixed gap */
 	width: 100% !important;
-	grid-template-columns: repeat(auto-fit, 280px) !important; /* Fixed tile width */
+	grid-template-columns: repeat(auto-fit, 250px) !important; /* Fixed tile width */
 }
 
 .status-indicator {

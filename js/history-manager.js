@@ -578,6 +578,21 @@
 			this.updateButtonStates();
 			console.log('🗑️ History cleared');
 		}
+		
+		/**
+		 * Manually capture state before a programmatic operation
+		 * Call this before operations that don't trigger focus (tile clear, reposition, etc.)
+		 */
+		captureBeforeOperation() {
+			if (!this.isCapturing || this.isReadOnlyMode()) return;
+			try {
+				const state = this.captureState();
+				this.pushState(state);
+				console.log('📸 Manual before-operation state captured');
+			} catch (e) {
+				console.warn('Failed to capture before-operation state:', e);
+			}
+		}
 	}
 
 	// Initialize History Manager

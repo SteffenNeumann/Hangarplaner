@@ -1313,6 +1313,13 @@ window.clearSingleTile = window.clearSingleTile || function(cellId){
   try {
     if (!cellId && cellId !== 0) return false;
 
+    // Capture state before clearing for undo
+    try {
+      if (HistoryManager.instance && typeof HistoryManager.instance.captureBeforeOperation === 'function') {
+        HistoryManager.instance.captureBeforeOperation();
+      }
+    } catch(_e) {}
+
     const clearedUpdates = {};
     const suppress = !!window.__suppressFieldSync;
 
@@ -1447,6 +1454,13 @@ window.moveTileContent = window.moveTileContent || async function(sourceId, dest
       const readOnly = !!(window.sharingManager && window.sharingManager.syncMode === 'sync') || (!!window.serverSync && window.serverSync.isMaster === false && window.serverSync.canReadFromServer && window.serverSync.canReadFromServer());
       if (readOnly) { try { window.showNotification && window.showNotification('Read-only mode: cannot move content', 'warning'); } catch(_){} return false; }
     } catch(_){}
+    
+    // Capture state before moving for undo
+    try {
+      if (HistoryManager.instance && typeof HistoryManager.instance.captureBeforeOperation === 'function') {
+        HistoryManager.instance.captureBeforeOperation();
+      }
+    } catch(_e) {}
 
     // Destination must be empty (Aircraft ID)
     const destAc = document.getElementById(`aircraft-${d}`);

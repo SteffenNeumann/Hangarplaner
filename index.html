@@ -1657,6 +1657,14 @@ function isReadOnlySync(){
       btn.addEventListener('click', async (e)=>{
         e.preventDefault(); e.stopPropagation();
         if (isReadOnlySync()) return; // No action in read-only
+        
+        // Capture state before clearing for undo
+        try {
+          if (HistoryManager.instance && typeof HistoryManager.instance.captureBeforeOperation === 'function') {
+            HistoryManager.instance.captureBeforeOperation();
+          }
+        } catch(_e) {}
+        
         const ss = window.serverSync;
         try { if (ss && typeof ss.suspendReads === 'function') ss.suspendReads(); } catch(_e) {}
         let ok = false;

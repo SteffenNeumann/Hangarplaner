@@ -205,10 +205,8 @@
 					}
 				}
 				
-				// Trigger change event (don't bubble to prevent recursion)
-				el.dispatchEvent(new Event('change', { bubbles: false }));
-				// Also dispatch input event for good measure
-				el.dispatchEvent(new Event('input', { bubbles: false }));
+				// DON'T trigger change/input events during restore
+				// This prevents other systems from reacting and causing flicker
 				return true;
 			};
 
@@ -395,20 +393,19 @@
 			setTimeout(() => {
 				try {
 					const initialState = this.captureState();
-					console.log('📸 Initial state captured:', initialState.tiles.length, 'tiles');
+					this.pushState(initialState); // Push to stack so first undo works
+					console.log('📸 Initial state captured and pushed:', initialState.tiles.length, 'tiles');
 				} catch (e) {
 					console.warn('Failed to capture initial state:', e);
 				}
-			}, 500);
+			}, 1000);
 			
-			// Capture state on field changes
-			const captureOnChange = (e) => {
-				const target = e.target;
-				if (!target) return;
+			// Store "before" state when user starts interacting
+			const captureBeforeChange = (e) => {
+				if (!this.isCapturing) return; // Skip during restore
 				
-				// Only track changes to tile fields
-				const id = target.id;
-				if (!id) return;
+				const target = e.target;
+				if (!target || !target.id) return;
 				
 				const patterns = [
 					/^aircraft-\d+$/,
@@ -421,23 +418,56 @@
 					/^notes-\d+$/
 				];
 				
-				const isTrackedField = patterns.some(pattern => pattern.test(id));
+				const isTrackedField = patterns.some(pattern => pattern.test(target.id));
+				if (!isTrackedField) return;
+				
+				// Store the state BEFORE the change
+				if (!this._beforeChangeState) {
+					this._beforeChangeState = this.captureState();
+					console.log('📸 Before-change state captured');
+				}
+			};
+			
+			// Capture state AFTER field changes
+			const captureAfterChange = (e) => {
+				if (!this.isCapturing) return; // Skip during restore
+				
+				const target = e.target;
+				if (!target || !target.id) return;
+				
+				const patterns = [
+					/^aircraft-\d+$/,
+					/^arrival-time-\d+$/,
+					/^departure-time-\d+$/,
+					/^position-\d+$/,
+					/^hangar-position-\d+$/,
+					/^status-\d+$/,
+					/^tow-status-\d+$/,
+					/^notes-\d+$/
+				];
+				
+				const isTrackedField = patterns.some(pattern => pattern.test(target.id));
 				if (!isTrackedField) return;
 
-				console.log('📝 Change detected:', id, '=', target.value);
+				console.log('📝 Change detected:', target.id, '=', target.value);
 
-				// Debounce: capture state after short delay
+				// Debounce: push before-state after short delay
 				clearTimeout(this._captureTimeout);
 				this._captureTimeout = setTimeout(() => {
-					const state = this.captureState();
-					this.pushState(state);
-				}, 300);
+					if (this._beforeChangeState) {
+						this.pushState(this._beforeChangeState);
+						this._beforeChangeState = null; // Clear for next change
+						console.log('✅ Before-state pushed to undo stack');
+					}
+				}, 500);
 			};
 
-			document.addEventListener('change', captureOnChange);
-			document.addEventListener('input', captureOnChange);
+			// Listen for focus (before change) and change/input (after change)
+			document.addEventListener('focus', captureBeforeChange, true);
+			document.addEventListener('change', captureAfterChange, true);
+			document.addEventListener('input', captureAfterChange, true);
 			
-			console.log('📝 Change listeners registered');
+			console.log('📝 Change listeners registered (capture phase)');
 		}
 
 		/**

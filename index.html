@@ -5571,9 +5571,7 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		        } catch(_) { formattedTs = it.timestamp; }
 		      }
 		      const user = it && it.userEmail ? it.userEmail : '';
-		      const subj = it && it.subject ? it.subject : '';
-		      const rec  = it && it.recipients ? (Array.isArray(it.recipients) ? it.recipients.join(', ') : String(it.recipients)) : '';
-		      li.textContent = `${formattedTs} User:${user} — ${subj} — ${rec}`;
+		      li.textContent = `${formattedTs} User:${user}`;
 		      ul.appendChild(li);
 		    });
 		  }

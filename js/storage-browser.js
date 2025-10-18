@@ -1545,6 +1545,16 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 						);
 					}
 
+					// *** NEU: Email Settings ergänzen (von collectEmailSettingsFromUI) ***
+					try {
+						if (typeof window.collectEmailSettingsFromUI === 'function') {
+							const emailSettings = window.collectEmailSettingsFromUI();
+							if (!data.settings) data.settings = {};
+							data.settings.email = emailSettings;
+							console.log('📧 Email settings collected from UI:', emailSettings);
+						}
+					} catch(_e) { console.warn('Failed to collect email settings', _e); }
+
 					// Ensure tiles present; if missing/empty, collect from DOM
 					try {
 						const needDom = !data || !Array.isArray(data.primaryTiles) || data.primaryTiles.length === 0;
@@ -1582,6 +1592,15 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 				data.settings.displayOptions = opts;
 				console.log("🎛️ Display Options zu Fallback-Daten hinzugefügt (ohne darkMode)");
 			}
+
+			// *** NEU: Email Settings auch im Fallback hinzufügen ***
+			try {
+				if (typeof window.collectEmailSettingsFromUI === 'function') {
+					const emailSettings = window.collectEmailSettingsFromUI();
+					data.settings.email = emailSettings;
+					console.log('📧 Email settings collected from UI (fallback):', emailSettings);
+				}
+			} catch(_e) { console.warn('Failed to collect email settings (fallback)', _e); }
 
 			return data;
 		} catch (error) {

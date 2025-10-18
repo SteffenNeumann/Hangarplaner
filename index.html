@@ -5549,32 +5549,33 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		      return items;
 		    } catch(_) { return []; }
 		  }
-		  function renderMailLog(items){
-		    const ul = document.getElementById('mailLogList');
-		    if (!ul) return;
-		    ul.innerHTML = '';
-		    const list = Array.isArray(items) ? items.slice().reverse() : [];
-		    if (!list.length){ ul.innerHTML = '<li class="text-gray-400">No mails sent yet</li>'; return; }
-		    list.forEach(it => {
-		      const li = document.createElement('li');
-		      // Format timestamp as hh:mm dd.MMM
-		      let formattedTs = '';
-		      if (it && it.timestamp) {
-		        try {
-		          const d = new Date(it.timestamp);
-		          const hh = String(d.getHours()).padStart(2, '0');
-		          const mm = String(d.getMinutes()).padStart(2, '0');
-		          const dd = String(d.getDate()).padStart(2, '0');
-		          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-		          const MMM = months[d.getMonth()];
-		          formattedTs = `${hh}:${mm} ${dd}.${MMM}`;
-		        } catch(_) { formattedTs = it.timestamp; }
-		      }
-		      const user = it && it.userEmail ? it.userEmail : '';
-		      li.textContent = `${formattedTs} User:${user}`;
-		      ul.appendChild(li);
-		    });
-		  }
+	  function renderMailLog(items){
+	    const ul = document.getElementById('mailLogList');
+	    if (!ul) return;
+	    ul.innerHTML = '';
+	    const list = Array.isArray(items) ? items.slice().reverse() : [];
+	    if (!list.length){ ul.innerHTML = '<li class="text-gray-400">No mails sent yet</li>'; return; }
+	    list.forEach(it => {
+	      const li = document.createElement('li');
+	      li.style.fontFamily = 'monospace';
+	      // Format timestamp as dd.MMM hh:mm
+	      let formattedTs = '';
+	      if (it && it.timestamp) {
+	        try {
+	          const d = new Date(it.timestamp);
+	          const hh = String(d.getHours()).padStart(2, '0');
+	          const mm = String(d.getMinutes()).padStart(2, '0');
+	          const dd = String(d.getDate()).padStart(2, '0');
+	          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+	          const MMM = months[d.getMonth()];
+	          formattedTs = `${dd}.${MMM} ${hh}:${mm}`;
+	        } catch(_) { formattedTs = it.timestamp; }
+	      }
+	      const user = it && it.userEmail ? it.userEmail : '';
+	      li.textContent = `${formattedTs}  User:${user}`;
+	      ul.appendChild(li);
+	    });
+	  }
 
 		  async function sendMailWithPdf(){
 		    try {

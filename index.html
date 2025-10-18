@@ -5458,6 +5458,10 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		<!-- Email Send (Export) -->
 		<script>
 		(function(){
+		  // Global email settings state for cross-mode synchronization
+		  window.emailSettings = { recipients:"", cc:"", subject:"", body:"", updatedAt:0, mailLogVersion:0 };
+		  let lastMailLogVersion = 0;
+
 		  const MAIL_FROM = 'info@hangarplaner.de'; // non-reply sender (configured on server as well)
 		  const SETTINGS_KEYS = {
 		    recipients: 'emailRecipients',
@@ -5488,6 +5492,35 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		  function setField(id, v){ const el = document.getElementById(id); if (el) el.value = v || ''; }
 		  function getField(id){ const el = document.getElementById(id); return el ? (el.value||'').trim() : ''; }
 
+		  // Centralized helpers for collecting and applying email settings
+		  function collectEmailSettingsFromUI(){
+		    return {
+		      recipients: getField('mailRecipients'),
+		      cc: getField('mailCC'),
+		      subject: getField('mailSubject'),
+		      body: getField('mailBody'),
+		      updatedAt: Date.now(),
+		      mailLogVersion: window.emailSettings.mailLogVersion || 0
+		    };
+		  }
+
+		  function applyEmailSettingsToUI(s){
+		    if(!s) return;
+		    window.emailSettings = { ...window.emailSettings, ...s };
+		    const map = [
+		      ['mailRecipients','recipients'],
+		      ['mailCC','cc'],
+		      ['mailSubject','subject'],
+		      ['mailBody','body']
+		    ];
+		    map.forEach(([id,key])=>{
+		      const el = document.getElementById(id);
+		      if(el && el !== document.activeElement){
+		        el.value = s[key] ?? el.value;
+		      }
+		    });
+		  }
+
 		  async function loadServerEmailSettings(){
 		    try {
 		      // Prefer central server URL if available
@@ -5503,40 +5536,52 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		    } catch(e) { /* ignore */ }
 		  }
 
-		  async function saveServerEmailSettings(){
+		  // NEW: Use sync infrastructure for immediate propagation (Master only)
+		  async function saveServerEmailSettings(forceSyncNow=true){
 		    try {
 		      // Only allow save in Master
 		      const isMaster = !!(window.serverSync && (window.serverSync.isMaster || (window.sharingManager && window.sharingManager.syncMode==='master')));
 		      if (!isMaster) {
-		        showModalAlert('Switch to Master mode to save global mail settings.');
+		        console.log('⚠️ Email settings save skipped (not in Master mode)');
 		        return false;
 		      }
-		      const recipients = getField('mailRecipients');
-		      const cc         = getField('mailCC');
-		      const subject    = getField('mailSubject');
-		      const body       = getField('mailBody');
-		      const payload = { metadata: { timestamp: Date.now() }, settings: {} };
-		      payload.settings[SETTINGS_KEYS.recipients] = recipients;
-		      payload.settings[SETTINGS_KEYS.cc]         = cc;
-		      payload.settings[SETTINGS_KEYS.subject]    = subject;
-		      payload.settings[SETTINGS_KEYS.body]       = body;
-		      let url = (window.serverSync && typeof window.serverSync.getServerUrl==='function' && window.serverSync.getServerUrl()) || (window.location.origin + '/sync/data.php');
-      const headers = { 'Content-Type':'application/json', 'X-Sync-Role':'master' };
-      try {
-        const sid = window.serverSync && typeof window.serverSync.getSessionId==='function' ? window.serverSync.getSessionId() : (localStorage.getItem('serverSync.sessionId')||'');
-        if (sid) headers['X-Sync-Session'] = sid;
-        let dname = '';
-        try { const el = document.getElementById('presenceNameInput'); if (el && el.value) dname = el.value.trim(); } catch(_eDom){}
-        try { if (!dname) dname = (localStorage.getItem('presence.displayName')||'').trim(); } catch(_e){}
-        if (!dname) dname = 'User';
-        headers['X-Display-Name'] = dname;
-      } catch(_e){}
-		      const res = await fetch(url, { method:'POST', headers, body: JSON.stringify(payload) });
-		      if (!res.ok) {
-		        try { const t = await res.text(); console.warn('Save settings failed', res.status, t); } catch(_e){}
-		        return false;
+
+		      const payload = collectEmailSettingsFromUI();
+		      window.emailSettings = { ...window.emailSettings, ...payload };
+
+		      // Queue settings patch via sync infrastructure
+		      if (window.serverSync && typeof window.serverSync.queueSettingsPatch === 'function') {
+		        window.serverSync.queueSettingsPatch('email', { ...payload });
+		        console.log('📧 Email settings queued for sync');
+
+		        // Trigger immediate sync
+		        if (forceSyncNow && typeof window.serverSync.syncWithServer === 'function') {
+		          await window.serverSync.syncWithServer();
+		          console.log('✅ Email settings synced immediately');
+		        }
+		        return true;
+		      } else {
+		        // Fallback to legacy POST method if queueSettingsPatch not available
+		        console.warn('⚠️ queueSettingsPatch not available, using fallback');
+		        const url = (window.serverSync && typeof window.serverSync.getServerUrl==='function' && window.serverSync.getServerUrl()) || (window.location.origin + '/sync/data.php');
+		        const headers = { 'Content-Type':'application/json', 'X-Sync-Role':'master' };
+		        try {
+		          const sid = window.serverSync && typeof window.serverSync.getSessionId==='function' ? window.serverSync.getSessionId() : (localStorage.getItem('serverSync.sessionId')||'');
+		          if (sid) headers['X-Sync-Session'] = sid;
+		          let dname = '';
+		          try { const el = document.getElementById('presenceNameInput'); if (el && el.value) dname = el.value.trim(); } catch(_eDom){}
+		          try { if (!dname) dname = (localStorage.getItem('presence.displayName')||'').trim(); } catch(_e){}
+		          if (!dname) dname = 'User';
+		          headers['X-Display-Name'] = dname;
+		        } catch(_e){}
+		        const body = { metadata: { timestamp: Date.now() }, settings: { email: payload } };
+		        const res = await fetch(url, { method:'POST', headers, body: JSON.stringify(body) });
+		        if (!res.ok) {
+		          try { const t = await res.text(); console.warn('Save settings failed', res.status, t); } catch(_e){}
+		          return false;
+		        }
+		        return true;
 		      }
-		      return true;
 		    } catch(e) { console.warn('saveServerEmailSettings error', e); return false; }
 		  }
 
@@ -5631,28 +5676,130 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		        showModalAlert('Sending failed' + (data && data.error ? (': ' + data.error) : ''));
 		        return;
 		      }
+		      
+		      // Success - dispatch mailSent event and refresh log
 		      try { window.showNotification && window.showNotification('Mail sent', 'success'); } catch(_e){}
-		      // refresh log
+		      
+		      // Dispatch mailSent event for event-driven refresh
+		      try { window.dispatchEvent(new CustomEvent('mailSent', { detail: { ts: Date.now() }})); } catch(_e){}
+		      
+		      // Local immediate refresh
 		      renderMailLog(await fetchMailLog(10));
+		      
+		      // Propagate to all clients via sync by bumping version (Master only)
+		      try {
+		        const isMaster = !!(window.serverSync && (window.serverSync.isMaster || (window.sharingManager && window.sharingManager.syncMode==='master')));
+		        if (isMaster && window.serverSync && typeof window.serverSync.queueSettingsPatch === 'function') {
+		          const newVer = Date.now();
+		          window.emailSettings.mailLogVersion = newVer;
+		          window.serverSync.queueSettingsPatch('email', { mailLogVersion: newVer });
+		          if (typeof window.serverSync.syncWithServer === 'function') {
+		            await window.serverSync.syncWithServer();
+		            console.log('📧 Mail log version synced to all clients');
+		          }
+		        }
+		      } catch(e){ console.warn('Failed to propagate mailLogVersion', e); }
 		    } catch(e){ showModalAlert('Unexpected error while sending: ' + (e && e.message ? e.message : e)); }
 		  }
 
+		  // Simple debounce helper
+		  function debounce(fn, delay){
+		    let timer;
+		    return function(){ clearTimeout(timer); timer = setTimeout(()=> fn(), delay); };
+		  }
+
 		  function wire(){
-		    const r = document.getElementById('mailRecipients');
-		    const c = document.getElementById('mailCC');
-		    const s = document.getElementById('mailSubject');
-		    const b = document.getElementById('mailBody');
+		    const fields = ['mailRecipients', 'mailCC', 'mailSubject', 'mailBody'];
+		    fields.forEach(id=>{
+		      const el = document.getElementById(id);
+		      if (el && !el.__wired){
+		        el.addEventListener('input', debounce(()=> saveServerEmailSettings(true), 500));
+		        el.addEventListener('blur', ()=> saveServerEmailSettings(true));
+		        el.__wired=true;
+		      }
+		    });
 		    const send = document.getElementById('sendMailBtn');
-		    if (r && !r.__wired){ r.addEventListener('change', saveServerEmailSettings); r.addEventListener('blur', saveServerEmailSettings); r.__wired=true; }
-		    if (c && !c.__wired){ c.addEventListener('change', saveServerEmailSettings); c.addEventListener('blur', saveServerEmailSettings); c.__wired=true; }
-		    if (s && !s.__wired){ s.addEventListener('change', saveServerEmailSettings); s.addEventListener('blur', saveServerEmailSettings); s.__wired=true; }
-		    if (b && !b.__wired){ b.addEventListener('change', saveServerEmailSettings); b.addEventListener('blur', saveServerEmailSettings); b.__wired=true; }
 		    if (send && !send.__wired){ send.addEventListener('click', function(e){ e.preventDefault(); sendMailWithPdf(); }); send.__wired=true; }
 		  }
 
 		  // On initial load and after server data loaded
-		  document.addEventListener('DOMContentLoaded', async ()=>{ try { wire(); await loadServerEmailSettings(); renderMailLog(await fetchMailLog(10)); } catch(_){} });
-		  document.addEventListener('serverDataLoaded', async ()=>{ try { await loadServerEmailSettings(); renderMailLog(await fetchMailLog(10)); } catch(_){} });
+		  document.addEventListener('DOMContentLoaded', async ()=>{ 
+		    try { 
+		      wire(); 
+		      await loadServerEmailSettings(); 
+		      renderMailLog(await fetchMailLog(10)); 
+		    } catch(_){} 
+		  });
+
+		  // NEW: Enhanced serverDataLoaded handler with email settings and mailLogVersion tracking
+		  document.addEventListener('serverDataLoaded', async (e)=>{ 
+		    try { 
+		      // Load email settings from server data if available
+		      const serverData = e.detail || {};
+		      const emailSettings = serverData?.settings?.email;
+		      
+		      if (emailSettings) {
+		        // Apply email settings to UI
+		        applyEmailSettingsToUI(emailSettings);
+		        
+		        // Trigger mail log refresh only when someone sent an email (Option B)
+		        if (typeof emailSettings.mailLogVersion === 'number' && emailSettings.mailLogVersion !== lastMailLogVersion) {
+		          lastMailLogVersion = emailSettings.mailLogVersion;
+		          console.log('📨 Mail log version changed, refreshing log');
+		          renderMailLog(await fetchMailLog(10));
+		        }
+		      } else {
+		        // Fallback to legacy loadServerEmailSettings
+		        await loadServerEmailSettings();
+		      }
+		    } catch(e){ console.warn('serverDataLoaded email handler error', e); } 
+		  });
+
+		  // NEW: Offline mode exception - read email settings even when Read is OFF (Option A)
+		  let emailOfflinePollTimer = null;
+		  function startEmailSettingsOfflinePoll(){
+		    if(emailOfflinePollTimer) return;
+		    console.log('📧 Starting offline email settings poller');
+		    emailOfflinePollTimer = setInterval(async ()=>{
+		      try{
+		        const serverData = await window.serverSync?.fetchServerDataLite?.(); // GET sync/data.php
+		        const s = serverData?.settings?.email;
+		        if(s){
+		          applyEmailSettingsToUI(s);
+		          if(typeof s.mailLogVersion === 'number' && s.mailLogVersion !== lastMailLogVersion){
+		            lastMailLogVersion = s.mailLogVersion;
+		            console.log('📨 Mail log version changed (offline mode), refreshing log');
+		            renderMailLog(await fetchMailLog(10));
+		          }
+		        }
+		      }catch(e){ console.warn('Offline email poll error', e); }
+		    }, 5000); // 5 second interval for near-immediate updates
+		  }
+
+		  function stopEmailSettingsOfflinePoll(){
+		    if(emailOfflinePollTimer){ 
+		      clearInterval(emailOfflinePollTimer); 
+		      emailOfflinePollTimer = null; 
+		      console.log('⏹️ Stopped offline email settings poller');
+		    }
+		  }
+
+		  // Hook on mode changes
+		  window.addEventListener('syncModeChanged', (e)=>{
+		    const readOn = e.detail?.readEnabled;
+		    if(readOn) stopEmailSettingsOfflinePoll(); 
+		    else startEmailSettingsOfflinePoll();
+		  });
+
+		  // Start once on DOM ready if Read is OFF
+		  document.addEventListener('DOMContentLoaded', ()=>{
+		    setTimeout(()=>{
+		      try {
+		        const readEnabled = window.serverSync?.isSlaveActive || window.serverSync?.isMaster;
+		        if(!readEnabled) startEmailSettingsOfflinePoll();
+		      } catch(e){}
+		    }, 2000); // delay to allow serverSync to initialize
+		  });
 		})();
 </script>
 

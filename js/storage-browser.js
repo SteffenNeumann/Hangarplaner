@@ -40,6 +40,9 @@ class ServerSync {
 		this._presenceHeartbeatTimer = null;
 		this._lastPresenceRefreshAt = 0;
 
+		// NEW: Pending settings patches for immediate email settings propagation
+		this._pendingSettings = {};
+
 		// Global verfügbar machen für Kompatibilität und Race Condition Prevention
 		window.isApplyingServerData = false;
 		window.isLoadingServerData = false;
@@ -50,6 +53,35 @@ class ServerSync {
 			this.applyServerData = this.applyServerData.bind(this);
 			this.applyTileData = this.applyTileData.bind(this);
 		} catch(_e){}
+	}
+
+	/**
+	 * NEW: Queue partial settings updates for next sync
+	 * @param {string} section - settings section (e.g., 'email')
+	 * @param {object} partial - partial settings object to merge
+	 */
+	queueSettingsPatch(section, partial) {
+		try {
+			if (!section || !partial || typeof partial !== 'object') return;
+			this._pendingSettings[section] = { ...(this._pendingSettings[section]||{}), ...partial };
+			console.log(`📦 Settings patch queued: ${section}`, partial);
+		} catch(e) { console.warn('queueSettingsPatch failed', e); }
+	}
+
+	/**
+	 * NEW: Lite GET for offline email settings poller (no side effects)
+	 * @returns {Promise<object>} server data
+	 */
+	async fetchServerDataLite() {
+		try {
+			const url = this.getServerUrl();
+			const res = await fetch(url, { method:'GET', credentials:'include', headers: { 'Accept':'application/json' } });
+			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			return await res.json();
+		} catch(e) {
+			console.warn('fetchServerDataLite failed', e);
+			throw e;
+		}
 	}
 
 	/**
@@ -1001,10 +1033,18 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 						pre[fid] = (base[key] ?? '');
 					});
 				} catch(_e){}
-				let __uname = '';
-				try { const inp = document.getElementById('presenceNameInput'); if (inp && inp.value) __uname = (inp.value||'').trim(); } catch(_eDom){}
-				try { if (!__uname) __uname = (localStorage.getItem('presence.displayName') || '').trim(); } catch(_e){}
-				requestBody = { metadata: { timestamp: Date.now(), displayName: __uname }, fieldUpdates: delta, preconditions: pre, settings: currentData.settings || {} };
+			let __uname = '';
+			try { const inp = document.getElementById('presenceNameInput'); if (inp && inp.value) __uname = (inp.value||'').trim(); } catch(_eDom){}
+			try { if (!__uname) __uname = (localStorage.getItem('presence.displayName') || '').trim(); } catch(_e){}
+			// NEW: Merge pending settings patches (email, etc.)
+			const settingsToSend = currentData.settings || {};
+			if (this._pendingSettings && Object.keys(this._pendingSettings).length > 0) {
+				Object.keys(this._pendingSettings).forEach(section => {
+					settingsToSend[section] = { ...(settingsToSend[section]||{}), ...this._pendingSettings[section] };
+				});
+				console.log('📦 Including pending settings in POST', this._pendingSettings);
+			}
+			requestBody = { metadata: { timestamp: Date.now(), displayName: __uname }, fieldUpdates: delta, preconditions: pre, settings: settingsToSend };
             } else {
                 // No field delta: skip POST in multi-master to avoid metadata churn and self-echo suppression
                 // Read-back polling will still converge both clients.
@@ -1051,6 +1091,8 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 					// Try to consume JSON and advance our lastServerTimestamp immediately for read-after-write coherency
 					let _resp = null; try { _resp = await response.json(); } catch(_e){}
 					try { const ts = parseInt(_resp?.timestamp || 0, 10); if (ts) { this.lastServerTimestamp = Math.max(this.lastServerTimestamp||0, ts); } } catch(_e){}
+					// NEW: Clear pending settings after successful POST
+					this._pendingSettings = {};
 					console.log("✅ Master: Server-Sync erfolgreich");
 					// Reset API-Sync-Bypass-Flag nach erfolgreicher Speicherung
 					if (window.HangarDataCoordinator) {
@@ -1830,11 +1872,20 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 				if (this._isMasterMode && this._isMasterMode() && this.requireOtherMastersForRead) {
 					let otherOnline = false;
 					try { otherOnline = await this._hasOtherMastersOnline(); } catch(_e) { otherOnline = false; }
-					if (!otherOnline) {
-						console.log('↩️ Presence gating: no other Master online — skipping tile updates');
-						try { this.lastLoadedAt = Date.now(); document.dispatchEvent(new CustomEvent('serverDataLoaded', { detail: { loadedAt: this.lastLoadedAt } })); } catch(e){}
-						return true;
-					}
+				if (!otherOnline) {
+					console.log('↩️ Presence gating: no other Master online — skipping tile updates');
+					// NEW: Still persist and dispatch email settings even when gated
+					try {
+						if (serverData.settings && serverData.settings.email) {
+							localStorage.setItem('settings.email', JSON.stringify(serverData.settings.email));
+						}
+					} catch(e){}
+					try { 
+						this.lastLoadedAt = Date.now(); 
+						document.dispatchEvent(new CustomEvent('serverDataLoaded', { detail: { loadedAt: this.lastLoadedAt, settings: serverData.settings } })); 
+					} catch(e){}
+					return true;
+				}
 				}
 			} catch(_e){}
 					// Last-write-wins baseline, but protect locally edited fields in multi-master
@@ -1864,7 +1915,9 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 				window.dataCoordinator.loadProject(toApply, "server");
 				console.log("✅ Server-Daten über Datenkoordinator angewendet");
 				try { this._updateBaselineFromServerData(toApply); } catch(_e){}
-				try { this.lastLoadedAt = Date.now(); document.dispatchEvent(new CustomEvent('serverDataLoaded', { detail: { loadedAt: this.lastLoadedAt } })); } catch(e){}
+				// NEW: Persist email settings to localStorage and include in event
+				try { if (toApply.settings && toApply.settings.email) { localStorage.setItem('settings.email', JSON.stringify(toApply.settings.email)); } } catch(e){}
+				try { this.lastLoadedAt = Date.now(); document.dispatchEvent(new CustomEvent('serverDataLoaded', { detail: { loadedAt: this.lastLoadedAt, settings: toApply.settings } })); } catch(e){}
 				this._firstApplyDone = true;
 				this._bypassFencesOnce = false;
 				return true;
@@ -1883,7 +1936,9 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 					const result = window.hangarData.applyLoadedHangarPlan(serverData);
 					console.log("📄 Ergebnis hangarData.applyLoadedHangarPlan:", result);
 					if (result) {
-						try { this.lastLoadedAt = Date.now(); document.dispatchEvent(new CustomEvent('serverDataLoaded', { detail: { loadedAt: this.lastLoadedAt } })); } catch(e){}
+						// NEW: Persist email settings and include in event
+						try { if (serverData.settings && serverData.settings.email) { localStorage.setItem('settings.email', JSON.stringify(serverData.settings.email)); } } catch(e){}
+						try { this.lastLoadedAt = Date.now(); document.dispatchEvent(new CustomEvent('serverDataLoaded', { detail: { loadedAt: this.lastLoadedAt, settings: serverData.settings } })); } catch(e){}
 						this._firstApplyDone = true;
 						this._bypassFencesOnce = false;
 						return true;
@@ -1933,7 +1988,9 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 			if (applied) {
 				console.log("✅ Server-Daten über direkten Fallback angewendet");
 				try { this._updateBaselineFromServerData(serverData); } catch(_e){}
-				try { this.lastLoadedAt = Date.now(); document.dispatchEvent(new CustomEvent('serverDataLoaded', { detail: { loadedAt: this.lastLoadedAt } })); } catch(e){}
+				// NEW: Persist email settings and include in event
+				try { if (serverData.settings && serverData.settings.email) { localStorage.setItem('settings.email', JSON.stringify(serverData.settings.email)); } } catch(e){}
+				try { this.lastLoadedAt = Date.now(); document.dispatchEvent(new CustomEvent('serverDataLoaded', { detail: { loadedAt: this.lastLoadedAt, settings: serverData.settings } })); } catch(e){}
 				this._firstApplyDone = true;
 				this._bypassFencesOnce = false;
 					return true;
@@ -1941,7 +1998,9 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 					console.warn("⚠️ Keine Server-Daten konnten angewendet werden");
 					// Even if no DOM changes were applied (e.g., empty dataset), update baseline and timestamp
 					try { this._updateBaselineFromServerData(serverData); } catch(_e){}
-					try { this.lastLoadedAt = Date.now(); document.dispatchEvent(new CustomEvent('serverDataLoaded', { detail: { loadedAt: this.lastLoadedAt } })); } catch(e){}
+					// NEW: Persist email settings and include in event
+					try { if (serverData.settings && serverData.settings.email) { localStorage.setItem('settings.email', JSON.stringify(serverData.settings.email)); } } catch(e){}
+					try { this.lastLoadedAt = Date.now(); document.dispatchEvent(new CustomEvent('serverDataLoaded', { detail: { loadedAt: this.lastLoadedAt, settings: serverData.settings } })); } catch(e){}
 					return true; // treat as success for convergence
 				}
 		} catch (error) {

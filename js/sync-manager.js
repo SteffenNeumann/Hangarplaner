@@ -54,7 +54,17 @@ class SharingManager {
   async debugTestWrite(){ try { const url = this._getServerUrlSafe(); const sid = (window.serverSync && typeof window.serverSync.getSessionId==='function') ? window.serverSync.getSessionId() : (localStorage.getItem('serverSync.sessionId') || ''); const dname = (localStorage.getItem('presence.displayName') || '').trim(); const body = { metadata: { debugPing: new Date().toISOString(), timestamp: Math.round(Date.now()) } }; this._debugLog(`POST ${url}`); const res = await fetch(url, { method:'POST', headers: { 'Content-Type':'application/json', 'X-Sync-Role':'master', 'X-Sync-Session': sid, 'X-Display-Name': dname }, body: JSON.stringify(body) }); this._debugLog(`POST status ${res.status}`); const text = await res.text(); this._debugLog(`Body (first 200): ${text.slice(0,200)}`); await this.debugTestRead(); } catch(e){ this._debugLog(`WRITE error: ${e.message}`); } }
 
   handleModeControlChange(mode){ if (!mode) return; this.updateSyncModeByString(mode); }
-  _emitModeChanged(){ try { document.dispatchEvent(new CustomEvent('syncModeChanged', { detail: { mode: this.syncMode } })); } catch(_e){} }
+  // NEW: Emit syncModeChanged with readEnabled and writeEnabled flags for email settings poller
+  _emitModeChanged(){ 
+    try { 
+      const readEnabled = (this.syncMode === 'sync' || this.syncMode === 'master');
+      const writeEnabled = (this.syncMode === 'master');
+      document.dispatchEvent(new CustomEvent('syncModeChanged', { 
+        detail: { mode: this.syncMode, readEnabled, writeEnabled } 
+      })); 
+      console.log(`📨 syncModeChanged event emitted: ${this.syncMode} (read=${readEnabled}, write=${writeEnabled})`);
+    } catch(_e){} 
+  }
   // Wait until window.serverSync exposes a specific method, up to timeoutMs
   async _waitForServerSyncMethod(name, timeoutMs = 2500){
     try {

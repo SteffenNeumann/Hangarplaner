@@ -186,19 +186,22 @@ class ServerSync {
 			if (this.serverSyncInterval) {
 				clearInterval(this.serverSyncInterval);
 			}
-			this.serverSyncInterval = setInterval(() => {
-				try {
-					if (
-						!this.isApplyingServerData &&
-						!window.isApplyingServerData &&
-						!window.isLoadingServerData &&
-						!window.isSavingToServer &&
-						this.hasDataChanged()
-					) {
-						this.syncWithServer();
-					}
-				} catch (_e) {}
-			}, 5000);
+		this.serverSyncInterval = setInterval(() => {
+			try {
+				console.warn('⚠️ [EMAIL SYNC DEBUG] Periodic sync tick...');
+				const applying = this.isApplyingServerData || window.isApplyingServerData;
+				const loading = window.isLoadingServerData;
+				const saving = window.isSavingToServer;
+				const changed = this.hasDataChanged();
+				console.warn('⚠️ [EMAIL SYNC DEBUG] Periodic sync checks:', { applying, loading, saving, changed });
+				if (!applying && !loading && !saving && changed) {
+					console.warn('⚠️ [EMAIL SYNC DEBUG] Calling syncWithServer...');
+					this.syncWithServer();
+				} else {
+					console.warn('⚠️ [EMAIL SYNC DEBUG] Sync skipped - condition not met');
+				}
+			} catch (_e) { console.warn('⚠️ [EMAIL SYNC DEBUG] Periodic sync error:', _e); }
+		}, 5000);
 			console.log("⏰ Periodische Server-Sync gestartet (5s Intervall, Change-Detection)");
 		} catch (e) {
 			console.warn('startPeriodicSync failed', e);

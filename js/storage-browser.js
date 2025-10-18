@@ -996,9 +996,10 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 				}
 			} catch(_e){}
 			// Aktuelle Daten sammeln
+			console.warn('⚠️ [EMAIL SYNC DEBUG] About to call collectCurrentData()...');
 			const currentData = this.collectCurrentData();
 
-			console.log('📦 collectCurrentData result:', {
+			console.warn('⚠️ [EMAIL SYNC DEBUG] collectCurrentData result:', {
 				hasData: !!currentData,
 				hasSettings: !!(currentData && currentData.settings),
 				hasEmail: !!(currentData && currentData.settings && currentData.settings.email),
@@ -1053,7 +1054,7 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 				console.log('📦 Final settings to send', JSON.stringify(settingsToSend));
 			}
 			requestBody = { metadata: { timestamp: Date.now(), displayName: __uname }, fieldUpdates: delta, preconditions: pre, settings: settingsToSend };
-			console.log('📦 POST body (with fieldUpdates):', JSON.stringify({ hasFieldUpdates: !!delta, settingsKeys: Object.keys(settingsToSend), emailInSettings: !!settingsToSend.email }));
+			console.warn('⚠️ [EMAIL SYNC DEBUG] POST body prepared:', JSON.stringify({ hasFieldUpdates: !!delta, settingsKeys: Object.keys(settingsToSend), emailInSettings: !!settingsToSend.email, fullSettingsEmail: settingsToSend.email }));
             } else {
                 // No field delta: check if we have pending settings to POST
                 if (this._pendingSettings && Object.keys(this._pendingSettings).length > 0) {
@@ -1555,15 +1556,16 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 
 					// *** NEU: Email Settings ergänzen (von collectEmailSettingsFromUI) ***
 					try {
+						console.warn('⚠️ [EMAIL SYNC DEBUG] Attempting to collect email settings...');
 						if (typeof window.collectEmailSettingsFromUI === 'function') {
 							const emailSettings = window.collectEmailSettingsFromUI();
 							if (!data.settings) data.settings = {};
 							data.settings.email = emailSettings;
-							console.log('📧 Email settings collected from UI:', JSON.stringify(emailSettings));
+							console.warn('⚠️ [EMAIL SYNC DEBUG] Email settings collected:', JSON.stringify(emailSettings));
 						} else {
-							console.warn('⚠️ window.collectEmailSettingsFromUI is not a function');
+							console.warn('⚠️ [EMAIL SYNC DEBUG] window.collectEmailSettingsFromUI is NOT a function, type:', typeof window.collectEmailSettingsFromUI);
 						}
-					} catch(_e) { console.warn('Failed to collect email settings', _e); }
+					} catch(_e) { console.warn('⚠️ [EMAIL SYNC DEBUG] Failed to collect email settings:', _e); }
 
 					// Ensure tiles present; if missing/empty, collect from DOM
 					try {

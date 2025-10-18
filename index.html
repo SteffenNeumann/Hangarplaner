@@ -5800,6 +5800,10 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		      } catch(e){}
 		    }, 2000); // delay to allow serverSync to initialize
 		  });
+
+		  // Expose email settings collector globally for storage-browser.js
+		  window.collectEmailSettingsFromUI = collectEmailSettingsFromUI;
+		  window.applyEmailSettingsToUI = applyEmailSettingsToUI;
 		})();
 </script>
 

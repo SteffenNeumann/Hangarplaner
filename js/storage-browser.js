@@ -1042,14 +1042,27 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 				Object.keys(this._pendingSettings).forEach(section => {
 					settingsToSend[section] = { ...(settingsToSend[section]||{}), ...this._pendingSettings[section] };
 				});
-				console.log('📦 Including pending settings in POST', this._pendingSettings);
+				console.log('📦 Including pending settings in POST', JSON.stringify(this._pendingSettings));
+				console.log('📦 Final settings to send', JSON.stringify(settingsToSend));
 			}
 			requestBody = { metadata: { timestamp: Date.now(), displayName: __uname }, fieldUpdates: delta, preconditions: pre, settings: settingsToSend };
             } else {
-                // No field delta: skip POST in multi-master to avoid metadata churn and self-echo suppression
-                // Read-back polling will still converge both clients.
-                console.log('⏭️ No field delta; skipping POST (multi-master safe)');
-                return true;
+                // No field delta: check if we have pending settings to POST
+                if (this._pendingSettings && Object.keys(this._pendingSettings).length > 0) {
+                    console.log('📦 No tile delta but pending settings exist - creating settings-only POST');
+                    const settingsOnlyPayload = currentData.settings || {};
+                    Object.keys(this._pendingSettings).forEach(section => {
+                        settingsOnlyPayload[section] = { ...(settingsOnlyPayload[section]||{}), ...this._pendingSettings[section] };
+                    });
+                    let __uname2 = '';
+                    try { const inp = document.getElementById('presenceNameInput'); if (inp && inp.value) __uname2 = (inp.value||'').trim(); } catch(_eDom){}
+                    try { if (!__uname2) __uname2 = (localStorage.getItem('presence.displayName') || '').trim(); } catch(_e){}
+                    requestBody = { metadata: { timestamp: Date.now(), displayName: __uname2 }, settings: settingsOnlyPayload };
+                } else {
+                    // No field delta and no settings: skip POST in multi-master to avoid metadata churn
+                    console.log('⏭️ No field delta and no pending settings; skipping POST (multi-master safe)');
+                    return true;
+                }
             }
 
 			// Optimierung: Verwende AbortController für Timeout

@@ -2439,6 +2439,12 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 	 */
 	hasDataChanged() {
 		try {
+			// OVERRIDE: If pending settings exist, force sync regardless of tile data changes
+			if (this._pendingSettings && Object.keys(this._pendingSettings).length > 0) {
+				console.log('✅ hasDataChanged: pending settings detected, forcing sync', Object.keys(this._pendingSettings));
+				return true;
+			}
+			
 			// WICHTIG: Prüfe ob kürzlich API-Updates stattgefunden haben
 			if (
 				window.HangarDataCoordinator &&

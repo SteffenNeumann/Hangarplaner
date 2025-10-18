@@ -5709,15 +5709,8 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		  }
 
 		  function wire(){
-		    const fields = ['mailRecipients', 'mailCC', 'mailSubject', 'mailBody'];
-		    fields.forEach(id=>{
-		      const el = document.getElementById(id);
-		      if (el && !el.__wired){
-		        el.addEventListener('input', debounce(()=> saveServerEmailSettings(true), 500));
-		        el.addEventListener('blur', ()=> saveServerEmailSettings(true));
-		        el.__wired=true;
-		      }
-		    });
+		    // Email fields now sync automatically via collectCurrentData() in periodic sync
+		    // No separate handler needed - periodic sync (every 5s) includes email settings
 		    const send = document.getElementById('sendMailBtn');
 		    if (send && !send.__wired){ send.addEventListener('click', function(e){ e.preventDefault(); sendMailWithPdf(); }); send.__wired=true; }
 		  }

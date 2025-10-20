@@ -5536,50 +5536,40 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		    } catch(e) { /* ignore */ }
 		  }
 
-		  // NEW: Use sync infrastructure for immediate propagation (Master only)
-		  async function saveServerEmailSettings(forceSyncNow=true){
+		  async function saveServerEmailSettings(){
 		    try {
 		      // Only allow save in Master
 		      const isMaster = !!(window.serverSync && (window.serverSync.isMaster || (window.sharingManager && window.sharingManager.syncMode==='master')));
 		      if (!isMaster) {
-		        console.log('⚠️ Email settings save skipped (not in Master mode)');
+		        showModalAlert('Switch to Master mode to save global mail settings.');
 		        return false;
 		      }
-
-		      const payload = collectEmailSettingsFromUI();
-		      window.emailSettings = { ...window.emailSettings, ...payload };
-
-		      // Queue settings patch via sync infrastructure
-		      if (window.serverSync && typeof window.serverSync.queueSettingsPatch === 'function') {
-		        window.serverSync.queueSettingsPatch('email', { ...payload });
-
-		        // Trigger immediate sync
-		        if (forceSyncNow && typeof window.serverSync.syncWithServer === 'function') {
-		          await window.serverSync.syncWithServer();
-		        }
-		        return true;
-		      } else {
-		        // Fallback to legacy POST method if queueSettingsPatch not available
-		        console.warn('⚠️ queueSettingsPatch not available, using fallback');
-		        const url = (window.serverSync && typeof window.serverSync.getServerUrl==='function' && window.serverSync.getServerUrl()) || (window.location.origin + '/sync/data.php');
-		        const headers = { 'Content-Type':'application/json', 'X-Sync-Role':'master' };
-		        try {
-		          const sid = window.serverSync && typeof window.serverSync.getSessionId==='function' ? window.serverSync.getSessionId() : (localStorage.getItem('serverSync.sessionId')||'');
-		          if (sid) headers['X-Sync-Session'] = sid;
-		          let dname = '';
-		          try { const el = document.getElementById('presenceNameInput'); if (el && el.value) dname = el.value.trim(); } catch(_eDom){}
-		          try { if (!dname) dname = (localStorage.getItem('presence.displayName')||'').trim(); } catch(_e){}
-		          if (!dname) dname = 'User';
-		          headers['X-Display-Name'] = dname;
-		        } catch(_e){}
-		        const body = { metadata: { timestamp: Date.now() }, settings: { email: payload } };
-		        const res = await fetch(url, { method:'POST', headers, body: JSON.stringify(body) });
-		        if (!res.ok) {
-		          try { const t = await res.text(); console.warn('Save settings failed', res.status, t); } catch(_e){}
-		          return false;
-		        }
-		        return true;
+		      const recipients = getField('mailRecipients');
+		      const cc         = getField('mailCC');
+		      const subject    = getField('mailSubject');
+		      const body       = getField('mailBody');
+		      const payload = { metadata: { timestamp: Date.now() }, settings: {} };
+		      payload.settings[SETTINGS_KEYS.recipients] = recipients;
+		      payload.settings[SETTINGS_KEYS.cc]         = cc;
+		      payload.settings[SETTINGS_KEYS.subject]    = subject;
+		      payload.settings[SETTINGS_KEYS.body]       = body;
+		      let url = (window.serverSync && typeof window.serverSync.getServerUrl==='function' && window.serverSync.getServerUrl()) || (window.location.origin + '/sync/data.php');
+      const headers = { 'Content-Type':'application/json', 'X-Sync-Role':'master' };
+      try {
+        const sid = window.serverSync && typeof window.serverSync.getSessionId==='function' ? window.serverSync.getSessionId() : (localStorage.getItem('serverSync.sessionId')||'');
+        if (sid) headers['X-Sync-Session'] = sid;
+        let dname = '';
+        try { const el = document.getElementById('presenceNameInput'); if (el && el.value) dname = el.value.trim(); } catch(_eDom){}
+        try { if (!dname) dname = (localStorage.getItem('presence.displayName')||'').trim(); } catch(_e){}
+        if (!dname) dname = 'User';
+        headers['X-Display-Name'] = dname;
+      } catch(_e){}
+		      const res = await fetch(url, { method:'POST', headers, body: JSON.stringify(payload) });
+		      if (!res.ok) {
+		        try { const t = await res.text(); console.warn('Save settings failed', res.status, t); } catch(_e){}
+		        return false;
 		      }
+		      return true;
 		    } catch(e) { console.warn('saveServerEmailSettings error', e); return false; }
 		  }
 
@@ -5713,9 +5703,9 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		      const el = document.getElementById(id);
 		      if (el && !el.__wired){
 		        // Debounced input handler for typing
-		        el.addEventListener('input', debounce(()=> saveServerEmailSettings(true), 500));
+		        el.addEventListener('input', debounce(saveServerEmailSettings, 500));
 		        // Immediate blur handler when field loses focus
-		        el.addEventListener('blur', ()=> saveServerEmailSettings(true));
+		        el.addEventListener('blur', saveServerEmailSettings);
 		        el.__wired=true;
 		      }
 		    });

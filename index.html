@@ -5552,12 +5552,10 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		      // Queue settings patch via sync infrastructure
 		      if (window.serverSync && typeof window.serverSync.queueSettingsPatch === 'function') {
 		        window.serverSync.queueSettingsPatch('email', { ...payload });
-		        console.log('📧 Email settings queued for sync');
 
 		        // Trigger immediate sync
 		        if (forceSyncNow && typeof window.serverSync.syncWithServer === 'function') {
 		          await window.serverSync.syncWithServer();
-		          console.log('✅ Email settings synced immediately');
 		        }
 		        return true;
 		      } else {
@@ -5709,8 +5707,18 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		  }
 
 		  function wire(){
-		    // Email fields now sync automatically via collectCurrentData() in periodic sync
-		    // No separate handler needed - periodic sync (every 5s) includes email settings
+		    // RESTORED: Direct event listeners for instant email settings sync (like commit 496af59)
+		    const fields = ['mailRecipients', 'mailCC', 'mailSubject', 'mailBody'];
+		    fields.forEach(id=>{
+		      const el = document.getElementById(id);
+		      if (el && !el.__wired){
+		        // Debounced input handler for typing
+		        el.addEventListener('input', debounce(()=> saveServerEmailSettings(true), 500));
+		        // Immediate blur handler when field loses focus
+		        el.addEventListener('blur', ()=> saveServerEmailSettings(true));
+		        el.__wired=true;
+		      }
+		    });
 		    const send = document.getElementById('sendMailBtn');
 		    if (send && !send.__wired){ send.addEventListener('click', function(e){ e.preventDefault(); sendMailWithPdf(); }); send.__wired=true; }
 		  }

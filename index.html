@@ -5722,79 +5722,24 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		    } catch(_){} 
 		  });
 
-		  // NEW: Enhanced serverDataLoaded handler with email settings and mailLogVersion tracking
+		  // Enhanced serverDataLoaded handler - reads flat email settings structure
 		  document.addEventListener('serverDataLoaded', async (e)=>{ 
 		    try { 
-		      // Load email settings from server data if available
 		      const serverData = e.detail || {};
-		      const emailSettings = serverData?.settings?.email;
+		      const s = serverData?.settings || {};
 		      
-		      if (emailSettings) {
-		        // Apply email settings to UI
-		        applyEmailSettingsToUI(emailSettings);
-		        
-		        // Trigger mail log refresh only when someone sent an email (Option B)
-		        if (typeof emailSettings.mailLogVersion === 'number' && emailSettings.mailLogVersion !== lastMailLogVersion) {
-		          lastMailLogVersion = emailSettings.mailLogVersion;
-		          console.log('📨 Mail log version changed, refreshing log');
-		          renderMailLog(await fetchMailLog(10));
-		        }
-		      } else {
-		        // Fallback to legacy loadServerEmailSettings
-		        await loadServerEmailSettings();
+		      // Check if we have email settings in flat structure (current format)
+		      if (s[SETTINGS_KEYS.recipients] !== undefined || s[SETTINGS_KEYS.cc] !== undefined || 
+		          s[SETTINGS_KEYS.subject] !== undefined || s[SETTINGS_KEYS.body] !== undefined) {
+		        // Apply from flat structure
+		        setField('mailRecipients', s[SETTINGS_KEYS.recipients] || '');
+		        setField('mailCC', s[SETTINGS_KEYS.cc] || '');
+		        setField('mailSubject', s[SETTINGS_KEYS.subject] || '');
+		        setField('mailBody', s[SETTINGS_KEYS.body] || '');
+		        console.log('📧 Email settings updated from server (flat structure)');
 		      }
 		    } catch(e){ console.warn('serverDataLoaded email handler error', e); } 
 		  });
-
-		  // NEW: Offline mode exception - read email settings even when Read is OFF (Option A)
-		  let emailOfflinePollTimer = null;
-		  function startEmailSettingsOfflinePoll(){
-		    if(emailOfflinePollTimer) return;
-		    console.log('📧 Starting offline email settings poller');
-		    emailOfflinePollTimer = setInterval(async ()=>{
-		      try{
-		        const serverData = await window.serverSync?.fetchServerDataLite?.(); // GET sync/data.php
-		        const s = serverData?.settings?.email;
-		        if(s){
-		          applyEmailSettingsToUI(s);
-		          if(typeof s.mailLogVersion === 'number' && s.mailLogVersion !== lastMailLogVersion){
-		            lastMailLogVersion = s.mailLogVersion;
-		            console.log('📨 Mail log version changed (offline mode), refreshing log');
-		            renderMailLog(await fetchMailLog(10));
-		          }
-		        }
-		      }catch(e){ console.warn('Offline email poll error', e); }
-		    }, 5000); // 5 second interval for near-immediate updates
-		  }
-
-		  function stopEmailSettingsOfflinePoll(){
-		    if(emailOfflinePollTimer){ 
-		      clearInterval(emailOfflinePollTimer); 
-		      emailOfflinePollTimer = null; 
-		      console.log('⏹️ Stopped offline email settings poller');
-		    }
-		  }
-
-		  // Hook on mode changes
-		  window.addEventListener('syncModeChanged', (e)=>{
-		    const readOn = e.detail?.readEnabled;
-		    if(readOn) stopEmailSettingsOfflinePoll(); 
-		    else startEmailSettingsOfflinePoll();
-		  });
-
-		  // Start once on DOM ready if Read is OFF
-		  document.addEventListener('DOMContentLoaded', ()=>{
-		    setTimeout(()=>{
-		      try {
-		        const readEnabled = window.serverSync?.isSlaveActive || window.serverSync?.isMaster;
-		        if(!readEnabled) startEmailSettingsOfflinePoll();
-		      } catch(e){}
-		    }, 2000); // delay to allow serverSync to initialize
-		  });
-
-		  // Expose email settings collector globally for storage-browser.js
-		  window.collectEmailSettingsFromUI = collectEmailSettingsFromUI;
-		  window.applyEmailSettingsToUI = applyEmailSettingsToUI;
 		})();
 </script>
 

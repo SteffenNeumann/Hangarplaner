@@ -48,6 +48,17 @@ const FleetDatabase = (function () {
 	let lastApiCall = 0;
 	let isLoading = false; // Load Protection Flag
 
+	// API Rate Limit Tracking
+	window.FleetDatabase = window.FleetDatabase || {};
+	window.FleetDatabase.apiQuotaExceeded = false;
+
+	/**
+	 * Check if error is a rate limit (429) error
+	 */
+	function isRateLimitError(e) {
+		return e && (e.status === 429 || e.isRateLimit === true);
+	}
+
 	// DOM-Elemente
 	let elements = {};
 
@@ -225,16 +236,33 @@ const FleetDatabase = (function () {
 					const apiData = await loadAllFleetDataFromAPI();
 					console.log("📊 API-Daten erhalten:", apiData);
 
-					// Differential-Synchronisation durchführen (ohne neue Datenladung)
-					console.log("🔄 Starte Differential-Synchronisation...");
-					await window.fleetDatabaseManager.syncWithApiData(apiData, {
-						skipReload: true,
-					});
+					// Check if API returned empty due to 429 rate limit
+					const apiIsEmpty =
+						!apiData ||
+						!apiData.airlines ||
+						Object.keys(apiData.airlines).length === 0;
 
-					// Aktualisierte Daten laden (nur einmal)
-					const updatedData = window.fleetDatabaseManager.getFleetData();
-					fleetData = convertFleetDataForTable(updatedData);
-					console.log("✅ Synchronisation abgeschlossen");
+					if (apiIsEmpty && window.FleetDatabase.apiQuotaExceeded) {
+						console.warn(
+							"[FleetDB] 429 fallback active. Skipping API sync and keeping cached data."
+						);
+						const msg =
+							"⚠️ AeroDataBox API quota exceeded. Showing cached fleet data (may not be up-to-date).";
+						updateStatus(msg);
+						// Keep existing cached fleetData; do NOT overwrite DB
+						// Continue with rendering the cached data below
+					} else {
+						// Normal path: Differential-Synchronisation durchführen (ohne neue Datenladung)
+						console.log("🔄 Starte Differential-Synchronisation...");
+						await window.fleetDatabaseManager.syncWithApiData(apiData, {
+							skipReload: true,
+						});
+
+						// Aktualisierte Daten laden (nur einmal)
+						const updatedData = window.fleetDatabaseManager.getFleetData();
+						fleetData = convertFleetDataForTable(updatedData);
+						console.log("✅ Synchronisation abgeschlossen");
+					}
 				} else {
 					console.log(
 						"⏭️ API-Synchronisation übersprungen (letzte Sync < 24h)"
@@ -248,14 +276,31 @@ const FleetDatabase = (function () {
 				const apiData = await loadAllFleetDataFromAPI();
 				console.log("📊 API-Daten für Erst-Synchronisation erhalten:", apiData);
 
-				// Daten in der serverseitigen Datenbank speichern
-				console.log("💾 Speichere Daten in der Fleet Database...");
-				await window.fleetDatabaseManager.syncWithApiData(apiData);
+				// Check if API returned empty due to 429 rate limit
+				const apiIsEmpty =
+					!apiData ||
+					!apiData.airlines ||
+					Object.keys(apiData.airlines).length === 0;
 
-				// Daten für die Tabelle laden
-				const savedData = window.fleetDatabaseManager.getFleetData();
-				fleetData = convertFleetDataForTable(savedData);
-				console.log("✅ Daten erfolgreich in Fleet Database gespeichert");
+				if (apiIsEmpty && window.FleetDatabase.apiQuotaExceeded) {
+					console.warn(
+						"[FleetDB] 429 on first sync. Cannot load initial data from API."
+					);
+					const msg =
+						"⚠️ AeroDataBox API quota exceeded. Unable to load initial fleet data. Please try again later.";
+					updateStatus(msg);
+					// No cached data available for first load; show empty state
+					fleetData = [];
+				} else {
+					// Normal path: Daten in der serverseitigen Datenbank speichern
+					console.log("💾 Speichere Daten in der Fleet Database...");
+					await window.fleetDatabaseManager.syncWithApiData(apiData);
+
+					// Daten für die Tabelle laden
+					const savedData = window.fleetDatabaseManager.getFleetData();
+					fleetData = convertFleetDataForTable(savedData);
+					console.log("✅ Daten erfolgreich in Fleet Database gespeichert");
+				}
 			}
 
 			console.log(`✅ ${fleetData.length} Flugzeuge verfügbar`);
@@ -291,6 +336,14 @@ const FleetDatabase = (function () {
 		};
 
 		try {
+			// Early exit if quota already exceeded
+			if (window.FleetDatabase.apiQuotaExceeded) {
+				console.warn(
+					"[FleetDB] API quota already exceeded. Returning empty airlines object."
+				);
+				return { airlines: {} };
+			}
+
 			// CLH Flotte laden
 			updateStatus("Lade CLH (Lufthansa CityLine) Flotte von API...");
 			console.log("📡 Lade CLH Flotte...");
@@ -319,16 +372,23 @@ const FleetDatabase = (function () {
 				};
 			}
 
-			console.log(
-				`📊 API-Daten geladen: CLH=${clhData.length}, LHX=${lhxData.length}`
+		console.log(
+			`📊 API-Daten geladen: CLH=${clhData.length}, LHX=${lhxData.length}`
+		);
+		console.log("📊 API-Daten Struktur:", apiData);
+		return apiData;
+	} catch (error) {
+		// Handle 429 rate limit errors gracefully
+		if (isRateLimitError(error) || window.FleetDatabase.apiQuotaExceeded) {
+			console.warn(
+				"[FleetDB] 429 rate limit in loadAllFleetDataFromAPI(). Returning empty airlines object."
 			);
-			console.log("📊 API-Daten Struktur:", apiData);
-			return apiData;
-		} catch (error) {
-			console.error("❌ Fehler beim Laden der API-Daten:", error);
-			throw error;
+			return { airlines: {} };
 		}
+		console.error("❌ Fehler beim Laden der API-Daten:", error);
+		throw error;
 	}
+}
 
 	/**
 	 * Konvertiert Fleet Database Daten für die Tabellen-Anzeige
@@ -413,6 +473,16 @@ const FleetDatabase = (function () {
 					hasMoreData = false;
 				}
 			} catch (error) {
+				// Handle 429 rate limit errors gracefully
+				if (isRateLimitError(error)) {
+					window.FleetDatabase.apiQuotaExceeded = true;
+					console.warn(
+						`[FleetDB] 429 rate limit in loadSimpleAirlineFleet(${airlineCode}). Returning ${allAircrafts.length} aircrafts loaded so far.`
+					);
+					hasMoreData = false;
+					// Return what we have so far instead of throwing
+					break;
+				}
 				console.error(
 					`❌ Fehler beim Laden der Seite für ${airlineCode}:`,
 					error
@@ -438,6 +508,22 @@ const FleetDatabase = (function () {
 			xhr.addEventListener("readystatechange", function () {
 				if (this.readyState === this.DONE) {
 					console.log(`📊 ${airlineCode} Response Status: ${this.status}`);
+
+					// Handle 429 Rate Limit Error
+					if (this.status === 429) {
+						window.FleetDatabase.apiQuotaExceeded = true;
+						const bodyText = this.responseText || "";
+						console.warn(
+							`[FleetDB] AeroDataBox 429 rate limit for ${airlineCode}. Falling back to cached data.`
+						);
+						console.warn(`[FleetDB] 429 response body:`, bodyText);
+						const err = new Error(`HTTP 429 for ${airlineCode}`);
+						err.status = 429;
+						err.isRateLimit = true;
+						err.body = bodyText;
+						reject(err);
+						return;
+					}
 
 					if (this.status === 200) {
 						try {

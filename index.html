@@ -5538,10 +5538,15 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 
 		  async function saveServerEmailSettings(){
 		    try {
-		      // Only allow save in Master
+		      // Skip if we're currently applying data from server to prevent save loop
+		      if (window._applyingEmailFromServer) {
+		        return false;
+		      }
+		      
+		      // Only allow save in Master - silently skip in Sync mode
 		      const isMaster = !!(window.serverSync && (window.serverSync.isMaster || (window.sharingManager && window.sharingManager.syncMode==='master')));
 		      if (!isMaster) {
-		        showModalAlert('Switch to Master mode to save global mail settings.');
+		        // Silent skip - don't show alert when triggered by programmatic updates in Sync mode
 		        return false;
 		      }
 		      const recipients = getField('mailRecipients');
@@ -5697,14 +5702,13 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		  }
 
 		  function wire(){
-		    // RESTORED: Direct event listeners for instant email settings sync (like commit 496af59)
+		    // Attach event listeners for email settings sync
 		    const fields = ['mailRecipients', 'mailCC', 'mailSubject', 'mailBody'];
 		    fields.forEach(id=>{
 		      const el = document.getElementById(id);
 		      if (el && !el.__wired){
-		        // Debounced input handler for typing
+		        // Check Master mode before saving - handlers work for all clients but save() checks permission
 		        el.addEventListener('input', debounce(saveServerEmailSettings, 500));
-		        // Immediate blur handler when field loses focus
 		        el.addEventListener('blur', saveServerEmailSettings);
 		        el.__wired=true;
 		      }
@@ -5731,12 +5735,18 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		      // Check if we have email settings in flat structure (current format)
 		      if (s[SETTINGS_KEYS.recipients] !== undefined || s[SETTINGS_KEYS.cc] !== undefined || 
 		          s[SETTINGS_KEYS.subject] !== undefined || s[SETTINGS_KEYS.body] !== undefined) {
-		        // Apply from flat structure
-		        setField('mailRecipients', s[SETTINGS_KEYS.recipients] || '');
-		        setField('mailCC', s[SETTINGS_KEYS.cc] || '');
-		        setField('mailSubject', s[SETTINGS_KEYS.subject] || '');
-		        setField('mailBody', s[SETTINGS_KEYS.body] || '');
-		        console.log('📧 Email settings updated from server (flat structure)');
+		        // Temporarily mark that we're applying server data to prevent save loop
+		        window._applyingEmailFromServer = true;
+		        try {
+		          setField('mailRecipients', s[SETTINGS_KEYS.recipients] || '');
+		          setField('mailCC', s[SETTINGS_KEYS.cc] || '');
+		          setField('mailSubject', s[SETTINGS_KEYS.subject] || '');
+		          setField('mailBody', s[SETTINGS_KEYS.body] || '');
+		          console.log('📧 Email settings updated from server (flat structure)');
+		        } finally {
+		          // Clear flag after a short delay to allow events to settle
+		          setTimeout(() => { window._applyingEmailFromServer = false; }, 100);
+		        }
 		      }
 		    } catch(e){ console.warn('serverDataLoaded email handler error', e); } 
 		  });

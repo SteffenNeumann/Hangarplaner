@@ -250,7 +250,7 @@ const FleetDatabase = (function () {
 						);
 						// Keep existing cached fleetData; do NOT overwrite DB
 						// Continue with rendering the cached data below
-					}
+					} else {
 						// Normal path: Differential-Synchronisation durchführen (ohne neue Datenladung)
 						console.log("🔄 Starte Differential-Synchronisation...");
 						await window.fleetDatabaseManager.syncWithApiData(apiData, {
@@ -287,7 +287,7 @@ const FleetDatabase = (function () {
 					);
 					// No cached data available for first load; show empty state
 					fleetData = [];
-				}
+				} else {
 					// Normal path: Daten in der serverseitigen Datenbank speichern
 					console.log("💾 Speichere Daten in der Fleet Database...");
 					await window.fleetDatabaseManager.syncWithApiData(apiData);

@@ -5729,6 +5729,13 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		      const serverData = e.detail || {};
 		      const s = serverData?.settings || {};
 		      
+		      console.warn('🔔 serverDataLoaded event received:', { 
+		        hasSettings: !!s,
+		        settingsKeys: Object.keys(s),
+		        hasEmailRecipients: s[SETTINGS_KEYS.recipients] !== undefined,
+		        recipients: s[SETTINGS_KEYS.recipients]
+		      });
+		      
 		      // Check if we have email settings in flat structure (current format)
 		      if (s[SETTINGS_KEYS.recipients] !== undefined || s[SETTINGS_KEYS.cc] !== undefined || 
 		          s[SETTINGS_KEYS.subject] !== undefined || s[SETTINGS_KEYS.body] !== undefined) {
@@ -5739,11 +5746,17 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		          setField('mailCC', s[SETTINGS_KEYS.cc] || '');
 		          setField('mailSubject', s[SETTINGS_KEYS.subject] || '');
 		          setField('mailBody', s[SETTINGS_KEYS.body] || '');
-		          console.log('📧 Email settings updated from server (flat structure)');
+		          console.warn('✅ Email settings applied from server:', {
+		            recipients: s[SETTINGS_KEYS.recipients],
+		            cc: s[SETTINGS_KEYS.cc],
+		            subject: s[SETTINGS_KEYS.subject]
+		          });
 		        } finally {
 		          // Clear flag after a short delay to allow events to settle
 		          setTimeout(() => { window._applyingEmailFromServer = false; }, 100);
 		        }
+		      } else {
+		        console.warn('⚠️ No email settings found in server data');
 		      }
 		    } catch(e){ console.warn('serverDataLoaded email handler error', e); } 
 		  });

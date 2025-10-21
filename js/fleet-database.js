@@ -174,6 +174,9 @@ const FleetDatabase = (function () {
 	async function loadFleetData() {
 		console.log("📡 loadFleetData() aufgerufen!");
 
+		// Reset 429 flag on each load attempt
+		window.FleetDatabase.apiQuotaExceeded = false;
+
 		// Load Protection: Verhindere mehrfache parallele Ladungen
 		if (isLoading) {
 			console.log("⏳ Datenladung bereits im Gange - überspringe...");
@@ -246,12 +249,9 @@ const FleetDatabase = (function () {
 						console.warn(
 							"[FleetDB] 429 fallback active. Skipping API sync and keeping cached data."
 						);
-						const msg =
-							"⚠️ AeroDataBox API quota exceeded. Showing cached fleet data (may not be up-to-date).";
-						updateStatus(msg);
 						// Keep existing cached fleetData; do NOT overwrite DB
 						// Continue with rendering the cached data below
-					} else {
+					}
 						// Normal path: Differential-Synchronisation durchführen (ohne neue Datenladung)
 						console.log("🔄 Starte Differential-Synchronisation...");
 						await window.fleetDatabaseManager.syncWithApiData(apiData, {
@@ -286,12 +286,9 @@ const FleetDatabase = (function () {
 					console.warn(
 						"[FleetDB] 429 on first sync. Cannot load initial data from API."
 					);
-					const msg =
-						"⚠️ AeroDataBox API quota exceeded. Unable to load initial fleet data. Please try again later.";
-					updateStatus(msg);
 					// No cached data available for first load; show empty state
 					fleetData = [];
-				} else {
+				}
 					// Normal path: Daten in der serverseitigen Datenbank speichern
 					console.log("💾 Speichere Daten in der Fleet Database...");
 					await window.fleetDatabaseManager.syncWithApiData(apiData);

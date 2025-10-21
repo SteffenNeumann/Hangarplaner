@@ -220,15 +220,15 @@ const FleetDatabase = (function () {
 				);
 				console.log(`📥 ${fleetData.length} Flugzeuge aus dem Cache geladen`);
 
-				// Prüfe ob API-Aktualisierung nötig ist (z.B. nur einmal täglich)
+				// Prüfe ob API-Aktualisierung nötig ist (nur alle 4 Wochen)
 				const lastSync = stats.lastApiSync || 0;
 				const now = Date.now();
-				const syncInterval = 24 * 60 * 60 * 1000; // 24 Stunden
+				const syncInterval = 28 * 24 * 60 * 60 * 1000; // 28 Tage (4 Wochen)
 				const needsSync = now - lastSync > syncInterval;
 
 				if (needsSync) {
 					console.log(
-						"🔄 API-Synchronisation wird durchgeführt (letzte Sync vor >24h)..."
+						"🔄 API-Synchronisation wird durchgeführt (letzte Sync vor >4 Wochen)..."
 					);
 
 					// API-Daten laden für Abgleich
@@ -265,7 +265,7 @@ const FleetDatabase = (function () {
 					}
 				} else {
 					console.log(
-						"⏭️ API-Synchronisation übersprungen (letzte Sync < 24h)"
+						"⏭️ API-Synchronisation übersprungen (letzte Sync < 4 Wochen)"
 					);
 				}
 			} else {

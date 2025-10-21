@@ -5546,7 +5546,6 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		      // Only allow save in Master - silently skip in Sync mode
 		      const isMaster = !!(window.serverSync && (window.serverSync.isMaster || (window.sharingManager && window.sharingManager.syncMode==='master')));
 		      if (!isMaster) {
-		        // Silent skip - don't show alert when triggered by programmatic updates in Sync mode
 		        return false;
 		      }
 		      const recipients = getField('mailRecipients');
@@ -5558,6 +5557,7 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		      payload.settings[SETTINGS_KEYS.cc]         = cc;
 		      payload.settings[SETTINGS_KEYS.subject]    = subject;
 		      payload.settings[SETTINGS_KEYS.body]       = body;
+		      console.warn('📧 MASTER: Saving email settings:', { recipients, cc, subject });
 		      let url = (window.serverSync && typeof window.serverSync.getServerUrl==='function' && window.serverSync.getServerUrl()) || (window.location.origin + '/sync/data.php');
       const headers = { 'Content-Type':'application/json', 'X-Sync-Role':'master' };
       try {
@@ -5571,9 +5571,10 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
       } catch(_e){}
 		      const res = await fetch(url, { method:'POST', headers, body: JSON.stringify(payload) });
 		      if (!res.ok) {
-		        try { const t = await res.text(); console.warn('Save settings failed', res.status, t); } catch(_e){}
+		        try { const t = await res.text(); console.warn('❌ Email save failed', res.status, t); } catch(_e){}
 		        return false;
 		      }
+		      console.warn('✅ MASTER: Email settings saved successfully');
 		      return true;
 		    } catch(e) { console.warn('saveServerEmailSettings error', e); return false; }
 		  }
@@ -5742,7 +5743,11 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		          setField('mailCC', s[SETTINGS_KEYS.cc] || '');
 		          setField('mailSubject', s[SETTINGS_KEYS.subject] || '');
 		          setField('mailBody', s[SETTINGS_KEYS.body] || '');
-		          console.log('📧 Email settings updated from server (flat structure)');
+		          console.warn('📧 SYNC: Email settings updated from server:', { 
+		            recipients: s[SETTINGS_KEYS.recipients],
+		            cc: s[SETTINGS_KEYS.cc],
+		            subject: s[SETTINGS_KEYS.subject]
+		          });
 		        } finally {
 		          // Clear flag after a short delay to allow events to settle
 		          setTimeout(() => { window._applyingEmailFromServer = false; }, 100);

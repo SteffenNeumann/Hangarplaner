@@ -125,9 +125,9 @@ const FleetDatabase = (function () {
 	 * Event-Listener einrichten
 	 */
 	function setupEventListeners() {
-		// Laden-Button
+		// Laden-Button - loads ONLY from server, no API call
 		if (elements.loadButton) {
-			elements.loadButton.addEventListener("click", loadFleetData);
+			elements.loadButton.addEventListener("click", loadFleetDataFromServer);
 		}
 
 		// Export-Button
@@ -168,7 +168,50 @@ const FleetDatabase = (function () {
 	}
 
 	/**
-	 * Flottendaten für beide Airlines laden - MIT SERVERSEITIGER DATENBANK
+	 * Load fleet data from server only (for manual button click)
+	 */
+	async function loadFleetDataFromServer() {
+		console.log("👆 Button: Lade Daten vom Server (kein API-Call)...");
+
+		// Load Protection
+		if (isLoading) {
+			console.log("⏳ Datenladung bereits im Gange - überspringe...");
+			return;
+		}
+
+		isLoading = true;
+		showLoadingState();
+		updateStatus("Lade Flottendaten vom Server...");
+
+		try {
+			if (!window.fleetDatabaseManager) {
+				throw new Error("Fleet Database Manager nicht initialisiert");
+			}
+
+			await window.fleetDatabaseManager.waitForInitialization();
+
+			// Load ONLY from server, no API sync
+			const cachedData = window.fleetDatabaseManager.getFleetData();
+			fleetData = convertFleetDataForTable(cachedData);
+
+			console.log(`✅ ${fleetData.length} Flugzeuge vom Server geladen`);
+			updateStatus(`${fleetData.length} Flugzeuge erfolgreich geladen`);
+
+			// Update filters and table
+			updateAircraftTypeFilter();
+			updateAirlineFilter();
+			applyFilters();
+		} catch (error) {
+			console.error("❌ Fehler beim Laden vom Server:", error);
+			updateStatus("Fehler beim Laden: " + error.message);
+			showEmptyState();
+		} finally {
+			isLoading = false;
+		}
+	}
+
+	/**
+	 * Auto-load fleet data with API sync check (for page load)
 	 */
 	async function loadFleetData() {
 		console.log("📡 loadFleetData() aufgerufen!");
@@ -1362,7 +1405,8 @@ const FleetDatabase = (function () {
 	// Öffentliche API
 	return {
 		init,
-		loadFleetData,
+		loadFleetData, // auto-load with API sync check (page load)
+		loadFleetDataFromServer, // server-only (button)
 		exportFleetData,
 		viewAircraftDetails,
 		useInHangar,
@@ -1428,7 +1472,7 @@ document.addEventListener("DOMContentLoaded", function () {
 			return;
 		}
 		dataLoadTriggered = true;
-		console.log("🎯 Starte einmalige automatische Datenladung...");
+		console.log("🎯 Starte einmalige automatische Datenladung (auto sync check)...");
 		FleetDatabase.loadFleetData();
 	}
 
@@ -1474,8 +1518,8 @@ window.FleetDatabase = FleetDatabase;
 
 // Test-Funktion für direktes Laden
 window.testFleetDatabaseLoad = function () {
-	console.log("🧪 Test: Lade Flottendaten direkt...");
-	FleetDatabase.loadFleetData();
+	console.log("🧪 Test: Lade Flottendaten direkt (server only)...");
+	FleetDatabase.loadFleetDataFromServer();
 };
 
 console.log("🧪 Test-Funktion verfügbar: testFleetDatabaseLoad()");

@@ -789,8 +789,8 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 			await this.slaveCheckForUpdates();
 		}, 3000); // 3 Sekunden Polling-Intervall
 
-		console.log(
-			"👤 Slave-Modus gestartet - Polling für Updates alle 3 Sekunden aktiv"
+		console.warn(
+			"👤 SYNC MODE STARTED - Polling for updates every 3 seconds"
 		);
 		// HINWEIS: Initialer Load erfolgt bereits in initSync()
 

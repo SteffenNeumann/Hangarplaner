@@ -5543,12 +5543,8 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		        return false;
 		      }
 		      
-		      // Only allow save in Master - silently skip in Sync mode
-		      const isMaster = !!(window.serverSync && (window.serverSync.isMaster || (window.sharingManager && window.sharingManager.syncMode==='master')));
-		      if (!isMaster) {
-		        // Silent skip - don't show alert when triggered by programmatic updates in Sync mode
-		        return false;
-		      }
+		      // Email settings can be saved in ANY mode (Standalone, Sync, Master)
+		      // They are user preferences, not shared hangar data
 		      const recipients = getField('mailRecipients');
 		      const cc         = getField('mailCC');
 		      const subject    = getField('mailSubject');
@@ -5559,6 +5555,7 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		      payload.settings[SETTINGS_KEYS.subject]    = subject;
 		      payload.settings[SETTINGS_KEYS.body]       = body;
 		      let url = (window.serverSync && typeof window.serverSync.getServerUrl==='function' && window.serverSync.getServerUrl()) || (window.location.origin + '/sync/data.php');
+      // Always use master role for email settings since they're configuration, not data
       const headers = { 'Content-Type':'application/json', 'X-Sync-Role':'master' };
       try {
         const sid = window.serverSync && typeof window.serverSync.getSessionId==='function' ? window.serverSync.getSessionId() : (localStorage.getItem('serverSync.sessionId')||'');

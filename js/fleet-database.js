@@ -48,9 +48,8 @@ const FleetDatabase = (function () {
 	let lastApiCall = 0;
 	let isLoading = false; // Load Protection Flag
 
-	// API Rate Limit Tracking
-	window.FleetDatabase = window.FleetDatabase || {};
-	window.FleetDatabase.apiQuotaExceeded = false;
+	// API Rate Limit Tracking (don't overwrite window.FleetDatabase yet)
+	let apiQuotaExceeded = false;
 
 	/**
 	 * Check if error is a rate limit (429) error
@@ -175,7 +174,7 @@ const FleetDatabase = (function () {
 		console.log("📡 loadFleetData() aufgerufen!");
 
 		// Reset 429 flag on each load attempt
-		window.FleetDatabase.apiQuotaExceeded = false;
+		apiQuotaExceeded = false;
 
 		// Load Protection: Verhindere mehrfache parallele Ladungen
 		if (isLoading) {
@@ -245,7 +244,7 @@ const FleetDatabase = (function () {
 						!apiData.airlines ||
 						Object.keys(apiData.airlines).length === 0;
 
-					if (apiIsEmpty && window.FleetDatabase.apiQuotaExceeded) {
+					if (apiIsEmpty && apiQuotaExceeded) {
 						console.warn(
 							"[FleetDB] 429 fallback active. Skipping API sync and keeping cached data."
 						);
@@ -282,7 +281,7 @@ const FleetDatabase = (function () {
 					!apiData.airlines ||
 					Object.keys(apiData.airlines).length === 0;
 
-				if (apiIsEmpty && window.FleetDatabase.apiQuotaExceeded) {
+				if (apiIsEmpty && apiQuotaExceeded) {
 					console.warn(
 						"[FleetDB] 429 on first sync. Cannot load initial data from API."
 					);
@@ -334,7 +333,7 @@ const FleetDatabase = (function () {
 
 		try {
 			// Early exit if quota already exceeded
-			if (window.FleetDatabase.apiQuotaExceeded) {
+			if (apiQuotaExceeded) {
 				console.warn(
 					"[FleetDB] API quota already exceeded. Returning empty airlines object."
 				);
@@ -376,7 +375,7 @@ const FleetDatabase = (function () {
 		return apiData;
 	} catch (error) {
 		// Handle 429 rate limit errors gracefully
-		if (isRateLimitError(error) || window.FleetDatabase.apiQuotaExceeded) {
+			if (isRateLimitError(error) || apiQuotaExceeded) {
 			console.warn(
 				"[FleetDB] 429 rate limit in loadAllFleetDataFromAPI(). Returning empty airlines object."
 			);
@@ -472,7 +471,7 @@ const FleetDatabase = (function () {
 			} catch (error) {
 				// Handle 429 rate limit errors gracefully
 				if (isRateLimitError(error)) {
-					window.FleetDatabase.apiQuotaExceeded = true;
+					apiQuotaExceeded = true;
 					console.warn(
 						`[FleetDB] 429 rate limit in loadSimpleAirlineFleet(${airlineCode}). Returning ${allAircrafts.length} aircrafts loaded so far.`
 					);
@@ -508,7 +507,7 @@ const FleetDatabase = (function () {
 
 					// Handle 429 Rate Limit Error
 					if (this.status === 429) {
-						window.FleetDatabase.apiQuotaExceeded = true;
+						apiQuotaExceeded = true;
 						const bodyText = this.responseText || "";
 						console.warn(
 							`[FleetDB] AeroDataBox 429 rate limit for ${airlineCode}. Falling back to cached data.`

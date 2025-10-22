@@ -267,7 +267,7 @@
           
           const td = document.createElement('td');
           td.colSpan = colCount;
-          td.innerHTML = '<div class="divider-line"><span class="divider-badge">APRON</span></div>';
+          td.innerHTML = '<div class="divider-line"></div>';
           
           trDiv.appendChild(td);
           tbody.appendChild(trDiv);

@@ -281,6 +281,9 @@
         
         const tr = document.createElement('tr');
         tr.className = 'planner-row';
+        tr.id = `table-row-${row.tileId}`;
+        // Add data attribute for hangar position for CSS targeting
+        tr.setAttribute('data-hangar-pos', row.hangarPosition);
         tr.innerHTML = [
           cellInput(`hangar-pos-${row.tileId}`, row.hangarPosition, 'text', ro, 'hangarPosition'),
           cellInput(`ac-${row.tileId}`, row.aircraftId, 'text', ro, 'aircraftId'),

@@ -5190,6 +5190,13 @@ body.table-view #panel-planner-table {
   border: none !important;
 }
 
+/* Hide unused hangar positions 8 and 11 in table view */
+#hangar-pos-8,
+#hangar-pos-11 {
+  display: none !important;
+}
+}
+
 /* Add borders back for non-neutral dark mode values */
 .dark-mode .planner-select.tow-status-selector[data-value="initiated"],
 .dark-mode .planner-select.tow-status-selector[data-value="ongoing"],

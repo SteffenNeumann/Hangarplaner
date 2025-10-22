@@ -111,8 +111,63 @@
     // Configurable placeholder set to treat as empty for sorting
     const PLACEHOLDER_EMPTY_SET = new Set();
 
+    // Parse time values to UTC timestamps for chronological sorting
+    function parseTimeToTimestamp(rawValue){
+      const h = window.helpers || {};
+      if (rawValue == null) return NaN;
+      let v = String(rawValue).trim();
+      if (!v) return NaN;
+
+      // 4-digit HHMM → HH:mm
+      if (/^\d{4}$/.test(v)) {
+        const hhmm = v.slice(0,2) + ':' + v.slice(2);
+        v = hhmm;
+      }
+
+      // ISO local with date: 2025-10-22T09:30
+      if (h.isISODateTimeLocal && h.isISODateTimeLocal(v)) {
+        // Treat as UTC; append Z if missing zone info
+        let isoUTC = v;
+        if (!/[Z+-]\d{2}:?\d{2}$/.test(isoUTC)) isoUTC += 'Z';
+        const t = Date.parse(isoUTC);
+        return Number.isFinite(t) ? t : NaN;
+      }
+
+      // Compact with date: dd.mm.yy,HH:MM
+      if (h.isCompactDateTime && h.isCompactDateTime(v)) {
+        const isoUTC = h.parseCompactToISOUTC ? h.parseCompactToISOUTC(v) : null;
+        if (isoUTC) {
+          // Append Z if missing zone
+          const iso = !/[Z+-]\d{2}:?\d{2}$/.test(isoUTC) ? isoUTC + 'Z' : isoUTC;
+          const t = Date.parse(iso);
+          return Number.isFinite(t) ? t : NaN;
+        }
+        return NaN;
+      }
+
+      // Time-only HH:mm → use current date as base (simple fallback)
+      if (/^\d{1,2}:\d{2}$/.test(v)) {
+        // Use helpers base date logic if available
+        const bases = h.getBaseDates ? h.getBaseDates() : {};
+        const baseDate = bases.arrivalBase || new Date().toISOString().slice(0,10);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(baseDate)) {
+          const [hh, mm] = v.split(':');
+          const isoUTC = `${baseDate}T${hh.padStart(2,'0')}:${mm}Z`;
+          const t = Date.parse(isoUTC);
+          return Number.isFinite(t) ? t : NaN;
+        }
+        return NaN;
+      }
+
+      // Fallback: try direct parse
+      const t = Date.parse(v);
+      return Number.isFinite(t) ? t : NaN;
+    }
+
     function isSortEmpty(column, v){
       if (v == null) return true;
+      // Treat NaN as empty for time columns
+      if (Number.isNaN(v)) return true;
       if (typeof v === 'string') {
         const t = v.trim();
         if (t === '') return true;
@@ -132,6 +187,10 @@
       if (column === 'towStatus') {
         const order = { 'initiated': 1, 'ongoing': 2, 'on-position': 3 };
         return order[v] !== undefined ? order[v] : 999;
+      }
+      // Time columns: parse to numeric timestamp for chronological sorting
+      if (column === 'arrivalTime' || column === 'departureTime') {
+        return parseTimeToTimestamp(v);
       }
       return String(v||'').toLowerCase();
     }

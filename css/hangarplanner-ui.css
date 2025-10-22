@@ -4720,6 +4720,10 @@ html:not(.dark-mode) #panel-planner-table.read-only #plannerTableView #plannerTa
 }
 
 /* -------- Planner table view: section divider -------- */
+tr.section-divider {
+  background: transparent !important;
+}
+
 tr.section-divider td {
   padding: 12px 0;
   background: transparent !important;
@@ -4729,6 +4733,7 @@ tr.section-divider .divider-line {
   position: relative;
   text-align: center;
   height: 20px;
+  background: transparent !important;
 }
 
 tr.section-divider .divider-line::before {

@@ -4708,6 +4708,54 @@ html:not(.dark-mode) #panel-planner-table.read-only #plannerTableView #plannerTa
   gap: 8px;
 }
 
+/* -------- Planner table view: section divider -------- */
+tr.section-divider td {
+  padding: 8px 0;
+  background: transparent;
+}
+
+tr.section-divider .divider-line {
+  position: relative;
+  text-align: center;
+  height: 20px;
+}
+
+tr.section-divider .divider-line::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  border-top: 1px solid #d1d5db;
+  transform: translateY(-50%);
+  z-index: 0;
+}
+
+tr.section-divider .divider-badge {
+  position: relative;
+  display: inline-block;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  z-index: 1;
+}
+
+/* Dark mode section divider */
+.dark-mode tr.section-divider .divider-line::before {
+  border-top-color: #334155;
+}
+
+.dark-mode tr.section-divider .divider-badge {
+  background: #0b1220;
+  color: #cbd5e1;
+  border-color: #334155;
+}
+
 /* Status light in table view */
 .planner-td .status-light {
   width: 12px;

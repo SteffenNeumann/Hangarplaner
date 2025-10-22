@@ -48,10 +48,11 @@
       if (!window.collectContainerTileData) return [];
       const prim = window.collectContainerTileData('#hangarGrid') || [];
       const sec = window.collectContainerTileData('#secondaryHangarGrid') || [];
-      const both = prim.concat(sec);
-      // Only visible tiles: collectContainerTileData already skips hidden ones
-      return both.map(row => ({
+      
+      // Tag primary (Hangar) tiles
+      const primRows = prim.map(row => ({
         tileId: row.tileId,
+        section: 'primary',
         hangarPosition: byIdValue(`hangar-position-${row.tileId}`),
         aircraftId: row.aircraftId || '',
         arrivalTime: row.arrivalTime || '',
@@ -61,6 +62,22 @@
         status: row.status || 'neutral',
         notes: byIdValue(`notes-${row.tileId}`),
       }));
+      
+      // Tag secondary (Apron) tiles
+      const secRows = sec.map(row => ({
+        tileId: row.tileId,
+        section: 'secondary',
+        hangarPosition: byIdValue(`hangar-position-${row.tileId}`),
+        aircraftId: row.aircraftId || '',
+        arrivalTime: row.arrivalTime || '',
+        departureTime: row.departureTime || '',
+        positionInfo: byIdValue(`position-${row.tileId}`),
+        towStatus: row.towStatus || 'neutral',
+        status: row.status || 'neutral',
+        notes: byIdValue(`notes-${row.tileId}`),
+      }));
+      
+      return primRows.concat(secRows);
     } catch(e){ return []; }
   }
   function byIdValue(id){ const el = document.getElementById(id); return el ? (el.value || '') : ''; }
@@ -195,7 +212,15 @@
       return String(v||'').toLowerCase();
     }
 
+    // Section-aware sorting: Hangar (primary) always on top, Apron (secondary) below
+    // Within each section, apply multi-level sorting
     STATE.filtered.sort((a,b)=>{
+      // Enforce section grouping first: primary < secondary
+      const aSec = (a.section === 'secondary') ? 1 : 0;
+      const bSec = (b.section === 'secondary') ? 1 : 0;
+      if (aSec !== bSec) return aSec - bSec; // Hangar before Apron
+      
+      // Within same section, apply sorting
       for (let i=0;i<sorts.length;i++){
         const { col, dir } = sorts[i];
         const sign = dir === 'asc' ? 1 : -1;
@@ -225,7 +250,30 @@
       // Toggle read-only class on the planner table panel for styling parity with main view
       try { const panel = document.getElementById('panel-planner-table'); if (panel) panel.classList.toggle('read-only', ro); } catch(_){}
 
+      // Determine column count for divider colspan
+      const table = document.getElementById('plannerTable');
+      const colCount = table ? table.querySelectorAll('thead th').length : 8;
+      
+      // Check if we have any secondary (Apron) rows
+      const hasSecondary = STATE.filtered.some(r => r.section === 'secondary');
+      let dividerInserted = false;
+
       STATE.filtered.forEach(row => {
+        // Insert divider before the first secondary row
+        if (!dividerInserted && hasSecondary && row.section === 'secondary') {
+          const trDiv = document.createElement('tr');
+          trDiv.className = 'section-divider';
+          trDiv.setAttribute('aria-hidden', 'true');
+          
+          const td = document.createElement('td');
+          td.colSpan = colCount;
+          td.innerHTML = '<div class="divider-line"><span class="divider-badge">APRON</span></div>';
+          
+          trDiv.appendChild(td);
+          tbody.appendChild(trDiv);
+          dividerInserted = true;
+        }
+        
         const tr = document.createElement('tr');
         tr.className = 'planner-row';
         tr.innerHTML = [

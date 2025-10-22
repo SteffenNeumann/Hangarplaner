@@ -43,6 +43,26 @@
       return false;
     } catch(e){ return false; }
   }
+  // Check if a value is blank (null, undefined, or whitespace)
+  function isBlank(v) {
+    return v == null || String(v).trim() === '';
+  }
+  // Check if a value is neutral or empty (for status fields)
+  function isNeutralOrEmpty(v) {
+    return isBlank(v) || String(v).toLowerCase() === 'neutral';
+  }
+  // Check if a row is completely empty (all meaningful fields blank or neutral)
+  function isRowEmpty(row) {
+    return (
+      isBlank(row.aircraftId) &&
+      isBlank(row.arrivalTime) &&
+      isBlank(row.departureTime) &&
+      isBlank(row.positionInfo) &&
+      isBlank(row.notes) &&
+      isNeutralOrEmpty(row.towStatus) &&
+      isNeutralOrEmpty(row.status)
+    );
+  }
   function getVisibleTileRows(){
     try {
       if (!window.collectContainerTileData) return [];
@@ -77,11 +97,15 @@
         notes: byIdValue(`notes-${row.tileId}`),
       }));
       
-      // Filter out placeholder positions 8 and 11
+      // Filter out placeholder positions 8 and 11, and completely empty rows
       const allRows = primRows.concat(secRows);
       return allRows.filter(row => {
         const pos = String(row.hangarPosition || '').trim();
-        return pos !== '8' && pos !== '11';
+        // Exclude positions 8 and 11
+        if (pos === '8' || pos === '11') return false;
+        // Exclude completely empty rows
+        if (isRowEmpty(row)) return false;
+        return true;
       });
     } catch(e){ return []; }
   }

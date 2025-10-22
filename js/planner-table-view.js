@@ -77,7 +77,12 @@
         notes: byIdValue(`notes-${row.tileId}`),
       }));
       
-      return primRows.concat(secRows);
+      // Filter out placeholder positions 8 and 11
+      const allRows = primRows.concat(secRows);
+      return allRows.filter(row => {
+        const pos = String(row.hangarPosition || '').trim();
+        return pos !== '8' && pos !== '11';
+      });
     } catch(e){ return []; }
   }
   function byIdValue(id){ const el = document.getElementById(id); return el ? (el.value || '') : ''; }

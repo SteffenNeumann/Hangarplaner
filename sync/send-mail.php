@@ -92,6 +92,11 @@ if ($binary === false || strlen($binary) === 0) respond([ 'success'=>false, 'err
 $userEmail = '';
 if (!empty($_SESSION['user']) && isset($_SESSION['user']['email'])) $userEmail = (string)$_SESSION['user']['email'];
 
+$displayName = '';
+if (!empty($_SESSION['user']) && isset($_SESSION['user']['displayName']) && $_SESSION['user']['displayName'] !== '') {
+  $displayName = (string)$_SESSION['user']['displayName'];
+}
+
 $from = isset($config['mailFrom']) && filter_var($config['mailFrom'], FILTER_VALIDATE_EMAIL) ? $config['mailFrom'] : 'info@hangarplaner.de';
 $boundary = 'np_' . bin2hex(random_bytes(8));
 $headers = '';
@@ -129,6 +134,7 @@ $log = read_log($LOG_FILE);
 $log[] = [
   'timestamp' => date('c'),
   'userEmail' => $userEmail,
+  'displayName' => $displayName,
   'recipients' => $validRecipients,
   'cc' => $validCc,
   'subject' => $subject,

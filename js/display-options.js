@@ -101,9 +101,9 @@ if (!window.collectAllHangarData) {
 window.displayOptions = {
 	// Standardwerte
 	defaults: {
-		tilesCount: 8,
+		tilesCount: 12,
 		secondaryTilesCount: 4, // KORRIGIERT: Startwert 4 statt 0
-		layout: 4,
+		layout: 6,
 		darkMode: false,
 		viewMode: false, // false = Kachel, true = Tabelle
 		zoomLevel: 100,
@@ -642,6 +642,9 @@ applyDarkMode(enabled) {
 		//	layout: this.current.layout,
 		// });
 
+		// Primary Tiles aktualisieren
+		this.updateTiles();
+
 		// Secondary Tiles aktualisieren (preserveData = true für Layout-Änderungen)
 		if (typeof updateSecondaryTiles === "function") {
 			updateSecondaryTiles(
@@ -995,14 +998,19 @@ onDarkModeChange() {
 	 * Aktualisiert die Anzahl der primären Tiles
 	 */
 	updateTiles() {
+		// Ensure tilesCount has a valid value before passing
+		const count = (this.current && typeof this.current.tilesCount === 'number' && isFinite(this.current.tilesCount))
+			? this.current.tilesCount
+			: this.defaults.tilesCount;
+
 		// Mehrere Fallback-Strategien ausprobieren
 		if (typeof updateTiles === "function") {
-			updateTiles(this.current.tilesCount);
+			updateTiles(count);
 		} else if (typeof window.hangarUI?.updateTiles === "function") {
-			window.hangarUI.updateTiles(this.current.tilesCount);
+			window.hangarUI.updateTiles(count);
 		} else if (typeof window.hangarUI?.uiSettings?.apply === "function") {
 			// Über uiSettings aktualisieren
-			window.hangarUI.uiSettings.tilesCount = this.current.tilesCount;
+			window.hangarUI.uiSettings.tilesCount = count;
 			window.hangarUI.uiSettings.apply();
 		} else {
 			console.warn(
@@ -1218,7 +1226,7 @@ onDarkModeChange() {
 			
 			#hangarGrid, #secondaryHangarGrid {
 				display: grid;
-				grid-template-columns: repeat(4, 1fr);
+				grid-template-columns: repeat(6, 1fr);
 				gap: 16px;
 				padding: 16px;
 			}

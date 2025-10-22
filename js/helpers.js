@@ -661,7 +661,7 @@ const storageHelperExtended = {
 				return [];
 			}
 
-			const primaryCount = uiSettings.tilesCount || 8;
+			const primaryCount = uiSettings.tilesCount || 12;
 			const secondaryCount = uiSettings.secondaryTilesCount || 4;
 
 			// Sekundäre Kacheln aus tileValues extrahieren
@@ -700,7 +700,7 @@ const storageHelperExtended = {
 
 			// Standard-Werte sicherstellen
 			if (typeof uiSettings.tilesCount !== "number") {
-				uiSettings.tilesCount = 8;
+				uiSettings.tilesCount = 12;
 				isModified = true;
 			}
 

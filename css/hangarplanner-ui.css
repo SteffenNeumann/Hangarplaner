@@ -70,22 +70,20 @@ html, body, button, input, select, textarea {
 
  .hangar-cell {
 	transition: all 0.3s ease;
-	width: 100%; /* fill the grid track width */
-	min-width: var(--card-min-width) !important;
-	max-width: none !important;
+	width: 250px; /* Fixed width */
+	height: 280px; /* Fixed height - increased for better spacing */
+	min-width: 250px !important;
+	max-width: 250px !important;
 	flex-basis: auto !important;
-	margin: 0; /* left-align inside grid track */
+	margin: 0;
 	box-sizing: border-box;
 	transform-origin: center center;
-	justify-self: stretch; /* stretch within grid area */
+	justify-self: center; /* center within grid area */
 	box-shadow: none !important;
 	border: 1px solid var(--border-light);
 	border-radius: 12px;
 	background-color: #ffffff !important; /* Zurück auf weiß */
-	/* Make tiles square in board view */
-	aspect-ratio: 1 / 1;
 	overflow: hidden; /* clip inner content as requested */
-	min-height: 0; /* allow inner flex children to size properly */
 }
 
 /* MAXIMALE PRIORITÄT: Überschreibe alle möglichen Status-basierten Hintergründe */
@@ -368,6 +366,7 @@ html, body, button, input, select, textarea {
 .hangar-container {
 	background-color: #f0f4f8;
 	padding: 2rem;
+	min-width: 1200px; /* Prevent tile collapse when sidebar expands */
 }
 
 .hangar-cell .card-header {
@@ -385,25 +384,52 @@ html, body, button, input, select, textarea {
 #hangarGrid,
 #secondaryHangarGrid {
 	display: grid;
-	gap: 16px;
+	gap: 24px; /* Fixed gap */
 	width: 100%;
 	transition: all 0.3s ease;
 	transform-origin: top left;
-	justify-content: start; /* align grid tracks to the left */
-	justify-items: stretch; /* tiles fill their grid columns */
+	justify-content: center; /* Center tiles within grid */
+	justify-items: center; /* Center tiles in their grid cells */
 }
 
 /* WICHTIG: Grid Layout Fix - Direkte CSS Grid Styles */
 #hangarGrid {
 	display: grid !important;
-	gap: 1rem !important;
+	gap: 24px !important; /* Fixed gap */
 	width: 100% !important;
+	grid-template-columns: repeat(6, 250px) !important; /* Force exactly 6 columns */
+	grid-auto-flow: dense; /* Allow tiles to fill gaps */
+}
+
+/* Staggered brick layout: offset columns 2 and 5 down by 1/4 tile height (70px = 280px / 4) */
+#hangarGrid .hangar-cell:nth-child(6n+2),
+#hangarGrid .hangar-cell:nth-child(6n+5) {
+	margin-top: 70px;
+}
+
+/* Reduce gap for second row (tiles 7-12) to be slightly larger than standard grid gap */
+#hangarGrid .hangar-cell:nth-child(n+7):nth-child(-n+12) {
+	margin-top: calc(-70px);
+}
+
+/* Reset margin for offsetted columns in second row to maintain their offset */
+#hangarGrid .hangar-cell:nth-child(8),
+#hangarGrid .hangar-cell:nth-child(11) {
+	margin-top: 70px;
+}
+
+/* Hide second row tiles in columns 2 and 5 (tiles 8 and 11) but keep space as placeholder */
+#hangarGrid .hangar-cell:nth-child(8),
+#hangarGrid .hangar-cell:nth-child(11) {
+	visibility: hidden !important;
+	pointer-events: none !important;
 }
 
 #secondaryHangarGrid {
 	display: grid !important;
-	gap: 1rem !important;
+	gap: 24px !important; /* Fixed gap */
 	width: 100% !important;
+	grid-template-columns: repeat(6, 250px) !important; /* Force exactly 6 columns */
 }
 
 .status-indicator {
@@ -1764,29 +1790,30 @@ html:not(.dark-mode) .status-selector:focus { outline: none; border-color: #94a3
 	display: flex;
 	flex-direction: column;
 	margin-top: 0.25rem;
-	margin-bottom: 0.25rem;
+	margin-bottom: 0.75rem; /* Increased bottom margin */
 	margin-left: 0 !important;
 	padding-left: 0 !important;
+	padding-bottom: 0.75rem; /* Increased bottom padding */
 }
 
 .notes-textarea,
 textarea.notes-textarea {
 	resize: none !important;
-	height: 22px !important;
-	min-height: 22px !important;
-	max-height: 22px !important;
+	height: 44px !important;
+	min-height: 44px !important;
+	max-height: 44px !important;
 	border: 1px solid transparent;
 	border-radius: 3px;
 	padding: 2px 0 !important; /* remove left/right padding so text aligns flush-left */
 	margin-left: 0 !important;
 	font-size: 0.8rem;
 	color: var(--text-dark);
-	overflow-y: hidden !important;
-	white-space: nowrap !important;
-	text-overflow: ellipsis !important;
+	overflow-y: auto !important;
+	white-space: normal !important;
+	text-overflow: clip !important;
 	line-height: 18px !important;
-	display: flex !important;
-	align-items: center !important;
+	display: block !important;
+	align-items: flex-start !important;
 	text-indent: 0;
 }
 
@@ -1934,12 +1961,12 @@ input:checked + .toggle-slider:before {
 	text-align: center;
 }
 .section-divider::after {
-	content: "OUTER SECTION";
+	content: "APRON";
 	position: absolute;
 	top: -10px;
 	left: 50%;
 	transform: translateX(-50%);
-	background-color: transparent;
+	background-color: #ffffff;
 	padding: 0 12px;
 	font-size: 12px;
 	font-weight: 500;
@@ -3273,7 +3300,7 @@ body:not(.dark-mode) #secondaryHangarGrid .hangar-cell .tow-status-selector:hove
 }
 
 .dark-mode .section-divider::after {
-	background-color: transparent;
+	background-color: var(--bg-primary);
 	color: var(--text-secondary);
 }
 
@@ -5213,6 +5240,36 @@ body.table-view #panel-planner-table {
 body:not(.dark-mode) #mailLogList,
 body:not(.dark-mode) #mailLogList li {
   color: #374151 !important; /* slate-700 for good contrast */
+}
+
+/* Mail log two-row layout */
+#mailLogList {
+  list-style: none;
+  padding-left: 0;
+}
+
+#mailLogList .mail-log-item {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  line-height: 1.2;
+  padding: 6px 8px;
+  border-bottom: 1px solid #eee;
+}
+
+#mailLogList .mail-row1 {
+  font-weight: 600;
+}
+
+#mailLogList .mail-row2 {
+  color: #555;
+  margin-top: 2px;
+}
+
+.dark-mode #mailLogList .mail-log-item {
+  border-bottom-color: var(--border-color);
+}
+
+.dark-mode #mailLogList .mail-row2 {
+  color: var(--text-secondary);
 }
 
 /* Users list truncation and layout */

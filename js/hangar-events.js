@@ -100,7 +100,7 @@ async function initializeUI() {
 
 			if (savedSettings) {
 				const {
-					tilesCount = 8,
+					tilesCount = 12,
 					secondaryTilesCount = 4,
 					layout = 4,
 				} = savedSettings;

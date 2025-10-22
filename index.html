@@ -549,30 +549,32 @@
 					</div>
 					<div class="sidebar-form-group">
 						<div class="sidebar-form-row">
-							<label for="tilesCount">Primary Tiles</label>
+							<label for="tilesCount">Hangar 4 Tiles</label>
 							<div class="input-container">
 								<input type="number" id="tilesCount" min="1" max="12" class="sidebar-form-control" />
 							</div>
 						</div>
 					</div>
 					<div class="sidebar-form-group">
-						<div class="sidebar-form-row">
-							<label for="secondaryTilesCount">Secondary Tiles</label>
-							<div class="input-container">
-								<input type="number" id="secondaryTilesCount" min="0" max="12" class="sidebar-form-control" />
-							</div>
+					<div class="sidebar-form-row">
+						<label for="secondaryTilesCount">Apron Tiles</label>
+						<div class="input-container">
+							<input type="number" id="secondaryTilesCount" min="0" class="sidebar-form-control" />
 						</div>
+					</div>
 					</div>
 					<div class="sidebar-form-group">
 						<div class="sidebar-form-row">
 							<label for="layoutType">Layout</label>
 							<div class="input-container">
-								<select id="layoutType" class="sidebar-form-select">
-									<option value="1">1 Column</option>
-									<option value="2">2 Columns</option>
-									<option value="3">3 Columns</option>
-									<option value="4" selected>4 Columns</option>
-								</select>
+							<select id="layoutType" class="sidebar-form-select">
+								<option value="1">1 Column</option>
+								<option value="2">2 Columns</option>
+								<option value="3">3 Columns</option>
+								<option value="4">4 Columns</option>
+								<option value="5">5 Columns</option>
+								<option value="6" selected>6 Columns</option>
+							</select>
 							</div>
 						</div>
 					</div>
@@ -737,6 +739,16 @@
 						<button id="btnSearch" class="sidebar-btn sidebar-btn-primary">Search</button>
 					</div>
 				</div>
+
+				<!-- History (Undo/Redo) -->
+				<div class="panel-divider"></div>
+				<div class="submenu-title">History</div>
+				<div class="sync-mode-description">Undo or redo your last changes</div>
+				<div class="sidebar-input-group">
+					<button id="undoBtn" class="sidebar-btn sidebar-btn-secondary flex-1" disabled title="Undo last change (Ctrl/Cmd+Z)">Undo</button>
+					<button id="redoBtn" class="sidebar-btn sidebar-btn-secondary flex-1" disabled title="Redo last undone change (Ctrl/Cmd+Y)">Redo</button>
+				</div>
+				<div class="text-sm text-center" style="margin-top: 6px; color: #64748b;">Shortcuts: Ctrl/Cmd+Z, Ctrl/Cmd+Y</div>
 			</div>
 
 			<!-- Hauptbereich mit Hangar-Kacheln -->
@@ -745,7 +757,7 @@
 					<header
 						class="bg-white p-4 shadow-md flex justify-between gap-16">
 						<div id="gitstamp" class="text-xs" style="align-self:center; white-space:nowrap; color:#64748b;" title="Last commit loaded">
-						  Loaded 2025-10-09T08:56:36Z · SHA 2fb8e51
+						  Loaded 2025-10-22 05:43:14 UTC · SHA 1625020
 						</div>
 						<!-- Wetter-Widget unverändert lassen -->
 						<div class="flex-grow"></div>
@@ -1645,6 +1657,14 @@ function isReadOnlySync(){
       btn.addEventListener('click', async (e)=>{
         e.preventDefault(); e.stopPropagation();
         if (isReadOnlySync()) return; // No action in read-only
+        
+        // Capture state before clearing for undo
+        try {
+          if (HistoryManager.instance && typeof HistoryManager.instance.captureBeforeOperation === 'function') {
+            HistoryManager.instance.captureBeforeOperation();
+          }
+        } catch(_e) {}
+        
         const ss = window.serverSync;
         try { if (ss && typeof ss.suspendReads === 'function') ss.suspendReads(); } catch(_e) {}
         let ok = false;
@@ -2026,9 +2046,9 @@ document.addEventListener('DOMContentLoaded', function(){
 							<!-- Additional info containers can be added here later -->
 						</div>
 
-<!-- Abschnitt 1 Container -->
+<!-- Hangar 4 Container -->
 					<div class="section-container planner-main">
-						<div id="hangarGrid" class="grid grid-cols-4 gap-4">
+					<div id="hangarGrid" class="grid grid-cols-6 gap-4">
 							<!-- 8 Hangar-Kacheln hier -->
 							<!-- Kachel 1 - NEU GESTALTET -->
 							<div
@@ -3184,9 +3204,9 @@ type="datetime-local"
 					<!-- Horizontale Trennlinie mit gleichmäßigem Abstand -->
 					<div class="section-divider"></div>
 
-					<!-- Abschnitt 2 Container -->
+					<!-- Apron Container -->
 					<div id="outerSectionContainer" class="section-container">
-						<div id="secondaryHangarGrid" class="grid grid-cols-4 gap-4">
+					<div id="secondaryHangarGrid" class="grid grid-cols-6 gap-4">
 							<!-- Hier werden dynamisch weitere Kacheln eingefügt -->
 						</div>
 					</div>
@@ -5438,6 +5458,10 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		<!-- Email Send (Export) -->
 		<script>
 		(function(){
+		  // Global email settings state for cross-mode synchronization
+		  window.emailSettings = { recipients:"", cc:"", subject:"", body:"", updatedAt:0, mailLogVersion:0 };
+		  let lastMailLogVersion = 0;
+
 		  const MAIL_FROM = 'info@hangarplaner.de'; // non-reply sender (configured on server as well)
 		  const SETTINGS_KEYS = {
 		    recipients: 'emailRecipients',
@@ -5468,6 +5492,35 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		  function setField(id, v){ const el = document.getElementById(id); if (el) el.value = v || ''; }
 		  function getField(id){ const el = document.getElementById(id); return el ? (el.value||'').trim() : ''; }
 
+		  // Centralized helpers for collecting and applying email settings
+		  function collectEmailSettingsFromUI(){
+		    return {
+		      recipients: getField('mailRecipients'),
+		      cc: getField('mailCC'),
+		      subject: getField('mailSubject'),
+		      body: getField('mailBody'),
+		      updatedAt: Date.now(),
+		      mailLogVersion: window.emailSettings.mailLogVersion || 0
+		    };
+		  }
+
+		  function applyEmailSettingsToUI(s){
+		    if(!s) return;
+		    window.emailSettings = { ...window.emailSettings, ...s };
+		    const map = [
+		      ['mailRecipients','recipients'],
+		      ['mailCC','cc'],
+		      ['mailSubject','subject'],
+		      ['mailBody','body']
+		    ];
+		    map.forEach(([id,key])=>{
+		      const el = document.getElementById(id);
+		      if(el && el !== document.activeElement){
+		        el.value = s[key] ?? el.value;
+		      }
+		    });
+		  }
+
 		  async function loadServerEmailSettings(){
 		    try {
 		      // Prefer central server URL if available
@@ -5485,12 +5538,13 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 
 		  async function saveServerEmailSettings(){
 		    try {
-		      // Only allow save in Master
-		      const isMaster = !!(window.serverSync && (window.serverSync.isMaster || (window.sharingManager && window.sharingManager.syncMode==='master')));
-		      if (!isMaster) {
-		        showModalAlert('Switch to Master mode to save global mail settings.');
+		      // Skip if we're currently applying data from server to prevent save loop
+		      if (window._applyingEmailFromServer) {
 		        return false;
 		      }
+		      
+		      // Email settings can be saved in ANY mode (Standalone, Sync, Master)
+		      // They are user preferences, not shared hangar data
 		      const recipients = getField('mailRecipients');
 		      const cc         = getField('mailCC');
 		      const subject    = getField('mailSubject');
@@ -5501,6 +5555,7 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		      payload.settings[SETTINGS_KEYS.subject]    = subject;
 		      payload.settings[SETTINGS_KEYS.body]       = body;
 		      let url = (window.serverSync && typeof window.serverSync.getServerUrl==='function' && window.serverSync.getServerUrl()) || (window.location.origin + '/sync/data.php');
+      // Always use master role for email settings since they're configuration, not data
       const headers = { 'Content-Type':'application/json', 'X-Sync-Role':'master' };
       try {
         const sid = window.serverSync && typeof window.serverSync.getSessionId==='function' ? window.serverSync.getSessionId() : (localStorage.getItem('serverSync.sessionId')||'');
@@ -5529,22 +5584,50 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		      return items;
 		    } catch(_) { return []; }
 		  }
-		  function renderMailLog(items){
-		    const ul = document.getElementById('mailLogList');
-		    if (!ul) return;
-		    ul.innerHTML = '';
-		    const list = Array.isArray(items) ? items.slice().reverse() : [];
-		    if (!list.length){ ul.innerHTML = '<li class="text-gray-400">No mails sent yet</li>'; return; }
-		    list.forEach(it => {
-		      const li = document.createElement('li');
-		      const ts = it && it.timestamp ? it.timestamp : '';
-		      const user = it && it.userEmail ? it.userEmail : '';
-		      const subj = it && it.subject ? it.subject : '';
-		      const rec  = it && it.recipients ? (Array.isArray(it.recipients) ? it.recipients.join(', ') : String(it.recipients)) : '';
-		      li.textContent = `${ts} — ${user} — ${subj} — ${rec}`;
-		      ul.appendChild(li);
-		    });
-		  }
+	  function formatMailTimestamp(ts) {
+	    if (!ts) return '';
+	    try {
+	      const d = new Date(ts);
+	      const hh = String(d.getHours()).padStart(2, '0');
+	      const mm = String(d.getMinutes()).padStart(2, '0');
+	      const dd = String(d.getDate()).padStart(2, '0');
+	      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+	      const MMM = months[d.getMonth()];
+	      return `${dd}.${MMM} ${hh}:${mm}`;
+	    } catch(_) { return String(ts); }
+	  }
+
+	  function emailLocalPart(email) {
+	    if (!email) return 'Unknown';
+	    return String(email).split('@')[0];
+	  }
+
+	  function renderMailLog(items){
+	    const ul = document.getElementById('mailLogList');
+	    if (!ul) return;
+	    ul.innerHTML = '';
+	    const list = Array.isArray(items) ? items.slice().reverse() : [];
+	    if (!list.length){ ul.innerHTML = '<li class="text-gray-400">No mails sent yet</li>'; return; }
+	    list.forEach(it => {
+	      const li = document.createElement('li');
+	      li.className = 'mail-log-item';
+
+	      const row1 = document.createElement('div');
+	      row1.className = 'mail-row1';
+	      row1.textContent = formatMailTimestamp(it.timestamp);
+
+	      const row2 = document.createElement('div');
+	      row2.className = 'mail-row2';
+	      const name = (it && it.displayName && String(it.displayName).trim())
+	        ? String(it.displayName).trim()
+	        : emailLocalPart(it && it.userEmail);
+	      row2.textContent = name;
+
+	      li.appendChild(row1);
+	      li.appendChild(row2);
+	      ul.appendChild(li);
+	    });
+	  }
 
 		  async function sendMailWithPdf(){
 		    try {
@@ -5600,28 +5683,100 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		        showModalAlert('Sending failed' + (data && data.error ? (': ' + data.error) : ''));
 		        return;
 		      }
+		      
+		      // Success - dispatch mailSent event and refresh log
 		      try { window.showNotification && window.showNotification('Mail sent', 'success'); } catch(_e){}
-		      // refresh log
+		      
+		      // Dispatch mailSent event for event-driven refresh
+		      try { window.dispatchEvent(new CustomEvent('mailSent', { detail: { ts: Date.now() }})); } catch(_e){}
+		      
+		      // Local immediate refresh
 		      renderMailLog(await fetchMailLog(10));
+		      
+		      // Propagate to all clients via sync by bumping version (Master only)
+		      try {
+		        const isMaster = !!(window.serverSync && (window.serverSync.isMaster || (window.sharingManager && window.sharingManager.syncMode==='master')));
+		        if (isMaster && window.serverSync && typeof window.serverSync.queueSettingsPatch === 'function') {
+		          const newVer = Date.now();
+		          window.emailSettings.mailLogVersion = newVer;
+		          window.serverSync.queueSettingsPatch('email', { mailLogVersion: newVer });
+		          if (typeof window.serverSync.syncWithServer === 'function') {
+		            await window.serverSync.syncWithServer();
+		            console.log('📧 Mail log version synced to all clients');
+		          }
+		        }
+		      } catch(e){ console.warn('Failed to propagate mailLogVersion', e); }
 		    } catch(e){ showModalAlert('Unexpected error while sending: ' + (e && e.message ? e.message : e)); }
 		  }
 
+		  // Simple debounce helper
+		  function debounce(fn, delay){
+		    let timer;
+		    return function(){ clearTimeout(timer); timer = setTimeout(()=> fn(), delay); };
+		  }
+
 		  function wire(){
-		    const r = document.getElementById('mailRecipients');
-		    const c = document.getElementById('mailCC');
-		    const s = document.getElementById('mailSubject');
-		    const b = document.getElementById('mailBody');
+		    // Attach event listeners for email settings sync
+		    const fields = ['mailRecipients', 'mailCC', 'mailSubject', 'mailBody'];
+		    fields.forEach(id=>{
+		      const el = document.getElementById(id);
+		      if (el && !el.__wired){
+		        // Check Master mode before saving - handlers work for all clients but save() checks permission
+		        el.addEventListener('input', debounce(saveServerEmailSettings, 500));
+		        el.addEventListener('blur', saveServerEmailSettings);
+		        el.__wired=true;
+		      }
+		    });
 		    const send = document.getElementById('sendMailBtn');
-		    if (r && !r.__wired){ r.addEventListener('change', saveServerEmailSettings); r.addEventListener('blur', saveServerEmailSettings); r.__wired=true; }
-		    if (c && !c.__wired){ c.addEventListener('change', saveServerEmailSettings); c.addEventListener('blur', saveServerEmailSettings); c.__wired=true; }
-		    if (s && !s.__wired){ s.addEventListener('change', saveServerEmailSettings); s.addEventListener('blur', saveServerEmailSettings); s.__wired=true; }
-		    if (b && !b.__wired){ b.addEventListener('change', saveServerEmailSettings); b.addEventListener('blur', saveServerEmailSettings); b.__wired=true; }
 		    if (send && !send.__wired){ send.addEventListener('click', function(e){ e.preventDefault(); sendMailWithPdf(); }); send.__wired=true; }
 		  }
 
 		  // On initial load and after server data loaded
-		  document.addEventListener('DOMContentLoaded', async ()=>{ try { wire(); await loadServerEmailSettings(); renderMailLog(await fetchMailLog(10)); } catch(_){} });
-		  document.addEventListener('serverDataLoaded', async ()=>{ try { await loadServerEmailSettings(); renderMailLog(await fetchMailLog(10)); } catch(_){} });
+		  document.addEventListener('DOMContentLoaded', async ()=>{ 
+		    try { 
+		      wire(); 
+		      await loadServerEmailSettings(); 
+		      renderMailLog(await fetchMailLog(10)); 
+		    } catch(_){} 
+		  });
+
+		  // Enhanced serverDataLoaded handler - reads flat email settings structure
+		  document.addEventListener('serverDataLoaded', async (e)=>{ 
+		    try { 
+		      const serverData = e.detail || {};
+		      const s = serverData?.settings || {};
+		      
+		      console.warn('🔔 serverDataLoaded event received:', { 
+		        hasSettings: !!s,
+		        settingsKeys: Object.keys(s),
+		        hasEmailRecipients: s[SETTINGS_KEYS.recipients] !== undefined,
+		        recipients: s[SETTINGS_KEYS.recipients]
+		      });
+		      
+		      // Check if we have email settings in flat structure (current format)
+		      if (s[SETTINGS_KEYS.recipients] !== undefined || s[SETTINGS_KEYS.cc] !== undefined || 
+		          s[SETTINGS_KEYS.subject] !== undefined || s[SETTINGS_KEYS.body] !== undefined) {
+		        // Temporarily mark that we're applying server data to prevent save loop
+		        window._applyingEmailFromServer = true;
+		        try {
+		          setField('mailRecipients', s[SETTINGS_KEYS.recipients] || '');
+		          setField('mailCC', s[SETTINGS_KEYS.cc] || '');
+		          setField('mailSubject', s[SETTINGS_KEYS.subject] || '');
+		          setField('mailBody', s[SETTINGS_KEYS.body] || '');
+		          console.warn('✅ Email settings applied from server:', {
+		            recipients: s[SETTINGS_KEYS.recipients],
+		            cc: s[SETTINGS_KEYS.cc],
+		            subject: s[SETTINGS_KEYS.subject]
+		          });
+		        } finally {
+		          // Clear flag after a short delay to allow events to settle
+		          setTimeout(() => { window._applyingEmailFromServer = false; }, 100);
+		        }
+		      } else {
+		        console.warn('⚠️ No email settings found in server data');
+		      }
+		    } catch(e){ console.warn('serverDataLoaded email handler error', e); } 
+		  });
 		})();
 </script>
 
@@ -5696,11 +5851,11 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
                     if (!secGrid) return;
                     const current = secGrid.querySelectorAll('.hangar-cell').length;
                     if (typeof window.updateSecondaryTiles === 'function'){
-                        window.updateSecondaryTiles(count, layout || 4);
+                        window.updateSecondaryTiles(count, layout || 6);
                         return;
                     }
                     if (window.hangarUI && typeof window.hangarUI.updateSecondaryTiles === 'function'){
-                        window.hangarUI.updateSecondaryTiles(count, layout || 4);
+                        window.hangarUI.updateSecondaryTiles(count, layout || 6);
                         return;
                     }
                     // Manual minimal clone fallback
@@ -5862,7 +6017,7 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
                     const tilesInput = document.getElementById('tilesCount');
                     if (tilesInput && !tilesInput.__wired){
                         tilesInput.addEventListener('change', function(){
-                            const v = parseInt(this.value) || 8;
+                            const v = parseInt(this.value) || 12;
                             showPrimaryTiles(v);
                         });
                         tilesInput.__wired = true;
@@ -5872,7 +6027,7 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
                     if (secTilesInput && !secTilesInput.__wired){
                         secTilesInput.addEventListener('change', function(){
                             const v = parseInt(this.value) || 4;
-                            ensureSecondaryTiles(v, parseInt(document.getElementById('layoutType')?.value||'4'));
+                            ensureSecondaryTiles(v, parseInt(document.getElementById('layoutType')?.value||'6'));
                         });
                         secTilesInput.__wired = true;
                     }
@@ -5880,7 +6035,7 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
                     const layoutSelect = document.getElementById('layoutType');
                     if (layoutSelect && !layoutSelect.__wired){
                         layoutSelect.addEventListener('change', function(){
-                            const v = parseInt(this.value) || 4;
+                            const v = parseInt(this.value) || 6;
                             applyLayoutColumns(v);
                             // reflow secondary grid to match layout
                             const secCnt = parseInt(document.getElementById('secondaryTilesCount')?.value||'4');
@@ -5892,11 +6047,11 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 
                 function fallbackInit(){
                     const persisted = getPersistedDisplay();
-                    let primary = 8, secondary = 4, layout = 4, tableView = false;
+                    let primary = 12, secondary = 4, layout = 6, tableView = false;
                     if (persisted){
                         primary = parseInt(persisted.tilesCount) || 8;
                         secondary = parseInt(persisted.secondaryTilesCount) || 4;
-                        layout = parseInt(persisted.layout) || 4;
+                        layout = parseInt(persisted.layout) || 6;
                         tableView = !!persisted.viewMode;
                     }
                     const tilesInput = document.getElementById('tilesCount');
@@ -6123,6 +6278,7 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
             })();
             </script>
 <script src="js/planner-table-view.js"></script>
+<script src="js/history-manager.js"></script>
 <script src="debug/move-overlay-debug.js"></script>
 <script src="js/board-move-fallback.js"></script>
 	</body>

@@ -398,7 +398,7 @@ exportContainer.appendChild(title);
 
 	// Primäre Sektion
 	if (allData.primary.length > 0) {
-		const primaryTable = createDataTable(allData.primary, "Primary Section", {
+		const primaryTable = createDataTable(allData.primary, "Hangar 4", {
 			includeNotes,
 			exportFields,
 		});
@@ -411,7 +411,7 @@ exportContainer.appendChild(title);
 	if (allData.secondary.length > 0) {
 		const secondaryTable = createDataTable(
 			allData.secondary,
-			"Secondary Section",
+			"Apron",
 			{
 				includeNotes,
 				exportFields,
@@ -563,11 +563,11 @@ const title = document.createElement("h1");
     `;
 	exportContainer.appendChild(dateElement);
 	if (allData.primary.length > 0) {
-		const primaryTable = createDataTable(allData.primary, "Primary Section", { includeNotes, exportFields });
+		const primaryTable = createDataTable(allData.primary, "Hangar 4", { includeNotes, exportFields });
 		if (primaryTable) exportContainer.appendChild(primaryTable);
 	}
 	if (allData.secondary.length > 0) {
-		const secondaryTable = createDataTable(allData.secondary, "Secondary Section", { includeNotes, exportFields });
+		const secondaryTable = createDataTable(allData.secondary, "Apron", { includeNotes, exportFields });
 		if (secondaryTable) exportContainer.appendChild(secondaryTable);
 	}
 	if (allData.primary.length === 0 && allData.secondary.length === 0) {

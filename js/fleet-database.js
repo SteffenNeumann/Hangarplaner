@@ -48,6 +48,16 @@ const FleetDatabase = (function () {
 	let lastApiCall = 0;
 	let isLoading = false; // Load Protection Flag
 
+	// API Rate Limit Tracking (don't overwrite window.FleetDatabase yet)
+	let apiQuotaExceeded = false;
+
+	/**
+	 * Check if error is a rate limit (429) error
+	 */
+	function isRateLimitError(e) {
+		return e && (e.status === 429 || e.isRateLimit === true);
+	}
+
 	// DOM-Elemente
 	let elements = {};
 
@@ -115,9 +125,9 @@ const FleetDatabase = (function () {
 	 * Event-Listener einrichten
 	 */
 	function setupEventListeners() {
-		// Laden-Button
+		// Laden-Button - loads ONLY from server, no API call
 		if (elements.loadButton) {
-			elements.loadButton.addEventListener("click", loadFleetData);
+			elements.loadButton.addEventListener("click", loadFleetDataFromServer);
 		}
 
 		// Export-Button
@@ -158,10 +168,56 @@ const FleetDatabase = (function () {
 	}
 
 	/**
-	 * Flottendaten für beide Airlines laden - MIT SERVERSEITIGER DATENBANK
+	 * Load fleet data from server only (for manual button click)
+	 */
+	async function loadFleetDataFromServer() {
+		console.log("👆 Button: Lade Daten vom Server (kein API-Call)...");
+
+		// Load Protection
+		if (isLoading) {
+			console.log("⏳ Datenladung bereits im Gange - überspringe...");
+			return;
+		}
+
+		isLoading = true;
+		showLoadingState();
+		updateStatus("Lade Flottendaten vom Server...");
+
+		try {
+			if (!window.fleetDatabaseManager) {
+				throw new Error("Fleet Database Manager nicht initialisiert");
+			}
+
+			await window.fleetDatabaseManager.waitForInitialization();
+
+			// Load ONLY from server, no API sync
+			const cachedData = window.fleetDatabaseManager.getFleetData();
+			fleetData = convertFleetDataForTable(cachedData);
+
+			console.log(`✅ ${fleetData.length} Flugzeuge vom Server geladen`);
+			updateStatus(`${fleetData.length} Flugzeuge erfolgreich geladen`);
+
+			// Update filters and table
+			updateAircraftTypeFilter();
+			updateAirlineFilter();
+			applyFilters();
+		} catch (error) {
+			console.error("❌ Fehler beim Laden vom Server:", error);
+			updateStatus("Fehler beim Laden: " + error.message);
+			showEmptyState();
+		} finally {
+			isLoading = false;
+		}
+	}
+
+	/**
+	 * Auto-load fleet data with API sync check (for page load)
 	 */
 	async function loadFleetData() {
 		console.log("📡 loadFleetData() aufgerufen!");
+
+		// Reset 429 flag on each load attempt
+		apiQuotaExceeded = false;
 
 		// Load Protection: Verhindere mehrfache parallele Ladungen
 		if (isLoading) {
@@ -209,15 +265,15 @@ const FleetDatabase = (function () {
 				);
 				console.log(`📥 ${fleetData.length} Flugzeuge aus dem Cache geladen`);
 
-				// Prüfe ob API-Aktualisierung nötig ist (z.B. nur einmal täglich)
+				// Prüfe ob API-Aktualisierung nötig ist (nur alle 4 Wochen)
 				const lastSync = stats.lastApiSync || 0;
 				const now = Date.now();
-				const syncInterval = 24 * 60 * 60 * 1000; // 24 Stunden
+				const syncInterval = 28 * 24 * 60 * 60 * 1000; // 28 Tage (4 Wochen)
 				const needsSync = now - lastSync > syncInterval;
 
 				if (needsSync) {
 					console.log(
-						"🔄 API-Synchronisation wird durchgeführt (letzte Sync vor >24h)..."
+						"🔄 API-Synchronisation wird durchgeführt (letzte Sync vor >4 Wochen)..."
 					);
 
 					// API-Daten laden für Abgleich
@@ -225,19 +281,33 @@ const FleetDatabase = (function () {
 					const apiData = await loadAllFleetDataFromAPI();
 					console.log("📊 API-Daten erhalten:", apiData);
 
-					// Differential-Synchronisation durchführen (ohne neue Datenladung)
-					console.log("🔄 Starte Differential-Synchronisation...");
-					await window.fleetDatabaseManager.syncWithApiData(apiData, {
-						skipReload: true,
-					});
+					// Check if API returned empty due to 429 rate limit
+					const apiIsEmpty =
+						!apiData ||
+						!apiData.airlines ||
+						Object.keys(apiData.airlines).length === 0;
 
-					// Aktualisierte Daten laden (nur einmal)
-					const updatedData = window.fleetDatabaseManager.getFleetData();
-					fleetData = convertFleetDataForTable(updatedData);
-					console.log("✅ Synchronisation abgeschlossen");
+					if (apiIsEmpty && apiQuotaExceeded) {
+						console.warn(
+							"[FleetDB] 429 fallback active. Skipping API sync and keeping cached data."
+						);
+						// Keep existing cached fleetData; do NOT overwrite DB
+						// Continue with rendering the cached data below
+					} else {
+						// Normal path: Differential-Synchronisation durchführen (ohne neue Datenladung)
+						console.log("🔄 Starte Differential-Synchronisation...");
+						await window.fleetDatabaseManager.syncWithApiData(apiData, {
+							skipReload: true,
+						});
+
+						// Aktualisierte Daten laden (nur einmal)
+						const updatedData = window.fleetDatabaseManager.getFleetData();
+						fleetData = convertFleetDataForTable(updatedData);
+						console.log("✅ Synchronisation abgeschlossen");
+					}
 				} else {
 					console.log(
-						"⏭️ API-Synchronisation übersprungen (letzte Sync < 24h)"
+						"⏭️ API-Synchronisation übersprungen (letzte Sync < 4 Wochen)"
 					);
 				}
 			} else {
@@ -248,14 +318,28 @@ const FleetDatabase = (function () {
 				const apiData = await loadAllFleetDataFromAPI();
 				console.log("📊 API-Daten für Erst-Synchronisation erhalten:", apiData);
 
-				// Daten in der serverseitigen Datenbank speichern
-				console.log("💾 Speichere Daten in der Fleet Database...");
-				await window.fleetDatabaseManager.syncWithApiData(apiData);
+				// Check if API returned empty due to 429 rate limit
+				const apiIsEmpty =
+					!apiData ||
+					!apiData.airlines ||
+					Object.keys(apiData.airlines).length === 0;
 
-				// Daten für die Tabelle laden
-				const savedData = window.fleetDatabaseManager.getFleetData();
-				fleetData = convertFleetDataForTable(savedData);
-				console.log("✅ Daten erfolgreich in Fleet Database gespeichert");
+				if (apiIsEmpty && apiQuotaExceeded) {
+					console.warn(
+						"[FleetDB] 429 on first sync. Cannot load initial data from API."
+					);
+					// No cached data available for first load; show empty state
+					fleetData = [];
+				} else {
+					// Normal path: Daten in der serverseitigen Datenbank speichern
+					console.log("💾 Speichere Daten in der Fleet Database...");
+					await window.fleetDatabaseManager.syncWithApiData(apiData);
+
+					// Daten für die Tabelle laden
+					const savedData = window.fleetDatabaseManager.getFleetData();
+					fleetData = convertFleetDataForTable(savedData);
+					console.log("✅ Daten erfolgreich in Fleet Database gespeichert");
+				}
 			}
 
 			console.log(`✅ ${fleetData.length} Flugzeuge verfügbar`);
@@ -291,6 +375,14 @@ const FleetDatabase = (function () {
 		};
 
 		try {
+			// Early exit if quota already exceeded
+			if (apiQuotaExceeded) {
+				console.warn(
+					"[FleetDB] API quota already exceeded. Returning empty airlines object."
+				);
+				return { airlines: {} };
+			}
+
 			// CLH Flotte laden
 			updateStatus("Lade CLH (Lufthansa CityLine) Flotte von API...");
 			console.log("📡 Lade CLH Flotte...");
@@ -319,16 +411,23 @@ const FleetDatabase = (function () {
 				};
 			}
 
-			console.log(
-				`📊 API-Daten geladen: CLH=${clhData.length}, LHX=${lhxData.length}`
+		console.log(
+			`📊 API-Daten geladen: CLH=${clhData.length}, LHX=${lhxData.length}`
+		);
+		console.log("📊 API-Daten Struktur:", apiData);
+		return apiData;
+	} catch (error) {
+		// Handle 429 rate limit errors gracefully
+			if (isRateLimitError(error) || apiQuotaExceeded) {
+			console.warn(
+				"[FleetDB] 429 rate limit in loadAllFleetDataFromAPI(). Returning empty airlines object."
 			);
-			console.log("📊 API-Daten Struktur:", apiData);
-			return apiData;
-		} catch (error) {
-			console.error("❌ Fehler beim Laden der API-Daten:", error);
-			throw error;
+			return { airlines: {} };
 		}
+		console.error("❌ Fehler beim Laden der API-Daten:", error);
+		throw error;
 	}
+}
 
 	/**
 	 * Konvertiert Fleet Database Daten für die Tabellen-Anzeige
@@ -413,6 +512,16 @@ const FleetDatabase = (function () {
 					hasMoreData = false;
 				}
 			} catch (error) {
+				// Handle 429 rate limit errors gracefully
+				if (isRateLimitError(error)) {
+					apiQuotaExceeded = true;
+					console.warn(
+						`[FleetDB] 429 rate limit in loadSimpleAirlineFleet(${airlineCode}). Returning ${allAircrafts.length} aircrafts loaded so far.`
+					);
+					hasMoreData = false;
+					// Return what we have so far instead of throwing
+					break;
+				}
 				console.error(
 					`❌ Fehler beim Laden der Seite für ${airlineCode}:`,
 					error
@@ -438,6 +547,22 @@ const FleetDatabase = (function () {
 			xhr.addEventListener("readystatechange", function () {
 				if (this.readyState === this.DONE) {
 					console.log(`📊 ${airlineCode} Response Status: ${this.status}`);
+
+					// Handle 429 Rate Limit Error
+					if (this.status === 429) {
+						apiQuotaExceeded = true;
+						const bodyText = this.responseText || "";
+						console.warn(
+							`[FleetDB] AeroDataBox 429 rate limit for ${airlineCode}. Falling back to cached data.`
+						);
+						console.warn(`[FleetDB] 429 response body:`, bodyText);
+						const err = new Error(`HTTP 429 for ${airlineCode}`);
+						err.status = 429;
+						err.isRateLimit = true;
+						err.body = bodyText;
+						reject(err);
+						return;
+					}
 
 					if (this.status === 200) {
 						try {
@@ -1280,7 +1405,8 @@ const FleetDatabase = (function () {
 	// Öffentliche API
 	return {
 		init,
-		loadFleetData,
+		loadFleetData, // auto-load with API sync check (page load)
+		loadFleetDataFromServer, // server-only (button)
 		exportFleetData,
 		viewAircraftDetails,
 		useInHangar,
@@ -1346,7 +1472,7 @@ document.addEventListener("DOMContentLoaded", function () {
 			return;
 		}
 		dataLoadTriggered = true;
-		console.log("🎯 Starte einmalige automatische Datenladung...");
+		console.log("🎯 Starte einmalige automatische Datenladung (auto sync check)...");
 		FleetDatabase.loadFleetData();
 	}
 
@@ -1392,8 +1518,8 @@ window.FleetDatabase = FleetDatabase;
 
 // Test-Funktion für direktes Laden
 window.testFleetDatabaseLoad = function () {
-	console.log("🧪 Test: Lade Flottendaten direkt...");
-	FleetDatabase.loadFleetData();
+	console.log("🧪 Test: Lade Flottendaten direkt (server only)...");
+	FleetDatabase.loadFleetDataFromServer();
 };
 
 console.log("🧪 Test-Funktion verfügbar: testFleetDatabaseLoad()");

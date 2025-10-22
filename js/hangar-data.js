@@ -36,9 +36,9 @@ hangarData.collectAllHangarData = function () {
 		const projectId =
 			document.getElementById("projectId").value || Date.now().toString();
 
-		// Basis-Einstellungen sammeln (Legacy-Format für Kompatibilität)
-		const settings = {
-			tilesCount: parseInt(document.getElementById("tilesCount")?.value) || 8,
+	// Basis-Einstellungen sammeln (Legacy-Format für Kompatibilität)
+	const settings = {
+		tilesCount: parseInt(document.getElementById("tilesCount")?.value) || 12,
 			secondaryTilesCount:
 				parseInt(document.getElementById("secondaryTilesCount")?.value) || 4, // Startwert 4
 			layout: parseInt(document.getElementById("layoutType")?.value) || 4,
@@ -104,12 +104,12 @@ function importHangarPlanFromJson(event) {
 						data.metadata.projectName;
 				}
 
-				// Einstellungen übernehmen
-				if (data.settings) {
-					if (window.hangarUI.checkElement("tilesCount")) {
-						document.getElementById("tilesCount").value =
-							data.settings.tilesCount || 8;
-					}
+			// Einstellungen übernehmen
+			if (data.settings) {
+				if (window.hangarUI.checkElement("tilesCount")) {
+					document.getElementById("tilesCount").value =
+						data.settings.tilesCount || 12;
+				}
 					if (window.hangarUI.checkElement("secondaryTilesCount")) {
 						document.getElementById("secondaryTilesCount").value =
 							data.settings.secondaryTilesCount || 4;
@@ -119,8 +119,8 @@ function importHangarPlanFromJson(event) {
 							data.settings.layout || 4;
 					}
 
-					// Einstellungen anwenden
-					window.hangarUI.uiSettings.tilesCount = data.settings.tilesCount || 8;
+				// Einstellungen anwenden
+				window.hangarUI.uiSettings.tilesCount = data.settings.tilesCount || 12;
 					window.hangarUI.uiSettings.secondaryTilesCount =
 						data.settings.secondaryTilesCount || 4;
 					window.hangarUI.uiSettings.layout = data.settings.layout || 4;
@@ -299,7 +299,7 @@ function applyLoadedHangarPlan(data) {
 			// Legacy-System für alte Daten ohne displayOptions
 			if (window.hangarUI && window.hangarUI.checkElement("tilesCount")) {
 				document.getElementById("tilesCount").value =
-					data.settings.tilesCount || 8;
+					data.settings.tilesCount || 12;
 			}
 			if (
 				window.hangarUI &&
@@ -314,7 +314,7 @@ function applyLoadedHangarPlan(data) {
 
 			// Legacy-Einstellungen anwenden
 			if (window.hangarUI && window.hangarUI.uiSettings) {
-				window.hangarUI.uiSettings.tilesCount = data.settings.tilesCount || 8;
+				window.hangarUI.uiSettings.tilesCount = data.settings.tilesCount || 12;
 				window.hangarUI.uiSettings.secondaryTilesCount =
 					data.settings.secondaryTilesCount || 4;
 				window.hangarUI.uiSettings.layout = data.settings.layout || 4;
@@ -606,7 +606,7 @@ function applyLoadedTileData(data) {
 			const { tilesCount, secondaryTilesCount, layout } = data.settings;
 
 			if (window.hangarUI && window.hangarUI.uiSettings) {
-				window.hangarUI.uiSettings.tilesCount = tilesCount || 8;
+				window.hangarUI.uiSettings.tilesCount = tilesCount || 12;
 				window.hangarUI.uiSettings.secondaryTilesCount =
 					secondaryTilesCount || 4;
 				window.hangarUI.uiSettings.layout = layout || 4;
@@ -1353,7 +1353,7 @@ function collectTilesData() {
  */
 function collectSettingsData() {
 	return {
-		tilesCount: parseInt(document.getElementById("tilesCount")?.value) || 8,
+		tilesCount: parseInt(document.getElementById("tilesCount")?.value) || 12,
 		secondaryTilesCount:
 			parseInt(document.getElementById("secondaryTilesCount")?.value) || 4,
 		layout: parseInt(document.getElementById("layoutType")?.value) || 4,
@@ -1399,7 +1399,7 @@ function applyProjectData(projectData) {
 
 		// UI-Felder aktualisieren
 		if (document.getElementById("tilesCount")) {
-			document.getElementById("tilesCount").value = tilesCount || 8;
+			document.getElementById("tilesCount").value = tilesCount || 12;
 		}
 
 		if (document.getElementById("secondaryTilesCount")) {
@@ -1422,7 +1422,7 @@ function applyProjectData(projectData) {
 
 		// UI-Einstellungen anwenden und Grid neu aufbauen
 		if (window.hangarUI && window.hangarUI.uiSettings) {
-			window.hangarUI.uiSettings.tilesCount = tilesCount || 8;
+			window.hangarUI.uiSettings.tilesCount = tilesCount || 12;
 			window.hangarUI.uiSettings.secondaryTilesCount = secondaryTilesCount || 0;
 			window.hangarUI.uiSettings.layout = layout || 4;
 			window.hangarUI.uiSettings.apply();
@@ -2506,7 +2506,7 @@ window.HangarDataCoordinator = {
 
 			// UI-Einstellungen anwenden falls hangarUI verfügbar
 			if (window.hangarUI && window.hangarUI.uiSettings) {
-				window.hangarUI.uiSettings.tilesCount = data.settings.tilesCount || 8;
+				window.hangarUI.uiSettings.tilesCount = data.settings.tilesCount || 12;
 				window.hangarUI.uiSettings.secondaryTilesCount =
 					data.settings.secondaryTilesCount || 4;
 				window.hangarUI.uiSettings.layout = data.settings.layout || 4;

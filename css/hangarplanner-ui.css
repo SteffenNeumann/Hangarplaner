@@ -5242,6 +5242,36 @@ body:not(.dark-mode) #mailLogList li {
   color: #374151 !important; /* slate-700 for good contrast */
 }
 
+/* Mail log two-row layout */
+#mailLogList {
+  list-style: none;
+  padding-left: 0;
+}
+
+#mailLogList .mail-log-item {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  line-height: 1.2;
+  padding: 6px 8px;
+  border-bottom: 1px solid #eee;
+}
+
+#mailLogList .mail-row1 {
+  font-weight: 600;
+}
+
+#mailLogList .mail-row2 {
+  color: #555;
+  margin-top: 2px;
+}
+
+.dark-mode #mailLogList .mail-log-item {
+  border-bottom-color: var(--border-color);
+}
+
+.dark-mode #mailLogList .mail-row2 {
+  color: var(--text-secondary);
+}
+
 /* Users list truncation and layout */
 #presenceNames { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 

@@ -5584,6 +5584,24 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 		      return items;
 		    } catch(_) { return []; }
 		  }
+	  function formatMailTimestamp(ts) {
+	    if (!ts) return '';
+	    try {
+	      const d = new Date(ts);
+	      const hh = String(d.getHours()).padStart(2, '0');
+	      const mm = String(d.getMinutes()).padStart(2, '0');
+	      const dd = String(d.getDate()).padStart(2, '0');
+	      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+	      const MMM = months[d.getMonth()];
+	      return `${dd}.${MMM} ${hh}:${mm}`;
+	    } catch(_) { return String(ts); }
+	  }
+
+	  function emailLocalPart(email) {
+	    if (!email) return 'Unknown';
+	    return String(email).split('@')[0];
+	  }
+
 	  function renderMailLog(items){
 	    const ul = document.getElementById('mailLogList');
 	    if (!ul) return;
@@ -5592,22 +5610,21 @@ header.innerHTML = '<button id="changelogToggle" class="changelog-toggle" aria-c
 	    if (!list.length){ ul.innerHTML = '<li class="text-gray-400">No mails sent yet</li>'; return; }
 	    list.forEach(it => {
 	      const li = document.createElement('li');
-	      li.style.fontFamily = 'monospace';
-	      // Format timestamp as dd.MMM hh:mm
-	      let formattedTs = '';
-	      if (it && it.timestamp) {
-	        try {
-	          const d = new Date(it.timestamp);
-	          const hh = String(d.getHours()).padStart(2, '0');
-	          const mm = String(d.getMinutes()).padStart(2, '0');
-	          const dd = String(d.getDate()).padStart(2, '0');
-	          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-	          const MMM = months[d.getMonth()];
-	          formattedTs = `${dd}.${MMM} ${hh}:${mm}`;
-	        } catch(_) { formattedTs = it.timestamp; }
-	      }
-	      const user = it && it.userEmail ? it.userEmail : '';
-	      li.textContent = `${formattedTs}  User:${user}`;
+	      li.className = 'mail-log-item';
+
+	      const row1 = document.createElement('div');
+	      row1.className = 'mail-row1';
+	      row1.textContent = formatMailTimestamp(it.timestamp);
+
+	      const row2 = document.createElement('div');
+	      row2.className = 'mail-row2';
+	      const name = (it && it.displayName && String(it.displayName).trim())
+	        ? String(it.displayName).trim()
+	        : emailLocalPart(it && it.userEmail);
+	      row2.textContent = name;
+
+	      li.appendChild(row1);
+	      li.appendChild(row2);
 	      ul.appendChild(li);
 	    });
 	  }

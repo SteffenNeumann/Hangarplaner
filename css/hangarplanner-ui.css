@@ -4853,7 +4853,7 @@ table .planner-select.tow-status-selector[data-value="neutral"],
 .planner-td select.status-plain {
   min-width: 90px;
   font-size: 12px; /* legacy */
-  height: 26px; /* legacy */
+  /*height: 26px;  legacy */
   padding: 2px 8px; /* legacy */
   border-radius: 2px; /* legacy */
   font-weight: 600;

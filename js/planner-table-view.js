@@ -321,15 +321,19 @@
       // Ensure tow alert dots are updated for new rows
       try { setTimeout(updateTowAlertDots, 0); } catch(_){ }
       
-      // Apply explicit zebra striping classes to visible data rows only
-      const dataRows = Array.from(tbody.querySelectorAll('tr.planner-row'));
-      dataRows.forEach((row, idx) => {
-        if (idx % 2 === 0) {
-          row.classList.add('zebra-even');
-          row.classList.remove('zebra-odd');
-        } else {
-          row.classList.add('zebra-odd');
-          row.classList.remove('zebra-even');
+      // Apply explicit zebra striping classes to ALL rows globally (across sections)
+      // This ensures colors continue correctly after the APRON divider
+      let visibleRowCount = 0;
+      Array.from(tbody.children).forEach(tr => {
+        if (tr.classList.contains('planner-row')) {
+          if (visibleRowCount % 2 === 0) {
+            tr.classList.add('zebra-even');
+            tr.classList.remove('zebra-odd');
+          } else {
+            tr.classList.add('zebra-odd');
+            tr.classList.remove('zebra-even');
+          }
+          visibleRowCount++;
         }
       });
     } catch(e){}

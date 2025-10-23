@@ -246,7 +246,6 @@
   function render(){
     try {
       const tbody = document.getElementById('plannerTableBody');
-      const status = document.getElementById('plannerTableStatus');
       if (!tbody) return;
       tbody.innerHTML = '';
       const ro = canReadOnly();
@@ -312,10 +311,6 @@
         
         // Status select in table view intentionally plain (no chip design)
       });
-
-      if (status){
-        status.textContent = `${STATE.filtered.length} of ${STATE.rows.length} tiles shown`;
-      }
 
       updateSortIndicators();
       // Ensure tow alert dots are updated for new rows

@@ -72,11 +72,12 @@
   color: #9ca3af !important; /* regular gray for Hangar Position in dark mode */
 }
 
-/* Widen first column (Hangar Position) in plannerTable */
+/* Widen first column (Hangar Position) in plannerTable - prevent header wrapping */
 #plannerTable th:first-child,
 #plannerTable td:first-child {
-  min-width: 100px !important;
-  width: 100px !important;
+  min-width: 130px !important;
+  width: 130px !important;
+  white-space: nowrap !important;
 }
 
 /* Override ALL table row hover effects across all tables and themes */

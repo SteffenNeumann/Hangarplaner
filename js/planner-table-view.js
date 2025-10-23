@@ -321,6 +321,18 @@
       updateSortIndicators();
       // Ensure tow alert dots are updated for new rows
       try { setTimeout(updateTowAlertDots, 0); } catch(_){ }
+      
+      // Apply explicit zebra striping classes to visible data rows only
+      const dataRows = Array.from(tbody.querySelectorAll('tr.planner-row'));
+      dataRows.forEach((row, idx) => {
+        if (idx % 2 === 0) {
+          row.classList.add('zebra-even');
+          row.classList.remove('zebra-odd');
+        } else {
+          row.classList.add('zebra-odd');
+          row.classList.remove('zebra-even');
+        }
+      });
     } catch(e){}
   }
   function displayTime(v){

@@ -5580,26 +5580,26 @@ html:not(.dark-mode) .tow-status-selector:hover {
 	border-right: none !important;
 }
 
-/* Zebra striping: Skip section dividers and apply to visible rows only */
-/* Light mode - visible rows get colors based on visible row count */
-#plannerTable tbody tr:not(.section-divider):nth-of-type(odd),
-#fleetTable tbody tr:nth-child(odd) {
+/* Zebra striping: Use explicit classes for planner table, nth-child for fleet table */
+/* Light mode */
+#plannerTable tbody tr.zebra-even,
+#fleetTable tbody tr:nth-child(even) {
 	background-color: #ffffff !important;
 }
 
-#plannerTable tbody tr:not(.section-divider):nth-of-type(even),
-#fleetTable tbody tr:nth-child(even) {
+#plannerTable tbody tr.zebra-odd,
+#fleetTable tbody tr:nth-child(odd) {
 	background-color: #f9fafb !important;
 }
 
 /* Dark mode zebra striping */
-.dark-mode #plannerTable tbody tr:not(.section-divider):nth-of-type(odd),
-.dark-mode #fleetTable tbody tr:nth-child(odd) {
+.dark-mode #plannerTable tbody tr.zebra-even,
+.dark-mode #fleetTable tbody tr:nth-child(even) {
 	background-color: var(--dark-card) !important;
 }
 
-.dark-mode #plannerTable tbody tr:not(.section-divider):nth-of-type(even),
-.dark-mode #fleetTable tbody tr:nth-child(even) {
+.dark-mode #plannerTable tbody tr.zebra-odd,
+.dark-mode #fleetTable tbody tr:nth-child(odd) {
 	background-color: var(--dark-secondary) !important;
 }
 

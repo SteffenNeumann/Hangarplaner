@@ -42,9 +42,10 @@
 	transition: background-color 0.2s ease;
 }
 
-.fleet-table th:hover {
+/* Hover disabled to match consistent table look */
+/* .fleet-table th:hover {
 	background-color: #e2e8f0;
-}
+} */
 
 .fleet-table th.sortable {
 	cursor: pointer;

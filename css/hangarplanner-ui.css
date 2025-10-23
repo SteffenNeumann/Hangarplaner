@@ -187,7 +187,7 @@ html, body, button, input, select, textarea {
 }
 
 #timetableTable tbody tr:hover {
-	background-color: #f8fafc;
+	background-color: inherit !important;
 }
 
 #timetableTable td {
@@ -5580,25 +5580,25 @@ html:not(.dark-mode) .tow-status-selector:hover {
 	border-right: none !important;
 }
 
-/* Zebra striping: Use :nth-of-type to skip hidden rows (positions 8 and 11) */
-/* Light mode - all visible rows get explicit colors based on visible position */
-#plannerTable tbody tr:not([style*="display: none"]):not([data-hangar-pos="8"]):not([data-hangar-pos="11"]):nth-of-type(odd),
+/* Zebra striping: Skip section dividers and apply to visible rows only */
+/* Light mode - visible rows get colors based on visible row count */
+#plannerTable tbody tr:not(.section-divider):nth-of-type(odd),
 #fleetTable tbody tr:nth-child(odd) {
 	background-color: #ffffff !important;
 }
 
-#plannerTable tbody tr:not([style*="display: none"]):not([data-hangar-pos="8"]):not([data-hangar-pos="11"]):nth-of-type(even),
+#plannerTable tbody tr:not(.section-divider):nth-of-type(even),
 #fleetTable tbody tr:nth-child(even) {
 	background-color: #f9fafb !important;
 }
 
 /* Dark mode zebra striping */
-.dark-mode #plannerTable tbody tr:not([style*="display: none"]):not([data-hangar-pos="8"]):not([data-hangar-pos="11"]):nth-of-type(odd),
+.dark-mode #plannerTable tbody tr:not(.section-divider):nth-of-type(odd),
 .dark-mode #fleetTable tbody tr:nth-child(odd) {
 	background-color: var(--dark-card) !important;
 }
 
-.dark-mode #plannerTable tbody tr:not([style*="display: none"]):not([data-hangar-pos="8"]):not([data-hangar-pos="11"]):nth-of-type(even),
+.dark-mode #plannerTable tbody tr:not(.section-divider):nth-of-type(even),
 .dark-mode #fleetTable tbody tr:nth-child(even) {
 	background-color: var(--dark-secondary) !important;
 }

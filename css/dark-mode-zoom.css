@@ -291,7 +291,7 @@ button {
 .dark-mode #airport-flights-container .flight-table tr:hover,
 .dark-mode #plannerTable tbody tr:hover,
 .dark-mode #fleetTable tbody tr:hover {
-  /* No hover effect */
+  background-color: inherit !important;
 }
 
 /* Preserve specific airport-flights text colors */

@@ -5554,3 +5554,67 @@ html:not(.dark-mode) .tow-status-selector:hover {
 	color: transparent !important;
 	-webkit-text-fill-color: transparent !important; /* Safari */
 }
+
+/* ==========================================================================
+   GLOBAL TABLE BORDER REMOVAL AND ZEBRA STRIPING FIX
+   Final overrides to ensure no borders and correct alternating rows
+   ========================================================================== */
+
+/* Remove ALL borders from table elements globally */
+#plannerTable tr,
+#plannerTable th,
+#plannerTable td,
+#fleetTable tr,
+#fleetTable th,
+#fleetTable td,
+#airport-flights-container table tr,
+#airport-flights-container table th,
+#airport-flights-container table td {
+	border: none !important;
+	border-top: none !important;
+	border-bottom: none !important;
+	border-left: none !important;
+	border-right: none !important;
+}
+
+/* Ensure zebra striping works correctly - odd rows white, even rows gray */
+#plannerTable tbody tr:nth-child(odd),
+#fleetTable tbody tr:nth-child(odd) {
+	background-color: #ffffff !important;
+}
+
+#plannerTable tbody tr:nth-child(even),
+#fleetTable tbody tr:nth-child(even) {
+	background-color: #f9fafb !important;
+}
+
+/* Dark mode zebra striping */
+.dark-mode #plannerTable tbody tr:nth-child(odd),
+.dark-mode #fleetTable tbody tr:nth-child(odd) {
+	background-color: var(--dark-card) !important;
+}
+
+.dark-mode #plannerTable tbody tr:nth-child(even),
+.dark-mode #fleetTable tbody tr:nth-child(even) {
+	background-color: var(--dark-secondary) !important;
+}
+
+/* Ensure inputs inherit row backgrounds properly */
+#plannerTable tbody tr .planner-input,
+#fleetTable tbody tr input {
+	background: transparent !important;
+}
+
+/* Remove hover effects completely */
+#plannerTable tbody tr:hover,
+#fleetTable tbody tr:hover,
+#airport-flights-container table tbody tr:hover {
+	background-color: inherit !important;
+}
+
+/* Ensure section dividers don't get borders either */
+#plannerTable tr.section-divider,
+#plannerTable tr.section-divider td {
+	border: none !important;
+	background: transparent !important;
+}

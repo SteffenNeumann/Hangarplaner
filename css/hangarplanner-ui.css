@@ -4823,17 +4823,17 @@ tr.section-divider .divider-badge {
   background: #f9fafb;
   border-color: #f9fafb;
 }
-/* Dark mode: match zebra row backgrounds */
+/* Dark mode: match zebra row backgrounds - override general status-light rule */
 .dark-mode #plannerTable tbody tr.zebra-even td .status-light[data-status="neutral"],
 .dark-mode #plannerTable tbody tr td .status-light[data-status="neutral"] {
-  background: var(--dark-card);
-  border-color: var(--dark-card);
-  box-shadow: none;
+  background: var(--dark-card) !important;
+  border-color: var(--dark-card) !important;
+  box-shadow: none !important;
 }
 .dark-mode #plannerTable tbody tr.zebra-odd td .status-light[data-status="neutral"] {
-  background: var(--dark-secondary);
-  border-color: var(--dark-secondary);
-  box-shadow: none;
+  background: var(--dark-secondary) !important;
+  border-color: var(--dark-secondary) !important;
+  box-shadow: none !important;
 }
 
 /* Tow status selector styling in table view - improved consistency */
@@ -4887,11 +4887,11 @@ tr.section-divider .divider-badge {
 /* Dark mode: match zebra row backgrounds */
 .dark-mode #plannerTable tbody tr.zebra-even td .tow-dot.neutral,
 .dark-mode #plannerTable tbody tr td .tow-dot.neutral {
-  background: var(--dark-card);
+  background: var(--dark-card) !important;
   opacity: 1;
 }
 .dark-mode #plannerTable tbody tr.zebra-odd td .tow-dot.neutral {
-  background: var(--dark-secondary);
+  background: var(--dark-secondary) !important;
   opacity: 1;
 }
 #plannerTable td .tow-status-selector {

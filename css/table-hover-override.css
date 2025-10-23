@@ -31,13 +31,19 @@
   letter-spacing: 0.05em !important;
 }
 
-/* Primary columns (Aircraft ID, Hangar Position, Registration) - bolder like flight-reg */
+/* Primary columns (Aircraft ID, Registration) - bolder like flight-reg */
 #plannerTable td .planner-input[data-col="aircraftId"],
-#plannerTable td .planner-input[data-col="hangarPosition"],
 #fleetTable .registration-code {
   font-weight: 600 !important;
   color: #111827 !important;
   font-size: 0.95rem !important;
+}
+
+/* Hangar Position - regular weight, not bold */
+#plannerTable td .planner-input[data-col="hangarPosition"] {
+  font-weight: 400 !important;
+  color: #6b7280 !important;
+  font-size: 0.875rem !important;
 }
 
 /* Dark mode color adjustments */
@@ -58,16 +64,19 @@
 }
 
 .dark-mode #plannerTable td .planner-input[data-col="aircraftId"],
-.dark-mode #plannerTable td .planner-input[data-col="hangarPosition"],
 .dark-mode #fleetTable .registration-code {
   color: #f3f4f6 !important; /* near white for primary columns in dark mode */
+}
+
+.dark-mode #plannerTable td .planner-input[data-col="hangarPosition"] {
+  color: #9ca3af !important; /* regular gray for Hangar Position in dark mode */
 }
 
 /* Widen first column (Hangar Position) in plannerTable */
 #plannerTable th:first-child,
 #plannerTable td:first-child {
-  min-width: 80px !important;
-  width: 80px !important;
+  min-width: 100px !important;
+  width: 100px !important;
 }
 
 /* Override ALL table row hover effects across all tables and themes */

@@ -77,11 +77,10 @@
         notes: byIdValue(`notes-${row.tileId}`),
       }));
       
-      // Filter out placeholder positions 8 and 11 only
+      // Filter out placeholder tiles 8 and 11 (by tileId, not position)
       const allRows = primRows.concat(secRows);
       return allRows.filter(row => {
-        const pos = String(row.hangarPosition || '').trim();
-        return pos !== '8' && pos !== '11';
+        return row.tileId !== 8 && row.tileId !== 11;
       });
     } catch(e){ return []; }
   }

@@ -1960,7 +1960,7 @@ input:checked + .toggle-slider:before {
 	transform: none;
 	text-align: center;
 }
-/*
+
 .section-divider::after {
 	content: "APRON";
 	position: absolute;
@@ -1974,7 +1974,7 @@ input:checked + .toggle-slider:before {
 	color: #64748b;
 	letter-spacing: 0.05em;
 }
-*/
+
 
 .section-label {
 	font-size: 15px;

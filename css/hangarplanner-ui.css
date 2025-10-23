@@ -4814,8 +4814,18 @@ tr.section-divider .divider-badge {
   border-color: transparent;
   box-shadow: none;
 }
+/* Light mode: match zebra backgrounds */
+#plannerTable tbody tr.zebra-even td .status-light[data-status="neutral"] {
+  background: #ffffff;
+  border-color: #ffffff;
+}
+#plannerTable tbody tr.zebra-odd td .status-light[data-status="neutral"] {
+  background: #f9fafb;
+  border-color: #f9fafb;
+}
 /* Dark mode: match zebra row backgrounds */
-.dark-mode #plannerTable tbody tr.zebra-even td .status-light[data-status="neutral"] {
+.dark-mode #plannerTable tbody tr.zebra-even td .status-light[data-status="neutral"],
+.dark-mode #plannerTable tbody tr td .status-light[data-status="neutral"] {
   background: var(--dark-card);
   border-color: var(--dark-card);
   box-shadow: none;
@@ -4867,8 +4877,16 @@ tr.section-divider .divider-badge {
   opacity: 1;
   animation: none;
 }
+/* Light mode: match zebra backgrounds */
+#plannerTable tbody tr.zebra-even td .tow-dot.neutral {
+  background: #ffffff;
+}
+#plannerTable tbody tr.zebra-odd td .tow-dot.neutral {
+  background: #f9fafb;
+}
 /* Dark mode: match zebra row backgrounds */
-.dark-mode #plannerTable tbody tr.zebra-even td .tow-dot.neutral {
+.dark-mode #plannerTable tbody tr.zebra-even td .tow-dot.neutral,
+.dark-mode #plannerTable tbody tr td .tow-dot.neutral {
   background: var(--dark-card);
   opacity: 1;
 }

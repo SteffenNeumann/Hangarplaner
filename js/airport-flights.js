@@ -342,10 +342,6 @@ const AirportFlights = (() => {
 					background-color: #f9fafb;
 				}
 				
-				#airport-flights-container .flight-table tr:hover {
-					background-color: #f3f4f6;
-				}
-				
 				/* Erste Spalte als Hauptelement (Registrierung) */
 				#airport-flights-container .flight-reg {
 					font-weight: 600;

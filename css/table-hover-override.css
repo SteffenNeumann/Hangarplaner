@@ -150,3 +150,50 @@ table tbody tr:hover,
   transition: none !important;
   cursor: default !important;
 }
+
+/* MAXIMUM SPECIFICITY OVERRIDES - Target specific table contexts */
+/* Planner table in panel-planner-table context (light mode) */
+#panel-planner-table #plannerTableView #plannerTable.fleet-table tbody tr:hover,
+#panel-planner-table #plannerTableView #plannerTable.fleet-table tbody tr:nth-child(odd):hover,
+#panel-planner-table #plannerTableView #plannerTable.fleet-table tbody tr:nth-child(even):hover,
+#panel-planner-table #plannerTableView #plannerTable.fleet-table tbody tr.zebra-odd:hover,
+#panel-planner-table #plannerTableView #plannerTable.fleet-table tbody tr.zebra-even:hover {
+  background-color: inherit !important;
+  background: inherit !important;
+  transition: none !important;
+}
+
+/* Fleet table context (light mode) */
+.fleet-table-container .fleet-table tbody tr:hover,
+.fleet-table-container .fleet-table tbody tr:nth-child(odd):hover,
+.fleet-table-container .fleet-table tbody tr:nth-child(even):hover,
+#fleetTable.fleet-table tbody tr:hover,
+#fleetTable.fleet-table tbody tr:nth-child(odd):hover,
+#fleetTable.fleet-table tbody tr:nth-child(even):hover {
+  background-color: inherit !important;
+  background: inherit !important;
+  transition: none !important;
+}
+
+/* Planner table in panel-planner-table context (dark mode) */
+.dark-mode #panel-planner-table #plannerTableView #plannerTable.fleet-table tbody tr:hover,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable.fleet-table tbody tr:nth-child(odd):hover,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable.fleet-table tbody tr:nth-child(even):hover,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable.fleet-table tbody tr.zebra-odd:hover,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable.fleet-table tbody tr.zebra-even:hover {
+  background-color: inherit !important;
+  background: inherit !important;
+  transition: none !important;
+}
+
+/* Fleet table context (dark mode) */
+.dark-mode .fleet-table-container .fleet-table tbody tr:hover,
+.dark-mode .fleet-table-container .fleet-table tbody tr:nth-child(odd):hover,
+.dark-mode .fleet-table-container .fleet-table tbody tr:nth-child(even):hover,
+.dark-mode #fleetTable.fleet-table tbody tr:hover,
+.dark-mode #fleetTable.fleet-table tbody tr:nth-child(odd):hover,
+.dark-mode #fleetTable.fleet-table tbody tr:nth-child(even):hover {
+  background-color: inherit !important;
+  background: inherit !important;
+  transition: none !important;
+}

@@ -40,6 +40,36 @@
   font-size: 0.95rem !important;
 }
 
+/* Dark mode color adjustments */
+.dark-mode #plannerTable td,
+.dark-mode #plannerTable tbody td,
+.dark-mode #plannerTable .planner-input,
+.dark-mode #plannerTable .planner-select,
+.dark-mode #fleetTable td,
+.dark-mode #fleetTable tbody td,
+.dark-mode #fleetTable input,
+.dark-mode #fleetTable select {
+  color: #9ca3af !important; /* lighter gray for dark mode */
+}
+
+.dark-mode #plannerTable th,
+.dark-mode #fleetTable th {
+  color: #d1d5db !important; /* lighter header text for dark mode */
+}
+
+.dark-mode #plannerTable td .planner-input[data-col="aircraftId"],
+.dark-mode #plannerTable td .planner-input[data-col="hangarPosition"],
+.dark-mode #fleetTable .registration-code {
+  color: #f3f4f6 !important; /* near white for primary columns in dark mode */
+}
+
+/* Widen first column (Hangar Position) in plannerTable */
+#plannerTable th:first-child,
+#plannerTable td:first-child {
+  min-width: 80px !important;
+  width: 80px !important;
+}
+
 /* Override ALL table row hover effects across all tables and themes */
 table tr:hover,
 table tbody tr:hover,

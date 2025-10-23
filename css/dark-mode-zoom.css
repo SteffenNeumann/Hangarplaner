@@ -260,7 +260,7 @@ button {
 .dark-mode #fleetTable th {
   background-color: var(--dark-secondary) !important;
   color: var(--dark-text) !important;
-  border-bottom: 0; /* No row borders */
+  border: none !important; /* Remove all borders */
   font-weight: 600;
   text-transform: uppercase;
   padding: 0.75rem;
@@ -271,7 +271,7 @@ button {
 .dark-mode #plannerTable td,
 .dark-mode #fleetTable td {
   color: var(--dark-text) !important;
-  border-bottom: 0; /* No row borders */
+  border: none !important; /* Remove all borders */
   padding: 0.75rem;
 }
 
@@ -287,11 +287,11 @@ button {
   background-color: var(--dark-secondary) !important;
 }
 
-/* Unified hover state for all tables */
+/* Remove hover state as requested */
 .dark-mode #airport-flights-container .flight-table tr:hover,
 .dark-mode #plannerTable tbody tr:hover,
 .dark-mode #fleetTable tbody tr:hover {
-  background-color: var(--dark-hover) !important;
+  /* No hover effect */
 }
 
 /* Preserve specific airport-flights text colors */

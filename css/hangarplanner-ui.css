@@ -2400,7 +2400,7 @@ input:checked + .toggle-slider:before {
 #fleetTable td {
 	padding: 0.75rem;
 	text-align: left;
-	border-bottom: 0; /* No row borders */
+	border: none !important; /* Remove all borders */
 }
 
 #airport-flights-container .flight-table th,
@@ -2420,10 +2420,11 @@ input:checked + .toggle-slider:before {
 	background-color: #f9fafb;
 }
 
+/* Remove hover styles as requested */
 #airport-flights-container .flight-table tr:hover,
 #plannerTable tbody tr:hover,
 #fleetTable tbody tr:hover {
-	background-color: #f3f4f6;
+	/* No hover effect */
 }
 
 #airport-flights-container .flight-number {
@@ -4521,29 +4522,38 @@ body.table-view #panel-planner-table .changelog-toggle { opacity: 1; pointer-eve
   text-transform: uppercase;
   color: #374151; /* Match unified table header */
   padding: 0.75rem; /* Match unified table padding */
-  border-bottom: 0; /* No row borders */
+  border: none !important; /* Remove all borders */
   z-index: 1;
   letter-spacing: 0.05em;
   font-weight: 600; /* Match unified table header */
 }
 #panel-planner-table #plannerTableView #plannerTable.fleet-table tbody td {
   padding: 0.75rem; /* Match unified table padding */
-  border-bottom: 0; /* No row borders */
+  border: none !important; /* Remove all borders */
+}
+#panel-planner-table #plannerTableView #plannerTable.fleet-table tbody tr:nth-child(even) {
+  background-color: #f9fafb; /* Zebra striping */
 }
 #panel-planner-table #plannerTableView #plannerTable.fleet-table tbody tr:hover {
-  background-color: #f3f4f6; /* Match unified table hover */
+  /* No hover effect */
 }
 /* Dark mode adjustments */
 .dark-mode #panel-planner-table #plannerTableView #plannerTable.fleet-table thead th {
   background: var(--dark-secondary); /* Match unified table header */
   color: var(--dark-text); /* Match unified table header */
-  border-bottom: 0; /* No row borders */
+  border: none !important; /* Remove all borders */
 }
 .dark-mode #panel-planner-table #plannerTableView #plannerTable.fleet-table tbody td {
-  border-bottom: 0; /* No row borders */
+  border: none !important; /* Remove all borders */
+}
+.dark-mode #panel-planner-table #plannerTableView #plannerTable.fleet-table tbody tr:nth-child(odd) {
+  background-color: var(--dark-card); /* Zebra striping */
+}
+.dark-mode #panel-planner-table #plannerTableView #plannerTable.fleet-table tbody tr:nth-child(even) {
+  background-color: var(--dark-secondary); /* Zebra striping */
 }
 .dark-mode #panel-planner-table #plannerTableView #plannerTable.fleet-table tbody tr:hover {
-  background-color: var(--dark-hover); /* Match unified table hover */
+  /* No hover effect */
 }
 
 /* Inputs and selects within planner table */
@@ -4554,9 +4564,14 @@ body.table-view #panel-planner-table .changelog-toggle { opacity: 1; pointer-eve
   border-radius: 6px;
   padding: 6px 8px; /* legacy sizing */
   font-size: 12px;
-  background: #fff;
+  background: transparent; /* Match row background */
   color: #0f172a;
   transition: border-color .15s ease, background-color .15s ease, color .15s ease;
+}
+/* Even rows - match zebra background */
+#panel-planner-table #plannerTableView #plannerTable tbody tr:nth-child(even) .planner-input,
+#panel-planner-table #plannerTableView #plannerTable tbody tr:nth-child(even) .planner-select:not(.tow-status-selector):not(.status-selector) {
+  background: transparent; /* Inherit row color */
 }
 #panel-planner-table #plannerTableView #plannerTable .planner-input:hover,
 #panel-planner-table #plannerTableView #plannerTable .planner-select:hover {
@@ -4572,9 +4587,14 @@ body.table-view #panel-planner-table .changelog-toggle { opacity: 1; pointer-eve
 /* Dark mode inputs baseline (do not affect selects styling differently here) */
 .dark-mode #panel-planner-table #plannerTableView #plannerTable .planner-input,
 .dark-mode #panel-planner-table #plannerTableView #plannerTable .planner-select {
-  background: var(--input-bg);
+  background: transparent; /* Match row background */
   color: var(--text-primary);
   border-color: transparent;
+}
+/* Even rows in dark mode - inherit zebra background */
+.dark-mode #panel-planner-table #plannerTableView #plannerTable tbody tr:nth-child(even) .planner-input,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable tbody tr:nth-child(even) .planner-select:not(.tow-status-selector):not(.status-selector) {
+  background: transparent; /* Inherit row color */
 }
 /* Ensure tow chip palette parity with Board: rely on tow- classes */
 .dark-mode #plannerTable .tow-status-selector {
@@ -4586,27 +4606,7 @@ body.table-view #panel-planner-table .changelog-toggle { opacity: 1; pointer-eve
   border-color: rgba(255,255,255,0.12);
 }
 
-/* Column-specific input background: only text inputs (Tow/Status selects stay as-is) */
-/* Hangar Pos, AC-ID, Arr, Dep, Position, Notes text inputs get body bg in dark mode */
-.dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="hangarPosition"],
-.dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="aircraftId"],
-.dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="arrivalTime"],
-.dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="departureTime"],
-.dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="positionInfo"],
-.dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="notes"] {
-  background: var(--bg-primary) !important;
-  color: var(--text-primary) !important;
-}
-/* Ensure body background even when disabled (Sync read-only) */
-.dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="hangarPosition"]:disabled,
-.dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="aircraftId"]:disabled,
-.dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="arrivalTime"]:disabled,
-.dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="departureTime"]:disabled,
-.dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="positionInfo"]:disabled,
-.dark-mode #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="notes"]:disabled {
-  background: var(--bg-primary) !important;
-  color: var(--text-primary) !important;
-}
+/* Remove column-specific backgrounds - inputs inherit row color */
 
 /* Arr/Dep placeholders: invisible by default, visible on hover/focus */
 #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="arrivalTime"]::placeholder,

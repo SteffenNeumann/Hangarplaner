@@ -4644,8 +4644,6 @@ body.table-view #panel-planner-table .changelog-toggle { opacity: 1; pointer-eve
 /* Make Arr/Dep inputs compact and robust for format switching */
 #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="arrivalTime"],
 #panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="departureTime"] {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  letter-spacing: 0.01em;
   padding: 4px 6px;
 }
 

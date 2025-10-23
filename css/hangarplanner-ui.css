@@ -2420,13 +2420,21 @@ input:checked + .toggle-slider:before {
 	background-color: #f9fafb;
 }
 
-/* Remove hover styles as requested - OVERRIDE COMPLETELY */
+/* Remove hover styles as requested - OVERRIDE COMPLETELY including zebra stripes */
 #airport-flights-container .flight-table tr:hover,
 #airport-flights-container .flight-table tbody tr:hover,
+#airport-flights-container .flight-table tbody tr:nth-child(odd):hover,
+#airport-flights-container .flight-table tbody tr:nth-child(even):hover,
 #airport-flights-container .flight-table tr:hover td,
 #plannerTable tbody tr:hover,
+#plannerTable tbody tr:nth-child(odd):hover,
+#plannerTable tbody tr:nth-child(even):hover,
+#plannerTable tbody tr.zebra-odd:hover,
+#plannerTable tbody tr.zebra-even:hover,
 #plannerTable tbody tr:hover td,
 #fleetTable tbody tr:hover,
+#fleetTable tbody tr:nth-child(odd):hover,
+#fleetTable tbody tr:nth-child(even):hover,
 #fleetTable tbody tr:hover td {
 	background-color: inherit !important;
 	transition: none !important;

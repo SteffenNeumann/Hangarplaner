@@ -287,13 +287,21 @@ button {
   background-color: var(--dark-secondary) !important;
 }
 
-/* Remove hover state as requested */
+/* Remove hover state as requested - including zebra stripes */
 .dark-mode #airport-flights-container .flight-table tr:hover,
 .dark-mode #airport-flights-container .flight-table tbody tr:hover,
+.dark-mode #airport-flights-container .flight-table tbody tr:nth-child(odd):hover,
+.dark-mode #airport-flights-container .flight-table tbody tr:nth-child(even):hover,
 .dark-mode #airport-flights-container .flight-table tr:hover td,
 .dark-mode #plannerTable tbody tr:hover,
+.dark-mode #plannerTable tbody tr:nth-child(odd):hover,
+.dark-mode #plannerTable tbody tr:nth-child(even):hover,
+.dark-mode #plannerTable tbody tr.zebra-odd:hover,
+.dark-mode #plannerTable tbody tr.zebra-even:hover,
 .dark-mode #plannerTable tbody tr:hover td,
 .dark-mode #fleetTable tbody tr:hover,
+.dark-mode #fleetTable tbody tr:nth-child(odd):hover,
+.dark-mode #fleetTable tbody tr:nth-child(even):hover,
 .dark-mode #fleetTable tbody tr:hover td {
   background-color: inherit !important;
   transition: none !important;

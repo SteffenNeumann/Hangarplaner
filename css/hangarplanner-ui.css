@@ -2420,11 +2420,12 @@ input:checked + .toggle-slider:before {
 	background-color: #f9fafb;
 }
 
-/* Remove hover styles as requested */
+/* Remove hover styles as requested - OVERRIDE COMPLETELY */
 #airport-flights-container .flight-table tr:hover,
 #plannerTable tbody tr:hover,
 #fleetTable tbody tr:hover {
-	/* No hover effect */
+	background-color: inherit !important;
+	transition: none !important;
 }
 
 #airport-flights-container .flight-number {
@@ -4535,7 +4536,8 @@ body.table-view #panel-planner-table .changelog-toggle { opacity: 1; pointer-eve
   background-color: #f9fafb; /* Zebra striping */
 }
 #panel-planner-table #plannerTableView #plannerTable.fleet-table tbody tr:hover {
-  /* No hover effect */
+  background-color: inherit !important;
+  transition: none !important;
 }
 /* Dark mode adjustments */
 .dark-mode #panel-planner-table #plannerTableView #plannerTable.fleet-table thead th {
@@ -4553,7 +4555,8 @@ body.table-view #panel-planner-table .changelog-toggle { opacity: 1; pointer-eve
   background-color: var(--dark-secondary); /* Zebra striping */
 }
 .dark-mode #panel-planner-table #plannerTableView #plannerTable.fleet-table tbody tr:hover {
-  /* No hover effect */
+  background-color: inherit !important;
+  transition: none !important;
 }
 
 /* Inputs and selects within planner table */
@@ -5577,24 +5580,25 @@ html:not(.dark-mode) .tow-status-selector:hover {
 	border-right: none !important;
 }
 
-/* Ensure zebra striping works correctly - odd rows white, even rows gray */
-#plannerTable tbody tr:nth-child(odd),
+/* Zebra striping: Use :nth-of-type to skip hidden rows (positions 8 and 11) */
+/* Light mode - all visible rows get explicit colors based on visible position */
+#plannerTable tbody tr:not([style*="display: none"]):not([data-hangar-pos="8"]):not([data-hangar-pos="11"]):nth-of-type(odd),
 #fleetTable tbody tr:nth-child(odd) {
 	background-color: #ffffff !important;
 }
 
-#plannerTable tbody tr:nth-child(even),
+#plannerTable tbody tr:not([style*="display: none"]):not([data-hangar-pos="8"]):not([data-hangar-pos="11"]):nth-of-type(even),
 #fleetTable tbody tr:nth-child(even) {
 	background-color: #f9fafb !important;
 }
 
 /* Dark mode zebra striping */
-.dark-mode #plannerTable tbody tr:nth-child(odd),
+.dark-mode #plannerTable tbody tr:not([style*="display: none"]):not([data-hangar-pos="8"]):not([data-hangar-pos="11"]):nth-of-type(odd),
 .dark-mode #fleetTable tbody tr:nth-child(odd) {
 	background-color: var(--dark-card) !important;
 }
 
-.dark-mode #plannerTable tbody tr:nth-child(even),
+.dark-mode #plannerTable tbody tr:not([style*="display: none"]):not([data-hangar-pos="8"]):not([data-hangar-pos="11"]):nth-of-type(even),
 .dark-mode #fleetTable tbody tr:nth-child(even) {
 	background-color: var(--dark-secondary) !important;
 }
@@ -5605,10 +5609,26 @@ html:not(.dark-mode) .tow-status-selector:hover {
 	background: transparent !important;
 }
 
-/* Remove hover effects completely */
+/* COMPLETELY DISABLE hover effects with pointer-events and transition */
+#plannerTable tbody tr,
+#fleetTable tbody tr,
+#airport-flights-container table tbody tr {
+	transition: none !important;
+}
+
 #plannerTable tbody tr:hover,
+#plannerTable tbody tr:hover *,
 #fleetTable tbody tr:hover,
-#airport-flights-container table tbody tr:hover {
+#fleetTable tbody tr:hover *,
+#airport-flights-container table tbody tr:hover,
+#airport-flights-container table tbody tr:hover * {
+	background-color: inherit !important;
+	transition: none !important;
+}
+
+/* Force override any hover styles from other CSS */
+.dark-mode #plannerTable tbody tr:hover,
+.dark-mode #fleetTable tbody tr:hover {
 	background-color: inherit !important;
 }
 

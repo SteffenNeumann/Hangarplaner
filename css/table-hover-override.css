@@ -80,58 +80,73 @@
   white-space: nowrap !important;
 }
 
-/* Override ALL table row hover effects across all tables and themes */
+/* Override ALL table row hover effects - use explicit colors instead of inherit */
+/* Light mode odd rows (white) */
+table tbody tr:nth-child(odd):hover,
+#airport-flights-container .flight-table tbody tr:nth-child(odd):hover,
+#plannerTable tbody tr.zebra-even:hover,
+#fleetTable tbody tr:nth-child(odd):hover,
+#timetableTable tbody tr:nth-child(odd):hover,
+.fleet-table tbody tr:nth-child(odd):hover {
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+}
+
+/* Light mode even rows (gray) */
+table tbody tr:nth-child(even):hover,
+#airport-flights-container .flight-table tbody tr:nth-child(even):hover,
+#plannerTable tbody tr.zebra-odd:hover,
+#fleetTable tbody tr:nth-child(even):hover,
+#timetableTable tbody tr:nth-child(even):hover,
+.fleet-table tbody tr:nth-child(even):hover {
+  background-color: #f9fafb !important;
+  background: #f9fafb !important;
+}
+
+/* Generic hover disable */
 table tr:hover,
 table tbody tr:hover,
-table tbody tr:nth-child(odd):hover,
-table tbody tr:nth-child(even):hover,
-table tbody tr:hover td,
-table tbody tr:hover th,
 #airport-flights-container table tr:hover,
-#airport-flights-container table tbody tr:hover,
 #airport-flights-container .flight-table tr:hover,
-#airport-flights-container .flight-table tbody tr:hover,
-#airport-flights-container .flight-table tbody tr:nth-child(odd):hover,
-#airport-flights-container .flight-table tbody tr:nth-child(even):hover,
 #plannerTable tr:hover,
 #plannerTable tbody tr:hover,
-#plannerTable tbody tr:nth-child(odd):hover,
-#plannerTable tbody tr:nth-child(even):hover,
-#plannerTable tbody tr.zebra-odd:hover,
-#plannerTable tbody tr.zebra-even:hover,
 #fleetTable tr:hover,
-#fleetTable tbody tr:hover,
-#fleetTable tbody tr:nth-child(odd):hover,
-#fleetTable tbody tr:nth-child(even):hover,
-#timetableTable tbody tr:hover,
-.fleet-table tbody tr:hover {
-  background-color: inherit !important;
-  background: inherit !important;
+#fleetTable tbody tr:hover {
   transition: none !important;
   cursor: default !important;
 }
 
-/* Dark mode overrides */
+/* Dark mode hover overrides - explicit colors */
+/* Dark mode odd rows (dark-card) */
+.dark-mode table tbody tr:nth-child(odd):hover,
+.dark-mode #airport-flights-container .flight-table tbody tr:nth-child(odd):hover,
+.dark-mode #plannerTable tbody tr.zebra-even:hover,
+.dark-mode #fleetTable tbody tr:nth-child(odd):hover,
+.dark-mode #timetableTable tbody tr:nth-child(odd):hover,
+.dark-mode .fleet-table tbody tr:nth-child(odd):hover {
+  background-color: var(--dark-card) !important;
+  background: var(--dark-card) !important;
+}
+
+/* Dark mode even rows (dark-secondary) */
+.dark-mode table tbody tr:nth-child(even):hover,
+.dark-mode #airport-flights-container .flight-table tbody tr:nth-child(even):hover,
+.dark-mode #plannerTable tbody tr.zebra-odd:hover,
+.dark-mode #fleetTable tbody tr:nth-child(even):hover,
+.dark-mode #timetableTable tbody tr:nth-child(even):hover,
+.dark-mode .fleet-table tbody tr:nth-child(even):hover {
+  background-color: var(--dark-secondary) !important;
+  background: var(--dark-secondary) !important;
+}
+
+/* Dark mode generic hover disable */
 .dark-mode table tr:hover,
 .dark-mode table tbody tr:hover,
-.dark-mode table tbody tr:nth-child(odd):hover,
-.dark-mode table tbody tr:nth-child(even):hover,
 .dark-mode #airport-flights-container table tr:hover,
 .dark-mode #airport-flights-container .flight-table tbody tr:hover,
-.dark-mode #airport-flights-container .flight-table tbody tr:nth-child(odd):hover,
-.dark-mode #airport-flights-container .flight-table tbody tr:nth-child(even):hover,
 .dark-mode #plannerTable tbody tr:hover,
-.dark-mode #plannerTable tbody tr:nth-child(odd):hover,
-.dark-mode #plannerTable tbody tr:nth-child(even):hover,
-.dark-mode #plannerTable tbody tr.zebra-odd:hover,
-.dark-mode #plannerTable tbody tr.zebra-even:hover,
 .dark-mode #fleetTable tbody tr:hover,
-.dark-mode #fleetTable tbody tr:nth-child(odd):hover,
-.dark-mode #fleetTable tbody tr:nth-child(even):hover,
-.dark-mode #timetableTable tbody tr:hover,
-.dark-mode .fleet-table tbody tr:hover {
-  background-color: inherit !important;
-  background: inherit !important;
+.dark-mode #timetableTable tbody tr:hover {
   transition: none !important;
   cursor: default !important;
 }

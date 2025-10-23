@@ -2382,8 +2382,10 @@ input:checked + .toggle-slider:before {
 	margin-bottom: 1rem;
 }
 
-/* Tabellendarstellung für Flugdaten */
-#airport-flights-container .flight-table {
+/* Unified table design for airport-flights, plannerTable, and fleetTable */
+#airport-flights-container .flight-table,
+#plannerTable,
+#fleetTable {
 	width: 100%;
 	border-collapse: collapse;
 	margin-bottom: 1.5rem;
@@ -2391,13 +2393,19 @@ input:checked + .toggle-slider:before {
 }
 
 #airport-flights-container .flight-table th,
-#airport-flights-container .flight-table td {
+#airport-flights-container .flight-table td,
+#plannerTable th,
+#plannerTable td,
+#fleetTable th,
+#fleetTable td {
 	padding: 0.75rem;
 	text-align: left;
-	border-bottom: 1px solid #e5e7eb;
+	border-bottom: 0; /* No row borders */
 }
 
-#airport-flights-container .flight-table th {
+#airport-flights-container .flight-table th,
+#plannerTable th,
+#fleetTable th {
 	background-color: #f9fafb;
 	font-weight: 600;
 	color: #374151;
@@ -2406,11 +2414,15 @@ input:checked + .toggle-slider:before {
 	letter-spacing: 0.05em;
 }
 
-#airport-flights-container .flight-table tbody tr:nth-child(even) {
+#airport-flights-container .flight-table tbody tr:nth-child(even),
+#plannerTable tbody tr:nth-child(even),
+#fleetTable tbody tr:nth-child(even) {
 	background-color: #f9fafb;
 }
 
-#airport-flights-container .flight-table tr:hover {
+#airport-flights-container .flight-table tr:hover,
+#plannerTable tbody tr:hover,
+#fleetTable tbody tr:hover {
 	background-color: #f3f4f6;
 }
 
@@ -4504,33 +4516,34 @@ body.table-view #panel-planner-table .changelog-toggle { opacity: 1; pointer-eve
 #panel-planner-table #plannerTableView #plannerTable.fleet-table thead th {
   position: sticky;
   top: 0;
-  background: #f8fafc;
-  font-size: 11px;
+  background: #f9fafb; /* Match unified table header */
+  font-size: 0.875rem; /* Match unified table header */
   text-transform: uppercase;
-  color: #64748b;
-  padding: 10px 12px;
-  border-bottom: 2px solid #e2e8f0;
+  color: #374151; /* Match unified table header */
+  padding: 0.75rem; /* Match unified table padding */
+  border-bottom: 0; /* No row borders */
   z-index: 1;
   letter-spacing: 0.05em;
+  font-weight: 600; /* Match unified table header */
 }
 #panel-planner-table #plannerTableView #plannerTable.fleet-table tbody td {
-  padding: 10px 12px;
-  border-bottom: 1px solid #e2e8f0;
+  padding: 0.75rem; /* Match unified table padding */
+  border-bottom: 0; /* No row borders */
 }
 #panel-planner-table #plannerTableView #plannerTable.fleet-table tbody tr:hover {
-  background-color: #f8fafc; /* subtle hover in light mode */
+  background-color: #f3f4f6; /* Match unified table hover */
 }
 /* Dark mode adjustments */
 .dark-mode #panel-planner-table #plannerTableView #plannerTable.fleet-table thead th {
-  background: var(--card-header-bg);
-  color: var(--text-secondary);
-  border-bottom-color: var(--border-color); /* Border: A */
+  background: var(--dark-secondary); /* Match unified table header */
+  color: var(--dark-text); /* Match unified table header */
+  border-bottom: 0; /* No row borders */
 }
 .dark-mode #panel-planner-table #plannerTableView #plannerTable.fleet-table tbody td {
-  border-bottom-color: var(--border-color); /* Border: A */
+  border-bottom: 0; /* No row borders */
 }
 .dark-mode #panel-planner-table #plannerTableView #plannerTable.fleet-table tbody tr:hover {
-  background-color: rgba(255,255,255,0.03); /* very subtle hover in dark mode */
+  background-color: var(--dark-hover); /* Match unified table hover */
 }
 
 /* Inputs and selects within planner table */

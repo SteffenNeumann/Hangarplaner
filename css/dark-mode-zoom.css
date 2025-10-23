@@ -243,7 +243,7 @@ button {
 .dark-mode .text-industrial-dark { color: var(--dark-text) !important; }
 .dark-mode .bg-gray-100 { background-color: var(--dark-secondary) !important; }
 
-/* Timetable: Airport flights container and tables (generated dynamically) */
+/* Unified table design for airport-flights, plannerTable, and fleetTable (dark mode) */
 .dark-mode #airport-flights-container {
   background-color: var(--dark-card) !important;
   color: var(--dark-text) !important;
@@ -253,25 +253,48 @@ button {
 .dark-mode #airport-flights-container h3 {
   color: var(--dark-text) !important;
 }
-.dark-mode #airport-flights-container .flight-table th {
+
+/* Unified header styles for all tables */
+.dark-mode #airport-flights-container .flight-table th,
+.dark-mode #plannerTable th,
+.dark-mode #fleetTable th {
   background-color: var(--dark-secondary) !important;
   color: var(--dark-text) !important;
-  border-color: var(--dark-border) !important;
+  border-bottom: 0; /* No row borders */
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 0.75rem;
 }
-.dark-mode #airport-flights-container .flight-table td {
+
+/* Unified cell styles for all tables */
+.dark-mode #airport-flights-container .flight-table td,
+.dark-mode #plannerTable td,
+.dark-mode #fleetTable td {
   color: var(--dark-text) !important;
-  border-color: var(--dark-border) !important;
+  border-bottom: 0; /* No row borders */
+  padding: 0.75rem;
 }
-/* Override alternating row backgrounds injected by JS */
-.dark-mode #airport-flights-container .flight-table tbody tr:nth-child(odd) {
+
+/* Unified zebra striping for all tables */
+.dark-mode #airport-flights-container .flight-table tbody tr:nth-child(odd),
+.dark-mode #plannerTable tbody tr:nth-child(odd),
+.dark-mode #fleetTable tbody tr:nth-child(odd) {
   background-color: var(--dark-card) !important;
 }
-.dark-mode #airport-flights-container .flight-table tbody tr:nth-child(even) {
+.dark-mode #airport-flights-container .flight-table tbody tr:nth-child(even),
+.dark-mode #plannerTable tbody tr:nth-child(even),
+.dark-mode #fleetTable tbody tr:nth-child(even) {
   background-color: var(--dark-secondary) !important;
 }
-.dark-mode #airport-flights-container .flight-table tr:hover {
+
+/* Unified hover state for all tables */
+.dark-mode #airport-flights-container .flight-table tr:hover,
+.dark-mode #plannerTable tbody tr:hover,
+.dark-mode #fleetTable tbody tr:hover {
   background-color: var(--dark-hover) !important;
 }
+
+/* Preserve specific airport-flights text colors */
 .dark-mode #airport-flights-container .flight-reg,
 .dark-mode #airport-flights-container .flight-number,
 .dark-mode #airport-flights-container .flight-time {

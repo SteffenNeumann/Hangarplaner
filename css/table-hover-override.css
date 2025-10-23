@@ -1,0 +1,61 @@
+/* 
+ * COMPREHENSIVE TABLE HOVER OVERRIDE
+ * This file must load AFTER Tailwind CSS to override its default hover styles
+ * DO NOT REMOVE - fixes persistent table row hover highlighting
+ */
+
+/* Override ALL table row hover effects across all tables and themes */
+table tr:hover,
+table tbody tr:hover,
+table tbody tr:nth-child(odd):hover,
+table tbody tr:nth-child(even):hover,
+table tbody tr:hover td,
+table tbody tr:hover th,
+#airport-flights-container table tr:hover,
+#airport-flights-container table tbody tr:hover,
+#airport-flights-container .flight-table tr:hover,
+#airport-flights-container .flight-table tbody tr:hover,
+#airport-flights-container .flight-table tbody tr:nth-child(odd):hover,
+#airport-flights-container .flight-table tbody tr:nth-child(even):hover,
+#plannerTable tr:hover,
+#plannerTable tbody tr:hover,
+#plannerTable tbody tr:nth-child(odd):hover,
+#plannerTable tbody tr:nth-child(even):hover,
+#plannerTable tbody tr.zebra-odd:hover,
+#plannerTable tbody tr.zebra-even:hover,
+#fleetTable tr:hover,
+#fleetTable tbody tr:hover,
+#fleetTable tbody tr:nth-child(odd):hover,
+#fleetTable tbody tr:nth-child(even):hover,
+#timetableTable tbody tr:hover,
+.fleet-table tbody tr:hover {
+  background-color: inherit !important;
+  background: inherit !important;
+  transition: none !important;
+  cursor: default !important;
+}
+
+/* Dark mode overrides */
+.dark-mode table tr:hover,
+.dark-mode table tbody tr:hover,
+.dark-mode table tbody tr:nth-child(odd):hover,
+.dark-mode table tbody tr:nth-child(even):hover,
+.dark-mode #airport-flights-container table tr:hover,
+.dark-mode #airport-flights-container .flight-table tbody tr:hover,
+.dark-mode #airport-flights-container .flight-table tbody tr:nth-child(odd):hover,
+.dark-mode #airport-flights-container .flight-table tbody tr:nth-child(even):hover,
+.dark-mode #plannerTable tbody tr:hover,
+.dark-mode #plannerTable tbody tr:nth-child(odd):hover,
+.dark-mode #plannerTable tbody tr:nth-child(even):hover,
+.dark-mode #plannerTable tbody tr.zebra-odd:hover,
+.dark-mode #plannerTable tbody tr.zebra-even:hover,
+.dark-mode #fleetTable tbody tr:hover,
+.dark-mode #fleetTable tbody tr:nth-child(odd):hover,
+.dark-mode #fleetTable tbody tr:nth-child(even):hover,
+.dark-mode #timetableTable tbody tr:hover,
+.dark-mode .fleet-table tbody tr:hover {
+  background-color: inherit !important;
+  background: inherit !important;
+  transition: none !important;
+  cursor: default !important;
+}

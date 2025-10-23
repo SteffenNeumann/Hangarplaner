@@ -2422,10 +2422,15 @@ input:checked + .toggle-slider:before {
 
 /* Remove hover styles as requested - OVERRIDE COMPLETELY */
 #airport-flights-container .flight-table tr:hover,
+#airport-flights-container .flight-table tbody tr:hover,
+#airport-flights-container .flight-table tr:hover td,
 #plannerTable tbody tr:hover,
-#fleetTable tbody tr:hover {
+#plannerTable tbody tr:hover td,
+#fleetTable tbody tr:hover,
+#fleetTable tbody tr:hover td {
 	background-color: inherit !important;
 	transition: none !important;
+	pointer-events: auto !important;
 }
 
 #airport-flights-container .flight-number {

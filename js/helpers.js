@@ -1196,13 +1196,14 @@ if (window.helpers) {
     return `${baseDateStr}T${pad2(h)}:${pad2(min)}`;
   }
 
-  // Formats ISO local datetime to dd.mm.yy,HH:MM (UTC-based display requested)
+  // Formats ISO local datetime to DD.MMM hh:mm (UTC-based display requested)
   function formatISOToCompactUTC(iso){
     if (!isISODateTimeLocal(iso)) return '';
     const [date, time] = iso.split('T');
     const [y,m,d] = date.split('-');
-    const yy = y.slice(-2);
-    return `${d}.${m}.${yy},${time}`;
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const monthName = months[parseInt(m,10)-1] || m;
+    return `${d}.${monthName} ${time}`;
   }
 
   // Parse compact dd.mm.yy,HH:mm to ISO local datetime YYYY-MM-DDTHH:mm

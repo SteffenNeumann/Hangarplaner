@@ -5,7 +5,8 @@
  * DO NOT REMOVE - fixes persistent table row hover highlighting
  */
 
-/* Modern sans-serif font for clean, professional table display */
+/* Match airport-flights styling exactly for consistent look */
+/* Table cells - default lighter weight and color like flight-number/time */
 #plannerTable td,
 #plannerTable tbody td,
 #plannerTable .planner-input,
@@ -13,38 +14,30 @@
 #fleetTable td,
 #fleetTable tbody td,
 #fleetTable input,
-#fleetTable select,
-#airport-flights-container .flight-table td,
-#airport-flights-container .flight-table tbody td,
-#timetableTable td,
-#timetableTable tbody td {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif !important;
-  font-size: 13px !important;
-  letter-spacing: -0.01em !important;
-  line-height: 1.5 !important;
+#fleetTable select {
   font-weight: 400 !important;
+  color: #6b7280 !important;
+  font-size: 0.875rem !important;
+  line-height: 1.5 !important;
 }
 
-/* Headers with tighter spacing and smaller size */
+/* Table headers - match airport-flights headers exactly */
 #plannerTable th,
-#fleetTable th,
-#airport-flights-container .flight-table th,
-#timetableTable th {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif !important;
-  font-size: 11px !important;
+#fleetTable th {
   font-weight: 600 !important;
-  letter-spacing: 0.05em !important;
+  color: #374151 !important;
+  font-size: 0.875rem !important;
   text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
 }
 
-/* Slightly bolder for registration/aircraft ID columns */
+/* Primary columns (Aircraft ID, Hangar Position, Registration) - bolder like flight-reg */
 #plannerTable td .planner-input[data-col="aircraftId"],
 #plannerTable td .planner-input[data-col="hangarPosition"],
-.flight-reg,
-.registration-code,
-.timetable-aircraft {
-  font-weight: 500 !important;
-  letter-spacing: 0.01em !important;
+#fleetTable .registration-code {
+  font-weight: 600 !important;
+  color: #111827 !important;
+  font-size: 0.95rem !important;
 }
 
 /* Override ALL table row hover effects across all tables and themes */

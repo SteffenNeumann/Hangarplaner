@@ -1,0 +1,67 @@
+/* 
+ * PLANNER TABLE INPUT FIXES
+ * Standardize input heights, margins, and styling across all columns
+ */
+
+/* Base input styling - consistent height and spacing for ALL inputs */
+#panel-planner-table #plannerTableView #plannerTable .planner-input,
+#panel-planner-table #plannerTableView #plannerTable .planner-select {
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 6px 8px !important;
+  margin: 0 !important;
+  line-height: 1.2 !important;
+  vertical-align: middle !important;
+  box-sizing: border-box !important;
+}
+
+/* Arr/Dep time inputs - smaller width to allow overlap, same height */
+#panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="arrivalTime"],
+#panel-planner-table #plannerTableView #plannerTable td .planner-input[data-col="departureTime"] {
+  width: 85% !important; /* Smaller than column width to show overlap */
+  padding: 6px 8px !important; /* Match all other inputs */
+  height: 32px !important;
+  min-height: 32px !important;
+}
+
+/* Arr/Dep columns - wider to accommodate overlapping inputs */
+#plannerTable colgroup col:nth-child(3),
+#plannerTable colgroup col:nth-child(4) {
+  width: 220px !important; /* Increased from 190px */
+}
+
+/* Input hover - match table row hover orange background */
+#panel-planner-table #plannerTableView #plannerTable .planner-input:hover,
+#panel-planner-table #plannerTableView #plannerTable .planner-select:hover {
+  background-color: rgba(255, 112, 67, 0.08) !important;
+  border-color: rgba(255, 112, 67, 0.3) !important;
+}
+
+/* Dark mode input hover - match table row hover */
+.dark-mode #panel-planner-table #plannerTableView #plannerTable .planner-input:hover,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable .planner-select:hover {
+  background-color: rgba(255, 112, 67, 0.12) !important;
+  border-color: rgba(255, 112, 67, 0.4) !important;
+}
+
+/* Focus state - keep blue but with orange tint */
+#panel-planner-table #plannerTableView #plannerTable .planner-input:focus,
+#panel-planner-table #plannerTableView #plannerTable .planner-select:focus {
+  background-color: rgba(255, 112, 67, 0.05) !important;
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.1) !important;
+}
+
+/* Ensure all table cells have consistent padding */
+#panel-planner-table #plannerTableView #plannerTable tbody td {
+  padding: 6px 8px !important;
+  vertical-align: middle !important;
+}
+
+/* Status and Tow selects - match height */
+#panel-planner-table #plannerTableView #plannerTable .status-selector,
+#panel-planner-table #plannerTableView #plannerTable .tow-status-selector {
+  height: 32px !important;
+  min-height: 32px !important;
+  line-height: 1.2 !important;
+}

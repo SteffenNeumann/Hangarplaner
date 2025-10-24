@@ -470,8 +470,9 @@ if (!acInput.getAttribute('title')) acInput.setAttribute('title', 'Shift+Click t
         eventFire(`#aircraft-${tileId}`, 'change');
         blurThenSync(`#aircraft-${tileId}`); 
       },
-      arrivalTime: (v)=>{ writeTimeTo(`#arrival-time-${tileId}`, v); },
-      departureTime: (v)=>{ writeTimeTo(`#departure-time-${tileId}`, v); },
+      // Time handlers now receive (tileId, element) instead of just value
+      arrivalTime: (tid, el)=>{ writeTimeTo(tid, 'arrivalTime', el); },
+      departureTime: (tid, el)=>{ writeTimeTo(tid, 'departureTime', el); },
       positionInfo: (v)=>{ 
         setIdValue(`position-${tileId}`, v); 
         eventFire(`#position-${tileId}`, 'input'); 
@@ -559,15 +560,19 @@ if (!acInput.getAttribute('title')) acInput.setAttribute('title', 'Shift+Click t
     const r2 = STATE.filtered.find(r => +r.tileId === +tileId);
     applyTo(r1); applyTo(r2);
   }
-
   async function applyEditorChange(el, handlers){
     try {
       const col = el.getAttribute('data-col');
       if (!col || !handlers[col]) return;
       const val = el.value;
       const tileId = parseTileIdFromControlId(el.id);
-      handlers[col](val);
-      // keep table model in sync so sort/render after click doesn’t drop edits
+      // For time fields, pass the element itself (not just value) so writeTimeTo can canonicalize
+      if (col === 'arrivalTime' || col === 'departureTime') {
+        handlers[col](tileId, el); // Pass tileId and element
+      } else {
+        handlers[col](val); // Other fields get value only
+      }
+      // keep table model in sync so sort/render after click doesn't drop edits
       if (isFinite(tileId)) updateRowCache(tileId, col, val);
       if (col === 'towStatus') { updateTowSelectChipClasses(el, val); try { updateTowAlertDots(); } catch(_){} }
       // Master mode: persist via centralized server sync if available
@@ -576,13 +581,60 @@ if (!acInput.getAttribute('title')) acInput.setAttribute('title', 'Shift+Click t
       }
     } catch(e){}
   }
-  function writeTimeTo(selector, displayVal){
-    const el = document.querySelector(selector);
-    if (!el) return;
-    el.value = displayVal || '';
-    // let helpers convert on blur/change according to app’s logic
-    eventFire(selector, 'change');
-    eventFire(selector, 'blur');
+  
+  // Ensure table→tile writes also set ISO and trigger save/sync
+  function writeTimeTo(tileId, which, fromTableEl){
+    // which: 'arrivalTime' | 'departureTime'
+    // fromTableEl: the table input element (with user's entered value)
+    const displayValue = (fromTableEl && fromTableEl.value) ? fromTableEl.value.trim() : '';
+    const tileInputId = which === 'arrivalTime' ? `arrival-time-${tileId}` : `departure-time-${tileId}`;
+    const tileInput = document.getElementById(tileInputId);
+    if (!tileInput) return;
+
+    let iso = '';
+    let display = displayValue;
+
+    // Canonicalize using helpers (converts HH:mm, compact, or ISO to canonical ISO)
+    if (displayValue) {
+      try {
+        if (window.helpers && typeof window.helpers.canonicalizeDateTimeFieldValue === 'function') {
+          const canon = window.helpers.canonicalizeDateTimeFieldValue(tileInputId, displayValue);
+          if (canon) {
+            iso = canon; // canonicalize returns ISO string
+            // Format back to compact display
+            if (window.helpers.formatISOToCompactUTC && window.helpers.isISODateTimeLocal && window.helpers.isISODateTimeLocal(iso)) {
+              display = window.helpers.formatISOToCompactUTC(iso);
+            }
+          }
+        }
+      } catch (e) {
+        // Keep as typed if canonicalization fails
+      }
+    }
+
+    // Write to TILE input (source of truth for hangar-data.js)
+    tileInput.value = display;
+    if (iso) {
+      tileInput.dataset.iso = iso;
+    } else {
+      delete tileInput.dataset.iso; // clear when empty/invalid
+    }
+
+    // Optionally keep TABLE cell dataset in sync
+    if (fromTableEl && fromTableEl.dataset !== undefined) {
+      if (iso) {
+        fromTableEl.dataset.iso = iso;
+      } else {
+        delete fromTableEl.dataset.iso;
+      }
+    }
+
+    // Fire events to trigger data collection and sync pipeline
+    tileInput.dispatchEvent(new Event('input', { bubbles: true }));
+    tileInput.dispatchEvent(new Event('change', { bubbles: true }));
+    // Also fire blur to ensure event manager processes immediately
+    tileInput.dispatchEvent(new Event('blur', { bubbles: true }));
+  }
   }
   function blurThenSync(selector){
     try {

@@ -1197,6 +1197,7 @@ if (window.helpers) {
   }
 
   // Formats ISO local datetime to DD.MMM hh:mm (UTC-based display requested)
+  // NOTE: This is for DISPLAY ONLY (e.g., header labels), NOT for input field values
   function formatISOToCompactUTC(iso){
     if (!isISODateTimeLocal(iso)) return '';
     const [date, time] = iso.split('T');
@@ -1204,6 +1205,16 @@ if (window.helpers) {
     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     const monthName = months[parseInt(m,10)-1] || m;
     return `${d}.${monthName} ${time}`;
+  }
+
+  // Formats ISO local datetime to dd.mm.yy,HH:MM (numeric format for input fields)
+  // This format is required for validation regex compatibility
+  function formatISOToNumericCompact(iso){
+    if (!isISODateTimeLocal(iso)) return '';
+    const [date, time] = iso.split('T');
+    const [yyyy, mm, dd] = date.split('-');
+    const yy = yyyy.slice(-2);
+    return `${dd}.${mm}.${yy},${time}`;
   }
 
   // Parse compact dd.mm.yy,HH:mm to ISO local datetime YYYY-MM-DDTHH:mm
@@ -1307,9 +1318,9 @@ if (window.helpers) {
     if (raw === '.') return;
     if (/^[+-]\d+$/.test(raw)) return; // +1, -2, etc.
 
-    // If user types full ISO, show compact immediately
+    // If user types full ISO, show numeric compact immediately
     if (isISODateTimeLocal(raw)){
-      e.target.value = formatISOToCompactUTC(raw);
+      e.target.value = formatISOToNumericCompact(raw);
       return;
     }
 
@@ -1383,7 +1394,7 @@ if (window.helpers) {
     }
 
     if (iso){
-      e.target.value = formatISOToCompactUTC(iso); // keep display compact
+      e.target.value = formatISOToNumericCompact(iso); // use numeric format for validation
       e.target.dataset.iso = iso; // store ISO reference on the element
     } else {
       // invalid input: leave the user's raw string to let them correct it
@@ -1461,10 +1472,10 @@ if (window.helpers) {
       inp.classList.add('compact-datetime');
       inp.setAttribute('placeholder','1230 or dd.mm.yy,HH:MM');
       attachCompactMask(inp);
-      // If value is ISO from storage, show compact
+      // If value is ISO from storage, show numeric compact
       const val = (inp.value||'').trim();
       if (isISODateTimeLocal(val)){
-        inp.value = formatISOToCompactUTC(val);
+        inp.value = formatISOToNumericCompact(val);
       }
     });
   }
@@ -2243,13 +2254,8 @@ if (window.helpers) {
               }
             } else {
               // Write value in numeric format dd.mm.yy,HH:MM for validation compatibility
-              // formatISOToCompactUTC outputs DD.MMM format which breaks regex validation
-              const [datePart, timePart] = iso.split('T');
-              const [yyyy, mm, dd] = datePart.split('-');
-              const yy = yyyy.slice(-2);
-              const numericCompact = `${dd}.${mm}.${yy},${timePart}`;
               pickerTarget.dataset.iso = iso;
-              pickerTarget.value = numericCompact;
+              pickerTarget.value = formatISOToNumericCompact(iso);
             }
             pickerTarget.dispatchEvent(new Event('input', {bubbles:true}));
             pickerTarget.dispatchEvent(new Event('change', {bubbles:true}));
@@ -2484,6 +2490,7 @@ if (window.helpers) {
   window.helpers.formatDateTimeLocalForPdf = formatDateTimeLocalForPdf;
   window.helpers.addDaysToDateString = addDaysToDateString;
   window.helpers.formatISOToCompactUTC = formatISOToCompactUTC;
+  window.helpers.formatISOToNumericCompact = formatISOToNumericCompact;
   window.helpers.parseCompactToISOUTC = parseCompactToISOUTC;
   window.helpers.canonicalizeDateTimeFieldValue = canonicalizeDateTimeFieldValue;
   window.helpers.attachCompactDateTimeInputs = attachCompactDateTimeInputs;

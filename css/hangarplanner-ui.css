@@ -4601,7 +4601,8 @@ body.table-view #panel-planner-table .changelog-toggle { opacity: 1; pointer-eve
 }
 #panel-planner-table #plannerTableView #plannerTable .planner-input:hover,
 #panel-planner-table #plannerTableView #plannerTable .planner-select:hover {
-  border-color: #e5e7eb;
+  background: transparent !important;
+  border-color: transparent !important;
 }
 #panel-planner-table #plannerTableView #plannerTable .planner-input:focus,
 #panel-planner-table #plannerTableView #plannerTable .planner-select:focus {
@@ -4629,7 +4630,8 @@ body.table-view #panel-planner-table .changelog-toggle { opacity: 1; pointer-eve
 }
 .dark-mode #panel-planner-table #plannerTableView #plannerTable .planner-input:hover,
 .dark-mode #panel-planner-table #plannerTableView #plannerTable .planner-select:hover {
-  border-color: rgba(255,255,255,0.12);
+  background: transparent !important;
+  border-color: transparent !important;
 }
 
 /* Remove column-specific backgrounds - inputs inherit row color */

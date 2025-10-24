@@ -30,20 +30,24 @@
   width: 220px !important; /* Increased from 190px */
 }
 
-/* Input hover - no background, inherit row hover, subtle border */
+/* Input hover - COMPLETELY TRANSPARENT, no border change */
 #panel-planner-table #plannerTableView #plannerTable .planner-input:hover,
-#panel-planner-table #plannerTableView #plannerTable .planner-select:hover {
+#panel-planner-table #plannerTableView #plannerTable .planner-select:hover,
+#panel-planner-table #plannerTableView #plannerTable tbody tr:hover .planner-input,
+#panel-planner-table #plannerTableView #plannerTable tbody tr:hover .planner-select {
   background-color: transparent !important;
   background: transparent !important;
-  border-color: rgba(229, 231, 235, 0.5) !important;
+  border-color: transparent !important;
 }
 
-/* Dark mode input hover - no background, inherit row hover */
+/* Dark mode input hover - COMPLETELY TRANSPARENT */
 .dark-mode #panel-planner-table #plannerTableView #plannerTable .planner-input:hover,
-.dark-mode #panel-planner-table #plannerTableView #plannerTable .planner-select:hover {
+.dark-mode #panel-planner-table #plannerTableView #plannerTable .planner-select:hover,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable tbody tr:hover .planner-input,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable tbody tr:hover .planner-select {
   background-color: transparent !important;
   background: transparent !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
+  border-color: transparent !important;
 }
 
 /* Focus state - keep blue but with orange tint */

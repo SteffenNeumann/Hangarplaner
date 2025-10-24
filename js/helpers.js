@@ -2242,8 +2242,14 @@ if (window.helpers) {
                 pickerTarget.dataset.rangeEndIso = endIso;
               }
             } else {
+              // Write value in numeric format dd.mm.yy,HH:MM for validation compatibility
+              // formatISOToCompactUTC outputs DD.MMM format which breaks regex validation
+              const [datePart, timePart] = iso.split('T');
+              const [yyyy, mm, dd] = datePart.split('-');
+              const yy = yyyy.slice(-2);
+              const numericCompact = `${dd}.${mm}.${yy},${timePart}`;
               pickerTarget.dataset.iso = iso;
-              pickerTarget.value = formatISOToCompactUTC(iso);
+              pickerTarget.value = numericCompact;
             }
             pickerTarget.dispatchEvent(new Event('input', {bubbles:true}));
             pickerTarget.dispatchEvent(new Event('change', {bubbles:true}));

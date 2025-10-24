@@ -589,6 +589,7 @@ if (!acInput.getAttribute('title')) acInput.setAttribute('title', 'Shift+Click t
     const displayValue = (fromTableEl && fromTableEl.value) ? fromTableEl.value.trim() : '';
     const tileInputId = which === 'arrivalTime' ? `arrival-time-${tileId}` : `departure-time-${tileId}`;
     const tileInput = document.getElementById(tileInputId);
+    console.log(`📝 writeTimeTo: ${tileInputId}, displayValue="${displayValue}"`, { tileInput: !!tileInput, fromTableEl: fromTableEl?.id });
     if (!tileInput) return;
 
     let iso = '';
@@ -619,6 +620,7 @@ if (!acInput.getAttribute('title')) acInput.setAttribute('title', 'Shift+Click t
     } else {
       delete tileInput.dataset.iso; // clear when empty/invalid
     }
+    console.log(`✅ Set tile input: value="${display}", dataset.iso="${iso||'(none)'}"`);
 
     // Optionally keep TABLE cell dataset in sync
     if (fromTableEl && fromTableEl.dataset !== undefined) {
@@ -630,6 +632,7 @@ if (!acInput.getAttribute('title')) acInput.setAttribute('title', 'Shift+Click t
     }
 
     // Fire events to trigger data collection and sync pipeline
+    console.log(`🔥 Firing events: input, change, blur on ${tileInputId}`);
     tileInput.dispatchEvent(new Event('input', { bubbles: true }));
     tileInput.dispatchEvent(new Event('change', { bubbles: true }));
     // Also fire blur to ensure event manager processes immediately

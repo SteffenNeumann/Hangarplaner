@@ -97,3 +97,37 @@ html:not(.dark-mode) #panel-planner-table #plannerTableView #plannerTable .statu
   background: transparent !important;
   border-color: transparent !important;
 }
+
+/* CHIP CLASS OVERRIDES - Force transparent for all tow chip states on hover */
+#panel-planner-table #plannerTableView #plannerTable .tow-status-selector.tow-neutral:hover,
+#panel-planner-table #plannerTableView #plannerTable .tow-status-selector.tow-initiated:hover,
+#panel-planner-table #plannerTableView #plannerTable .tow-status-selector.tow-ongoing:hover,
+#panel-planner-table #plannerTableView #plannerTable .tow-status-selector.tow-on-position:hover,
+#panel-planner-table #plannerTableView #plannerTable tbody tr:hover .tow-status-selector.tow-neutral,
+#panel-planner-table #plannerTableView #plannerTable tbody tr:hover .tow-status-selector.tow-initiated,
+#panel-planner-table #plannerTableView #plannerTable tbody tr:hover .tow-status-selector.tow-ongoing,
+#panel-planner-table #plannerTableView #plannerTable tbody tr:hover .tow-status-selector.tow-on-position,
+html:not(.dark-mode) #panel-planner-table #plannerTableView #plannerTable .tow-status-selector.tow-neutral:hover,
+html:not(.dark-mode) #panel-planner-table #plannerTableView #plannerTable .tow-status-selector.tow-initiated:hover,
+html:not(.dark-mode) #panel-planner-table #plannerTableView #plannerTable .tow-status-selector.tow-ongoing:hover,
+html:not(.dark-mode) #panel-planner-table #plannerTableView #plannerTable .tow-status-selector.tow-on-position:hover {
+  background-color: transparent !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  border-left-color: transparent !important;
+}
+
+/* Dark mode chip class overrides */
+.dark-mode #panel-planner-table #plannerTableView #plannerTable .tow-status-selector.tow-neutral:hover,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable .tow-status-selector.tow-initiated:hover,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable .tow-status-selector.tow-ongoing:hover,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable .tow-status-selector.tow-on-position:hover,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable tbody tr:hover .tow-status-selector.tow-neutral,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable tbody tr:hover .tow-status-selector.tow-initiated,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable tbody tr:hover .tow-status-selector.tow-ongoing,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable tbody tr:hover .tow-status-selector.tow-on-position {
+  background-color: transparent !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  border-left-color: transparent !important;
+}

@@ -4584,6 +4584,16 @@ body.table-view #panel-planner-table .changelog-toggle { opacity: 1; pointer-eve
   color: #0f172a;
   transition: border-color .15s ease, background-color .15s ease, color .15s ease;
 }
+/* Ensure table cells provide positioning context for compact-dt-btn */
+#panel-planner-table #plannerTableView #plannerTable td.planner-td {
+  position: relative;
+}
+/* Position compact date-time wrapper properly in table cells */
+#panel-planner-table #plannerTableView #plannerTable td .compact-dt-wrap {
+  position: relative;
+  display: block;
+  width: 100%;
+}
 /* Even rows - match zebra background */
 #panel-planner-table #plannerTableView #plannerTable tbody tr:nth-child(even) .planner-input,
 #panel-planner-table #plannerTableView #plannerTable tbody tr:nth-child(even) .planner-select:not(.tow-status-selector):not(.status-selector) {

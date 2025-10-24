@@ -635,7 +635,6 @@ if (!acInput.getAttribute('title')) acInput.setAttribute('title', 'Shift+Click t
     // Also fire blur to ensure event manager processes immediately
     tileInput.dispatchEvent(new Event('blur', { bubbles: true }));
   }
-  }
   function blurThenSync(selector){
     try {
       const el = document.querySelector(selector);

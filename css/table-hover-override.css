@@ -89,7 +89,9 @@ table tbody tr,
 #timetableTable tbody tr,
 .fleet-table tbody tr {
   border-left: 4px solid transparent !important;
-  transition: border-left-color 0.4s ease !important;
+  transition: border-left-color 0.25s ease !important;
+  /* Force no background transitions */
+  transition-property: border-left-color !important;
 }
 
 /* Light mode: Orange left border on hover - NO background change */
@@ -136,7 +138,8 @@ table tbody tr:hover td,
 .fleet-table-container .fleet-table tbody tr,
 #fleetTable.fleet-table tbody tr {
   border-left: 4px solid transparent !important;
-  transition: border-left-color 0.4s ease !important;
+  transition: border-left-color 0.25s ease !important;
+  transition-property: border-left-color !important;
 }
 
 /* Planner table in panel-planner-table context (light mode) - orange border on hover */
@@ -209,4 +212,55 @@ table tbody tr:hover td,
   background-color: inherit !important;
   background: inherit !important;
   cursor: pointer !important;
+}
+
+/* NUCLEAR OPTION: Force override any remaining hover backgrounds */
+/* Light mode - explicit zebra colors on hover */
+table tbody tr:nth-child(odd):hover,
+table tbody tr:nth-child(odd):hover td,
+#plannerTable tbody tr:nth-child(odd):hover,
+#plannerTable tbody tr:nth-child(odd):hover td,
+#plannerTable tbody tr.zebra-odd:hover,
+#plannerTable tbody tr.zebra-odd:hover td,
+#fleetTable tbody tr:nth-child(odd):hover,
+#fleetTable tbody tr:nth-child(odd):hover td {
+  background-color: #f9fafb !important;
+  background: #f9fafb !important;
+}
+
+table tbody tr:nth-child(even):hover,
+table tbody tr:nth-child(even):hover td,
+#plannerTable tbody tr:nth-child(even):hover,
+#plannerTable tbody tr:nth-child(even):hover td,
+#plannerTable tbody tr.zebra-even:hover,
+#plannerTable tbody tr.zebra-even:hover td,
+#fleetTable tbody tr:nth-child(even):hover,
+#fleetTable tbody tr:nth-child(even):hover td {
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+}
+
+/* Dark mode - explicit zebra colors on hover */
+.dark-mode table tbody tr:nth-child(odd):hover,
+.dark-mode table tbody tr:nth-child(odd):hover td,
+.dark-mode #plannerTable tbody tr:nth-child(odd):hover,
+.dark-mode #plannerTable tbody tr:nth-child(odd):hover td,
+.dark-mode #plannerTable tbody tr.zebra-odd:hover,
+.dark-mode #plannerTable tbody tr.zebra-odd:hover td,
+.dark-mode #fleetTable tbody tr:nth-child(odd):hover,
+.dark-mode #fleetTable tbody tr:nth-child(odd):hover td {
+  background-color: var(--dark-secondary) !important;
+  background: var(--dark-secondary) !important;
+}
+
+.dark-mode table tbody tr:nth-child(even):hover,
+.dark-mode table tbody tr:nth-child(even):hover td,
+.dark-mode #plannerTable tbody tr:nth-child(even):hover,
+.dark-mode #plannerTable tbody tr:nth-child(even):hover td,
+.dark-mode #plannerTable tbody tr.zebra-even:hover,
+.dark-mode #plannerTable tbody tr.zebra-even:hover td,
+.dark-mode #fleetTable tbody tr:nth-child(even):hover,
+.dark-mode #fleetTable tbody tr:nth-child(even):hover td {
+  background-color: var(--dark-card) !important;
+  background: var(--dark-card) !important;
 }

@@ -71,3 +71,23 @@
   min-height: 32px !important;
   line-height: 1.2 !important;
 }
+
+/* Status and Tow selects hover - transparent background */
+#panel-planner-table #plannerTableView #plannerTable .status-selector:hover,
+#panel-planner-table #plannerTableView #plannerTable .tow-status-selector:hover,
+#panel-planner-table #plannerTableView #plannerTable tbody tr:hover .status-selector,
+#panel-planner-table #plannerTableView #plannerTable tbody tr:hover .tow-status-selector {
+  background-color: transparent !important;
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
+/* Dark mode Status and Tow selects hover */
+.dark-mode #panel-planner-table #plannerTableView #plannerTable .status-selector:hover,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable .tow-status-selector:hover,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable tbody tr:hover .status-selector,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable tbody tr:hover .tow-status-selector {
+  background-color: transparent !important;
+  background: transparent !important;
+  border-color: transparent !important;
+}

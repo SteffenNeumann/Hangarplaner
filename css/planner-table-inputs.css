@@ -72,21 +72,27 @@
   line-height: 1.2 !important;
 }
 
-/* Status and Tow selects hover - transparent background */
+/* Status and Tow selects hover - NUCLEAR override all possible selectors */
 #panel-planner-table #plannerTableView #plannerTable .status-selector:hover,
 #panel-planner-table #plannerTableView #plannerTable .tow-status-selector:hover,
 #panel-planner-table #plannerTableView #plannerTable tbody tr:hover .status-selector,
-#panel-planner-table #plannerTableView #plannerTable tbody tr:hover .tow-status-selector {
+#panel-planner-table #plannerTableView #plannerTable tbody tr:hover .tow-status-selector,
+#panel-planner-table #plannerTableView #plannerTable select.status-selector:hover,
+#panel-planner-table #plannerTableView #plannerTable select.tow-status-selector:hover,
+html:not(.dark-mode) #panel-planner-table #plannerTableView #plannerTable .tow-status-selector:hover,
+html:not(.dark-mode) #panel-planner-table #plannerTableView #plannerTable .status-selector:hover {
   background-color: transparent !important;
   background: transparent !important;
   border-color: transparent !important;
 }
 
-/* Dark mode Status and Tow selects hover */
+/* Dark mode Status and Tow selects hover - NUCLEAR override */
 .dark-mode #panel-planner-table #plannerTableView #plannerTable .status-selector:hover,
 .dark-mode #panel-planner-table #plannerTableView #plannerTable .tow-status-selector:hover,
 .dark-mode #panel-planner-table #plannerTableView #plannerTable tbody tr:hover .status-selector,
-.dark-mode #panel-planner-table #plannerTableView #plannerTable tbody tr:hover .tow-status-selector {
+.dark-mode #panel-planner-table #plannerTableView #plannerTable tbody tr:hover .tow-status-selector,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable select.status-selector:hover,
+.dark-mode #panel-planner-table #plannerTableView #plannerTable select.tow-status-selector:hover {
   background-color: transparent !important;
   background: transparent !important;
   border-color: transparent !important;

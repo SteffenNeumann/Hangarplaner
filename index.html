@@ -32,6 +32,9 @@
 			function configureTailwind() {
 				if (typeof tailwind !== "undefined") {
 					tailwind.config = {
+						corePlugins: {
+							preflight: false, // Disable Tailwind's base styles including table hover
+						},
 						theme: {
 							extend: {
 								fontFamily: { sans: ["Inter", "ui-sans-serif"] },

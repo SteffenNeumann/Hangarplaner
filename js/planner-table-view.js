@@ -282,11 +282,16 @@
         tr.id = `table-row-${row.tileId}`;
         // Add data attribute for hangar position for CSS targeting
         tr.setAttribute('data-hangar-pos', row.hangarPosition);
+        const h = window.helpers || {};
+        const arrISO = (h.isISODateTimeLocal && h.isISODateTimeLocal(row.arrivalTime)) ? row.arrivalTime : (h.isCompactDateTime && h.isCompactDateTime(row.arrivalTime) && h.parseCompactToISOUTC ? h.parseCompactToISOUTC(row.arrivalTime) : '');
+        const depISO = (h.isISODateTimeLocal && h.isISODateTimeLocal(row.departureTime)) ? row.departureTime : (h.isCompactDateTime && h.isCompactDateTime(row.departureTime) && h.parseCompactToISOUTC ? h.parseCompactToISOUTC(row.departureTime) : '');
+        const arrDisplay = displayTime(row.arrivalTime);
+        const depDisplay = displayTime(row.departureTime);
         tr.innerHTML = [
           cellInput(`hangar-pos-${row.tileId}`, row.hangarPosition, 'text', ro, 'hangarPosition'),
           cellInput(`ac-${row.tileId}`, row.aircraftId, 'text', ro, 'aircraftId'),
-          cellDateInput(row.tileId, displayTime(row.arrivalTime), ro, 'arrivalTime'),
-          cellDateInput(row.tileId, displayTime(row.departureTime), ro, 'departureTime'),
+          cellDateInput(row.tileId, arrDisplay, arrISO, ro, 'arrivalTime'),
+          cellDateInput(row.tileId, depDisplay, depISO, ro, 'departureTime'),
           cellInput(`pos-${row.tileId}`, row.positionInfo, 'text', ro, 'positionInfo'),
           cellTowStatus(`tow-${row.tileId}`, row.towStatus, ro, 'towStatus'),
           cellSelectWithAmpel(`stat-${row.tileId}`, row.status, ro, [{val: 'neutral', text: ''}, {val: 'ready', text: 'Ready'}, {val: 'maintenance', text: 'MX'}, {val: 'aog', text: 'AOG'}], 'status'),
@@ -375,9 +380,10 @@
   }
 
   // Specialized date-time cell that uses IDs compatible with the compact picker
-  function cellDateInput(tileId, val, ro, col){
+  function cellDateInput(tileId, val, iso, ro, col){
     const id = col === 'arrivalTime' ? `arrival-time-table-${tileId}` : `departure-time-table-${tileId}`;
-    return `<td class="planner-td"><input data-col="${col}" id="${esc(id)}" type="text" class="planner-input" ${ro?'disabled':''} value="${esc(val)}" placeholder="1230 or dd.mm.yy,HH:MM"></td>`;
+    const isoAttr = iso ? ` data-iso=\"${esc(iso)}\"` : '';
+    return `<td class=\"planner-td\"><input data-col=\"${col}\" id=\"${esc(id)}\" type=\"text\" class=\"planner-input\"${isoAttr} ${ro?'disabled':''} value=\"${esc(val)}\" placeholder=\"1230 or dd.mm.yy,HH:MM\"></td>`;
   }
   function cellTowStatus(id, val, ro, col){
     const towOptions = {

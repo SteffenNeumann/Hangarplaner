@@ -2425,18 +2425,18 @@ if (window.helpers) {
     else if (is4DigitTime(raw)) iso = canonicalizeDateTimeFieldValue(input.id, raw);
 
     if (iso){
-      const compact = formatISOToCompactUTC(iso);
-      const parts = compact.split(',');
-      p._date.value = parts[0] || '';
-      const tp = parts[1] || '00:00';
+      // Parse ISO directly instead of using compact format
+      const [datePart, timePart] = iso.split('T');
+      const [yyyy, mm, dd] = datePart.split('-');
+      const yy = yyyy.slice(-2);
+      // Set internal date field in dd.mm.yy format (for picker internal use)
+      p._date.value = `${dd}.${mm}.${yy}`;
+      // Set time fields
+      const tp = timePart || '00:00';
       if (p._timeStart) p._timeStart.value = tp;
       if (p._rangeMode && p._timeEnd) p._timeEnd.value = tp;
-      // derive selected date from compact (dd.mm.yy)
-      if (parts[0]){
-        const [dd,mm,yy] = parts[0].split('.');
-        const yFull = 2000 + parseInt(yy,10);
-        p._selectedDate = new Date(yFull, parseInt(mm,10)-1, parseInt(dd,10));
-      }
+      // Set selected date object
+      p._selectedDate = new Date(parseInt(yyyy,10), parseInt(mm,10)-1, parseInt(dd,10));
     } else {
       // default to today UTC + 00:00
       const now = new Date();

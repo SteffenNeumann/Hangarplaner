@@ -52,6 +52,7 @@
 }
 
 body {
+	margin: 0;
 	overflow: hidden;
 	background-color: var(--bg-color-light);
 	color: var(--text-dark);
@@ -184,10 +185,6 @@ html, body, button, input, select, textarea {
 #timetableTable tbody tr {
 	border-bottom: 1px solid #f3f4f6;
 	transition: background-color 0.2s;
-}
-
-#timetableTable tbody tr:hover {
-	background-color: inherit !important;
 }
 
 #timetableTable td {

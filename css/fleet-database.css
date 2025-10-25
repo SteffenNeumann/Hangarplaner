@@ -66,10 +66,6 @@
 	transition: background-color 0.2s ease;
 }
 
-.fleet-table tbody tr:hover {
-	background-color: inherit !important;
-}
-
 .fleet-table td {
 	padding: 12px 16px;
 	font-size: 0.8125rem; /* Kompakter: zuvor 0.875rem */

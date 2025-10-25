@@ -2231,13 +2231,16 @@ if (window.helpers) {
               if (idx){
                 const arrEl = document.getElementById(`arrival-time-${idx}`);
                 const depEl = document.getElementById(`departure-time-${idx}`);
-                if (arrEl){ arrEl.value = startCompact; arrEl.dataset.iso = startIso; arrEl.dispatchEvent(new Event('input',{bubbles:true})); arrEl.dispatchEvent(new Event('change',{bubbles:true})); }
-                if (depEl){ depEl.value = endCompact; depEl.dataset.iso = endIso; depEl.dispatchEvent(new Event('input',{bubbles:true})); depEl.dispatchEvent(new Event('change',{bubbles:true})); }
+                const h = window.helpers || {};
+                const startDisplay = (h.formatISOToCompactUTC && startIso) ? h.formatISOToCompactUTC(startIso) : startCompact;
+                const endDisplay   = (h.formatISOToCompactUTC && endIso) ? h.formatISOToCompactUTC(endIso) : endCompact;
+                if (arrEl){ arrEl.value = startDisplay; arrEl.dataset.iso = startIso; arrEl.dispatchEvent(new Event('input',{bubbles:true})); arrEl.dispatchEvent(new Event('change',{bubbles:true})); }
+                if (depEl){ depEl.value = endDisplay; depEl.dataset.iso = endIso; depEl.dispatchEvent(new Event('input',{bubbles:true})); depEl.dispatchEvent(new Event('change',{bubbles:true})); }
                 // Also update Planner Table inputs if present
                 const arrTable = document.getElementById(`arrival-time-table-${idx}`);
                 const depTable = document.getElementById(`departure-time-table-${idx}`);
-                if (arrTable){ arrTable.value = startCompact; arrTable.dataset.iso = startIso; arrTable.dispatchEvent(new Event('input',{bubbles:true})); arrTable.dispatchEvent(new Event('change',{bubbles:true})); }
-                if (depTable){ depTable.value = endCompact; depTable.dataset.iso = endIso; depTable.dispatchEvent(new Event('input',{bubbles:true})); depTable.dispatchEvent(new Event('change',{bubbles:true})); }
+                if (arrTable){ arrTable.value = startDisplay; arrTable.dataset.iso = startIso; arrTable.dispatchEvent(new Event('input',{bubbles:true})); arrTable.dispatchEvent(new Event('change',{bubbles:true})); }
+                if (depTable){ depTable.value = endDisplay; depTable.dataset.iso = endIso; depTable.dispatchEvent(new Event('input',{bubbles:true})); depTable.dispatchEvent(new Event('change',{bubbles:true})); }
                 // Ensure the clicked field reflects the appropriate value
                 try {
                   const tid = id.toLowerCase();
@@ -2253,9 +2256,9 @@ if (window.helpers) {
                 pickerTarget.dataset.rangeEndIso = endIso;
               }
             } else {
-              // Write value in numeric format dd.mm.yy,HH:MM for validation compatibility
+              // Write value in DD.MMM hh:mm display format (store ISO in dataset)
               pickerTarget.dataset.iso = iso;
-              pickerTarget.value = formatISOToNumericCompact(iso);
+              pickerTarget.value = (typeof formatISOToCompactUTC === 'function') ? formatISOToCompactUTC(iso) : formatISOToNumericCompact(iso);
             }
             pickerTarget.dispatchEvent(new Event('input', {bubbles:true}));
             pickerTarget.dispatchEvent(new Event('change', {bubbles:true}));
@@ -2456,7 +2459,9 @@ if (window.helpers) {
   // Attach compact behavior to arrival/departure inputs
   function attachCompactDateTimeInputs(root){
     const scope = root || document;
-    const inputs = scope.querySelectorAll('input[id^="arrival-time-"], input[id^="departure-time-"]');
+    const inputs = scope.querySelectorAll(
+      'input[id^="arrival-time-"], input[id^="departure-time-"], input[id^="arrival-time-table-"], input[id^="departure-time-table-"]'
+    );
     inputs.forEach(attachCompactMask);
   }
 

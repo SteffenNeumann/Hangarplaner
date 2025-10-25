@@ -1157,9 +1157,14 @@ if (window.helpers) {
     return `${pad2(h)}:${pad2(m)}`;
   }
 
-  // Validates compact format dd.mm.yy,HH:MM (accepts both HH:mm and HH:MM)
+  // Validates compact format: dd.mm.yy,HH:MM (numeric) OR dd.MMM HH:MM (display)
   function isCompactDateTime(str){
-    return typeof str === 'string' && /^\d{2}\.\d{2}\.\d{2},\d{2}:[\d]{2}$/.test(str);
+    if (typeof str !== 'string') return false;
+    // Numeric format: dd.mm.yy,HH:MM
+    if (/^\d{2}\.\d{2}\.\d{2},\d{2}:[\d]{2}$/.test(str)) return true;
+    // Display format: dd.MMM HH:MM (e.g., 25.Oct 14:30)
+    if (/^\d{2}\.[A-Z][a-z]{2}\s+\d{2}:\d{2}$/.test(str)) return true;
+    return false;
   }
 
   // Pads to 2-digit
@@ -1217,15 +1222,38 @@ if (window.helpers) {
     return `${dd}.${mm}.${yy},${time}`;
   }
 
-  // Parse compact dd.mm.yy,HH:mm to ISO local datetime YYYY-MM-DDTHH:mm
-  // Assumes years 2000-2099 for two-digit year (UTC context)
+  // Parse compact formats to ISO local datetime YYYY-MM-DDTHH:mm
+  // Accepts: dd.mm.yy,HH:MM (numeric) OR dd.MMM HH:MM (display)
   function parseCompactToISOUTC(compact){
-    if (!isCompactDateTime(compact)) return '';
-    const [datePart, timePart] = compact.split(',');
-    const [dd, mm, yy] = datePart.split('.');
-    const [HH, MM] = timePart.split(':');
-    const yyyy = String(2000 + parseInt(yy,10));
-    return `${yyyy}-${mm}-${dd}T${HH}:${MM}`;
+    if (!compact || typeof compact !== 'string') return '';
+    const s = compact.trim();
+    
+    // Format 1: dd.mm.yy,HH:MM (numeric)
+    if (/^\d{2}\.\d{2}\.\d{2},\d{2}:\d{2}$/.test(s)) {
+      const [datePart, timePart] = s.split(',');
+      const [dd, mm, yy] = datePart.split('.');
+      const [HH, MM] = timePart.split(':');
+      const yyyy = String(2000 + parseInt(yy,10));
+      return `${yyyy}-${mm}-${dd}T${HH}:${MM}`;
+    }
+    
+    // Format 2: dd.MMM HH:MM (display format)
+    const m = s.match(/^(\d{2})\.(\w{3})\s+(\d{2}):(\d{2})$/);
+    if (m) {
+      const dd = m[1];
+      const mmm = m[2];
+      const HH = m[3];
+      const MM = m[4];
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const monthIdx = months.findIndex(mon => mon === mmm);
+      if (monthIdx === -1) return '';
+      const mm = String(monthIdx + 1).padStart(2, '0');
+      // Use current year as default
+      const yyyy = new Date().getFullYear();
+      return `${yyyy}-${mm}-${dd}T${HH}:${MM}`;
+    }
+    
+    return '';
   }
 
   // Formats datetime-local to yy.mm.dd,HH:mm for PDF display (accepts ISO string)
@@ -1302,7 +1330,7 @@ if (window.helpers) {
   function attachCompactMask(input){
     if (!input || input.__compactMaskAttached) return;
     input.setAttribute('inputmode','numeric');
-    input.setAttribute('placeholder','1230 or dd.mm.yy,HH:MM');
+    input.setAttribute('placeholder','1230 or dd.MMM HH:MM');
     input.dataset.dtCompact = 'true';
 
     // Ensure input fills its cell and leave space for absolute calendar button
@@ -1318,9 +1346,9 @@ if (window.helpers) {
     if (raw === '.') return;
     if (/^[+-]\d+$/.test(raw)) return; // +1, -2, etc.
 
-    // If user types full ISO, show numeric compact immediately
+    // If user types full ISO, show dd.MMM HH:MM format
     if (isISODateTimeLocal(raw)){
-      e.target.value = formatISOToNumericCompact(raw);
+      e.target.value = formatISOToCompactUTC(raw);
       return;
     }
 
@@ -1394,7 +1422,7 @@ if (window.helpers) {
     }
 
     if (iso){
-      e.target.value = formatISOToNumericCompact(iso); // use numeric format for validation
+      e.target.value = formatISOToCompactUTC(iso); // use dd.MMM HH:MM format for display
       e.target.dataset.iso = iso; // store ISO reference on the element
     } else {
       // invalid input: leave the user's raw string to let them correct it
@@ -2232,15 +2260,16 @@ if (window.helpers) {
                 const arrEl = document.getElementById(`arrival-time-${idx}`);
                 const depEl = document.getElementById(`departure-time-${idx}`);
                 const h = window.helpers || {};
+                // Use dd.MMM HH:MM format (human-readable)
                 const startDisplay = (h.formatISOToCompactUTC && startIso) ? h.formatISOToCompactUTC(startIso) : startCompact;
                 const endDisplay   = (h.formatISOToCompactUTC && endIso) ? h.formatISOToCompactUTC(endIso) : endCompact;
-                if (arrEl){ arrEl.value = startDisplay; arrEl.dataset.iso = startIso; arrEl.dispatchEvent(new Event('input',{bubbles:true})); arrEl.dispatchEvent(new Event('change',{bubbles:true})); }
-                if (depEl){ depEl.value = endDisplay; depEl.dataset.iso = endIso; depEl.dispatchEvent(new Event('input',{bubbles:true})); depEl.dispatchEvent(new Event('change',{bubbles:true})); }
+                if (arrEl){ arrEl.value = startDisplay; arrEl.dataset.iso = startIso; arrEl.dispatchEvent(new Event('input',{bubbles:true})); arrEl.dispatchEvent(new Event('change',{bubbles:true})); arrEl.dispatchEvent(new Event('blur',{bubbles:true})); }
+                if (depEl){ depEl.value = endDisplay; depEl.dataset.iso = endIso; depEl.dispatchEvent(new Event('input',{bubbles:true})); depEl.dispatchEvent(new Event('change',{bubbles:true})); depEl.dispatchEvent(new Event('blur',{bubbles:true})); }
                 // Also update Planner Table inputs if present
                 const arrTable = document.getElementById(`arrival-time-table-${idx}`);
                 const depTable = document.getElementById(`departure-time-table-${idx}`);
-                if (arrTable){ arrTable.value = startDisplay; arrTable.dataset.iso = startIso; arrTable.dispatchEvent(new Event('input',{bubbles:true})); arrTable.dispatchEvent(new Event('change',{bubbles:true})); }
-                if (depTable){ depTable.value = endDisplay; depTable.dataset.iso = endIso; depTable.dispatchEvent(new Event('input',{bubbles:true})); depTable.dispatchEvent(new Event('change',{bubbles:true})); }
+                if (arrTable){ arrTable.value = startDisplay; arrTable.dataset.iso = startIso; arrTable.dispatchEvent(new Event('input',{bubbles:true})); arrTable.dispatchEvent(new Event('change',{bubbles:true})); arrTable.dispatchEvent(new Event('blur',{bubbles:true})); }
+                if (depTable){ depTable.value = endDisplay; depTable.dataset.iso = endIso; depTable.dispatchEvent(new Event('input',{bubbles:true})); depTable.dispatchEvent(new Event('change',{bubbles:true})); depTable.dispatchEvent(new Event('blur',{bubbles:true})); }
                 // Ensure the clicked field reflects the appropriate value
                 try {
                   const tid = id.toLowerCase();
@@ -2256,9 +2285,9 @@ if (window.helpers) {
                 pickerTarget.dataset.rangeEndIso = endIso;
               }
             } else {
-              // Write value in DD.MMM hh:mm display format (store ISO in dataset)
+              // Write value in dd.MMM HH:MM format (store ISO in dataset)
               pickerTarget.dataset.iso = iso;
-              pickerTarget.value = (typeof formatISOToCompactUTC === 'function') ? formatISOToCompactUTC(iso) : formatISOToNumericCompact(iso);
+              pickerTarget.value = (typeof formatISOToCompactUTC === 'function') ? formatISOToCompactUTC(iso) : iso;
             }
             pickerTarget.dispatchEvent(new Event('input', {bubbles:true}));
             pickerTarget.dispatchEvent(new Event('change', {bubbles:true}));

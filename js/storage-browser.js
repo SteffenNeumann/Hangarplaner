@@ -1618,12 +1618,25 @@ await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' 
 			sel.forEach(el => { const m = el.id.match(/-(\d+)$/); if (m) ids.add(parseInt(m[1],10)); });
 		} catch(_e){}
 		const toTile = (id) => {
-			const getVal = (prefix) => { const el = document.getElementById(`${prefix}${id}`); return el ? (el.value || '').trim() : ''; };
-			const aircraftId = getVal('aircraft-');
-			const posInfo = getVal('position-');
-			const posHangar = getVal('hangar-position-');
-			const arrivalTime = getVal('arrival-time-');
-			const departureTime = getVal('departure-time-');
+		const getVal = (prefix) => { const el = document.getElementById(`${prefix}${id}`); return el ? (el.value || '').trim() : ''; };
+		// For date/time fields, prefer dataset.iso (ISO format) over displayed value
+		const getDateTime = (prefix) => {
+			const el = document.getElementById(`${prefix}${id}`);
+			if (!el) return '';
+			// Prefer ISO from dataset
+			if (el.dataset && el.dataset.iso) return el.dataset.iso;
+			// Fallback: canonicalize displayed value to ISO
+			const raw = (el.value || '').trim();
+			if (raw && window.helpers && typeof window.helpers.canonicalizeDateTimeFieldValue === 'function') {
+				return window.helpers.canonicalizeDateTimeFieldValue(el.id, raw) || raw;
+			}
+			return raw;
+		};
+		const aircraftId = getVal('aircraft-');
+		const posInfo = getVal('position-');
+		const posHangar = getVal('hangar-position-');
+		const arrivalTime = getDateTime('arrival-time-');
+		const departureTime = getDateTime('departure-time-');
 			const status = getVal('status-') || 'neutral';
 			const towStatus = getVal('tow-status-') || 'neutral';
 			const notes = getVal('notes-');

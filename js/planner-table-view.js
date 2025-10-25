@@ -341,10 +341,12 @@
   function displayTime(v){
     if (!v) return '';
     try {
-      // Use formatISOToCompactUTC to display DD.MMM hh:mm format in table input fields
+      // Use formatISOToCompactUTC to display dd.MMM HH:MM format (human-readable)
       if (window.helpers && typeof window.helpers.isISODateTimeLocal === 'function' && typeof window.helpers.formatISOToCompactUTC === 'function'){
         if (window.helpers.isISODateTimeLocal(v)) return window.helpers.formatISOToCompactUTC(v);
       }
+      // Also handle compact format passthrough
+      if (window.helpers && typeof window.helpers.isCompactDateTime === 'function' && window.helpers.isCompactDateTime(v)) return v;
     } catch(_){}
     // Already compact or HH:mm or free text: show as-is
     return v;
@@ -383,7 +385,7 @@
   function cellDateInput(tileId, val, iso, ro, col){
     const id = col === 'arrivalTime' ? `arrival-time-table-${tileId}` : `departure-time-table-${tileId}`;
     const isoAttr = iso ? ` data-iso=\"${esc(iso)}\"` : '';
-    return `<td class=\"planner-td\"><input data-col=\"${col}\" id=\"${esc(id)}\" type=\"text\" class=\"planner-input\"${isoAttr} ${ro?'disabled':''} value=\"${esc(val)}\" placeholder=\"1230 or dd.mm.yy,HH:MM\"></td>`;
+    return `<td class=\"planner-td\"><input data-col=\"${col}\" id=\"${esc(id)}\" type=\"text\" class=\"planner-input\"${isoAttr} ${ro?'disabled':''} value=\"${esc(val)}\" placeholder=\"1230 or dd.MMM HH:MM\"></td>`;
   }
   function cellTowStatus(id, val, ro, col){
     const towOptions = {
@@ -609,7 +611,7 @@ if (!acInput.getAttribute('title')) acInput.setAttribute('title', 'Shift+Click t
           const canon = window.helpers.canonicalizeDateTimeFieldValue(tileInputId, displayValue);
           if (canon) {
             iso = canon; // canonicalize returns ISO string
-            // Format back to DD.MMM hh:mm display format
+            // Format back to dd.MMM HH:MM display format
             if (window.helpers.formatISOToCompactUTC && window.helpers.isISODateTimeLocal && window.helpers.isISODateTimeLocal(iso)) {
               display = window.helpers.formatISOToCompactUTC(iso);
             }
@@ -620,7 +622,7 @@ if (!acInput.getAttribute('title')) acInput.setAttribute('title', 'Shift+Click t
       }
     }
 
-    // Write to TILE input (source of truth for hangar-data.js)
+    // Write to TILE input (source of truth for hangar-data.js) in dd.MMM HH:MM format
     tileInput.value = display;
     if (iso) {
       tileInput.dataset.iso = iso;
@@ -629,8 +631,9 @@ if (!acInput.getAttribute('title')) acInput.setAttribute('title', 'Shift+Click t
     }
     console.log(`✅ Set tile input: value="${display}", dataset.iso="${iso||'(none)'}"`);
 
-    // Optionally keep TABLE cell dataset in sync
+    // Optionally keep TABLE cell dataset in sync (same dd.MMM HH:MM format)
     if (fromTableEl && fromTableEl.dataset !== undefined) {
+      fromTableEl.value = display; // Update table input with same display format
       if (iso) {
         fromTableEl.dataset.iso = iso;
       } else {

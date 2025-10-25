@@ -336,10 +336,9 @@
   function displayTime(v){
     if (!v) return '';
     try {
-      // Use formatISOToNumericCompact for TABLE INPUT FIELDS to maintain validation compatibility
-      // formatISOToCompactUTC is for DISPLAY ONLY (headers, labels) with DD.MMM format
-      if (window.helpers && typeof window.helpers.isISODateTimeLocal === 'function' && typeof window.helpers.formatISOToNumericCompact === 'function'){
-        if (window.helpers.isISODateTimeLocal(v)) return window.helpers.formatISOToNumericCompact(v);
+      // Use formatISOToCompactUTC to display DD.MMM hh:mm format in table input fields
+      if (window.helpers && typeof window.helpers.isISODateTimeLocal === 'function' && typeof window.helpers.formatISOToCompactUTC === 'function'){
+        if (window.helpers.isISODateTimeLocal(v)) return window.helpers.formatISOToCompactUTC(v);
       }
     } catch(_){}
     // Already compact or HH:mm or free text: show as-is
@@ -604,9 +603,9 @@ if (!acInput.getAttribute('title')) acInput.setAttribute('title', 'Shift+Click t
           const canon = window.helpers.canonicalizeDateTimeFieldValue(tileInputId, displayValue);
           if (canon) {
             iso = canon; // canonicalize returns ISO string
-            // Format back to NUMERIC compact display for input validation (dd.mm.yy,HH:MM)
-            if (window.helpers.formatISOToNumericCompact && window.helpers.isISODateTimeLocal && window.helpers.isISODateTimeLocal(iso)) {
-              display = window.helpers.formatISOToNumericCompact(iso);
+            // Format back to DD.MMM hh:mm display format
+            if (window.helpers.formatISOToCompactUTC && window.helpers.isISODateTimeLocal && window.helpers.isISODateTimeLocal(iso)) {
+              display = window.helpers.formatISOToCompactUTC(iso);
             }
           }
         }

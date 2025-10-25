@@ -82,32 +82,52 @@
 
 /* ==== Unified row hover (single source of truth) ==== */
 
-/* All tables: add left border + orange background on hover */
+/* All tables: add left border on row + orange background on hover */
 #timetableTable tbody tr:hover,
-#timetableTable tbody tr:hover td,
 #plannerTable tbody tr:hover,
-#plannerTable tbody tr:hover td,
 #fleetTable tbody tr:hover,
-#fleetTable tbody tr:hover td,
 .fleet-table tbody tr:hover,
-.fleet-table tbody tr:hover td {
+.flight-table tbody tr:hover {
   border-left: 4px solid #FF7043 !important;
   background-color: rgba(255, 112, 67, 0.08) !important;
   cursor: pointer !important;
 }
 
+/* Ensure cells inherit background but no border */
+#timetableTable tbody tr:hover td,
+#plannerTable tbody tr:hover td,
+#fleetTable tbody tr:hover td,
+.fleet-table tbody tr:hover td,
+.flight-table tbody tr:hover td {
+  background-color: rgba(255, 112, 67, 0.08) !important;
+  border-left: none !important;
+}
+
 /* Dark mode: stronger orange background */
 .dark-mode #timetableTable tbody tr:hover,
-.dark-mode #timetableTable tbody tr:hover td,
 .dark-mode #plannerTable tbody tr:hover,
-.dark-mode #plannerTable tbody tr:hover td,
 .dark-mode #fleetTable tbody tr:hover,
-.dark-mode #fleetTable tbody tr:hover td,
 .dark-mode .fleet-table tbody tr:hover,
-.dark-mode .fleet-table tbody tr:hover td {
+.dark-mode .flight-table tbody tr:hover {
   border-left: 4px solid #FF7043 !important;
   background-color: rgba(255, 112, 67, 0.12) !important;
   cursor: pointer !important;
 }
 
-/* Inputs stay transparent (planner-table-inputs.css handles this) */
+.dark-mode #timetableTable tbody tr:hover td,
+.dark-mode #plannerTable tbody tr:hover td,
+.dark-mode #fleetTable tbody tr:hover td,
+.dark-mode .fleet-table tbody tr:hover td,
+.dark-mode .flight-table tbody tr:hover td {
+  background-color: rgba(255, 112, 67, 0.12) !important;
+  border-left: none !important;
+}
+
+/* Keep inputs/selects transparent on hover */
+#plannerTable tbody tr:hover input,
+#plannerTable tbody tr:hover select,
+#plannerTable tbody tr:hover .planner-input,
+#plannerTable tbody tr:hover .planner-select {
+  background-color: transparent !important;
+  background: transparent !important;
+}
